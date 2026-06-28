@@ -1,0 +1,1 @@
+# mebel-sklad-demo
