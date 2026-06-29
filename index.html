@@ -14,7 +14,379 @@
 .auth-locked .auth-screen{display:flex}
 .auth-panel{width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:28px}
 .auth-panel .logo{margin:0 auto 14px}.auth-panel h2{margin:0;text-align:center;font-size:24px;font-weight:500;letter-spacing:-.04em}.auth-panel p{margin:8px 0 22px;text-align:center;color:var(--muted);line-height:1.45}.auth-panel .input{margin-bottom:10px}.auth-panel .btn{width:100%;margin-top:4px}.auth-panel .auth-line{text-align:center;margin-top:16px}.auth-panel .auth-error{text-align:center;margin-top:10px}
+
+.lang-switch,.side-lang{display:inline-flex;gap:4px;background:#f2f3f5;border:1px solid var(--line);border-radius:999px;padding:4px}
+.lang-switch{position:absolute;left:22px;top:22px}.lang-switch button,.side-lang button{height:28px;min-width:36px;border-radius:999px;color:#6b7280;font-size:12px;font-weight:500;padding:0 10px}.lang-switch button.active,.side-lang button.active{background:#fff;color:#111;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.side-lang{margin-top:12px}.link-btn{font-size:12px;color:#5b6472;text-decoration:underline;text-underline-offset:3px;margin-top:10px}.link-btn:hover{color:#111}.auth-panel{position:relative}.auth-helper{display:flex;justify-content:center;margin-top:6px}.auth-success{font-size:12px;color:#287047;text-align:center;margin-top:10px;min-height:16px}
+
 .version-badge{position:fixed;left:24px;bottom:8px;z-index:100;color:#9ca3af;font-size:11px;font-weight:400;opacity:.72;user-select:none;background:transparent;border:0;padding:0;box-shadow:none}
+
+/* v1.5 Login Fixed */
+.auth-screen{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:90;
+  background:#F7F8FA;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.auth-locked .sidebar,
+.auth-locked .main,
+.auth-locked .app{
+  display:none!important;
+  visibility:hidden!important;
+}
+.auth-locked .auth-screen{display:flex!important}
+.auth-panel{
+  position:relative;
+  width:min(420px,92vw);
+  min-height:410px;
+  background:#fff;
+  border:1px solid #E7E9EE;
+  border-radius:20px;
+  box-shadow:0 28px 70px rgba(16,24,40,.08);
+  padding:28px 30px 30px;
+  text-align:center;
+  overflow:visible;
+}
+.auth-panel .logo{
+  width:44px;
+  height:44px;
+  border-radius:12px;
+  background:#F2F3F5;
+  color:#111;
+  display:grid;
+  place-items:center;
+  font-size:14px;
+  font-weight:600;
+  margin:0 auto 17px;
+  box-shadow:none;
+}
+.auth-panel h2{
+  margin:0 0 10px;
+  font-size:24px;
+  line-height:1.08;
+  font-weight:700;
+  letter-spacing:-.04em;
+  color:#111;
+}
+.auth-panel p{
+  max-width:280px;
+  margin:0 auto 24px;
+  color:#68707C;
+  font-size:13px;
+  line-height:1.45;
+}
+.auth-panel .input{
+  width:100%;
+  height:44px;
+  border:1px solid #E2E5EA;
+  background:#fff;
+  border-radius:11px;
+  padding:0 13px;
+  margin:0 0 11px;
+  font-size:13px;
+  color:#111;
+  outline:none;
+  box-shadow:none;
+  transition:border-color .2s, box-shadow .2s;
+}
+.auth-panel .input:focus{
+  border-color:#C9CED6;
+  box-shadow:0 0 0 4px rgba(17,24,39,.04);
+}
+.auth-panel .btn.primary{
+  width:100%;
+  height:44px;
+  min-height:44px;
+  border-radius:10px;
+  margin:4px 0 0;
+  background:#17181B;
+  color:#fff;
+  border-color:#17181B;
+  font-size:13px;
+  font-weight:600;
+  box-shadow:0 12px 24px rgba(0,0,0,.11);
+  transition:background .2s, transform .2s;
+}
+.auth-panel .btn.primary:hover{
+  background:#25262A;
+  transform:translateY(-1px);
+}
+.auth-helper{
+  display:flex;
+  justify-content:center;
+  margin-top:16px;
+}
+.auth-helper:before{
+  content:"";
+  position:absolute;
+  left:30px;
+  right:30px;
+  height:1px;
+  background:linear-gradient(90deg, transparent, #E7E9EE 18%, #E7E9EE 82%, transparent);
+  transform:translateY(-12px);
+  opacity:.65;
+}
+.link-btn{
+  color:#68707C;
+  font-size:12px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  margin-top:0;
+  transition:color .2s;
+}
+.link-btn:hover{color:#111}
+.auth-panel .auth-line{
+  position:absolute;
+  left:30px;
+  right:30px;
+  bottom:29px;
+  color:#68707C;
+  font-size:12px;
+  line-height:1.35;
+  text-align:center;
+}
+.auth-error{
+  min-height:16px;
+  margin-top:9px;
+  color:#C73535;
+  font-size:12px;
+  text-align:center;
+}
+.auth-success{
+  min-height:16px;
+  margin-top:9px;
+  color:#287047;
+  font-size:12px;
+  text-align:center;
+}
+.lang-switch{
+  position:absolute!important;
+  left:24px!important;
+  top:24px!important;
+  display:inline-flex!important;
+  gap:3px!important;
+  background:#F1F2F4!important;
+  border:1px solid #E2E5EA!important;
+  border-radius:999px!important;
+  padding:4px!important;
+  z-index:5!important;
+}
+.lang-switch button{
+  height:28px!important;
+  min-width:36px!important;
+  padding:0 10px!important;
+  border-radius:999px!important;
+  color:#6B7280!important;
+  font-size:12px!important;
+  font-weight:600!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.lang-switch button.active{
+  background:#fff!important;
+  color:#111!important;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)!important;
+}
+.side-lang{display:none!important}
+.version-badge{
+  position:fixed;
+  left:24px;
+  bottom:12px;
+  z-index:100;
+  color:#A4A9B2;
+  font-size:11px;
+  font-weight:400;
+  opacity:.72;
+  user-select:none;
+  background:transparent;
+  border:0;
+  padding:0;
+  box-shadow:none;
+}
+
+
+/* v1.5: login screen exactly like compact reference */
+.auth-screen{
+  display:none!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:90!important;
+  background:#F7F8FA!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:24px!important;
+}
+.auth-locked .sidebar,
+.auth-locked .main,
+.auth-locked .app{
+  display:none!important;
+  visibility:hidden!important;
+}
+.auth-locked .auth-screen{display:flex!important}
+.auth-panel{
+  position:relative!important;
+  width:min(420px,92vw)!important;
+  min-height:410px!important;
+  background:#fff!important;
+  border:1px solid #E7E9EE!important;
+  border-radius:20px!important;
+  box-shadow:0 28px 70px rgba(16,24,40,.08)!important;
+  padding:28px 30px 30px!important;
+  text-align:center!important;
+  overflow:visible!important;
+}
+.auth-panel .logo{
+  width:44px!important;
+  height:44px!important;
+  border-radius:12px!important;
+  background:#F2F3F5!important;
+  color:#111!important;
+  display:grid!important;
+  place-items:center!important;
+  font-size:14px!important;
+  font-weight:600!important;
+  margin:0 auto 17px!important;
+  box-shadow:none!important;
+}
+.auth-panel h2{
+  margin:0 0 10px!important;
+  font-size:24px!important;
+  line-height:1.08!important;
+  font-weight:700!important;
+  letter-spacing:-.04em!important;
+  color:#111!important;
+}
+.auth-panel p{
+  max-width:280px!important;
+  margin:0 auto 24px!important;
+  color:#68707C!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+}
+.auth-panel .input{
+  width:100%!important;
+  height:44px!important;
+  border:1px solid #E2E5EA!important;
+  background:#fff!important;
+  border-radius:11px!important;
+  padding:0 13px!important;
+  margin:0 0 11px!important;
+  font-size:13px!important;
+  color:#111!important;
+  outline:none!important;
+  box-shadow:none!important;
+}
+.auth-panel .input:focus{
+  border-color:#C9CED6!important;
+  box-shadow:0 0 0 4px rgba(17,24,39,.04)!important;
+}
+.auth-panel .btn.primary{
+  width:100%!important;
+  height:44px!important;
+  min-height:44px!important;
+  border-radius:10px!important;
+  margin:4px 0 0!important;
+  background:#17181B!important;
+  color:#fff!important;
+  border-color:#17181B!important;
+  font-size:13px!important;
+  font-weight:600!important;
+  box-shadow:0 12px 24px rgba(0,0,0,.11)!important;
+}
+.auth-panel .btn.primary:hover{background:#25262A!important}
+.auth-helper{
+  display:flex!important;
+  justify-content:center!important;
+  margin-top:16px!important;
+}
+.auth-helper:before{
+  content:""!important;
+  position:absolute!important;
+  left:30px!important;
+  right:30px!important;
+  height:1px!important;
+  background:linear-gradient(90deg, transparent, #E7E9EE 18%, #E7E9EE 82%, transparent)!important;
+  transform:translateY(-12px)!important;
+  opacity:.65!important;
+}
+.link-btn{
+  color:#68707C!important;
+  font-size:12px!important;
+  text-decoration:underline!important;
+  text-underline-offset:3px!important;
+  margin-top:0!important;
+}
+.link-btn:hover{color:#111!important}
+.auth-panel .auth-line{
+  position:absolute!important;
+  left:30px!important;
+  right:30px!important;
+  bottom:29px!important;
+  color:#68707C!important;
+  font-size:12px!important;
+  line-height:1.35!important;
+  text-align:center!important;
+}
+.auth-error,.auth-success{
+  min-height:16px!important;
+  margin-top:9px!important;
+  font-size:12px!important;
+  text-align:center!important;
+}
+.auth-error{color:#C73535!important}
+.auth-success{color:#287047!important}
+.lang-switch{
+  position:absolute!important;
+  left:24px!important;
+  top:24px!important;
+  display:inline-flex!important;
+  gap:3px!important;
+  background:#F1F2F4!important;
+  border:1px solid #E2E5EA!important;
+  border-radius:999px!important;
+  padding:4px!important;
+  z-index:5!important;
+}
+.lang-switch button{
+  height:28px!important;
+  min-width:36px!important;
+  padding:0 10px!important;
+  border-radius:999px!important;
+  color:#6B7280!important;
+  font-size:12px!important;
+  font-weight:600!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.lang-switch button.active{
+  background:#fff!important;
+  color:#111!important;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)!important;
+}
+.language-menu,.language-button,.language-dropdown{display:none!important}
+.side-lang{display:none!important}
+.version-badge{
+  position:fixed!important;
+  left:24px!important;
+  bottom:12px!important;
+  z-index:100!important;
+  color:#A4A9B2!important;
+  font-size:11px!important;
+  font-weight:400!important;
+  opacity:.72!important;
+  user-select:none!important;
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+}
+
 </style>
 </head>
 <body class="auth-locked">
@@ -81,7 +453,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Добавить</h3><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v0.8 Languages</div>
+<div class="version-badge" id="appVersionBadge">v1.5 Login Fixed</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -91,7 +463,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v0.8 Languages';
+const APP_VERSION = 'v1.5 Login Fixed';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -100,18 +472,25 @@ const I18N = {
     searchTop:'Поиск по названию, артикулу, атрибутам...', searchFull:'Поиск по названию, артикулу, цвету, атрибутам...', allCategories:'Все категории', allSubcategories:'Все подкатегории', enterSku:'Введите артикул — единица измерения определится автоматически', skuIn:'Артикул, например A-0001', skuOut:'Артикул, например P-0001',
     sku:'Артикул', name:'Название', category:'Категория', subcategory:'Подкатегория', attributes:'Атрибуты', quantity:'Остаток', unit:'Ед. изм.', minQuantity:'Мин. остаток', status:'Статус', actions:'Действия', inStock:'В наличии', noStock:'Нет в наличии', noMaterialsTitle:'Материалы не найдены', noMaterialsDesc:'Измените поиск или добавьте новую позицию.',
     login:'Вход', loginTitle:'Вход', loginDesc:'Введите email и пароль. Склад откроется только после входа.', loginButton:'Войти', logout:'Выйти', noSignup:'Без регистрации. Доступ выдаёт администратор.', loginHint:'Склад скрыт до входа. Доступ выдаёт администратор.', accessOk:'доступ разрешён', email:'email', password:'пароль', fillEmailPass:'Введите email и пароль', wrongLogin:'Неверный email или пароль', loginRequired:'Сначала войдите', loggedIn:'Вход выполнен', loggedOut:'Вы вышли',
-    orderTitle:'Заказы', orderDesc:'Выберите модель и сразу увидите, каких материалов не хватает', newOrder:'+ Новый заказ', modelTitle:'Модели мебели', modelDesc:'Состав материалов на одно изделие', newModel:'+ Новая модель', settingsDesc:'Простое обслуживание данных', exportImport:'Экспорт / импорт', jsonHint:'Можно сохранить данные в JSON и потом загрузить обратно.', downloadJson:'Скачать JSON', uploadJson:'Загрузить JSON', wipe:'Очистить всё', checking:'Проверка входа...', save:'Сохранить', cancel:'Отмена', savedMaterial:'Материал сохранён', enterPositive:'Введите количество больше 0', enterSkuMsg:'Введите артикул', notFoundSku:'Материал с таким артикулом не найден', materialNotFound:'Материал не найден. Проверьте артикул', added:'Добавлено', writtenOff:'Списано'
+    orderTitle:'Заказы', orderDesc:'Выберите модель и сразу увидите, каких материалов не хватает', newOrder:'+ Новый заказ', modelTitle:'Модели мебели', modelDesc:'Состав материалов на одно изделие', newModel:'+ Новая модель', settingsDesc:'Простое обслуживание данных', exportImport:'Экспорт / импорт', jsonHint:'Можно сохранить данные в JSON и потом загрузить обратно.', downloadJson:'Скачать JSON', uploadJson:'Загрузить JSON', wipe:'Очистить всё', checking:'Проверка входа...', save:'Сохранить', cancel:'Отмена', savedMaterial:'Материал сохранён', enterPositive:'Введите количество больше 0', enterSkuMsg:'Введите артикул', notFoundSku:'Материал с таким артикулом не найден', materialNotFound:'Материал не найден. Проверьте артикул', added:'Добавлено', writtenOff:'Списано', forgotPassword:'Забыли пароль?', resetPassword:'Сброс пароля', resetDesc:'Введите email. Мы отправим ссылку для смены пароля.', sendReset:'Отправить ссылку', backToLogin:'Назад ко входу', resetSent:'Если email существует, ссылка отправлена.', newPassword:'Новый пароль', updatePassword:'Обновить пароль', passwordUpdated:'Пароль обновлён. Теперь войдите заново.', quickInLabel:'Быстрое поступление', quickOutLabel:'Быстрое списание', shown:'Показано', of:'из', itemsWord:'позиций', showBy:'Показывать по', edit:'Редактировать', delete:'Удалить', materialBasic:'Основное', materialAttrs:'Атрибуты', materialStock:'Остаток', skuAutoHint:'Артикул создаётся автоматически по категории. Можно изменить вручную.', noSubcategory:'Без подкатегории' 
   },
   en: {
-    appTitle:'FurniCore', appSubtitle:'materials management', section:'Section', stock:'Warehouse', orders:'Orders', models:'Furniture models', refs:'Directories', settings:'Settings', stockTitle:'Warehouse', stockDesc:'Material stock control', addMaterial:'＋ Add material', totalItems:'Total items', categories:'Categories', lowStock:'Low stock', outStock:'Out of stock', quickIn:'Quick receipt', quickOut:'Quick write-off', foundMaterial:'Found material', add:'Add', writeOff:'Write off', number:'Number', filters:'Filters', reset:'Reset', searchTop:'Search by name, SKU, attributes...', searchFull:'Search by name, SKU, color, attributes...', allCategories:'All categories', allSubcategories:'All subcategories', enterSku:'Enter SKU — unit will be detected automatically', skuIn:'SKU, e.g. A-0001', skuOut:'SKU, e.g. P-0001', sku:'SKU', name:'Name', category:'Category', subcategory:'Subcategory', attributes:'Attributes', quantity:'Stock', unit:'Unit', minQuantity:'Min. stock', status:'Status', actions:'Actions', inStock:'In stock', noStock:'Out of stock', noMaterialsTitle:'No materials found', noMaterialsDesc:'Change search or add a new item.', login:'Login', loginTitle:'Login', loginDesc:'Enter email and password. The warehouse opens only after login.', loginButton:'Sign in', logout:'Sign out', noSignup:'No self-registration. Access is granted by administrator.', loginHint:'Warehouse is hidden until login. Access is granted by administrator.', accessOk:'access granted', email:'email', password:'password', fillEmailPass:'Enter email and password', wrongLogin:'Wrong email or password', loginRequired:'Please sign in first', loggedIn:'Signed in', loggedOut:'Signed out', orderTitle:'Orders', orderDesc:'Select a model and immediately see missing materials', newOrder:'+ New order', modelTitle:'Furniture models', modelDesc:'Materials per one product', newModel:'+ New model', settingsDesc:'Simple data maintenance', exportImport:'Export / import', jsonHint:'You can save data as JSON and load it back later.', downloadJson:'Download JSON', uploadJson:'Upload JSON', wipe:'Clear all', checking:'Checking session...', save:'Save', cancel:'Cancel', savedMaterial:'Material saved', enterPositive:'Enter a quantity greater than 0', enterSkuMsg:'Enter SKU', notFoundSku:'Material with this SKU was not found', materialNotFound:'Material not found. Check SKU', added:'Added', writtenOff:'Written off'
+    appTitle:'FurniCore', appSubtitle:'materials management', section:'Section', stock:'Warehouse', orders:'Orders', models:'Furniture models', refs:'Directories', settings:'Settings', stockTitle:'Warehouse', stockDesc:'Material stock control', addMaterial:'＋ Add material', totalItems:'Total items', categories:'Categories', lowStock:'Low stock', outStock:'Out of stock', quickIn:'Quick receipt', quickOut:'Quick write-off', foundMaterial:'Found material', add:'Add', writeOff:'Write off', number:'Number', filters:'Filters', reset:'Reset', searchTop:'Search by name, SKU, attributes...', searchFull:'Search by name, SKU, color, attributes...', allCategories:'All categories', allSubcategories:'All subcategories', enterSku:'Enter SKU — unit will be detected automatically', skuIn:'SKU, e.g. A-0001', skuOut:'SKU, e.g. P-0001', sku:'SKU', name:'Name', category:'Category', subcategory:'Subcategory', attributes:'Attributes', quantity:'Stock', unit:'Unit', minQuantity:'Min. stock', status:'Status', actions:'Actions', inStock:'In stock', noStock:'Out of stock', noMaterialsTitle:'No materials found', noMaterialsDesc:'Change search or add a new item.', login:'Login', loginTitle:'Login', loginDesc:'Enter email and password. The warehouse opens only after login.', loginButton:'Sign in', logout:'Sign out', noSignup:'No self-registration. Access is granted by administrator.', loginHint:'Warehouse is hidden until login. Access is granted by administrator.', accessOk:'access granted', email:'email', password:'password', fillEmailPass:'Enter email and password', wrongLogin:'Wrong email or password', loginRequired:'Please sign in first', loggedIn:'Signed in', loggedOut:'Signed out', orderTitle:'Orders', orderDesc:'Select a model and immediately see missing materials', newOrder:'+ New order', modelTitle:'Furniture models', modelDesc:'Materials per one product', newModel:'+ New model', settingsDesc:'Simple data maintenance', exportImport:'Export / import', jsonHint:'You can save data as JSON and load it back later.', downloadJson:'Download JSON', uploadJson:'Upload JSON', wipe:'Clear all', checking:'Checking session...', save:'Save', cancel:'Cancel', savedMaterial:'Material saved', enterPositive:'Enter a quantity greater than 0', enterSkuMsg:'Enter SKU', notFoundSku:'Material with this SKU was not found', materialNotFound:'Material not found. Check SKU', added:'Added', writtenOff:'Written off', forgotPassword:'Forgot password?', resetPassword:'Password reset', resetDesc:'Enter your email. We will send a password reset link.', sendReset:'Send reset link', backToLogin:'Back to login', resetSent:'If this email exists, a reset link was sent.', newPassword:'New password', updatePassword:'Update password', passwordUpdated:'Password updated. Please sign in again.', quickInLabel:'Quick receipt', quickOutLabel:'Quick write-off', shown:'Showing', of:'of', itemsWord:'items', showBy:'Show by', edit:'Edit', delete:'Delete', materialBasic:'Basic info', materialAttrs:'Attributes', materialStock:'Stock', skuAutoHint:'SKU is generated automatically by category. You can change it manually.', noSubcategory:'No subcategory' 
   },
   lv: {
-    appTitle:'FurniCore', appSubtitle:'materiālu uzskaite', section:'Sadaļa', stock:'Noliktava', orders:'Pasūtījumi', models:'Mēbeļu modeļi', refs:'Katalogi', settings:'Iestatījumi', stockTitle:'Noliktava', stockDesc:'Materiālu atlikumu uzskaite', addMaterial:'＋ Pievienot materiālu', totalItems:'Pozīcijas kopā', categories:'Kategorijas', lowStock:'Beidzas', outStock:'Nav noliktavā', quickIn:'Ātra pieņemšana', quickOut:'Ātra norakstīšana', foundMaterial:'Atrasts materiāls', add:'Pievienot', writeOff:'Norakstīt', number:'Skaits', filters:'Filtri', reset:'Atiestatīt', searchTop:'Meklēt pēc nosaukuma, artikula, atribūtiem...', searchFull:'Meklēt pēc nosaukuma, artikula, krāsas, atribūtiem...', allCategories:'Visas kategorijas', allSubcategories:'Visas apakškategorijas', enterSku:'Ievadiet artikulu — mērvienība noteiksies automātiski', skuIn:'Artikuls, piem. A-0001', skuOut:'Artikuls, piem. P-0001', sku:'Artikuls', name:'Nosaukums', category:'Kategorija', subcategory:'Apakškategorija', attributes:'Atribūti', quantity:'Atlikums', unit:'Mērv.', minQuantity:'Min. atlikums', status:'Statuss', actions:'Darbības', inStock:'Ir noliktavā', noStock:'Nav noliktavā', noMaterialsTitle:'Materiāli nav atrasti', noMaterialsDesc:'Mainiet meklēšanu vai pievienojiet jaunu pozīciju.', login:'Ieeja', loginTitle:'Ieeja', loginDesc:'Ievadiet email un paroli. Noliktava atvērsies tikai pēc ieejas.', loginButton:'Ieiet', logout:'Iziet', noSignup:'Bez reģistrācijas. Piekļuvi piešķir administrators.', loginHint:'Noliktava ir paslēpta līdz ieejai. Piekļuvi piešķir administrators.', accessOk:'piekļuve atļauta', email:'email', password:'parole', fillEmailPass:'Ievadiet email un paroli', wrongLogin:'Nepareizs email vai parole', loginRequired:'Vispirms ieejiet sistēmā', loggedIn:'Ieeja veikta', loggedOut:'Jūs izgājāt', orderTitle:'Pasūtījumi', orderDesc:'Izvēlieties modeli un uzreiz redzēsiet trūkstošos materiālus', newOrder:'+ Jauns pasūtījums', modelTitle:'Mēbeļu modeļi', modelDesc:'Materiāli vienam izstrādājumam', newModel:'+ Jauns modelis', settingsDesc:'Vienkārša datu apkope', exportImport:'Eksports / imports', jsonHint:'Datus var saglabāt JSON failā un vēlāk ielādēt atpakaļ.', downloadJson:'Lejupielādēt JSON', uploadJson:'Augšupielādēt JSON', wipe:'Dzēst visu', checking:'Pārbauda ieeju...', save:'Saglabāt', cancel:'Atcelt', savedMaterial:'Materiāls saglabāts', enterPositive:'Ievadiet daudzumu lielāku par 0', enterSkuMsg:'Ievadiet artikulu', notFoundSku:'Materiāls ar šo artikulu nav atrasts', materialNotFound:'Materiāls nav atrasts. Pārbaudiet artikulu', added:'Pievienots', writtenOff:'Norakstīts'
+    appTitle:'FurniCore', appSubtitle:'materiālu uzskaite', section:'Sadaļa', stock:'Noliktava', orders:'Pasūtījumi', models:'Mēbeļu modeļi', refs:'Katalogi', settings:'Iestatījumi', stockTitle:'Noliktava', stockDesc:'Materiālu atlikumu uzskaite', addMaterial:'＋ Pievienot materiālu', totalItems:'Pozīcijas kopā', categories:'Kategorijas', lowStock:'Beidzas', outStock:'Nav noliktavā', quickIn:'Ātra pieņemšana', quickOut:'Ātra norakstīšana', foundMaterial:'Atrasts materiāls', add:'Pievienot', writeOff:'Norakstīt', number:'Skaits', filters:'Filtri', reset:'Atiestatīt', searchTop:'Meklēt pēc nosaukuma, artikula, atribūtiem...', searchFull:'Meklēt pēc nosaukuma, artikula, krāsas, atribūtiem...', allCategories:'Visas kategorijas', allSubcategories:'Visas apakškategorijas', enterSku:'Ievadiet artikulu — mērvienība noteiksies automātiski', skuIn:'Artikuls, piem. A-0001', skuOut:'Artikuls, piem. P-0001', sku:'Artikuls', name:'Nosaukums', category:'Kategorija', subcategory:'Apakškategorija', attributes:'Atribūti', quantity:'Atlikums', unit:'Mērv.', minQuantity:'Min. atlikums', status:'Statuss', actions:'Darbības', inStock:'Ir noliktavā', noStock:'Nav noliktavā', noMaterialsTitle:'Materiāli nav atrasti', noMaterialsDesc:'Mainiet meklēšanu vai pievienojiet jaunu pozīciju.', login:'Ieeja', loginTitle:'Ieeja', loginDesc:'Ievadiet email un paroli. Noliktava atvērsies tikai pēc ieejas.', loginButton:'Ieiet', logout:'Iziet', noSignup:'Bez reģistrācijas. Piekļuvi piešķir administrators.', loginHint:'Noliktava ir paslēpta līdz ieejai. Piekļuvi piešķir administrators.', accessOk:'piekļuve atļauta', email:'email', password:'parole', fillEmailPass:'Ievadiet email un paroli', wrongLogin:'Nepareizs email vai parole', loginRequired:'Vispirms ieejiet sistēmā', loggedIn:'Ieeja veikta', loggedOut:'Jūs izgājāt', orderTitle:'Pasūtījumi', orderDesc:'Izvēlieties modeli un uzreiz redzēsiet trūkstošos materiālus', newOrder:'+ Jauns pasūtījums', modelTitle:'Mēbeļu modeļi', modelDesc:'Materiāli vienam izstrādājumam', newModel:'+ Jauns modelis', settingsDesc:'Vienkārša datu apkope', exportImport:'Eksports / imports', jsonHint:'Datus var saglabāt JSON failā un vēlāk ielādēt atpakaļ.', downloadJson:'Lejupielādēt JSON', uploadJson:'Augšupielādēt JSON', wipe:'Dzēst visu', checking:'Pārbauda ieeju...', save:'Saglabāt', cancel:'Atcelt', savedMaterial:'Materiāls saglabāts', enterPositive:'Ievadiet daudzumu lielāku par 0', enterSkuMsg:'Ievadiet artikulu', notFoundSku:'Materiāls ar šo artikulu nav atrasts', materialNotFound:'Materiāls nav atrasts. Pārbaudiet artikulu', added:'Pievienots', writtenOff:'Norakstīts', forgotPassword:'Aizmirsāt paroli?', resetPassword:'Paroles atiestatīšana', resetDesc:'Ievadiet email. Nosūtīsim saiti paroles maiņai.', sendReset:'Nosūtīt saiti', backToLogin:'Atpakaļ uz ieeju', resetSent:'Ja email eksistē, saite tika nosūtīta.', newPassword:'Jauna parole', updatePassword:'Atjaunot paroli', passwordUpdated:'Parole atjaunota. Lūdzu, ieejiet vēlreiz.', quickInLabel:'Ātra pieņemšana', quickOutLabel:'Ātra norakstīšana', shown:'Parādīts', of:'no', itemsWord:'pozīcijām', showBy:'Rādīt pa', edit:'Labot', delete:'Dzēst', materialBasic:'Pamatinformācija', materialAttrs:'Atribūti', materialStock:'Atlikums', skuAutoHint:'Artikuls tiek izveidots automātiski pēc kategorijas. To var mainīt.', noSubcategory:'Bez apakškategorijas' 
   }
 };
 let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
-function langButtons(){ return `<div class="lang-switch"><button type="button" onclick="setLang('ru')" class="${currentLang==='ru'?'active':''}">RU</button><button type="button" onclick="setLang('en')" class="${currentLang==='en'?'active':''}">EN</button><button type="button" onclick="setLang('lv')" class="${currentLang==='lv'?'active':''}">LV</button></div>`; }
+function langButtons(){
+  return `<div class="lang-switch">
+    <button type="button" onclick="setLang('ru')" class="${currentLang==='ru'?'active':''}">RU</button>
+    <button type="button" onclick="setLang('en')" class="${currentLang==='en'?'active':''}">EN</button>
+    <button type="button" onclick="setLang('lv')" class="${currentLang==='lv'?'active':''}">LV</button>
+  </div>`;
+}
+
 function sideLangButtons(){ return `<div class="side-lang"><button type="button" onclick="setLang('ru')" class="${currentLang==='ru'?'active':''}">RU</button><button type="button" onclick="setLang('en')" class="${currentLang==='en'?'active':''}">EN</button><button type="button" onclick="setLang('lv')" class="${currentLang==='lv'?'active':''}">LV</button></div>`; }
 function setLang(lang){ currentLang=lang; localStorage.setItem('furnicore_lang', lang); renderAuthBox(); renderAll(); applyI18n(); }
 function applyI18n(){
@@ -121,6 +500,10 @@ function applyI18n(){
   const nav=document.querySelectorAll('#mainNav button'); const navKeys=['stock','orders','models','refs','settings']; nav.forEach((b,i)=>{ const span=b.querySelector('.ico'); b.innerHTML=(span?span.outerHTML:'')+' '+t(navKeys[i]); });
   const pairs=[['#stock .title h2','stockTitle'],['#stock .title p','stockDesc'],['#orders .title h2','orderTitle'],['#orders .title p','orderDesc'],['#models .title h2','modelTitle'],['#models .title p','modelDesc'],['#settings .title h2','settings'],['#settings .title p','settingsDesc']]; pairs.forEach(([sel,key])=>{const el=qs(sel); if(el) el.textContent=t(key);});
   const b1=qs('#stock .topbar .btn.primary'); if(b1) b1.textContent=t('addMaterial'); const b2=qs('#orders .btn.primary'); if(b2) b2.textContent=t('newOrder'); const b3=qs('#models .btn.primary'); if(b3) b3.textContent=t('newModel');
+  const labelMap=[['#quickAddBox .field:nth-child(1) label','quickInLabel'],['#quickAddBox .field:nth-child(2) label','foundMaterial'],['#quickAddBox .field:nth-child(3) label','add'],['#quickWriteOffBox .field:nth-child(1) label','quickOutLabel'],['#quickWriteOffBox .field:nth-child(2) label','foundMaterial'],['#quickWriteOffBox .field:nth-child(3) label','writeOff']]; labelMap.forEach(([sel,key])=>{const el=qs(sel); if(el) el.textContent=t(key);});
+  const qBtn=qs('#quickAddBox button'); if(qBtn) qBtn.textContent=t('add'); const wBtn=qs('#quickWriteOffBox button'); if(wBtn) wBtn.textContent=t('writeOff'); const toolBtns=document.querySelectorAll('.toolbar .btn'); if(toolBtns[0]) toolBtns[0].textContent=t('filters'); if(toolBtns[1]) toolBtns[1].textContent=t('reset');
+  const si=qs('#settings h3'); if(si) si.textContent=t('exportImport'); const sp=qs('#settings p.muted'); if(sp) sp.textContent=t('jsonHint'); const sb=document.querySelectorAll('#settings .actions .btn'); if(sb[0]) sb[0].textContent=t('downloadJson'); if(sb[1]) sb[1].childNodes[0].textContent=t('uploadJson'); if(sb[2]) sb[2].textContent=t('wipe');
+  renderFilters(); updateSubFilter();
   const ph={topSearchInput:'searchTop',searchInput:'searchFull',quickSku:'skuIn',writeOffSku:'skuOut',quickQty:'number',writeOffQty:'number',loginEmail:'email',loginPassword:'password'}; Object.entries(ph).forEach(([id,key])=>{ const el=document.getElementById(id); if(el) el.placeholder=t(key); });
   const qInfo=document.getElementById('quickInfo'); if(qInfo && !document.getElementById('quickSku')?.value) qInfo.textContent=t('enterSku'); const wInfo=document.getElementById('writeOffInfo'); if(wInfo && !document.getElementById('writeOffSku')?.value) wInfo.textContent=t('enterSku');
   const av=document.getElementById('appVersionBadge'); if(av) av.textContent=APP_VERSION;
@@ -145,7 +528,7 @@ function renderAuthBox(){
     sideBox.innerHTML=`<div class="auth-title">${t('login')}</div><div class="auth-line">${t('loginHint')}</div>${sideLangButtons()}`;
   }
   if(panel){
-    panel.innerHTML=`${langButtons()}<div class="logo">M</div><h2>${t('loginTitle')}</h2><p>${t('loginDesc')}</p><input class="input" id="loginEmail" type="email" placeholder="${t('email')}" autocomplete="email"><input class="input" id="loginPassword" type="password" placeholder="${t('password')}" autocomplete="current-password"><button class="btn primary" onclick="loginUser()">${t('loginButton')}</button><div class="auth-error" id="authError"></div><div class="auth-line">${t('noSignup')}</div>`;
+    panel.innerHTML=`${langButtons()}<div class="logo">M</div><h2>${t('loginTitle')}</h2><p>${t('loginDesc')}</p><input class="input" id="loginEmail" type="email" placeholder="${t('email')}" autocomplete="email"><input class="input" id="loginPassword" type="password" placeholder="${t('password')}" autocomplete="current-password"><button class="btn primary" onclick="loginUser()">${t('loginButton')}</button><div class="auth-helper"><button class="link-btn" type="button" onclick="showResetPassword()">${t('forgotPassword')}</button></div><div class="auth-error" id="authError"></div><div class="auth-success" id="authSuccess"></div><div class="auth-line">${t('noSignup')}</div>`;
     const email=document.getElementById('loginEmail');
     const pass=document.getElementById('loginPassword');
     if(email) email.onkeydown=e=>{if(e.key==='Enter') pass?.focus()};
@@ -153,6 +536,48 @@ function renderAuthBox(){
   }
   applyI18n();
 }
+
+function showResetPassword(){
+  const panel=document.getElementById('authPanel');
+  if(!panel) return;
+  const existing=document.getElementById('loginEmail')?.value?.trim() || '';
+  panel.innerHTML=`${langButtons()}<div class="logo">M</div><h2>${t('resetPassword')}</h2><p>${t('resetDesc')}</p><input class="input" id="resetEmail" type="email" placeholder="${t('email')}" value="${existing}" autocomplete="email"><button class="btn primary" onclick="sendPasswordReset()">${t('sendReset')}</button><div class="auth-error" id="authError"></div><div class="auth-success" id="authSuccess"></div><div class="auth-helper"><button class="link-btn" type="button" onclick="renderAuthBox()">${t('backToLogin')}</button></div>`;
+  const email=document.getElementById('resetEmail');
+  if(email) email.onkeydown=e=>{if(e.key==='Enter') sendPasswordReset()};
+}
+async function sendPasswordReset(){
+  const email=document.getElementById('resetEmail')?.value?.trim();
+  const errBox=document.getElementById('authError');
+  const okBox=document.getElementById('authSuccess');
+  if(!email){ if(errBox) errBox.textContent=t('fillEmailPass'); return; }
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0] });
+  if(error){ if(errBox) errBox.textContent=error.message; console.error(error); return; }
+  if(errBox) errBox.textContent='';
+  if(okBox) okBox.textContent=t('resetSent');
+}
+function showUpdatePassword(){
+  const panel=document.getElementById('authPanel');
+  if(!panel) return;
+  panel.innerHTML=`${langButtons()}<div class="logo">M</div><h2>${t('resetPassword')}</h2><p>${t('newPassword')}</p><input class="input" id="newPassword" type="password" placeholder="${t('newPassword')}" autocomplete="new-password"><button class="btn primary" onclick="updatePasswordAfterRecovery()">${t('updatePassword')}</button><div class="auth-error" id="authError"></div><div class="auth-success" id="authSuccess"></div>`;
+}
+async function updatePasswordAfterRecovery(){
+  const password=document.getElementById('newPassword')?.value || '';
+  const errBox=document.getElementById('authError');
+  const okBox=document.getElementById('authSuccess');
+  if(!password || password.length < 6){ if(errBox) errBox.textContent=t('newPassword'); return; }
+  const { error } = await supabaseClient.auth.updateUser({ password });
+  if(error){ if(errBox) errBox.textContent=error.message; console.error(error); return; }
+  if(okBox) okBox.textContent=t('passwordUpdated');
+  setTimeout(()=>logoutUser(),1200);
+}
+supabaseClient.auth.onAuthStateChange((event, session)=>{
+  if(event==='PASSWORD_RECOVERY'){
+    currentUser=session?.user || null;
+    setAuthLocked(true);
+    showUpdatePassword();
+  }
+});
+
 async function loginUser(){
   const email=document.getElementById('loginEmail')?.value?.trim();
   const password=document.getElementById('loginPassword')?.value || '';
@@ -389,20 +814,20 @@ async function quickAddStock(){if(!requireAuth())return;const sku=normalizeSku(d
 function updateWriteOffInfo(){const box=document.getElementById('quickWriteOffBox');const info=document.getElementById('writeOffInfo');if(!box||!info)return;const sku=writeOffSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent='Введите артикул — единица измерения определится автоматически';return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">Сейчас: ${mat.quantity} ${mat.unit}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`Материал не найден. По артикулу это похоже на <b>${unit}</b>`:t('materialNotFound');}
 async function quickWriteOffStock(){if(!requireAuth())return;const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=Number(document.getElementById('writeOffQty')?.value);if(!sku){toast(t('enterSkuMsg'));return}const mat=findMaterialBySku(sku);if(!mat){toast(t('notFoundSku'));updateWriteOffInfo();return}if(!Number.isFinite(qty)||qty<=0){toast(t('enterPositive'));return}const oldQty=Number(mat.quantity||0);if(oldQty<qty){if(!confirm(`На складе только ${mat.quantity} ${mat.unit}. Списать всё и поставить 0?`))return;mat.quantity=0}else{mat.quantity=Number((oldQty-qty).toFixed(3))}mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('writeOffQty').value='';document.getElementById('writeOffSku').select();toast(`Списано ${qty} ${mat.unit}: ${mat.name}`)}
 function renderFilters(){
-  const cf=document.getElementById('categoryFilter');cf.innerHTML='<option value="">Все категории</option>'+Object.keys(CATEGORIES).map(c=>`<option>${c}</option>`).join('');
+  const cf=document.getElementById('categoryFilter');cf.innerHTML=`<option value="">${t('allCategories')}</option>`+Object.keys(CATEGORIES).map(c=>`<option>${c}</option>`).join('');
   cf.onchange=()=>{updateSubFilter();renderAll()};document.getElementById('subcategoryFilter').onchange=renderAll;document.getElementById('searchInput').oninput=()=>{const t=document.getElementById('topSearchInput'); if(t&&t.value!==document.getElementById('searchInput').value)t.value=document.getElementById('searchInput').value; renderAll()};const top=document.getElementById('topSearchInput'); if(top) top.oninput=()=>{document.getElementById('searchInput').value=top.value;renderAll()};
 }
-function updateSubFilter(){const cat=document.getElementById('categoryFilter').value;const sf=document.getElementById('subcategoryFilter');let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML='<option value="">Все подкатегории</option>'+subs.map(s=>`<option>${s}</option>`).join('')}
+function updateSubFilter(){const cat=document.getElementById('categoryFilter').value;const sf=document.getElementById('subcategoryFilter');let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option>${s}</option>`).join('')}
 function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;document.getElementById('stats').innerHTML=`<div class="stat"><div><span>${t('totalItems')}</span><b>${total}</b></div><div class="sico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></div></div><div class="stat"><div><span>${t('categories')}</span><b>${cats}</b></div><div class="sico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></div></div><div class="stat"><div><span>${t('lowStock')}</span><b>${low}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg></div></div><div class="stat"><div><span>${t('outStock')}</span><b>${out}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></div></div>`}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${m.category}${m.subcategory?' · '+m.subcategory:''}</span>`}
-function renderStock(){const rows=filteredMaterials();const box=document.getElementById('stockTable');if(!rows.length){box.innerHTML=`<div class="empty"><b>${t('noMaterialsTitle')}</b>${t('noMaterialsDesc')}</div>`;return}box.innerHTML=`<table><thead><tr>${[['sku',t('sku')],['name',t('name')],['category',t('category')],['subcategory',t('subcategory')],['attributes',t('attributes')],['quantity',t('quantity')],['unit',t('unit')],['minQuantity',t('minQuantity')],['status',t('status')]].map(([k,t])=>`<th class="sortable" onclick="setSort('${k}')">${t} ↕</th>`).join('')}<th>${t('actions')}</th></tr></thead><tbody>${rows.map(m=>{const st=statusOf(m);return `<tr><td>${m.sku||'—'}</td><td><div class="name">${m.name}</div></td><td>${m.category}</td><td>${m.subcategory||'—'}</td><td>${attrText(m)}</td><td><span class="qty">${m.quantity}</span></td><td>${m.unit}</td><td>${m.minQuantity||0}</td><td><span class="status ${st[0]}"><span class="dot"></span>${st[1]}</span></td><td><div class="row-actions"><button class="iconbtn" title="Редактировать" onclick="openMaterialModal('${m.id}')"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button><button class="iconbtn" title="Удалить" onclick="deleteMaterial('${m.id}')"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div></td></tr>`}).join('')}</tbody></table><div class="table-foot"><span>Показано 1–${rows.length} из ${data.materials.length} позиций</span><div class="pager"><span>Показывать по</span><button class="pagebtn active">10</button><button class="pagebtn">‹</button><button class="pagebtn active">1</button><button class="pagebtn">2</button><button class="pagebtn">3</button><button class="pagebtn">›</button></div></div>`}
+function renderStock(){const rows=filteredMaterials();const box=document.getElementById('stockTable');if(!rows.length){box.innerHTML=`<div class="empty"><b>${t('noMaterialsTitle')}</b>${t('noMaterialsDesc')}</div>`;return}box.innerHTML=`<table><thead><tr>${[['sku',t('sku')],['name',t('name')],['category',t('category')],['subcategory',t('subcategory')],['attributes',t('attributes')],['quantity',t('quantity')],['unit',t('unit')],['minQuantity',t('minQuantity')],['status',t('status')]].map(([k,t])=>`<th class="sortable" onclick="setSort('${k}')">${t} ↕</th>`).join('')}<th>${t('actions')}</th></tr></thead><tbody>${rows.map(m=>{const st=statusOf(m);return `<tr><td>${m.sku||'—'}</td><td><div class="name">${m.name}</div></td><td>${m.category}</td><td>${m.subcategory||'—'}</td><td>${attrText(m)}</td><td><span class="qty">${m.quantity}</span></td><td>${m.unit}</td><td>${m.minQuantity||0}</td><td><span class="status ${st[0]}"><span class="dot"></span>${st[1]}</span></td><td><div class="row-actions"><button class="iconbtn" title="${t('edit')}" onclick="openMaterialModal('${m.id}')"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button><button class="iconbtn" title="${t('delete')}" onclick="deleteMaterial('${m.id}')"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div></td></tr>`}).join('')}</tbody></table><div class="table-foot"><span>${t('shown')} 1–${rows.length} ${t('of')} ${data.materials.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')}</span><button class="pagebtn active">10</button><button class="pagebtn">‹</button><button class="pagebtn active">1</button><button class="pagebtn">2</button><button class="pagebtn">3</button><button class="pagebtn">›</button></div></div>`}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}renderStock()}
 function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';updateSubFilter();renderAll()}
 function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
 function openModal(title,body,foot){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modalFoot').innerHTML=foot;document.getElementById('modalBackdrop').classList.add('show')}
 function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">Нет</option><option value="true" ${attrs[key]?'selected':''}>Да</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
-function openMaterialModal(id=null){if(!requireAuth())return;const m=id?data.materials.find(x=>x.id===id):{category:'Ткань',subcategory:'велюр',attributes:{},unit:'м²',quantity:0,minQuantity:0};const autoSku=!id;const body=`<div class="step-title"><span>1</span> Основное</div><div class="form-grid"><div class="field"><label>Артикул</label><input id="mSku" class="input" value="${m.sku||nextSku(m.category,m.subcategory,id||'')}"><div class="hint">Артикул создаётся автоматически по категории. Можно изменить вручную.</div></div><div class="field"><label>Название</label><input id="mName" class="input" value="${m.name||''}"></div><div class="field"><label>Категория</label><select id="mCat" class="select">${Object.keys(CATEGORIES).map(c=>`<option ${m.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Подкатегория</label><select id="mSub" class="select"></select></div></div><div class="step-title"><span>2</span> Атрибуты</div><div class="form-grid" id="attrBox"></div><div class="step-title"><span>3</span> Остаток</div><div class="form-grid"><div class="field"><label>Остаток</label><input id="mQty" type="number" step="0.01" class="input" value="${m.quantity||0}"></div><div class="field"><label>Мин. остаток</label><input id="mMin" type="number" step="0.01" class="input" value="${m.minQuantity||0}"></div><div class="field"><label>Ед. изм.</label><input id="mUnit" class="input" value="${m.unit||'м²'}"></div></div>`;const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveMaterial('${id||''}')">Сохранить</button>`;openModal(id?'Редактировать материал':'Добавить материал',body,foot);const catEl=document.getElementById('mCat'),subEl=document.getElementById('mSub'),unitEl=document.getElementById('mUnit'),skuEl=document.getElementById('mSku');function refreshSku(){if(autoSku)skuEl.value=nextSku(catEl.value,subEl.value,id||'')}function redraw(){const cat=catEl.value;const subs=CATEGORIES[cat].subs||[];subEl.innerHTML='<option value="">Без подкатегории</option>'+subs.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');unitEl.value=CATEGORIES[cat].unit;document.getElementById('attrBox').innerHTML=materialFields(cat,subEl.value,m.attributes||{});refreshSku()}catEl.onchange=()=>{m.subcategory='';redraw()};subEl.onchange=()=>{document.getElementById('attrBox').innerHTML=materialFields(catEl.value,subEl.value,m.attributes||{});refreshSku()};redraw()}
+function openMaterialModal(id=null){if(!requireAuth())return;const m=id?data.materials.find(x=>x.id===id):{category:'Ткань',subcategory:'велюр',attributes:{},unit:'м²',quantity:0,minQuantity:0};const autoSku=!id;const body=`<div class="step-title"><span>1</span> ${t('materialBasic')}</div><div class="form-grid"><div class="field"><label>${t('sku')}</label><input id="mSku" class="input" value="${m.sku||nextSku(m.category,m.subcategory,id||'')}"><div class="hint">${t('skuAutoHint')}</div></div><div class="field"><label>${t('name')}</label><input id="mName" class="input" value="${m.name||''}"></div><div class="field"><label>${t('category')}</label><select id="mCat" class="select">${Object.keys(CATEGORIES).map(c=>`<option ${m.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>${t('subcategory')}</label><select id="mSub" class="select"></select></div></div><div class="step-title"><span>2</span> ${t('materialAttrs')}</div><div class="form-grid" id="attrBox"></div><div class="step-title"><span>3</span> ${t('materialStock')}</div><div class="form-grid"><div class="field"><label>${t('quantity')}</label><input id="mQty" type="number" step="0.01" class="input" value="${m.quantity||0}"></div><div class="field"><label>${t('minQuantity')}</label><input id="mMin" type="number" step="0.01" class="input" value="${m.minQuantity||0}"></div><div class="field"><label>${t('unit')}</label><input id="mUnit" class="input" value="${m.unit||'м²'}"></div></div>`;const foot=`<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" onclick="saveMaterial('${id||''}')">${t('save')}</button>`;openModal(id?t('edit'):t('addMaterial'),body,foot);const catEl=document.getElementById('mCat'),subEl=document.getElementById('mSub'),unitEl=document.getElementById('mUnit'),skuEl=document.getElementById('mSku');function refreshSku(){if(autoSku)skuEl.value=nextSku(catEl.value,subEl.value,id||'')}function redraw(){const cat=catEl.value;const subs=CATEGORIES[cat].subs||[];subEl.innerHTML=`<option value="">${t('noSubcategory')}</option>`+subs.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');unitEl.value=CATEGORIES[cat].unit;document.getElementById('attrBox').innerHTML=materialFields(cat,subEl.value,m.attributes||{});refreshSku()}catEl.onchange=()=>{m.subcategory='';redraw()};subEl.onchange=()=>{document.getElementById('attrBox').innerHTML=materialFields(catEl.value,subEl.value,m.attributes||{});refreshSku()};redraw()}
 async function saveMaterial(id){const cat=document.getElementById('mCat').value;const attrs={};document.querySelectorAll('.attr').forEach(i=>attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value);const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||'Без названия',category:cat,subcategory:mSub.value,attributes:attrs,unit:mUnit.value,quantity:Number(mQty.value||0),minQuantity:Number(mMin.value||0),lastUpdated:today()};const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;closeModal();await loadMaterialsFromSupabase();toast(t('savedMaterial'))}
 async function deleteMaterial(id){if(!confirm('Удалить материал?'))return;const ok=await deleteMaterialFromSupabase(id);if(!ok)return;data.models.forEach(m=>m.items=m.items.filter(i=>i.materialId!==id));await loadMaterialsFromSupabase();toast('Материал удалён')}
 function changeQty(id,delta){const m=data.materials.find(x=>x.id===id);const val=prompt('На сколько изменить остаток?',delta);if(val===null)return;m.quantity=Number((Number(m.quantity)+Number(val)).toFixed(3));m.lastUpdated=today();save();renderAll()}
