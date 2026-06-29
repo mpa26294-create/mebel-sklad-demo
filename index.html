@@ -70,7 +70,105 @@
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Добавить</h3><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_79Dh3acmslYiBSUyZ9LQBQ_5GGmBS0G";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function dbToMaterial(row){
+  return {
+    id: row.id,
+    sku: row.article || '',
+    category: row.category || '',
+    subcategory: '',
+    name: row.name || '',
+    attributes: {},
+    unit: row.unit || '',
+    quantity: Number(row.quantity || 0),
+    minQuantity: Number(row.min_quantity || 0),
+    lastUpdated: row.created_at ? String(row.created_at).slice(0,10) : today()
+  };
+}
+
+function materialToDb(m){
+  return {
+    article: m.sku || '',
+    name: m.name || '',
+    category: m.category || '',
+    quantity: Number(m.quantity || 0),
+    unit: m.unit || ''
+  };
+}
+
+async function loadMaterialsFromSupabase(){
+  const { data: rows, error } = await supabaseClient
+    .from('materials')
+    .select('*')
+    .order('id', { ascending: true });
+
+  if(error){
+    console.error(error);
+    toast('Ошибка загрузки Supabase');
+    return;
+  }
+
+  data.materials = (rows || []).map(dbToMaterial);
+  renderAll();
+  updateQuickAddInfo();
+  updateWriteOffInfo();
+}
+
+async function insertMaterialToSupabase(m){
+  const { error } = await supabaseClient
+    .from('materials')
+    .insert(materialToDb(m));
+
+  if(error){
+    console.error(error);
+    toast('Ошибка сохранения');
+    return false;
+  }
+  return true;
+}
+
+async function updateMaterialInSupabase(m){
+  const { error } = await supabaseClient
+    .from('materials')
+    .update(materialToDb(m))
+    .eq('id', m.id);
+
+  if(error){
+    console.error(error);
+    toast('Ошибка обновления');
+    return false;
+  }
+  return true;
+}
+
+async function deleteMaterialFromSupabase(id){
+  const { error } = await supabaseClient
+    .from('materials')
+    .delete()
+    .eq('id', id);
+
+  if(error){
+    console.error(error);
+    toast('Ошибка удаления');
+    return false;
+  }
+  return true;
+}
+
+function subscribeMaterials(){
+  supabaseClient
+    .channel('materials-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'materials' }, () => {
+      loadMaterialsFromSupabase();
+    })
+    .subscribe();
+}
+
 const CATEGORIES = {
   'Ткань': {icon:'🧵', cls:'fabric', unit:'м²', subs:['велюр','шенилл','рогожка','жаккард','экокожа','натуральная кожа'], fields:[['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
   'Поролон': {icon:'🧽', cls:'foam', unit:'м²', subs:[], fields:[['grade','Марка / плотность'],['thickness','Толщина, мм','number']]},
@@ -131,7 +229,7 @@ function migrateSkus(db){
 }
 
 const storeKey='mebel_sklad_data_v1';
-let data = loadData();
+let data = {materials:[],models:[],orders:[]};
 let sortKey='name', sortDir=1;
 function uid(){return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random())}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -150,7 +248,7 @@ function demoData(){
   return {materials,models,orders};
 }
 function loadData(){try{const saved=localStorage.getItem(storeKey);return saved?migrateSkus(JSON.parse(saved)):demoData()}catch(e){return demoData()}}
-function save(){localStorage.setItem(storeKey,JSON.stringify(data))}
+function save(){/* Supabase mode: материалы сохраняются в облако */}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
 function attrText(m){return Object.entries(m.attributes||{}).filter(([k,v])=>v!==''&&v!==null&&v!==false&&v!==undefined).map(([k,v])=>String(v)).join(' · ') || '—'}
 function statusOf(m){if(Number(m.quantity)<=0)return ['out','Нет в наличии'];if(Number(m.quantity)<Number(m.minQuantity||0))return ['low','Заканчивается'];return ['ok','В наличии']}
@@ -168,9 +266,9 @@ function normalizeSku(v){return String(v||'').trim().toUpperCase().replace(/\s+/
 function findMaterialBySku(sku){const n=normalizeSku(sku);return data.materials.find(m=>normalizeSku(m.sku)===n)}
 function quickUnitBySku(sku){const n=normalizeSku(sku);const prefix=n.split('-')[0];const map={A:'м²',P:'м²',K:'м³',F:'м²',SP:'м²',B:'шт',G:'шт',S:'шт',SK:'шт',D:'шт',L:'шт',R:'шт',KA:'шт',M:'шт',KR:'шт',FT:'шт'};return map[prefix]||''}
 function updateQuickAddInfo(){const box=document.getElementById('quickAddBox');const info=document.getElementById('quickInfo');if(!box||!info)return;const sku=quickSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent='Введите артикул — единица измерения определится автоматически';return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">Сейчас: ${mat.quantity} ${mat.unit}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`Материал не найден. По артикулу это похоже на <b>${unit}</b>`:'Материал не найден. Проверьте артикул';}
-function quickAddStock(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=Number(document.getElementById('quickQty')?.value);if(!sku){toast('Введите артикул');return}const mat=findMaterialBySku(sku);if(!mat){toast('Материал с таким артикулом не найден');updateQuickAddInfo();return}if(!Number.isFinite(qty)||qty<=0){toast('Введите количество больше 0');return}mat.quantity=Number((Number(mat.quantity||0)+qty).toFixed(3));mat.lastUpdated=today();save();renderAll();document.getElementById('quickQty').value='';document.getElementById('quickSku').select();updateQuickAddInfo();toast(`Добавлено ${qty} ${mat.unit}: ${mat.name}`)}
+async function quickAddStock(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=Number(document.getElementById('quickQty')?.value);if(!sku){toast('Введите артикул');return}const mat=findMaterialBySku(sku);if(!mat){toast('Материал с таким артикулом не найден');updateQuickAddInfo();return}if(!Number.isFinite(qty)||qty<=0){toast('Введите количество больше 0');return}const oldQty=Number(mat.quantity||0);mat.quantity=Number((oldQty+qty).toFixed(3));mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('quickQty').value='';document.getElementById('quickSku').select();toast(`Добавлено ${qty} ${mat.unit}: ${mat.name}`)}
 function updateWriteOffInfo(){const box=document.getElementById('quickWriteOffBox');const info=document.getElementById('writeOffInfo');if(!box||!info)return;const sku=writeOffSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent='Введите артикул — единица измерения определится автоматически';return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">Сейчас: ${mat.quantity} ${mat.unit}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`Материал не найден. По артикулу это похоже на <b>${unit}</b>`:'Материал не найден. Проверьте артикул';}
-function quickWriteOffStock(){const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=Number(document.getElementById('writeOffQty')?.value);if(!sku){toast('Введите артикул');return}const mat=findMaterialBySku(sku);if(!mat){toast('Материал с таким артикулом не найден');updateWriteOffInfo();return}if(!Number.isFinite(qty)||qty<=0){toast('Введите количество больше 0');return}if(Number(mat.quantity||0)<qty){if(!confirm(`На складе только ${mat.quantity} ${mat.unit}. Списать всё и поставить 0?`))return;mat.quantity=0}else{mat.quantity=Number((Number(mat.quantity||0)-qty).toFixed(3))}mat.lastUpdated=today();save();renderAll();document.getElementById('writeOffQty').value='';document.getElementById('writeOffSku').select();updateWriteOffInfo();toast(`Списано ${qty} ${mat.unit}: ${mat.name}`)}
+async function quickWriteOffStock(){const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=Number(document.getElementById('writeOffQty')?.value);if(!sku){toast('Введите артикул');return}const mat=findMaterialBySku(sku);if(!mat){toast('Материал с таким артикулом не найден');updateWriteOffInfo();return}if(!Number.isFinite(qty)||qty<=0){toast('Введите количество больше 0');return}const oldQty=Number(mat.quantity||0);if(oldQty<qty){if(!confirm(`На складе только ${mat.quantity} ${mat.unit}. Списать всё и поставить 0?`))return;mat.quantity=0}else{mat.quantity=Number((oldQty-qty).toFixed(3))}mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('writeOffQty').value='';document.getElementById('writeOffSku').select();toast(`Списано ${qty} ${mat.unit}: ${mat.name}`)}
 function renderFilters(){
   const cf=document.getElementById('categoryFilter');cf.innerHTML='<option value="">Все категории</option>'+Object.keys(CATEGORIES).map(c=>`<option>${c}</option>`).join('');
   cf.onchange=()=>{updateSubFilter();renderAll()};document.getElementById('subcategoryFilter').onchange=renderAll;document.getElementById('searchInput').oninput=()=>{const t=document.getElementById('topSearchInput'); if(t&&t.value!==document.getElementById('searchInput').value)t.value=document.getElementById('searchInput').value; renderAll()};const top=document.getElementById('topSearchInput'); if(top) top.oninput=()=>{document.getElementById('searchInput').value=top.value;renderAll()};
@@ -186,8 +284,8 @@ function closeModal(){document.getElementById('modalBackdrop').classList.remove(
 function openModal(title,body,foot){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modalFoot').innerHTML=foot;document.getElementById('modalBackdrop').classList.add('show')}
 function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">Нет</option><option value="true" ${attrs[key]?'selected':''}>Да</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
 function openMaterialModal(id=null){const m=id?data.materials.find(x=>x.id===id):{category:'Ткань',subcategory:'велюр',attributes:{},unit:'м²',quantity:0,minQuantity:0};const autoSku=!id;const body=`<div class="step-title"><span>1</span> Основное</div><div class="form-grid"><div class="field"><label>Артикул</label><input id="mSku" class="input" value="${m.sku||nextSku(m.category,m.subcategory,id||'')}"><div class="hint">Артикул создаётся автоматически по категории. Можно изменить вручную.</div></div><div class="field"><label>Название</label><input id="mName" class="input" value="${m.name||''}"></div><div class="field"><label>Категория</label><select id="mCat" class="select">${Object.keys(CATEGORIES).map(c=>`<option ${m.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Подкатегория</label><select id="mSub" class="select"></select></div></div><div class="step-title"><span>2</span> Атрибуты</div><div class="form-grid" id="attrBox"></div><div class="step-title"><span>3</span> Остаток</div><div class="form-grid"><div class="field"><label>Остаток</label><input id="mQty" type="number" step="0.01" class="input" value="${m.quantity||0}"></div><div class="field"><label>Мин. остаток</label><input id="mMin" type="number" step="0.01" class="input" value="${m.minQuantity||0}"></div><div class="field"><label>Ед. изм.</label><input id="mUnit" class="input" value="${m.unit||'м²'}"></div></div>`;const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveMaterial('${id||''}')">Сохранить</button>`;openModal(id?'Редактировать материал':'Добавить материал',body,foot);const catEl=document.getElementById('mCat'),subEl=document.getElementById('mSub'),unitEl=document.getElementById('mUnit'),skuEl=document.getElementById('mSku');function refreshSku(){if(autoSku)skuEl.value=nextSku(catEl.value,subEl.value,id||'')}function redraw(){const cat=catEl.value;const subs=CATEGORIES[cat].subs||[];subEl.innerHTML='<option value="">Без подкатегории</option>'+subs.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');unitEl.value=CATEGORIES[cat].unit;document.getElementById('attrBox').innerHTML=materialFields(cat,subEl.value,m.attributes||{});refreshSku()}catEl.onchange=()=>{m.subcategory='';redraw()};subEl.onchange=()=>{document.getElementById('attrBox').innerHTML=materialFields(catEl.value,subEl.value,m.attributes||{});refreshSku()};redraw()}
-function saveMaterial(id){const cat=document.getElementById('mCat').value;const attrs={};document.querySelectorAll('.attr').forEach(i=>attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value);const obj={id:id||uid(),sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||'Без названия',category:cat,subcategory:mSub.value,attributes:attrs,unit:mUnit.value,quantity:Number(mQty.value||0),minQuantity:Number(mMin.value||0),lastUpdated:today()};if(id){data.materials=data.materials.map(x=>x.id===id?obj:x)}else data.materials.push(obj);save();closeModal();renderAll();toast('Материал сохранён')}
-function deleteMaterial(id){if(!confirm('Удалить материал?'))return;data.materials=data.materials.filter(x=>x.id!==id);data.models.forEach(m=>m.items=m.items.filter(i=>i.materialId!==id));save();renderAll()}
+async function saveMaterial(id){const cat=document.getElementById('mCat').value;const attrs={};document.querySelectorAll('.attr').forEach(i=>attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value);const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||'Без названия',category:cat,subcategory:mSub.value,attributes:attrs,unit:mUnit.value,quantity:Number(mQty.value||0),minQuantity:Number(mMin.value||0),lastUpdated:today()};const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;closeModal();await loadMaterialsFromSupabase();toast('Материал сохранён')}
+async function deleteMaterial(id){if(!confirm('Удалить материал?'))return;const ok=await deleteMaterialFromSupabase(id);if(!ok)return;data.models.forEach(m=>m.items=m.items.filter(i=>i.materialId!==id));await loadMaterialsFromSupabase();toast('Материал удалён')}
 function changeQty(id,delta){const m=data.materials.find(x=>x.id===id);const val=prompt('На сколько изменить остаток?',delta);if(val===null)return;m.quantity=Number((Number(m.quantity)+Number(val)).toFixed(3));m.lastUpdated=today();save();renderAll()}
 function openModelModal(id=null){const model=id?data.models.find(x=>x.id===id):{name:'',note:'',items:[]};const options=data.materials.map(m=>`<option value="${m.id}">${m.sku} — ${m.name} (${m.unit})</option>`).join('');const itemRows=(model.items||[]).map((it,idx)=>modelItemRow(options,it,idx)).join('');const body=`<div class="form-grid"><div class="field"><label>Название модели</label><input id="modelName" class="input" value="${model.name||''}"></div><div class="field"><label>Заметка</label><input id="modelNote" class="input" value="${model.note||''}"></div><div class="field full"><label>Материалы на 1 изделие</label><div id="modelItems">${itemRows}</div><button class="btn small" style="margin-top:8px" onclick="addModelItem()">+ Добавить материал</button><button class="btn small" style="margin-top:8px" onclick="openMaterialModal()">+ Новый материал</button></div></div>`;const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveModel('${id||''}')">Сохранить</button>`;openModal(id?'Редактировать модель':'Новая модель',body,foot);window.currentMaterialOptions=options}
 function modelItemRow(options,it={},idx=0){return `<div class="line-item model-input-row"><select class="select mi-material">${options.replace(`value="${it.materialId}"`,`value="${it.materialId}" selected`)}</select><input class="input mi-qty" type="number" step="0.01" value="${it.qty||1}" style="max-width:120px"><button class="btn small danger" onclick="this.closest('.model-input-row').remove()">Удалить</button></div>`}
@@ -204,7 +302,7 @@ function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileRe
 function wipeData(){if(!confirm('Очистить все данные?'))return;data={materials:[],models:[],orders:[]};save();renderAll()}
 function renderAll(){renderStats();renderStock();renderModels();renderOrders()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm('Вернуть демо-данные? Текущие данные будут заменены.')){data=demoData();save();renderAll();toast('Демо восстановлено')}};
-renderNav();renderFilters();updateSubFilter();renderAll();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickAddStock()}} updateQuickAddInfo();const ws=document.getElementById('writeOffSku'), wq=document.getElementById('writeOffQty'); if(ws){ws.oninput=updateWriteOffInfo;ws.onkeydown=e=>{if(e.key==='Enter')wq?.focus()}} if(wq){wq.onkeydown=e=>{if(e.key==='Enter')quickWriteOffStock()}} updateWriteOffInfo();
+renderNav();renderFilters();updateSubFilter();renderAll();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickAddStock()}} updateQuickAddInfo();const ws=document.getElementById('writeOffSku'), wq=document.getElementById('writeOffQty'); if(ws){ws.oninput=updateWriteOffInfo;ws.onkeydown=e=>{if(e.key==='Enter')wq?.focus()}} if(wq){wq.onkeydown=e=>{if(e.key==='Enter')quickWriteOffStock()}} updateWriteOffInfo();subscribeMaterials();loadMaterialsFromSupabase();
 </script>
 </body>
 </html>
