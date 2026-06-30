@@ -488,11 +488,14 @@
 </style>
 </head>
 <body class="auth-locked">
-<button class="mobile-menu-btn" id="mobileMenuBtn" type="button" onclick="toggleMobileSidebar()" aria-label="Menu">☰</button>
+
 <div class="mobile-sidebar-backdrop" onclick="closeMobileSidebar()"></div>
 <div class="app">
   <aside class="sidebar">
-  <div class="brand"><div class="logo">M</div><div><h1>Склад мягкой мебели</h1><p>учёт материалов</p></div></div>
+  <div class="brand">
+
+<button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+<div class="logo">M</div><div><h1>Склад мягкой мебели</h1><p>учёт материалов</p></div></div>
   <div class="nav-title">Раздел</div>
   <div class="nav" id="mainNav">
     <button class="active" data-section="stock"><span class="ico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span> Склад</button>
@@ -1117,4 +1120,3 @@ renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('
 </script>
 </body>
 </html>
-
