@@ -401,13 +401,13 @@
 @media(max-width:640px){.category-picker{grid-template-columns:1fr}}
 
 
-/* v2.0: compact stock rows and details modal */
+/* v2.1: clean material table without duplicated info */
 .stock-table-wrap{overflow:auto}
-.stock-table{min-width:980px}
+.stock-table{min-width:940px}
 .stock-table tbody tr{cursor:pointer;transition:background .15s}
 .stock-table tbody tr:hover{background:#fafafa}
 .stock-title{display:flex;flex-direction:column;gap:3px;min-width:220px}
-.stock-main{font-weight:500;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
+.stock-main{font-weight:500;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
 .stock-meta{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;white-space:nowrap}
 .stock-dims,.stock-tags{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;color:#4b5563}
 .stock-pdf{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:4px 8px;background:#fff;color:#30343b;font-size:12px;white-space:nowrap}
@@ -488,7 +488,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Добавить</h3><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v2.0 - Compact Rows and Details</div>
+<div class="version-badge" id="appVersionBadge">v2.1 - Clean Material Table</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -498,7 +498,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v2.0 - Compact Rows and Details';
+const APP_VERSION = 'v2.1 - Clean Material Table';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -835,7 +835,10 @@ function toast(t){const el=document.getElementById('toast');el.textContent=t;el.
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function attrText(m){return materialCompactText(m) || '—'}
 function materialDimensions(m){const a=m.attributes||{};return [a.width,a.length,a.height].filter(Boolean).length?`${a.width||'?'}×${a.length||'?'}×${a.height||'?'} мм`:''}
-function materialCompactText(m){const a=m.attributes||{};if(m.category==='Поролон'){return [a.grade, materialDimensions(m), a.supplier, a.tags].filter(Boolean).join(' · ')}return Object.entries(a).filter(([k,v])=>!['pdfPath','pdfUrl','pdfName'].includes(k)&&v!==''&&v!==null&&v!==false&&v!==undefined).map(([k,v])=>String(v)).join(' · ')}
+function materialCompactText(m){const a=m.attributes||{};if(m.category==='Поролон'){return [a.supplier, a.order, a.tags].filter(Boolean).join(' · ')}return Object.entries(a).filter(([k,v])=>!['pdfPath','pdfUrl','pdfName'].includes(k)&&v!==''&&v!==null&&v!==false&&v!==undefined).map(([k,v])=>String(v)).join(' · ')}
+function materialDisplayName(m){if(m.category==='Поролон')return 'Поролон';return m.name||m.category||'—'}
+function materialMainInfo(m){const a=m.attributes||{};if(m.category==='Поролон')return [a.supplier, a.order].filter(Boolean).join(' · ');return materialCompactText(m)}
+function materialDensity(m){const a=m.attributes||{};return m.category==='Поролон'?(a.grade||'—'):'—'}
 function materialPdfButton(m){const a=m.attributes||{};if(!a.pdfPath && !a.pdfUrl && !a.pdfName)return '—';return `<button class="stock-pdf" type="button" onclick="event.stopPropagation();openMaterialPdf('${m.id}')">PDF</button>`}
 async function openMaterialPdf(id){const m=data.materials.find(x=>String(x.id)===String(id));const a=m?.attributes||{};if(a.pdfPath){const {data:link,error}=await supabaseClient.storage.from(PDF_BUCKET).createSignedUrl(a.pdfPath,60*10);if(error){console.error(error);toast('Ошибка открытия PDF');return;}window.open(link.signedUrl,'_blank');return;}if(a.pdfUrl){window.open(a.pdfUrl,'_blank');return;}toast('PDF не найден')}
 function detailItem(label,value,full=false){return `<div class="detail-card ${full?'full':''}"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${value?escapeHtml(value):'—'}</div></div>`}
@@ -866,7 +869,7 @@ function updateSubFilter(){const cat=document.getElementById('categoryFilter').v
 function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;document.getElementById('stats').innerHTML=`<div class="stat"><div><span>${t('totalItems')}</span><b>${total}</b></div><div class="sico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></div></div><div class="stat"><div><span>${t('categories')}</span><b>${cats}</b></div><div class="sico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></div></div><div class="stat"><div><span>${t('lowStock')}</span><b>${low}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg></div></div><div class="stat"><div><span>${t('outStock')}</span><b>${out}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></div></div>`}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${m.category}${m.subcategory?' · '+m.subcategory:''}</span>`}
-function renderStock(){const rows=filteredMaterials();const box=document.getElementById('stockTable');if(!rows.length){box.innerHTML=`<div class="empty"><b>${t('noMaterialsTitle')}</b>${t('noMaterialsDesc')}</div>`;return}box.innerHTML=`<div class="stock-table-wrap"><table class="stock-table"><thead><tr>${[['sku',t('sku')],['name',t('name')],['category',t('category')],['attributes',t('attributes')],['quantity',t('quantity')],['minQuantity',t('minQuantity')],['status',t('status')],['pdf','PDF']].map(([k,label])=>`<th ${k!=='pdf'?'class="sortable" onclick="setSort(\''+k+'\')"':''}>${label}${k!=='pdf'?' ↕':''}</th>`).join('')}<th>${t('actions')}</th></tr></thead><tbody>${rows.map(m=>{const st=statusOf(m);const dims=materialDimensions(m);const compact=materialCompactText(m);return `<tr onclick="openMaterialDetails('${m.id}')"><td><b>${escapeHtml(m.sku||'—')}</b></td><td><div class="stock-title"><div class="stock-main">${escapeHtml(m.name||'—')}</div><div class="stock-meta">${dims?`<span>${escapeHtml(dims)}</span>`:''}${m.attributes?.grade?`<span>${escapeHtml(m.attributes.grade)}</span>`:''}</div></div></td><td>${escapeHtml(m.category||'—')}</td><td><div class="stock-tags">${escapeHtml(compact||'—')}</div></td><td><span class="qty">${escapeHtml(m.quantity)}</span> ${escapeHtml(m.unit||'')}</td><td>${escapeHtml(m.minQuantity||0)}</td><td><span class="status ${st[0]}">${st[1]}</span></td><td>${materialPdfButton(m)}</td><td><div class="row-actions"><button class="iconbtn" title="${t('edit')}" onclick="event.stopPropagation();openMaterialModal('${m.id}')"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button><button class="iconbtn" title="${t('delete')}" onclick="event.stopPropagation();deleteMaterial('${m.id}')"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div></td></tr>`}).join('')}</tbody></table></div><div class="table-foot"><span>${t('shown')} 1–${rows.length} ${t('of')} ${data.materials.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')}</span><button class="pagebtn active">10</button><button class="pagebtn">‹</button><button class="pagebtn active">1</button><button class="pagebtn">2</button><button class="pagebtn">3</button><button class="pagebtn">›</button></div></div>`}
+function renderStock(){const rows=filteredMaterials();const box=document.getElementById('stockTable');if(!rows.length){box.innerHTML=`<div class="empty"><b>${t('noMaterialsTitle')}</b>${t('noMaterialsDesc')}</div>`;return}const columns=[['sku',t('sku')],['name','Материал'],['category',t('category')],['size','Размер'],['density','Плотность'],['quantity',t('quantity')],['minQuantity',t('minQuantity')],['status',t('status')],['pdf','PDF']];box.innerHTML=`<div class="stock-table-wrap"><table class="stock-table"><thead><tr>${columns.map(([k,label])=>`<th ${['sku','name','category','quantity','minQuantity','status'].includes(k)?'class="sortable" onclick="setSort(\''+k+'\')"':''}>${label}${['sku','name','category','quantity','minQuantity','status'].includes(k)?' ↕':''}</th>`).join('')}<th>${t('actions')}</th></tr></thead><tbody>${rows.map(m=>{const st=statusOf(m);const dims=materialDimensions(m)||'—';const density=materialDensity(m);const info=materialMainInfo(m);return `<tr onclick="openMaterialDetails('${m.id}')"><td><b>${escapeHtml(m.sku||'—')}</b></td><td><div class="stock-title"><div class="stock-main">${escapeHtml(materialDisplayName(m))}</div>${info?`<div class="stock-meta"><span>${escapeHtml(info)}</span></div>`:''}</div></td><td>${escapeHtml(m.category||'—')}</td><td><div class="stock-dims">${escapeHtml(dims)}</div></td><td>${escapeHtml(density)}</td><td><span class="qty">${escapeHtml(m.quantity)}</span> ${escapeHtml(m.unit||'')}</td><td>${escapeHtml(m.minQuantity||0)}</td><td><span class="status ${st[0]}">${st[1]}</span></td><td>${materialPdfButton(m)}</td><td><div class="row-actions"><button class="iconbtn" title="${t('edit')}" onclick="event.stopPropagation();openMaterialModal('${m.id}')"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button><button class="iconbtn" title="${t('delete')}" onclick="event.stopPropagation();deleteMaterial('${m.id}')"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div></td></tr>`}).join('')}</tbody></table></div><div class="table-foot"><span>${t('shown')} 1–${rows.length} ${t('of')} ${data.materials.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')}</span><button class="pagebtn active">10</button><button class="pagebtn">‹</button><button class="pagebtn active">1</button><button class="pagebtn">2</button><button class="pagebtn">3</button><button class="pagebtn">›</button></div></div>`}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}renderStock()}
 function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';updateSubFilter();renderAll()}
 function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
@@ -959,7 +962,6 @@ async function saveFoamMaterial(id=''){
   if(!sku.startsWith('DET.')) sku='DET.'+sku;
   const width=safeVal('foamWidth'), length=safeVal('foamLength'), height=safeVal('foamHeight'), grade=safeVal('foamGrade');
   const titleParts=['Поролон'];
-  if(width||length||height) titleParts.push(`${width||'?'}×${length||'?'}×${height||'?'} мм`);
   if(grade) titleParts.push(grade);
   const oldMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null;
   const oldAttrs=oldMaterial?.attributes || {};
