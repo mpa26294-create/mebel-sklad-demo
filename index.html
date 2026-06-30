@@ -401,17 +401,26 @@
 @media(max-width:640px){.category-picker{grid-template-columns:1fr}}
 
 
-/* v2.1: clean material table without duplicated info */
+/* v2.2: polished warehouse table */
 .stock-table-wrap{overflow:auto}
-.stock-table{min-width:940px}
+.stock-table{min-width:980px;table-layout:auto}
+.stock-table th,.stock-table td{white-space:nowrap}
 .stock-table tbody tr{cursor:pointer;transition:background .15s}
 .stock-table tbody tr:hover{background:#fafafa}
-.stock-title{display:flex;flex-direction:column;gap:3px;min-width:220px}
-.stock-main{font-weight:500;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
-.stock-meta{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;white-space:nowrap}
+.stock-sku{font-family:"IBM Plex Mono","SFMono-Regular",Menlo,Consolas,monospace;font-size:12px;font-weight:600;color:#111;letter-spacing:-.02em}
+.stock-title{display:block;min-width:220px}
+.stock-main{font-weight:500;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
 .stock-dims,.stock-tags{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;color:#4b5563}
-.stock-pdf{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:4px 8px;background:#fff;color:#30343b;font-size:12px;white-space:nowrap}
-.stock-pdf:hover{background:#f6f7f8}
+.stock-qty-cell{font-weight:600;border-radius:10px;padding:8px 10px;display:inline-flex;align-items:center;gap:4px;min-width:72px;justify-content:center}
+.stock-qty-cell.out{background:#fff1f1;color:#b42323}
+.stock-qty-cell.low{background:#fff8e7;color:#8a650e}
+.stock-qty-cell.ok{background:transparent;color:#111}
+.status.ok{background:#ecfdf3;color:#287047;border-color:#bfe8cc}
+.status.low{background:#fff8e7;color:var(--yellowText);border-color:#f2dfaa}
+.status.out{background:#fff1f1;color:var(--redText);border-color:#f2c9c9}
+.stock-pdf{width:32px;height:32px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#4f5865;display:inline-grid;place-items:center;transition:background .15s,border-color .15s,color .15s}
+.stock-pdf:hover{background:#f6f7f8;border-color:#d7dce4;color:#111}
+.stock-pdf svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .detail-card{border:1px solid var(--line);border-radius:12px;background:#fbfbfc;padding:12px}
 .detail-card.full{grid-column:1/-1}
@@ -488,7 +497,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Добавить</h3><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v2.1 - Clean Material Table</div>
+<div class="version-badge" id="appVersionBadge">v2.2 - Warehouse Table Polish</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -498,7 +507,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v2.1 - Clean Material Table';
+const APP_VERSION = 'v2.2 - Warehouse Table Polish';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -837,9 +846,9 @@ function attrText(m){return materialCompactText(m) || '—'}
 function materialDimensions(m){const a=m.attributes||{};return [a.width,a.length,a.height].filter(Boolean).length?`${a.width||'?'}×${a.length||'?'}×${a.height||'?'} мм`:''}
 function materialCompactText(m){const a=m.attributes||{};if(m.category==='Поролон'){return [a.supplier, a.order, a.tags].filter(Boolean).join(' · ')}return Object.entries(a).filter(([k,v])=>!['pdfPath','pdfUrl','pdfName'].includes(k)&&v!==''&&v!==null&&v!==false&&v!==undefined).map(([k,v])=>String(v)).join(' · ')}
 function materialDisplayName(m){if(m.category==='Поролон')return 'Поролон';return m.name||m.category||'—'}
-function materialMainInfo(m){const a=m.attributes||{};if(m.category==='Поролон')return [a.supplier, a.order].filter(Boolean).join(' · ');return materialCompactText(m)}
+function materialMainInfo(m){return materialCompactText(m)}
 function materialDensity(m){const a=m.attributes||{};return m.category==='Поролон'?(a.grade||'—'):'—'}
-function materialPdfButton(m){const a=m.attributes||{};if(!a.pdfPath && !a.pdfUrl && !a.pdfName)return '—';return `<button class="stock-pdf" type="button" onclick="event.stopPropagation();openMaterialPdf('${m.id}')">PDF</button>`}
+function materialPdfButton(m){const a=m.attributes||{};if(!a.pdfPath && !a.pdfUrl && !a.pdfName)return '—';return `<button class="stock-pdf" type="button" title="Открыть PDF" aria-label="Открыть PDF" onclick="event.stopPropagation();openMaterialPdf('${m.id}')"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 13h8"/><path d="M8 17h5"/></svg></button>`}
 async function openMaterialPdf(id){const m=data.materials.find(x=>String(x.id)===String(id));const a=m?.attributes||{};if(a.pdfPath){const {data:link,error}=await supabaseClient.storage.from(PDF_BUCKET).createSignedUrl(a.pdfPath,60*10);if(error){console.error(error);toast('Ошибка открытия PDF');return;}window.open(link.signedUrl,'_blank');return;}if(a.pdfUrl){window.open(a.pdfUrl,'_blank');return;}toast('PDF не найден')}
 function detailItem(label,value,full=false){return `<div class="detail-card ${full?'full':''}"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${value?escapeHtml(value):'—'}</div></div>`}
 function openMaterialDetails(id){const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast('Материал не найден');return;}const a=m.attributes||{};const details=[];details.push(detailItem('Артикул',m.sku));details.push(detailItem('Категория',m.category));details.push(detailItem('Название',m.name,true));details.push(detailItem('Остаток',`${m.quantity} ${m.unit}`));details.push(detailItem('Мин. остаток',m.minQuantity||0));if(m.category==='Поролон'){details.push(detailItem('Размеры',materialDimensions(m)));details.push(detailItem('Марка / Плотность',a.grade));details.push(detailItem('Поставщик',a.supplier));details.push(detailItem('Заказ',a.order));details.push(detailItem('Теги',a.tags,true));details.push(detailItem('PDF',a.pdfName,true));}else{details.push(detailItem('Атрибуты',materialCompactText(m),true));}const body=`<div class="detail-head"><div><h4>${escapeHtml(m.name||m.sku)}</h4><p class="muted" style="margin:6px 0 0">${escapeHtml(m.category)}${m.subcategory?' · '+escapeHtml(m.subcategory):''}</p></div><span class="status ${statusOf(m)[0]}">${statusOf(m)[1]}</span></div><div class="detail-grid">${details.join('')}</div>`;const foot=`<button class="btn" onclick="closeModal()">Закрыть</button>${(a.pdfPath||a.pdfUrl)?`<button class="btn" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button>`:''}<button class="btn primary" onclick="openMaterialModal('${m.id}')">Редактировать</button>`;openModal('Информация о материале',body,foot)}
@@ -869,7 +878,7 @@ function updateSubFilter(){const cat=document.getElementById('categoryFilter').v
 function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;document.getElementById('stats').innerHTML=`<div class="stat"><div><span>${t('totalItems')}</span><b>${total}</b></div><div class="sico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></div></div><div class="stat"><div><span>${t('categories')}</span><b>${cats}</b></div><div class="sico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></div></div><div class="stat"><div><span>${t('lowStock')}</span><b>${low}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg></div></div><div class="stat"><div><span>${t('outStock')}</span><b>${out}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></div></div>`}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${m.category}${m.subcategory?' · '+m.subcategory:''}</span>`}
-function renderStock(){const rows=filteredMaterials();const box=document.getElementById('stockTable');if(!rows.length){box.innerHTML=`<div class="empty"><b>${t('noMaterialsTitle')}</b>${t('noMaterialsDesc')}</div>`;return}const columns=[['sku',t('sku')],['name','Материал'],['category',t('category')],['size','Размер'],['density','Плотность'],['quantity',t('quantity')],['minQuantity',t('minQuantity')],['status',t('status')],['pdf','PDF']];box.innerHTML=`<div class="stock-table-wrap"><table class="stock-table"><thead><tr>${columns.map(([k,label])=>`<th ${['sku','name','category','quantity','minQuantity','status'].includes(k)?'class="sortable" onclick="setSort(\''+k+'\')"':''}>${label}${['sku','name','category','quantity','minQuantity','status'].includes(k)?' ↕':''}</th>`).join('')}<th>${t('actions')}</th></tr></thead><tbody>${rows.map(m=>{const st=statusOf(m);const dims=materialDimensions(m)||'—';const density=materialDensity(m);const info=materialMainInfo(m);return `<tr onclick="openMaterialDetails('${m.id}')"><td><b>${escapeHtml(m.sku||'—')}</b></td><td><div class="stock-title"><div class="stock-main">${escapeHtml(materialDisplayName(m))}</div>${info?`<div class="stock-meta"><span>${escapeHtml(info)}</span></div>`:''}</div></td><td>${escapeHtml(m.category||'—')}</td><td><div class="stock-dims">${escapeHtml(dims)}</div></td><td>${escapeHtml(density)}</td><td><span class="qty">${escapeHtml(m.quantity)}</span> ${escapeHtml(m.unit||'')}</td><td>${escapeHtml(m.minQuantity||0)}</td><td><span class="status ${st[0]}">${st[1]}</span></td><td>${materialPdfButton(m)}</td><td><div class="row-actions"><button class="iconbtn" title="${t('edit')}" onclick="event.stopPropagation();openMaterialModal('${m.id}')"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button><button class="iconbtn" title="${t('delete')}" onclick="event.stopPropagation();deleteMaterial('${m.id}')"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div></td></tr>`}).join('')}</tbody></table></div><div class="table-foot"><span>${t('shown')} 1–${rows.length} ${t('of')} ${data.materials.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')}</span><button class="pagebtn active">10</button><button class="pagebtn">‹</button><button class="pagebtn active">1</button><button class="pagebtn">2</button><button class="pagebtn">3</button><button class="pagebtn">›</button></div></div>`}
+function renderStock(){const rows=filteredMaterials();const box=document.getElementById('stockTable');if(!rows.length){box.innerHTML=`<div class="empty"><b>${t('noMaterialsTitle')}</b>${t('noMaterialsDesc')}</div>`;return}const sortable=['sku','name','category','quantity','minQuantity','status'];const columns=[['sku','Артикул'],['name','Материал'],['category','Категория'],['size','Размер'],['density','Плотность/Марка'],['quantity','Остаток'],['minQuantity','Мин. остаток'],['status','Статус'],['pdf','PDF']];box.innerHTML=`<div class="stock-table-wrap"><table class="stock-table"><thead><tr>${columns.map(([k,label])=>`<th ${sortable.includes(k)?'class="sortable" onclick="setSort(\''+k+'\')"':''}>${label}${sortable.includes(k)?' ↕':''}</th>`).join('')}</tr></thead><tbody>${rows.map(m=>{const st=statusOf(m);const dims=materialDimensions(m)||'—';const density=materialDensity(m);return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td><div class="stock-title"><div class="stock-main">${escapeHtml(materialDisplayName(m))}</div></div></td><td>${escapeHtml(m.category||'—')}</td><td><div class="stock-dims">${escapeHtml(dims)}</div></td><td>${escapeHtml(density)}</td><td><span class="stock-qty-cell ${st[0]}">${escapeHtml(m.quantity)} ${escapeHtml(m.unit||'')}</span></td><td>${escapeHtml(m.minQuantity||0)}</td><td><span class="status ${st[0]}">${st[1]}</span></td><td>${materialPdfButton(m)}</td></tr>`}).join('')}</tbody></table></div><div class="table-foot"><span>${t('shown')} 1–${rows.length} ${t('of')} ${data.materials.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')}</span><button class="pagebtn active">10</button><button class="pagebtn">‹</button><button class="pagebtn active">1</button><button class="pagebtn">2</button><button class="pagebtn">3</button><button class="pagebtn">›</button></div></div>`}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}renderStock()}
 function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';updateSubFilter();renderAll()}
 function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
@@ -1019,5 +1028,6 @@ renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('
 </script>
 </body>
 </html>
+
 
 
