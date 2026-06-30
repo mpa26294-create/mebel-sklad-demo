@@ -387,6 +387,19 @@
   box-shadow:none!important;
 }
 
+
+/* v1.7: category picker and foam material form */
+.category-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.category-card{min-height:74px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:14px 15px;text-align:left;display:flex;align-items:center;gap:12px;transition:background .18s,border-color .18s,transform .18s}
+.category-card:hover{background:#fafafa;border-color:#d9dde5;transform:translateY(-1px)}
+.category-card .cat-ico{width:34px;height:34px;border-radius:10px;background:transparent;display:grid;place-items:center;color:#5F6672;font-size:18px;font-weight:400;border:1px solid #eceef2}
+.category-card b{display:block;font-size:14px;font-weight:500;color:#111}
+.category-card span{display:block;margin-top:3px;color:var(--muted);font-size:12px}
+.file-drop{height:42px;border:1px dashed #cfd4dc;background:#fbfbfc;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;color:#68707c}
+.file-drop input{display:none}
+.file-drop small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:640px){.category-picker{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body class="auth-locked">
@@ -406,7 +419,7 @@
 
   <main class="main">
     <section id="stock" class="section active">
-      <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><div class="search-top"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="topSearchInput" placeholder="Поиск по названию, артикулу, атрибутам..."/></div><button class="btn primary" onclick="openMaterialModal()">＋ Добавить материал</button></div></div>
+      <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><div class="search-top"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="topSearchInput" placeholder="Поиск по названию, артикулу, атрибутам..."/></div><button class="btn primary" onclick="openAddCategoryModal()">＋ Добавить материал</button></div></div>
       <div class="stats" id="stats"></div>
       <div class="quick-add" id="quickAddBox">
         <div class="field"><label>Быстрое поступление</label><input class="input" id="quickSku" placeholder="Артикул, например A-0001" autocomplete="off"></div>
@@ -453,7 +466,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Добавить</h3><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v1.6 Edit Fixed</div>
+<div class="version-badge" id="appVersionBadge">v1.9 - Supabase PDF Upload</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -463,7 +476,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v1.6 Edit Fixed';
+const APP_VERSION = 'v1.9 - Supabase PDF Upload';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -620,9 +633,9 @@ function dbToMaterial(row){
     id: row.id,
     sku: row.article || '',
     category: row.category || '',
-    subcategory: '',
+    subcategory: row.subcategory || '',
     name: row.name || '',
-    attributes: {},
+    attributes: row.attributes || {},
     unit: row.unit || '',
     quantity: Number(row.quantity || 0),
     minQuantity: Number(row.min_quantity || 0),
@@ -635,8 +648,11 @@ function materialToDb(m){
     article: m.sku || '',
     name: m.name || '',
     category: m.category || '',
+    subcategory: m.subcategory || '',
     quantity: Number(m.quantity || 0),
-    unit: m.unit || ''
+    unit: m.unit || '',
+    min_quantity: Number(m.minQuantity || 0),
+    attributes: m.attributes || {}
   };
 }
 
@@ -714,13 +730,13 @@ function subscribeMaterials(){
 }
 
 const CATEGORIES = {
-  'Ткань': {icon:'🧵', cls:'fabric', unit:'м²', subs:['велюр','шенилл','рогожка','жаккард','экокожа','натуральная кожа'], fields:[['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
-  'Поролон': {icon:'🧽', cls:'foam', unit:'м²', subs:[], fields:[['grade','Марка / плотность'],['thickness','Толщина, мм','number']]},
-  'Древесина': {icon:'🪵', cls:'wood', unit:'м³', subs:['Брус','Доска'], fieldsBySub:{'Брус':[['crossSection','Сечение'],['woodType','Порода'],['length','Длина, м','number']],'Доска':[['thickness','Толщина, мм','number'],['woodType','Порода']]}},
+  'Ткань': {icon:'◌', cls:'fabric', unit:'м²', subs:['велюр','шенилл','рогожка','жаккард','экокожа','натуральная кожа'], fields:[['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
+  'Поролон': {icon:'◫', cls:'foam', unit:'м²', subs:[], fields:[['grade','Марка / плотность'],['thickness','Толщина, мм','number']]},
+  'Древесина': {icon:'▤', cls:'wood', unit:'м³', subs:['Брус','Доска'], fieldsBySub:{'Брус':[['crossSection','Сечение'],['woodType','Порода'],['length','Длина, м','number']],'Доска':[['thickness','Толщина, мм','number'],['woodType','Порода']]}},
   'Фанера': {icon:'▦', cls:'sheet', unit:'м²', subs:[], fields:[['thickness','Толщина, мм','number'],['grade','Марка / сорт'],['limited','Лимитированная партия','checkbox']]},
   'ДСП': {icon:'◫', cls:'sheet', unit:'м²', subs:[], fields:[['thickness','Толщина, мм','number'],['laminated','Ламинированная','checkbox'],['decor','Цвет / декор'],['limited','Лимитированная партия','checkbox']]},
-  'Крепёж': {icon:'🔩', cls:'fix', unit:'шт', subs:['Болты','Гайки','Шурупы / саморезы'], fieldsBySub:{'Болты':[['thread','Резьба / диаметр'],['length','Длина, мм','number'],['strengthClass','Класс прочности']],'Гайки':[['thread','Резьба'],['type','Тип']],'Шурупы / саморезы':[['diameter','Диаметр, мм','number'],['length','Длина, мм','number'],['type','Тип']] }},
-  'Фурнитура': {icon:'🧰', cls:'hardware', unit:'шт', subs:['Скобы','Молнии','Нитки','Клей','Ножки','Механизмы диванов'], fields:[['type','Тип / описание'],['size','Размер'],['color','Цвет']]}
+  'Крепёж': {icon:'⌘', cls:'fix', unit:'шт', subs:['Болты','Гайки','Шурупы / саморезы'], fieldsBySub:{'Болты':[['thread','Резьба / диаметр'],['length','Длина, мм','number'],['strengthClass','Класс прочности']],'Гайки':[['thread','Резьба'],['type','Тип']],'Шурупы / саморезы':[['diameter','Диаметр, мм','number'],['length','Длина, мм','number'],['type','Тип']] }},
+  'Фурнитура': {icon:'⬚', cls:'hardware', unit:'шт', subs:['Скобы','Молнии','Нитки','Клей','Ножки','Механизмы диванов'], fields:[['type','Тип / описание'],['size','Размер'],['color','Цвет']]}
 };
 const SKU_PREFIX = {
   'Ткань':'A',          // Audums
@@ -794,7 +810,7 @@ function demoData(){
 function loadData(){try{const saved=localStorage.getItem(storeKey);return saved?migrateSkus(JSON.parse(saved)):demoData()}catch(e){return demoData()}}
 function save(){/* Supabase mode: материалы сохраняются в облако */}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
-function attrText(m){return Object.entries(m.attributes||{}).filter(([k,v])=>v!==''&&v!==null&&v!==false&&v!==undefined).map(([k,v])=>String(v)).join(' · ') || '—'}
+function attrText(m){return Object.entries(m.attributes||{}).filter(([k,v])=>!['pdfPath','pdfUrl'].includes(k)&&v!==''&&v!==null&&v!==false&&v!==undefined).map(([k,v])=>k==='pdfName'?`PDF: ${v}`:String(v)).join(' · ') || '—'}
 function statusOf(m){if(Number(m.quantity)<=0)return ['out',t('noStock')];if(Number(m.quantity)<Number(m.minQuantity||0))return ['low',t('lowStock')];return ['ok',t('inStock')]}
 function renderNav(){
   document.getElementById('mainNav').onclick=e=>{
@@ -826,12 +842,134 @@ function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}renderSt
 function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';updateSubFilter();renderAll()}
 function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
 function openModal(title,body,foot){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modalFoot').innerHTML=foot;document.getElementById('modalBackdrop').classList.add('show')}
+
+const ADD_CATEGORIES = ['Поролон','Ткань','Древесина','Фанера','ДСП','Крепёж','Фурнитура'];
+function categoryHint(cat){
+  const map={
+    'Поролон':'детали, плотность, размеры',
+    'Ткань':'рулоны, цвет, коллекция',
+    'Древесина':'брус, доска, порода',
+    'Фанера':'листы и толщина',
+    'ДСП':'листы, декор, ламинация',
+    'Крепёж':'шурупы, болты, гайки',
+    'Фурнитура':'механизмы, ножки, клей'
+  };
+  return map[cat] || '';
+}
+function openAddCategoryModal(){
+  if(!requireAuth())return;
+  const body=`<div class="step-title"><span>1</span> Что добавить?</div><div class="category-picker">${ADD_CATEGORIES.map(cat=>`<button class="category-card" type="button" onclick="selectMaterialCategory('${cat}')"><div class="cat-ico">${CATEGORIES[cat]?.icon||'+'}</div><div><b>${cat}</b><span>${categoryHint(cat)}</span></div></button>`).join('')}</div>`;
+  const foot=`<button class="btn" onclick="closeModal()">${t('cancel')}</button>`;
+  openModal('Добавить материал',body,foot);
+}
+function selectMaterialCategory(cat){
+  if(cat==='Поролон'){openFoamModal();return;}
+  openMaterialModal(null,cat);
+}
+function safeVal(id){return document.getElementById(id)?.value?.trim() || ''}
+const PDF_BUCKET = 'material-pdfs';
+function cleanStoragePart(v){return String(v||'file').trim().replace(/[^a-zA-Z0-9._-]+/g,'_').replace(/^_+|_+$/g,'') || 'file'}
+async function uploadFoamPdfToSupabase(sku, oldAttrs={}){
+  const input=document.getElementById('foamPdf');
+  const file=input?.files?.[0];
+  if(!file){
+    return {
+      pdfName: oldAttrs.pdfName || '',
+      pdfPath: oldAttrs.pdfPath || '',
+      pdfUrl: oldAttrs.pdfUrl || ''
+    };
+  }
+  if(file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')){
+    toast('Можно загружать только PDF');
+    return null;
+  }
+  const safeSku=cleanStoragePart(sku.replace('DET.','DET-'));
+  const safeName=cleanStoragePart(file.name);
+  const path=`foam/${safeSku}/${Date.now()}_${safeName}`;
+  const { error } = await supabaseClient.storage
+    .from(PDF_BUCKET)
+    .upload(path, file, { cacheControl:'3600', upsert:false, contentType:'application/pdf' });
+  if(error){
+    console.error(error);
+    toast('Ошибка загрузки PDF');
+    return null;
+  }
+  const { data: publicData } = supabaseClient.storage.from(PDF_BUCKET).getPublicUrl(path);
+  return { pdfName:file.name, pdfPath:path, pdfUrl:publicData?.publicUrl || '' };
+}
+function openPdfUrl(url){
+  if(!url){toast('PDF не найден');return;}
+  window.open(url,'_blank');
+}
+function openFoamModal(id=null){
+  if(!requireAuth())return;
+  const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
+  const attrs=found?.attributes||{};
+  const sku=found?.sku || 'DET.';
+  const body=`<div class="step-title"><span>1</span> Поролон</div>
+  <div class="form-grid">
+    <div class="field"><label>Артикул</label><input id="foamSku" class="input" value="${sku}"><div class="hint">Начало DET. уже стоит, дальше допишите номер или код детали.</div></div>
+    <div class="field"><label>Марка / Плотность</label><input id="foamGrade" class="input" value="${attrs.grade||''}" placeholder="Например ST-3040"></div>
+    <div class="field"><label>Ширина, мм</label><input id="foamWidth" type="number" step="1" class="input" value="${attrs.width||''}"></div>
+    <div class="field"><label>Длина, мм</label><input id="foamLength" type="number" step="1" class="input" value="${attrs.length||''}"></div>
+    <div class="field"><label>Высота, мм</label><input id="foamHeight" type="number" step="1" class="input" value="${attrs.height||''}"></div>
+    <div class="field"><label>Минимальный остаток</label><input id="foamMin" type="number" step="0.01" class="input" value="${found?.minQuantity||0}"></div>
+    <div class="field"><label>Поставщик</label><input id="foamSupplier" class="input" value="${attrs.supplier||''}" placeholder="Название поставщика"></div>
+    <div class="field"><label>Заказ</label><input id="foamOrder" class="input" value="${attrs.order||''}" placeholder="Номер заказа / закупки"></div>
+    <div class="field full"><label>Загрузка PDF</label><label class="file-drop"><small id="foamPdfName">${attrs.pdfName||'PDF не выбран'}</small><span class="btn small" type="button">Выбрать PDF</span><input id="foamPdf" type="file" accept="application/pdf" onchange="document.getElementById('foamPdfName').textContent=this.files[0]?.name||'PDF не выбран'"></label><div class="hint">PDF загружается в Supabase Storage bucket: material-pdfs.</div>${attrs.pdfUrl?`<button class="btn small" style="margin-top:8px" onclick="openPdfUrl('${attrs.pdfUrl}')">Открыть текущий PDF</button>`:''}</div>
+    <div class="field full"><label>Теги</label><input id="foamTags" class="input" value="${attrs.tags||''}" placeholder="Например: сиденье, спинка, серый"></div>
+  </div>`;
+  const foot=`<button class="btn" onclick="openAddCategoryModal()">Назад</button><button class="btn primary" onclick="saveFoamMaterial('${id||''}')">${t('save')}</button>`;
+  openModal(id?'Редактировать поролон':'Добавить поролон',body,foot);
+  const skuEl=document.getElementById('foamSku');
+  if(skuEl){skuEl.oninput=()=>{if(!skuEl.value.startsWith('DET.'))skuEl.value='DET.'+skuEl.value.replace(/^DET\.?/i,'')}}
+}
+async function saveFoamMaterial(id=''){
+  let sku=safeVal('foamSku');
+  if(!sku || sku==='DET.'){toast('Допишите артикул после DET.');return;}
+  if(!sku.startsWith('DET.')) sku='DET.'+sku;
+  const width=safeVal('foamWidth'), length=safeVal('foamLength'), height=safeVal('foamHeight'), grade=safeVal('foamGrade');
+  const titleParts=['Поролон'];
+  if(width||length||height) titleParts.push(`${width||'?'}×${length||'?'}×${height||'?'} мм`);
+  if(grade) titleParts.push(grade);
+  const oldMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null;
+  const oldAttrs=oldMaterial?.attributes || {};
+  const pdfData=await uploadFoamPdfToSupabase(sku, oldAttrs);
+  if(!pdfData)return;
+  const attrs={
+    width, length, height, grade,
+    supplier:safeVal('foamSupplier'),
+    order:safeVal('foamOrder'),
+    pdfName:pdfData.pdfName,
+    pdfPath:pdfData.pdfPath,
+    pdfUrl:pdfData.pdfUrl,
+    tags:safeVal('foamTags')
+  };
+  const obj={
+    id:id||null,
+    sku,
+    name:titleParts.join(' · '),
+    category:'Поролон',
+    subcategory:'',
+    attributes:attrs,
+    unit:'шт',
+    quantity:id?(oldMaterial?.quantity||0):0,
+    minQuantity:Number(safeVal('foamMin')||0),
+    lastUpdated:today()
+  };
+  const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
+  if(!ok)return;
+  closeModal();
+  await loadMaterialsFromSupabase();
+  toast(t('savedMaterial'));
+}
+
 function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">Нет</option><option value="true" ${attrs[key]?'selected':''}>Да</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
-function openMaterialModal(id=null){if(!requireAuth())return;const foundMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null; if(id && !foundMaterial){toast('Материал не найден'); return;} const m=foundMaterial||{category:'Ткань',subcategory:'велюр',attributes:{},unit:'м²',quantity:0,minQuantity:0};const autoSku=!id;const body=`<div class="step-title"><span>1</span> ${t('materialBasic')}</div><div class="form-grid"><div class="field"><label>${t('sku')}</label><input id="mSku" class="input" value="${m.sku||nextSku(m.category,m.subcategory,id||'')}"><div class="hint">${t('skuAutoHint')}</div></div><div class="field"><label>${t('name')}</label><input id="mName" class="input" value="${m.name||''}"></div><div class="field"><label>${t('category')}</label><select id="mCat" class="select">${Object.keys(CATEGORIES).map(c=>`<option ${m.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>${t('subcategory')}</label><select id="mSub" class="select"></select></div></div><div class="step-title"><span>2</span> ${t('materialAttrs')}</div><div class="form-grid" id="attrBox"></div><div class="step-title"><span>3</span> ${t('materialStock')}</div><div class="form-grid"><div class="field"><label>${t('quantity')}</label><input id="mQty" type="number" step="0.01" class="input" value="${m.quantity||0}"></div><div class="field"><label>${t('minQuantity')}</label><input id="mMin" type="number" step="0.01" class="input" value="${m.minQuantity||0}"></div><div class="field"><label>${t('unit')}</label><input id="mUnit" class="input" value="${m.unit||'м²'}"></div></div>`;const foot=`<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" onclick="saveMaterial('${id||''}')">${t('save')}</button>`;openModal(id?t('edit'):t('addMaterial'),body,foot);const catEl=document.getElementById('mCat'),subEl=document.getElementById('mSub'),unitEl=document.getElementById('mUnit'),skuEl=document.getElementById('mSku');function refreshSku(){if(autoSku)skuEl.value=nextSku(catEl.value,subEl.value,id||'')}function redraw(){const cat=catEl.value;const subs=CATEGORIES[cat].subs||[];subEl.innerHTML=`<option value="">${t('noSubcategory')}</option>`+subs.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');unitEl.value=CATEGORIES[cat].unit;document.getElementById('attrBox').innerHTML=materialFields(cat,subEl.value,m.attributes||{});refreshSku()}catEl.onchange=()=>{m.subcategory='';redraw()};subEl.onchange=()=>{document.getElementById('attrBox').innerHTML=materialFields(catEl.value,subEl.value,m.attributes||{});refreshSku()};redraw()}
+function openMaterialModal(id=null, presetCategory='Ткань'){if(!requireAuth())return;const foundMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null; if(id && !foundMaterial){toast('Материал не найден'); return;} if(foundMaterial && foundMaterial.category==='Поролон'){openFoamModal(id);return;} const preset=CATEGORIES[presetCategory]?presetCategory:'Ткань'; const firstSub=(CATEGORIES[preset]?.subs||[])[0]||''; const m=foundMaterial||{category:preset,subcategory:firstSub,attributes:{},unit:CATEGORIES[preset]?.unit||'м²',quantity:0,minQuantity:0};const autoSku=!id;const body=`<div class="step-title"><span>1</span> ${t('materialBasic')}</div><div class="form-grid"><div class="field"><label>${t('sku')}</label><input id="mSku" class="input" value="${m.sku||nextSku(m.category,m.subcategory,id||'')}"><div class="hint">${t('skuAutoHint')}</div></div><div class="field"><label>${t('name')}</label><input id="mName" class="input" value="${m.name||''}"></div><div class="field"><label>${t('category')}</label><select id="mCat" class="select">${Object.keys(CATEGORIES).map(c=>`<option ${m.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>${t('subcategory')}</label><select id="mSub" class="select"></select></div></div><div class="step-title"><span>2</span> ${t('materialAttrs')}</div><div class="form-grid" id="attrBox"></div><div class="step-title"><span>3</span> ${t('materialStock')}</div><div class="form-grid"><div class="field"><label>${t('quantity')}</label><input id="mQty" type="number" step="0.01" class="input" value="${m.quantity||0}"></div><div class="field"><label>${t('minQuantity')}</label><input id="mMin" type="number" step="0.01" class="input" value="${m.minQuantity||0}"></div><div class="field"><label>${t('unit')}</label><input id="mUnit" class="input" value="${m.unit||'м²'}"></div></div>`;const foot=`<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" onclick="saveMaterial('${id||''}')">${t('save')}</button>`;openModal(id?t('edit'):t('addMaterial'),body,foot);const catEl=document.getElementById('mCat'),subEl=document.getElementById('mSub'),unitEl=document.getElementById('mUnit'),skuEl=document.getElementById('mSku');function refreshSku(){if(autoSku)skuEl.value=nextSku(catEl.value,subEl.value,id||'')}function redraw(){const cat=catEl.value;const subs=CATEGORIES[cat].subs||[];subEl.innerHTML=`<option value="">${t('noSubcategory')}</option>`+subs.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');unitEl.value=CATEGORIES[cat].unit;document.getElementById('attrBox').innerHTML=materialFields(cat,subEl.value,m.attributes||{});refreshSku()}catEl.onchange=()=>{m.subcategory='';redraw()};subEl.onchange=()=>{document.getElementById('attrBox').innerHTML=materialFields(catEl.value,subEl.value,m.attributes||{});refreshSku()};redraw()}
 async function saveMaterial(id){const cat=document.getElementById('mCat').value;const attrs={};document.querySelectorAll('.attr').forEach(i=>attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value);const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||'Без названия',category:cat,subcategory:mSub.value,attributes:attrs,unit:mUnit.value,quantity:Number(mQty.value||0),minQuantity:Number(mMin.value||0),lastUpdated:today()};const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;closeModal();await loadMaterialsFromSupabase();toast(t('savedMaterial'))}
 async function deleteMaterial(id){if(!confirm('Удалить материал?'))return;const ok=await deleteMaterialFromSupabase(id);if(!ok)return;data.models.forEach(m=>m.items=m.items.filter(i=>i.materialId!==id));await loadMaterialsFromSupabase();toast('Материал удалён')}
 function changeQty(id,delta){const m=data.materials.find(x=>String(x.id)===String(id));const val=prompt('На сколько изменить остаток?',delta);if(val===null)return;m.quantity=Number((Number(m.quantity)+Number(val)).toFixed(3));m.lastUpdated=today();save();renderAll()}
-function openModelModal(id=null){const model=id?data.models.find(x=>String(x.id)===String(id)):{name:'',note:'',items:[]};const options=data.materials.map(m=>`<option value="${m.id}">${m.sku} — ${m.name} (${m.unit})</option>`).join('');const itemRows=(model.items||[]).map((it,idx)=>modelItemRow(options,it,idx)).join('');const body=`<div class="form-grid"><div class="field"><label>Название модели</label><input id="modelName" class="input" value="${model.name||''}"></div><div class="field"><label>Заметка</label><input id="modelNote" class="input" value="${model.note||''}"></div><div class="field full"><label>Материалы на 1 изделие</label><div id="modelItems">${itemRows}</div><button class="btn small" style="margin-top:8px" onclick="addModelItem()">+ Добавить материал</button><button class="btn small" style="margin-top:8px" onclick="openMaterialModal()">+ Новый материал</button></div></div>`;const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveModel('${id||''}')">Сохранить</button>`;openModal(id?'Редактировать модель':'Новая модель',body,foot);window.currentMaterialOptions=options}
+function openModelModal(id=null){const model=id?data.models.find(x=>String(x.id)===String(id)):{name:'',note:'',items:[]};const options=data.materials.map(m=>`<option value="${m.id}">${m.sku} — ${m.name} (${m.unit})</option>`).join('');const itemRows=(model.items||[]).map((it,idx)=>modelItemRow(options,it,idx)).join('');const body=`<div class="form-grid"><div class="field"><label>Название модели</label><input id="modelName" class="input" value="${model.name||''}"></div><div class="field"><label>Заметка</label><input id="modelNote" class="input" value="${model.note||''}"></div><div class="field full"><label>Материалы на 1 изделие</label><div id="modelItems">${itemRows}</div><button class="btn small" style="margin-top:8px" onclick="addModelItem()">+ Добавить материал</button><button class="btn small" style="margin-top:8px" onclick="openAddCategoryModal()">+ Новый материал</button></div></div>`;const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveModel('${id||''}')">Сохранить</button>`;openModal(id?'Редактировать модель':'Новая модель',body,foot);window.currentMaterialOptions=options}
 function modelItemRow(options,it={},idx=0){return `<div class="line-item model-input-row"><select class="select mi-material">${options.replace(`value="${it.materialId}"`,`value="${it.materialId}" selected`)}</select><input class="input mi-qty" type="number" step="0.01" value="${it.qty||1}" style="max-width:120px"><button class="btn small danger" onclick="this.closest('.model-input-row').remove()">Удалить</button></div>`}
 function addModelItem(){document.getElementById('modelItems').insertAdjacentHTML('beforeend',modelItemRow(window.currentMaterialOptions||''))}
 function saveModel(id){const items=[...document.querySelectorAll('.model-input-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.mi-material').value));return {materialId:mat?.id,qty:Number(r.querySelector('.mi-qty').value||0),unit:mat?.unit||''}}).filter(i=>i.materialId);const obj={id:id||uid(),name:modelName.value.trim()||'Без названия',note:modelNote.value.trim(),items};if(id)data.models=data.models.map(x=>String(x.id)===String(id)?obj:x);else data.models.push(obj);save();closeModal();renderAll();toast('Модель сохранена')}
