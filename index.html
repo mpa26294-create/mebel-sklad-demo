@@ -431,6 +431,22 @@
 .detail-actions{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:640px){.detail-grid{grid-template-columns:1fr}.stock-main{max-width:220px}}
 
+/* v2.3: centered table headers, PDF actions, stock adjust */
+.stock-table th{text-align:center!important}
+.stock-table td:nth-child(1),
+.stock-table td:nth-child(3),
+.stock-table td:nth-child(4),
+.stock-table td:nth-child(5),
+.stock-table td:nth-child(6),
+.stock-table td:nth-child(7),
+.stock-table td:nth-child(8),
+.stock-table td:nth-child(9){text-align:center}
+.stock-table td:nth-child(2){text-align:left}
+.stock-adjust{grid-column:1/-1;border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px;display:grid;grid-template-columns:1fr 130px auto auto;gap:10px;align-items:end}
+.stock-adjust-title{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#8a8f99;margin-bottom:7px}.stock-adjust-current{font-size:20px;font-weight:600;color:#111;letter-spacing:-.03em}.stock-adjust .btn{height:42px}.pdf-actions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:640px){.stock-adjust{grid-template-columns:1fr}.pdf-actions{width:100%}.pdf-actions .btn{flex:1}}
+
+
 </style>
 </head>
 <body class="auth-locked">
@@ -497,7 +513,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Добавить</h3><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v2.2 - Warehouse Table Polish</div>
+<div class="version-badge" id="appVersionBadge">v2.3 - PDF Actions and Stock Adjust</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -507,7 +523,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v2.2 - Warehouse Table Polish';
+const APP_VERSION = 'v2.3 - PDF Actions and Stock Adjust';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -849,9 +865,14 @@ function materialDisplayName(m){if(m.category==='Поролон')return 'Пор�
 function materialMainInfo(m){return materialCompactText(m)}
 function materialDensity(m){const a=m.attributes||{};return m.category==='Поролон'?(a.grade||'—'):'—'}
 function materialPdfButton(m){const a=m.attributes||{};if(!a.pdfPath && !a.pdfUrl && !a.pdfName)return '—';return `<button class="stock-pdf" type="button" title="Открыть PDF" aria-label="Открыть PDF" onclick="event.stopPropagation();openMaterialPdf('${m.id}')"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 13h8"/><path d="M8 17h5"/></svg></button>`}
-async function openMaterialPdf(id){const m=data.materials.find(x=>String(x.id)===String(id));const a=m?.attributes||{};if(a.pdfPath){const {data:link,error}=await supabaseClient.storage.from(PDF_BUCKET).createSignedUrl(a.pdfPath,60*10);if(error){console.error(error);toast('Ошибка открытия PDF');return;}window.open(link.signedUrl,'_blank');return;}if(a.pdfUrl){window.open(a.pdfUrl,'_blank');return;}toast('PDF не найден')}
+async function materialPdfUrl(id){const m=data.materials.find(x=>String(x.id)===String(id));const a=m?.attributes||{};if(a.pdfPath){const {data:link,error}=await supabaseClient.storage.from(PDF_BUCKET).createSignedUrl(a.pdfPath,60*10);if(error){console.error(error);toast('Ошибка открытия PDF');return null;}return link.signedUrl;}if(a.pdfUrl)return a.pdfUrl;toast('PDF не найден');return null}
+async function openMaterialPdf(id){const url=await materialPdfUrl(id);if(url)window.open(url,'_blank')}
+async function downloadMaterialPdf(id){const m=data.materials.find(x=>String(x.id)===String(id));const a=m?.attributes||{};const url=await materialPdfUrl(id);if(!url)return;const link=document.createElement('a');link.href=url;link.download=a.pdfName||`${m?.sku||'material'}.pdf`;link.target='_blank';document.body.appendChild(link);link.click();link.remove()}
+async function printMaterialPdf(id){const url=await materialPdfUrl(id);if(!url)return;const w=window.open('','_blank');if(!w){toast('Разрешите всплывающие окна для печати');return;}w.document.write(`<html><head><title>Печать PDF</title><style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="${url}" onload="setTimeout(()=>{window.focus();window.print()},800)"></iframe></body></html>`);w.document.close()}
 function detailItem(label,value,full=false){return `<div class="detail-card ${full?'full':''}"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${value?escapeHtml(value):'—'}</div></div>`}
-function openMaterialDetails(id){const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast('Материал не найден');return;}const a=m.attributes||{};const details=[];details.push(detailItem('Артикул',m.sku));details.push(detailItem('Категория',m.category));details.push(detailItem('Название',m.name,true));details.push(detailItem('Остаток',`${m.quantity} ${m.unit}`));details.push(detailItem('Мин. остаток',m.minQuantity||0));if(m.category==='Поролон'){details.push(detailItem('Размеры',materialDimensions(m)));details.push(detailItem('Марка / Плотность',a.grade));details.push(detailItem('Поставщик',a.supplier));details.push(detailItem('Заказ',a.order));details.push(detailItem('Теги',a.tags,true));details.push(detailItem('PDF',a.pdfName,true));}else{details.push(detailItem('Атрибуты',materialCompactText(m),true));}const body=`<div class="detail-head"><div><h4>${escapeHtml(m.name||m.sku)}</h4><p class="muted" style="margin:6px 0 0">${escapeHtml(m.category)}${m.subcategory?' · '+escapeHtml(m.subcategory):''}</p></div><span class="status ${statusOf(m)[0]}">${statusOf(m)[1]}</span></div><div class="detail-grid">${details.join('')}</div>`;const foot=`<button class="btn" onclick="closeModal()">Закрыть</button>${(a.pdfPath||a.pdfUrl)?`<button class="btn" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button>`:''}<button class="btn primary" onclick="openMaterialModal('${m.id}')">Редактировать</button>`;openModal('Информация о материале',body,foot)}
+function stockAdjustBlock(m){return `<div class="stock-adjust"><div><div class="stock-adjust-title">Изменить остаток</div><div class="stock-adjust-current">${escapeHtml(m.quantity)} ${escapeHtml(m.unit||'')}</div></div><div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">Количество</span><input id="detailQtyChange" class="input" type="number" step="0.01" min="0" placeholder="0"></label></div><button class="btn" onclick="adjustMaterialQty('${m.id}',-1)">− Списать</button><button class="btn primary" onclick="adjustMaterialQty('${m.id}',1)">+ Добавить</button></div>`}
+async function adjustMaterialQty(id,dir){const input=document.getElementById('detailQtyChange');const delta=Number(input?.value||0);if(!Number.isFinite(delta)||delta<=0){toast('Введите количество больше 0');return;}const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast('Материал не найден');return;}const oldQty=Number(m.quantity||0);const next=dir>0?oldQty+delta:Math.max(0,oldQty-delta);m.quantity=Number(next.toFixed(3));m.lastUpdated=today();const ok=await updateMaterialInSupabase(m);if(!ok){m.quantity=oldQty;return;}await loadMaterialsFromSupabase();openMaterialDetails(id);toast(dir>0?'Остаток добавлен':'Остаток списан')}
+function openMaterialDetails(id){const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast('Материал не найден');return;}const a=m.attributes||{};const details=[];details.push(detailItem('Артикул',m.sku));details.push(detailItem('Категория',m.category));details.push(detailItem('Название',m.name,true));details.push(detailItem('Остаток',`${m.quantity} ${m.unit}`));details.push(detailItem('Мин. остаток',m.minQuantity||0));if(m.category==='Поролон'){details.push(detailItem('Размеры',materialDimensions(m)));details.push(detailItem('Марка / Плотность',a.grade));details.push(detailItem('Поставщик',a.supplier));details.push(detailItem('Заказ',a.order));details.push(detailItem('Теги',a.tags,true));details.push(detailItem('PDF',a.pdfName,true));}else{details.push(detailItem('Атрибуты',materialCompactText(m),true));}const body=`<div class="detail-head"><div><h4>${escapeHtml(m.name||m.sku)}</h4><p class="muted" style="margin:6px 0 0">${escapeHtml(m.category)}${m.subcategory?' · '+escapeHtml(m.subcategory):''}</p></div><span class="status ${statusOf(m)[0]}">${statusOf(m)[1]}</span></div><div class="detail-grid">${details.join('')}${stockAdjustBlock(m)}</div>`;const hasPdf=a.pdfPath||a.pdfUrl;const foot=`<button class="btn" onclick="closeModal()">Закрыть</button>${hasPdf?`<div class="pdf-actions"><button class="btn" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button><button class="btn" onclick="downloadMaterialPdf('${m.id}')">Скачать PDF</button><button class="btn" onclick="printMaterialPdf('${m.id}')">Печать PDF</button></div>`:''}<button class="btn primary" onclick="openMaterialModal('${m.id}')">Редактировать</button>`;openModal('Информация о материале',body,foot)}
 function statusOf(m){if(Number(m.quantity)<=0)return ['out',t('noStock')];if(Number(m.quantity)<Number(m.minQuantity||0))return ['low',t('lowStock')];return ['ok',t('inStock')]}
 function renderNav(){
   document.getElementById('mainNav').onclick=e=>{
@@ -1028,6 +1049,3 @@ renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('
 </script>
 </body>
 </html>
-
-
-
