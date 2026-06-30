@@ -447,6 +447,16 @@
 @media(max-width:640px){.stock-adjust{grid-template-columns:1fr}.pdf-actions{width:100%}.pdf-actions .btn{flex:1}}
 
 
+
+/* v2.7: visible language switch and real pagination */
+.side-lang{display:flex!important;align-items:center;justify-content:center;gap:4px;margin-top:12px;background:#f2f3f5;border:1px solid var(--line);border-radius:999px;padding:4px}
+.side-lang button{height:28px;min-width:36px;border-radius:999px;color:#6b7280;font-size:12px;font-weight:600;padding:0 10px;background:transparent;border:0}
+.side-lang button.active{background:#fff;color:#111;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pager{gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pagebtn.disabled{opacity:.42;cursor:not-allowed;pointer-events:none}
+.pagebtn.more{width:auto;padding:0 12px}
+.table-foot strong{font-weight:500;color:#111}
+
 </style>
 </head>
 <body class="auth-locked">
@@ -513,7 +523,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Добавить</h3><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v2.5 - Stock Quantity Rules</div>
+<div class="version-badge" id="appVersionBadge">v2.7 - Language and Pagination</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -523,7 +533,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v2.5 - Stock Quantity Rules';
+const APP_VERSION = 'v2.7 - Language and Pagination';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -838,6 +848,8 @@ function migrateSkus(db){
 const storeKey='mebel_sklad_data_v1';
 let data = {materials:[],models:[],orders:[]};
 let sortKey='name', sortDir=1;
+let stockPage=1;
+const stockPageSize=15;
 function uid(){return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random())}
 function today(){return new Date().toISOString().slice(0,10)}
 function demoData(){
@@ -870,8 +882,9 @@ async function openMaterialPdf(id){const url=await materialPdfUrl(id);if(url)win
 async function downloadMaterialPdf(id){const m=data.materials.find(x=>String(x.id)===String(id));const a=m?.attributes||{};const url=await materialPdfUrl(id);if(!url)return;const link=document.createElement('a');link.href=url;link.download=a.pdfName||`${m?.sku||'material'}.pdf`;link.target='_blank';document.body.appendChild(link);link.click();link.remove()}
 async function printMaterialPdf(id){const url=await materialPdfUrl(id);if(!url)return;const w=window.open('','_blank');if(!w){toast('Разрешите всплывающие окна для печати');return;}w.document.write(`<html><head><title>Печать PDF</title><style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="${url}" onload="setTimeout(()=>{window.focus();window.print()},800)"></iframe></body></html>`);w.document.close()}
 function detailItem(label,value,full=false){return `<div class="detail-card ${full?'full':''}"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${value?escapeHtml(value):'—'}</div></div>`}
-function stockAdjustBlock(m){return `<div class="stock-adjust"><div><div class="stock-adjust-title">Изменить остаток</div><div class="stock-adjust-current">${escapeHtml(m.quantity)} ${escapeHtml(m.unit||'')}</div></div><div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">Количество</span><input id="detailQtyChange" class="input" type="number" step="1" min="1" value="1" inputmode="numeric"></label></div><button class="btn" onclick="adjustMaterialQty('${m.id}',-1)">− Списать</button><button class="btn primary" onclick="adjustMaterialQty('${m.id}',1)">+ Добавить</button></div>`}
-async function adjustMaterialQty(id,dir){const input=document.getElementById('detailQtyChange');const delta=Math.trunc(Number(input?.value||0));if(!Number.isInteger(delta)||delta<=0){toast('Введите целое количество больше 0');return;}const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast('Материал не найден');return;}const oldQty=Math.trunc(Number(m.quantity||0));if(dir<0 && delta>oldQty){toast('Нельзя списать больше, чем есть на складе');return;}const next=dir>0?oldQty+delta:oldQty-delta;m.quantity=next;m.lastUpdated=today();const ok=await updateMaterialInSupabase(m);if(!ok){m.quantity=oldQty;return;}await loadMaterialsFromSupabase();openMaterialDetails(id);toast(dir>0?'Остаток добавлен':'Остаток списан')}
+function stockAdjustBlock(m){const isPieces=(m.unit||'шт')==='шт';const step=isPieces?'1':'0.01';const value=isPieces?'1':'0.01';return `<div class="stock-adjust"><div><div class="stock-adjust-title">Изменить остаток</div><div class="stock-adjust-current">${escapeHtml(m.quantity)} ${escapeHtml(m.unit||'')}</div></div><div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">Количество, ${escapeHtml(m.unit||'')}</span><input id="detailQtyChange" class="input" type="number" step="${step}" min="${step}" value="${value}" inputmode="decimal"></label></div><button class="btn" onclick="adjustMaterialQty('${m.id}',-1)">− Списать</button><button class="btn primary" onclick="adjustMaterialQty('${m.id}',1)">+ Добавить</button></div>`}
+function normalizeQtyForUnit(value,unit){const n=Number(String(value).replace(',','.'));if(!Number.isFinite(n)||n<=0)return null;if(unit==='шт'){if(!Number.isInteger(n))return null;return n;}return Number(n.toFixed(3));}
+async function adjustMaterialQty(id,dir){const input=document.getElementById('detailQtyChange');const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast('Материал не найден');return;}const delta=normalizeQtyForUnit(input?.value||0,m.unit||'шт');if(delta===null){toast((m.unit||'шт')==='шт'?'Введите целое количество больше 0':'Введите количество больше 0');return;}const oldQty=Number(m.quantity||0);if(dir<0 && delta>oldQty){toast('Нельзя списать больше, чем есть на складе');return;}const next=dir>0?oldQty+delta:oldQty-delta;m.quantity=Number(next.toFixed(3));m.lastUpdated=today();const ok=await updateMaterialInSupabase(m);if(!ok){m.quantity=oldQty;return;}await loadMaterialsFromSupabase();openMaterialDetails(id);toast(dir>0?'Остаток добавлен':'Остаток списан')}
 function openMaterialDetails(id){const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast('Материал не найден');return;}const a=m.attributes||{};const details=[];details.push(detailItem('Артикул',m.sku));details.push(detailItem('Категория',m.category));details.push(detailItem('Остаток',`${m.quantity} ${m.unit}`));details.push(detailItem('Мин. остаток',m.minQuantity||0));if(m.category==='Поролон'){details.push(detailItem('Размеры',materialDimensions(m)));details.push(detailItem('Марка / Плотность',a.grade));details.push(detailItem('Поставщик',a.supplier));details.push(detailItem('Заказ',a.order));details.push(detailItem('Теги',a.tags,true));details.push(detailItem('PDF',a.pdfName,true));}else{details.push(detailItem('Атрибуты',materialCompactText(m),true));}const body=`<div class="detail-head"><div><h4>${escapeHtml(m.name||m.sku)}</h4><p class="muted" style="margin:6px 0 0">${escapeHtml(m.category)}${m.subcategory?' · '+escapeHtml(m.subcategory):''}</p></div><span class="status ${statusOf(m)[0]}">${statusOf(m)[1]}</span></div><div class="detail-grid">${details.join('')}${stockAdjustBlock(m)}</div>`;const hasPdf=a.pdfPath||a.pdfUrl;const foot=`${hasPdf?`<button class="btn" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button>`:''}<button class="btn primary" onclick="openMaterialModal('${m.id}')">Редактировать</button>`;openModal('Информация о материале',body,foot)}
 function statusOf(m){if(Number(m.quantity)<=0)return ['out',t('noStock')];if(Number(m.quantity)<Number(m.minQuantity||0))return ['low',t('lowStock')];return ['ok',t('inStock')]}
 function renderNav(){
@@ -886,22 +899,40 @@ function renderNav(){
 }
 function normalizeSku(v){return String(v||'').trim().toUpperCase().replace(/\s+/g,'')}
 function findMaterialBySku(sku){const n=normalizeSku(sku);return data.materials.find(m=>normalizeSku(m.sku)===n)}
-function quickUnitBySku(sku){const n=normalizeSku(sku);const prefix=n.split('-')[0];const map={A:'м²',P:'м²',K:'м³',F:'м²',SP:'м²',B:'шт',G:'шт',S:'шт',SK:'шт',D:'шт',L:'шт',R:'шт',KA:'шт',M:'шт',KR:'шт',FT:'шт'};return map[prefix]||''}
+function quickUnitBySku(sku){const n=normalizeSku(sku);const prefix=n.split('-')[0];const map={A:'м²',P:'м²',K:'м³',F:'м²',SP:'м²',B:'шт',G:'шт',S:'шт',SK:'шт',D:'шт',L:'шт',R:'шт',KA:'шт',M:'шт',KR:'шт',FT:'шт',DET:'шт'};return map[prefix]||''}
 function updateQuickAddInfo(){const box=document.getElementById('quickAddBox');const info=document.getElementById('quickInfo');if(!box||!info)return;const sku=quickSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent='Введите артикул — единица измерения определится автоматически';return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">Сейчас: ${mat.quantity} ${mat.unit}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`Материал не найден. По артикулу это похоже на <b>${unit}</b>`:t('materialNotFound');}
 async function quickAddStock(){if(!requireAuth())return;const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=Number(document.getElementById('quickQty')?.value);if(!sku){toast(t('enterSkuMsg'));return}const mat=findMaterialBySku(sku);if(!mat){toast(t('notFoundSku'));updateQuickAddInfo();return}if(!Number.isFinite(qty)||qty<=0){toast(t('enterPositive'));return}const oldQty=Number(mat.quantity||0);mat.quantity=Number((oldQty+qty).toFixed(3));mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('quickQty').value='';document.getElementById('quickSku').select();toast(`Добавлено ${qty} ${mat.unit}: ${mat.name}`)}
 function updateWriteOffInfo(){const box=document.getElementById('quickWriteOffBox');const info=document.getElementById('writeOffInfo');if(!box||!info)return;const sku=writeOffSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent='Введите артикул — единица измерения определится автоматически';return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">Сейчас: ${mat.quantity} ${mat.unit}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`Материал не найден. По артикулу это похоже на <b>${unit}</b>`:t('materialNotFound');}
 async function quickWriteOffStock(){if(!requireAuth())return;const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=Number(document.getElementById('writeOffQty')?.value);if(!sku){toast(t('enterSkuMsg'));return}const mat=findMaterialBySku(sku);if(!mat){toast(t('notFoundSku'));updateWriteOffInfo();return}if(!Number.isFinite(qty)||qty<=0){toast(t('enterPositive'));return}const oldQty=Number(mat.quantity||0);if(oldQty<qty){if(!confirm(`На складе только ${mat.quantity} ${mat.unit}. Списать всё и поставить 0?`))return;mat.quantity=0}else{mat.quantity=Number((oldQty-qty).toFixed(3))}mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('writeOffQty').value='';document.getElementById('writeOffSku').select();toast(`Списано ${qty} ${mat.unit}: ${mat.name}`)}
 function renderFilters(){
   const cf=document.getElementById('categoryFilter');cf.innerHTML=`<option value="">${t('allCategories')}</option>`+Object.keys(CATEGORIES).map(c=>`<option>${c}</option>`).join('');
-  cf.onchange=()=>{updateSubFilter();renderAll()};document.getElementById('subcategoryFilter').onchange=renderAll;document.getElementById('searchInput').oninput=()=>{const t=document.getElementById('topSearchInput'); if(t&&t.value!==document.getElementById('searchInput').value)t.value=document.getElementById('searchInput').value; renderAll()};const top=document.getElementById('topSearchInput'); if(top) top.oninput=()=>{document.getElementById('searchInput').value=top.value;renderAll()};
+  cf.onchange=()=>{stockPage=1;updateSubFilter();renderAll()};
+  document.getElementById('subcategoryFilter').onchange=()=>{stockPage=1;renderAll()};
+  document.getElementById('searchInput').oninput=()=>{const t=document.getElementById('topSearchInput'); if(t&&t.value!==document.getElementById('searchInput').value)t.value=document.getElementById('searchInput').value; stockPage=1;renderAll()};
+  const top=document.getElementById('topSearchInput'); if(top) top.oninput=()=>{document.getElementById('searchInput').value=top.value;stockPage=1;renderAll()};
 }
 function updateSubFilter(){const cat=document.getElementById('categoryFilter').value;const sf=document.getElementById('subcategoryFilter');let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option>${s}</option>`).join('')}
 function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;document.getElementById('stats').innerHTML=`<div class="stat"><div><span>${t('totalItems')}</span><b>${total}</b></div><div class="sico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></div></div><div class="stat"><div><span>${t('categories')}</span><b>${cats}</b></div><div class="sico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></div></div><div class="stat"><div><span>${t('lowStock')}</span><b>${low}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg></div></div><div class="stat"><div><span>${t('outStock')}</span><b>${out}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></div></div>`}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${m.category}${m.subcategory?' · '+m.subcategory:''}</span>`}
-function renderStock(){const rows=filteredMaterials();const box=document.getElementById('stockTable');if(!rows.length){box.innerHTML=`<div class="empty"><b>${t('noMaterialsTitle')}</b>${t('noMaterialsDesc')}</div>`;return}const sortable=['sku','name','category','quantity','minQuantity','status'];const columns=[['sku','Артикул'],['name','Материал'],['category','Категория'],['size','Размер'],['density','Плотность/Марка'],['quantity','Остаток'],['minQuantity','Мин. остаток'],['status','Статус'],['pdf','PDF']];box.innerHTML=`<div class="stock-table-wrap"><table class="stock-table"><thead><tr>${columns.map(([k,label])=>`<th ${sortable.includes(k)?'class="sortable" onclick="setSort(\''+k+'\')"':''}>${label}${sortable.includes(k)?' ↕':''}</th>`).join('')}</tr></thead><tbody>${rows.map(m=>{const st=statusOf(m);const dims=materialDimensions(m)||'—';const density=materialDensity(m);return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td><div class="stock-title"><div class="stock-main">${escapeHtml(materialDisplayName(m))}</div></div></td><td>${escapeHtml(m.category||'—')}</td><td><div class="stock-dims">${escapeHtml(dims)}</div></td><td>${escapeHtml(density)}</td><td><span class="stock-qty-cell ${st[0]}">${escapeHtml(m.quantity)} ${escapeHtml(m.unit||'')}</span></td><td>${escapeHtml(m.minQuantity||0)}</td><td><span class="status ${st[0]}">${st[1]}</span></td><td>${materialPdfButton(m)}</td></tr>`}).join('')}</tbody></table></div><div class="table-foot"><span>${t('shown')} 1–${rows.length} ${t('of')} ${data.materials.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')}</span><button class="pagebtn active">10</button><button class="pagebtn">‹</button><button class="pagebtn active">1</button><button class="pagebtn">2</button><button class="pagebtn">3</button><button class="pagebtn">›</button></div></div>`}
-function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}renderStock()}
-function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';updateSubFilter();renderAll()}
+function renderStock(){
+  const rows=filteredMaterials();
+  const box=document.getElementById('stockTable');
+  if(!rows.length){box.innerHTML=`<div class="empty"><b>${t('noMaterialsTitle')}</b>${t('noMaterialsDesc')}</div>`;return}
+  const totalPages=Math.max(1,Math.ceil(rows.length/stockPageSize));
+  stockPage=Math.min(Math.max(1,stockPage),totalPages);
+  const startIndex=(stockPage-1)*stockPageSize;
+  const pageRows=rows.slice(startIndex,startIndex+stockPageSize);
+  const sortable=['sku','name','category','quantity','minQuantity','status'];
+  const columns=[['sku','Артикул'],['name','Материал'],['category','Категория'],['size','Размер'],['density','Плотность/Марка'],['quantity','Остаток'],['minQuantity','Мин. остаток'],['status','Статус'],['pdf','PDF']];
+  const pages=Array.from({length:totalPages},(_,i)=>i+1).filter(p=>p===1||p===totalPages||Math.abs(p-stockPage)<=1);
+  let last=0;
+  const pageButtons=pages.map(p=>{const gap=p-last>1?`<span class="muted">…</span>`:'';last=p;return gap+`<button class="pagebtn ${p===stockPage?'active':''}" onclick="setStockPage(${p})">${p}</button>`}).join('');
+  box.innerHTML=`<div class="stock-table-wrap"><table class="stock-table"><thead><tr>${columns.map(([k,label])=>`<th ${sortable.includes(k)?'class="sortable" onclick="setSort(\''+k+'\')"':''}>${label}${sortable.includes(k)?' ↕':''}</th>`).join('')}</tr></thead><tbody>${pageRows.map(m=>{const st=statusOf(m);const dims=materialDimensions(m)||'—';const density=materialDensity(m);return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td><div class="stock-title"><div class="stock-main">${escapeHtml(materialDisplayName(m))}</div></div></td><td>${escapeHtml(m.category||'—')}</td><td><div class="stock-dims">${escapeHtml(dims)}</div></td><td>${escapeHtml(density)}</td><td><span class="stock-qty-cell ${st[0]}">${escapeHtml(m.quantity)} ${escapeHtml(m.unit||'')}</span></td><td>${escapeHtml(m.minQuantity||0)}</td><td><span class="status ${st[0]}">${st[1]}</span></td><td>${materialPdfButton(m)}</td></tr>`}).join('')}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${startIndex+1}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button>${stockPage<totalPages?`<button class="pagebtn more" onclick="setStockPage(${stockPage+1})">Загрузить ещё</button>`:''}</div></div>`
+}
+function setStockPage(page){stockPage=page;renderStock()}
+function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPage=1;renderStock()}
+function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';stockPage=1;updateSubFilter();renderAll()}
 function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
 function openModal(title,body,foot){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modalFoot').innerHTML=foot;document.getElementById('modalBackdrop').classList.add('show')}
 
@@ -975,8 +1006,9 @@ function openFoamModal(id=null){
     <div class="field"><label>Ширина, мм</label><input id="foamWidth" type="number" step="1" class="input" value="${attrs.width||''}"></div>
     <div class="field"><label>Длина, мм</label><input id="foamLength" type="number" step="1" class="input" value="${attrs.length||''}"></div>
     <div class="field"><label>Высота, мм</label><input id="foamHeight" type="number" step="1" class="input" value="${attrs.height||''}"></div>
-    <div class="field"><label>Минимальный остаток</label><input id="foamMin" type="number" step="1" min="0" class="input" value="${Math.trunc(Number(found?.minQuantity||0))}"></div>
-    <div class="field"><label>Количество, шт</label><input id="foamQty" type="number" step="1" min="0" class="input" value="${Math.trunc(Number(found?.quantity||0))}"></div>
+    <div class="field"><label>Единица учёта</label><select id="foamUnit" class="select" onchange="syncFoamUnitInputs()"><option value="шт" ${(found?.unit||'шт')==='шт'?'selected':''}>шт</option><option value="м²" ${found?.unit==='м²'?'selected':''}>м²</option></select><div class="hint">Выберите, как учитывать этот поролон: по деталям или по площади.</div></div>
+    <div class="field"><label>Минимальный остаток</label><input id="foamMin" type="number" step="${(found?.unit||'шт')==='шт'?'1':'0.01'}" min="0" class="input" value="${found?.unit==='м²'?Number(found?.minQuantity||0):Math.trunc(Number(found?.minQuantity||0))}"></div>
+    <div class="field"><label id="foamQtyLabel">Количество, ${(found?.unit||'шт')}</label><input id="foamQty" type="number" step="${(found?.unit||'шт')==='шт'?'1':'0.01'}" min="0" class="input" value="${found?.unit==='м²'?Number(found?.quantity||0):Math.trunc(Number(found?.quantity||0))}"></div>
     <div class="field"><label>Поставщик</label><input id="foamSupplier" class="input" value="${attrs.supplier||''}" placeholder="Название поставщика"></div>
     <div class="field"><label>Заказ</label><input id="foamOrder" class="input" value="${attrs.order||''}" placeholder="Номер заказа / закупки"></div>
     <div class="field full"><label>Загрузка PDF</label><label class="file-drop"><small id="foamPdfName">${attrs.pdfName||'PDF не выбран'}</small><span class="btn small" type="button">Выбрать PDF</span><input id="foamPdf" type="file" accept="application/pdf" onchange="document.getElementById('foamPdfName').textContent=this.files[0]?.name||'PDF не выбран'"></label><div class="hint">PDF загружается в Supabase Storage bucket: material-pdfs.</div>${attrs.pdfUrl?`<button class="btn small" style="margin-top:8px" onclick="openPdfUrl('${attrs.pdfUrl}')">Открыть текущий PDF</button>`:''}</div>
@@ -986,12 +1018,19 @@ function openFoamModal(id=null){
   openModal(id?'Редактировать поролон':'Добавить поролон',body,foot);
   const skuEl=document.getElementById('foamSku');
   if(skuEl){skuEl.oninput=()=>{if(!skuEl.value.startsWith('DET.'))skuEl.value='DET.'+skuEl.value.replace(/^DET\.?/i,'')}}
+  syncFoamUnitInputs();
 }
+function syncFoamUnitInputs(){const unit=document.getElementById('foamUnit')?.value||'шт';const qty=document.getElementById('foamQty');const min=document.getElementById('foamMin');const label=document.getElementById('foamQtyLabel');const step=unit==='шт'?'1':'0.01';if(qty){qty.step=step;qty.min='0';if(unit==='шт'&&qty.value)qty.value=String(Math.trunc(Number(qty.value)||0));}if(min){min.step=step;min.min='0';if(unit==='шт'&&min.value)min.value=String(Math.trunc(Number(min.value)||0));}if(label)label.textContent=`Количество, ${unit}`;}
+function readFoamQuantity(id,fieldName){const unit=document.getElementById('foamUnit')?.value||'шт';const el=document.getElementById(id);const raw=String(el?.value||'0').replace(',','.');const n=Number(raw);if(!Number.isFinite(n)||n<0){toast(`Поле «${fieldName}» должно быть 0 или больше`);return null;}if(unit==='шт'&&!Number.isInteger(n)){toast(`Поле «${fieldName}» должно быть целым числом`);return null;}return unit==='шт'?Math.trunc(n):Number(n.toFixed(3));}
 async function saveFoamMaterial(id=''){
   let sku=safeVal('foamSku');
   if(!sku || sku==='DET.'){toast('Допишите артикул после DET.');return;}
   if(!sku.startsWith('DET.')) sku='DET.'+sku;
   const width=safeVal('foamWidth'), length=safeVal('foamLength'), height=safeVal('foamHeight'), grade=safeVal('foamGrade');
+  const unit=document.getElementById('foamUnit')?.value||'шт';
+  const foamQty=readFoamQuantity('foamQty','Количество');
+  const foamMin=readFoamQuantity('foamMin','Минимальный остаток');
+  if(foamQty===null||foamMin===null)return;
   const titleParts=['Поролон'];
   if(grade) titleParts.push(grade);
   const oldMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null;
@@ -1014,9 +1053,9 @@ async function saveFoamMaterial(id=''){
     category:'Поролон',
     subcategory:'',
     attributes:attrs,
-    unit:'шт',
-    quantity:id?(oldMaterial?.quantity||0):0,
-    minQuantity:Math.trunc(Number(safeVal('foamMin')||0)),
+    unit,
+    quantity:foamQty,
+    minQuantity:foamMin,
     lastUpdated:today()
   };
   const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
@@ -1050,4 +1089,3 @@ renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('
 </script>
 </body>
 </html>
-
