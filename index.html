@@ -634,6 +634,75 @@
 .stock-input-row .input{background:#fff}
 @media(max-width:640px){.stock-input-row{grid-template-columns:1fr}}
 
+
+/* v4.0: soft smart filters */
+.pro-filter-panel{display:none;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fcfcfd 0%,#f8fafc 100%);padding:14px 16px}
+.pro-filter-panel.show{display:block}
+.quick-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filter-chip{height:32px;border:1px solid #e4e8ef;border-radius:999px;background:#fff;color:#4b5563;padding:0 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(16,24,40,.025);transition:background .16s,border-color .16s,color .16s,box-shadow .16s}
+.filter-chip:hover{background:#f8fafc;border-color:#d8dee8;color:#111}
+.filter-chip.active{background:#eef7f2;color:#287047;border-color:#c9ead7;box-shadow:0 4px 12px rgba(40,112,71,.07)}
+.filter-chip[data-filter="problem"].active,.filter-chip[data-filter="needorder"].active,.filter-chip[data-filter="low"].active{background:#fff8e7;color:#8a650e;border-color:#f2dfaa;box-shadow:0 4px 12px rgba(138,101,14,.06)}
+.filter-chip[data-filter="out"].active{background:#fff1f1;color:#c73535;border-color:#f2c9c9;box-shadow:0 4px 12px rgba(199,53,53,.06)}
+.filter-chip[data-filter="ordered"].active{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;box-shadow:0 4px 12px rgba(29,78,216,.06)}
+.filter-chip[data-filter="reserved"].active{background:#f5f3ff;color:#6d45b9;border-color:#ddd6fe;box-shadow:0 4px 12px rgba(109,69,185,.06)}
+.filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end}
+.filter-note{font-size:12px;color:#7b8190;margin-top:10px;line-height:1.35}
+#advancedFiltersBtn.primary{background:#f4f7fb!important;color:#111!important;border-color:#dfe5ee!important;box-shadow:none!important}
+@media(max-width:1100px){.filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.filter-grid{grid-template-columns:1fr}.quick-filter-row{flex-wrap:nowrap;overflow:auto;padding-bottom:2px}.filter-chip{white-space:nowrap}}
+
+
+/* v5.0: production orders */
+.orders-toolbar{grid-template-columns:1.25fr .65fr .65fr .55fr .7fr auto!important}
+.order-table-wrap{overflow:auto}
+.order-table{min-width:980px}
+.order-table th,.order-table td{white-space:nowrap}
+.order-materials{max-width:330px;white-space:normal;color:#4b5563;font-size:12px;line-height:1.35}
+.order-materials b{color:#111;font-weight:500}.order-actions{display:flex;gap:6px;flex-wrap:wrap}.status.new{background:#f8fafc;color:#4b5563;border-color:#e2e8f0}.status.work{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}.status.wait{background:#fff8e7;color:#8a650e;border-color:#f2dfaa}.status.done{background:#ecfdf3;color:#287047;border-color:#bfe8cc}.status.cancel{background:#fff1f1;color:#c73535;border-color:#f2c9c9}.order-form-section{border:1px solid var(--line);border-radius:14px;background:#fbfbfc;padding:14px;margin-top:14px}.order-section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.order-section-head h4{margin:0;font-size:14px;font-weight:600}.order-row{display:grid;grid-template-columns:1fr 130px 38px;gap:10px;align-items:end;margin-top:8px}.order-material-row{display:grid;grid-template-columns:130px 1fr 110px 110px 1.1fr 38px;gap:10px;align-items:end;margin-top:8px}.readonly-pill{height:42px;border:1px solid var(--line);border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 10px;color:#5b6472}.material-check{font-size:12px;line-height:1.35}.material-check.ok{color:#287047}.material-check.bad{color:#c73535}.material-check.warn{color:#8a650e}.order-time-total{display:inline-flex;gap:8px;align-items:center;border:1px solid #dfe5ee;border-radius:999px;background:#fff;padding:7px 10px;color:#111}.manual-number{display:flex;align-items:center;gap:8px;color:#555c68;font-size:12px;margin-top:8px}.order-view-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.order-view-card{border:1px solid var(--line);border-radius:12px;background:#fbfbfc;padding:12px}.order-view-card.full{grid-column:1/-1}.order-view-card small{display:block;color:#8a8f99;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}.order-view-card b{font-weight:600}.inline-info{display:inline-flex;align-items:center;gap:6px}.modal.wide{width:min(1040px,100%)}
+@media(max-width:1100px){.orders-toolbar{grid-template-columns:1fr 1fr!important}.order-material-row{grid-template-columns:1fr 1fr}.order-row{grid-template-columns:1fr 1fr 38px}}
+@media(max-width:640px){.orders-toolbar{grid-template-columns:1fr!important}.order-material-row,.order-row,.order-view-grid{grid-template-columns:1fr}.order-materials{max-width:240px}.readonly-pill{font-size:14px}.order-actions .btn{flex:1}}
+
+
+/* v4.3: compact orders and reservation details */
+.order-table th,.order-table td{padding:10px 12px!important}
+.order-table tbody tr{height:56px}
+.order-materials{max-width:360px;font-size:12px;line-height:1.25}
+.order-time-cell{line-height:1.2}
+.order-time-cell b{font-weight:600}
+.order-actions{justify-content:flex-end}
+.action-menu{position:relative;display:inline-flex;justify-content:flex-end}
+.action-menu-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;color:#111;display:grid;place-items:center;font-size:18px;line-height:1;box-shadow:0 1px 1px rgba(0,0,0,.02)}
+.action-menu-btn:hover{background:#f7f8fa}
+.action-menu-list{display:none;position:absolute;right:0;top:38px;z-index:60;min-width:166px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(16,24,40,.14);flex-direction:column;gap:2px}
+.action-menu.open .action-menu-list{display:flex}
+.action-menu-list button{height:34px;border-radius:9px;text-align:left;padding:0 10px;color:#30343b;white-space:nowrap}
+.action-menu-list button:hover{background:#f5f6f7}
+.action-menu-list button.danger{color:#c73535}
+.reserve-orders{margin-top:6px;font-size:11px;line-height:1.25;color:#6f7480}
+.reserve-orders b{color:#111;font-weight:600}
+.stock-mini .reserve-line{font-size:11px;color:#6f7480;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:640px){.action-menu-list{position:fixed;right:16px;top:auto;bottom:16px;min-width:220px}.order-table{min-width:900px}}
+
+
+/* v4.4: clean compact orders table */
+#orders .panel{overflow:visible!important}
+#orders .order-table-wrap{overflow:visible!important}
+#orders .order-table{min-width:720px!important}
+#orders .order-table th,#orders .order-table td{padding:9px 12px!important}
+#orders .order-table tbody tr{height:52px!important}
+#orders .order-table th:nth-child(1),#orders .order-table td:nth-child(1){width:110px}
+#orders .order-table th:nth-child(2),#orders .order-table td:nth-child(2){width:auto}
+#orders .order-table th:nth-child(3),#orders .order-table td:nth-child(3){width:115px;text-align:center}
+#orders .order-table th:nth-child(4),#orders .order-table td:nth-child(4){width:160px;text-align:center}
+#orders .order-table th:nth-child(5),#orders .order-table td:nth-child(5){width:120px;text-align:center}
+#orders .order-table th:nth-child(6),#orders .order-table td:nth-child(6){width:64px;text-align:right}
+.order-client-cell{line-height:1.2}
+.order-client-cell .sub{max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.order-time-cell b{font-size:13px}
+.action-menu-list{z-index:200!important}
+@media(max-width:820px){#orders .order-table-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}#orders .order-table{min-width:720px!important}.order-client-cell .sub{max-width:180px}}
+
 </style>
 </head>
 <body class="auth-locked">
@@ -647,7 +716,7 @@
   <div class="nav-title">Раздел</div>
   <div class="nav" id="mainNav">
     <button class="active" data-section="stock"><span class="ico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span> Склад</button>
-    <button class="disabled" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h6"/><rect x="5" y="3" width="14" height="18" rx="2"/></svg></span> Заказы</button>
+    <button data-section="orders"><span class="ico"><svg viewBox="0 0 24 24"><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h6"/><rect x="5" y="3" width="14" height="18" rx="2"/></svg></span> Заказы</button>
     <button class="disabled" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 16l8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg></span> Модели мебели</button>
     <button class="disabled" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button class="disabled" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
@@ -672,14 +741,43 @@
         <button class="btn danger-fill" onclick="quickWriteOffStock()">Списать</button>
       </div>
       <div class="panel">
-        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="searchInput" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><select class="select" id="subcategoryFilter"></select><button class="btn" type="button">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
+        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="searchInput" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><select class="select" id="subcategoryFilter"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
+        <div class="pro-filter-panel" id="proFilterPanel">
+          <div class="quick-filter-row" id="quickFilterRow">
+            <button class="filter-chip active" type="button" data-filter="all" onclick="setQuickFilter('all')">Все</button>
+            <button class="filter-chip" type="button" data-filter="problem" onclick="setQuickFilter('problem')">Проблемы</button>
+            <button class="filter-chip" type="button" data-filter="needorder" onclick="setQuickFilter('needorder')">Нужно заказать</button>
+            <button class="filter-chip" type="button" data-filter="out" onclick="setQuickFilter('out')">Нет в наличии</button>
+            <button class="filter-chip" type="button" data-filter="low" onclick="setQuickFilter('low')">Заканчивается</button>
+            <button class="filter-chip" type="button" data-filter="ordered" onclick="setQuickFilter('ordered')">Заказано</button>
+            <button class="filter-chip" type="button" data-filter="reserved" onclick="setQuickFilter('reserved')">С резервом</button>
+          </div>
+          <div class="filter-grid">
+            <div class="field"><label>Статус</label><select class="select" id="stockStateFilter" onchange="stockPage=1;renderAll()"><option value="">Любой</option><option value="ok">В наличии</option><option value="low">Заканчивается</option><option value="out">Нет в наличии</option><option value="needorder">Нужно заказать</option><option value="ordered">Заказано</option></select></div>
+            <div class="field"><label>Ед. изм.</label><select class="select" id="unitFilter" onchange="stockPage=1;renderAll()"><option value="">Любая</option><option value="шт">шт</option><option value="м²">м²</option><option value="м³">м³</option></select></div>
+            <div class="field"><label>Поставщик</label><input class="input" id="supplierFilter" placeholder="Название" oninput="stockPage=1;renderAll()"></div>
+            <div class="field"><label>Заказ / закупка</label><input class="input" id="orderFilter" placeholder="Номер" oninput="stockPage=1;renderAll()"></div>
+          </div>
+          <div class="filter-note">Быстрые фильтры сверху работают как готовые профили. Поля ниже нужны только для точного поиска по статусу, единице, поставщику или номеру закупки.</div>
+        </div>
         <div id="stockTable"></div>
       </div>
     </section>
 
     <section id="orders" class="section">
-      <div class="topbar"><div class="title"><h2>Заказы</h2><p>Выберите модель и сразу увидите, каких материалов не хватает</p></div><button class="btn primary" onclick="openOrderModal()">+ Новый заказ</button></div>
-      <div class="cards-grid" id="ordersGrid"></div>
+      <div class="topbar"><div class="title"><h2>Заказы</h2><p>Производственные заказы и резерв материалов</p></div><div class="actions"><button class="btn primary" onclick="openOrderModal()">＋ Добавить заказ</button></div></div>
+      <div class="stats" id="orderStats"></div>
+      <div class="panel">
+        <div class="toolbar orders-toolbar">
+          <div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="orderSearchInput" placeholder="Поиск по номеру или заказчику..." oninput="renderOrders()"/></div>
+          <select class="select" id="orderStatusFilter" onchange="renderOrders()"><option value="">Все статусы</option><option>Новый</option><option>В работе</option><option>Ожидает материалы</option><option>Готов</option><option>Отменён</option></select>
+          <select class="select" id="orderClientFilter" onchange="renderOrders()"><option value="">Все заказчики</option></select>
+          <input class="input" type="date" id="orderDateFilter" onchange="renderOrders()"/>
+          <select class="select" id="orderProblemFilter" onchange="renderOrders()"><option value="">Материалы: все</option><option value="ok">Материалы доступны</option><option value="problem">Есть нехватка</option></select>
+          <button class="btn" onclick="clearOrderFilters()">Сбросить</button>
+        </div>
+        <div id="ordersTable"></div>
+      </div>
     </section>
 
     <section id="models" class="section">
@@ -704,7 +802,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Добавить</h3><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v3.5 - Smart State + Decimal Stock</div>
+<div class="version-badge" id="appVersionBadge">v4.4 - Compact Orders</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -714,7 +812,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v3.8 - Integer PCS + Compact Stock Row';
+const APP_VERSION = 'v4.4 - Compact Orders';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -915,6 +1013,7 @@ async function loadMaterialsFromSupabase(){
   }
 
   data.materials = (rows || []).map(dbToMaterial);
+  try{ syncMaterialReservations(); }catch(e){}
   renderAll();
   updateQuickAddInfo();
   updateWriteOffInfo();
@@ -1034,8 +1133,9 @@ function migrateSkus(db){
 }
 
 const storeKey='mebel_sklad_data_v1';
-let data = {materials:[],models:[],orders:[]};
+let data = loadData();
 let sortKey='name', sortDir=1;
+let activeQuickFilter='all';
 let stockPage=1;
 const stockPageSize=15;
 function uid(){return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random())}
@@ -1054,8 +1154,8 @@ function demoData(){
   const orders=[{id:uid(),number:'ORD-1001',client:'Демо клиент',modelId:models[0].id,qty:2,status:'Новый'}];
   return {materials,models,orders};
 }
-function loadData(){try{const saved=localStorage.getItem(storeKey);return saved?migrateSkus(JSON.parse(saved)):demoData()}catch(e){return demoData()}}
-function save(){/* Supabase mode: материалы сохраняются в облако */}
+function loadData(){try{const saved=localStorage.getItem(storeKey);if(saved){const parsed=JSON.parse(saved);return {materials:[],models:parsed.models||[],orders:parsed.orders||[]}}const d=demoData();return {materials:[],models:d.models||[],orders:d.orders||[]}}catch(e){return {materials:[],models:[],orders:[]}}}
+function save(){try{localStorage.setItem(storeKey,JSON.stringify({materials:[],models:data.models||[],orders:data.orders||[]}))}catch(e){console.warn(e)}}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function attrText(m){return materialCompactText(m) || '—'}
@@ -1078,14 +1178,79 @@ function normalizeStockValue(value,unit,allowZero=true){const raw=String(value??
 function reservedQty(m){return Math.max(0,stockNumForUnit((m.attributes||{}).reservedQty,m.unit))}
 function orderedQty(m){return Math.max(0,stockNumForUnit((m.attributes||{}).orderedQty,m.unit))}
 function availableQty(m){const u=m.unit;return Math.max(0,stockNumForUnit(stockNumForUnit(m.quantity,u)-reservedQty(m),u))}
-function stockInfoBlock(m){const u=m.unit||'';return `<div class="stock-info-grid"><div class="stock-info-card"><div class="stock-info-label">На складе</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,u),u))}</div></div><div class="stock-info-card"><div class="stock-info-label">Зарезервировано</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(reservedQty(m),u))}</div></div><div class="stock-info-card"><div class="stock-info-label">Заказано</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(orderedQty(m),u))}</div></div><div class="stock-info-card"><div class="stock-info-label">Доступно</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(availableQty(m),u))}</div></div></div>`}
+function materialReservationOrders(matId){
+  return (data.orders||[])
+    .filter(o=>!['Готов','Отменён'].includes(o.status))
+    .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(matId)).map(i=>({order:o,item:i})));
+}
+function reservationOrdersHtml(m){
+  const rows=materialReservationOrders(m.id);
+  if(!rows.length)return '';
+  return `<div class="reserve-orders">${rows.map(r=>`<div><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''} — ${escapeHtml(qtyWithUnit(r.item.qty,m.unit))}</div>`).join('')}</div>`;
+}
+function reservationOrdersShort(m){
+  const rows=materialReservationOrders(m.id);
+  if(!rows.length)return '';
+  const txt=rows.map(r=>`${r.order.number||'—'}: ${qtyWithUnit(r.item.qty,m.unit)}`).join(' · ');
+  return txt.length>42?txt.slice(0,42)+'…':txt;
+}
+function stockInfoBlock(m){const u=m.unit||'';return `<div class="stock-info-grid"><div class="stock-info-card"><div class="stock-info-label">На складе</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,u),u))}</div></div><div class="stock-info-card"><div class="stock-info-label">Зарезервировано</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(reservedQty(m),u))}</div>${reservationOrdersHtml(m)}</div><div class="stock-info-card"><div class="stock-info-label">Заказано</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(orderedQty(m),u))}</div></div><div class="stock-info-card"><div class="stock-info-label">Доступно</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(availableQty(m),u))}</div></div></div>`}
 function stockNumberInput(id,label,value,unit=''){return `<div class="field"><label>${label}${unit?`, ${escapeHtml(unitLabel(unit))}`:''}</label><input id="${id}" type="number" step="${stockStep(unit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(value,unit),unit)}" inputmode="decimal"></div>`}
 function stockTripleInputs(prefix, values, unit){return `<div class="stock-input-block"><div class="stock-input-head">Складские количества <button class="info-btn" type="button" onclick="showStockStatusHelp()">i</button></div><div class="stock-input-row">${stockNumberInput(prefix+'Ordered','Заказано',values.ordered,unit)}${stockNumberInput(prefix+'Reserved','Зарезервировано',values.reserved,unit)}${stockNumberInput(prefix+'Qty','На складе',values.qty,unit)}</div></div>`}
 function syncStockInputs(prefix,unit){['Qty','Reserved','Ordered','Min'].forEach(suf=>{const el=document.getElementById(prefix+suf);if(!el)return;el.step=stockStep(unit);el.min='0';const v=normalizeStockValue(el.value,unit,true);if(v!==null)el.value=inputQtyValue(v,unit);});const qtyLabel=document.getElementById(prefix+'QtyLabel');if(qtyLabel)qtyLabel.textContent=`На складе, ${unitLabel(unit)}`;}
 
 function stockAdjustBlock(m){const step=stockStep(m.unit||'шт');const value=stockDefaultValue(m.unit||'шт');const unitText=unitLabel(m.unit||'шт');return `<div class="stock-adjust"><div><div class="stock-adjust-title">${t('changeStock')}</div><div class="stock-adjust-current">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit||''))}</div></div><div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">${t('qtyWithUnit')}, ${escapeHtml(unitText)}</span><input id="detailQtyChange" class="input" type="number" step="${step}" min="${step}" value="${value}" inputmode="decimal"></label></div><button class="btn danger-fill" onclick="adjustMaterialQty('${m.id}',-1)">− ${t('writeOff')}</button><button class="btn primary" onclick="adjustMaterialQty('${m.id}',1)">+ ${t('add')}</button></div>`}
 function normalizeQtyForUnit(value,unit){return normalizeStockValue(value,unit,false)}
-async function adjustMaterialQty(id,dir){const input=document.getElementById('detailQtyChange');const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast(t('notFoundMaterial'));return;}const delta=normalizeQtyForUnit(input?.value||0,m.unit||'шт');if(delta===null){toast((m.unit||'шт')==='шт'?t('enterIntPositive'):t('enterQtyPositive'));return;}const oldQty=stockNumForUnit(m.quantity,m.unit);if(dir<0 && delta>oldQty){toast(t('noNegativeStock'));return;}const next=dir>0?oldQty+delta:oldQty-delta;m.quantity=stockNumForUnit(next,m.unit);m.lastUpdated=today();const ok=await updateMaterialInSupabase(m);if(!ok){m.quantity=oldQty;return;}await loadMaterialsFromSupabase();openMaterialDetails(id);toast(dir>0?t('stockAdded'):t('stockWrittenOff'))}
+function applyMaterialReceipt(mat, addQty){
+  if(!mat) return;
+  const unit=mat.unit||'шт';
+  mat.attributes=mat.attributes||{};
+  const oldStock=stockNumForUnit(mat.quantity,unit);
+  const oldOrdered=orderedQty(mat);
+  mat.quantity=stockNumForUnit(oldStock+addQty,unit);
+  mat.attributes.orderedQty=Math.max(0,stockNumForUnit(oldOrdered-addQty,unit));
+  const activeReserved=typeof materialReservedOutsideOrder==='function'?materialReservedOutsideOrder(mat.id,''):reservedQty(mat);
+  mat.attributes.reservedQty=stockNumForUnit(activeReserved,unit);
+  if(mat.attributes.orderedQty<=0 && mat.attributes.purchaseStatus==='ordered'){
+    mat.attributes.purchaseStatus=availableQty(mat)>0?'instock':'noorder';
+  }
+  mat.lastUpdated=today();
+}
+function refreshOrdersAfterStockChange(){
+  let changed=false;
+  (data.orders||[]).forEach(o=>{
+    if(o.status==='Ожидает материалы' && !orderHasMaterialProblem(o)){
+      o.status='В работе';
+      changed=true;
+    }
+  });
+  if(changed) save();
+  return changed;
+}
+
+async function adjustMaterialQty(id,dir){
+  const input=document.getElementById('detailQtyChange');
+  const m=data.materials.find(x=>String(x.id)===String(id));
+  if(!m){toast(t('notFoundMaterial'));return;}
+  const delta=normalizeQtyForUnit(input?.value||0,m.unit||'шт');
+  if(delta===null){toast((m.unit||'шт')==='шт'?t('enterIntPositive'):t('enterQtyPositive'));return;}
+  const oldQty=stockNumForUnit(m.quantity,m.unit);
+  const oldAttrs={...(m.attributes||{})};
+  if(dir<0 && delta>oldQty){toast(t('noNegativeStock'));return;}
+  if(dir>0){
+    applyMaterialReceipt(m,delta);
+  }else{
+    m.quantity=stockNumForUnit(oldQty-delta,m.unit);
+    m.lastUpdated=today();
+  }
+  const ok=await updateMaterialInSupabase(m);
+  if(!ok){m.quantity=oldQty;m.attributes=oldAttrs;return;}
+  await loadMaterialsFromSupabase();
+  refreshOrdersAfterStockChange();
+  renderAll();
+  openMaterialDetails(id);
+  toast(dir>0?t('stockAdded'):t('stockWrittenOff'));
+}
 function openMaterialDetails(id){const m=data.materials.find(x=>String(x.id)===String(id));if(!m){toast(t('notFoundMaterial'));return;}const a=m.attributes||{};const st=materialStateOf(m);const details=[];details.push(detailItem(t('sku'),m.sku));details.push(detailItem(t('category'),categoryLabel(m.category)));details.push(detailItem('Состояние',st[1]));details.push(detailItem(t('minQuantity'),m.minQuantity||0));if(m.category==='Поролон'){details.push(detailItem(t('dimensions'),materialDimensions(m)));details.push(detailItem(t('gradeDensity'),a.grade));details.push(detailItem(t('supplier'),a.supplier));details.push(detailItem(t('order'),a.order));details.push(detailItem(t('tags'),a.tags,true));details.push(detailItem('PDF',a.pdfName,true));}else{details.push(detailItem(t('attributes'),materialCompactText(m),true));}const body=`<div class="detail-head"><div><h4>${escapeHtml(materialTitle(m))}</h4><p class="muted" style="margin:6px 0 0">${escapeHtml(categoryLabel(m.category))}${m.subcategory?' · '+escapeHtml(m.subcategory):''}</p></div><span class="status ${st[0]}">${st[1]}</span></div><div class="detail-grid">${stockInfoBlock(m)}${details.join('')}${stockAdjustBlock(m)}</div>`;const hasPdf=a.pdfPath||a.pdfUrl;const foot=`${hasPdf?`<button class="btn" onclick="openMaterialPdf('${m.id}')">${t('openPdf')}</button>`:''}<button class="btn primary" onclick="openMaterialModal('${m.id}')">${t('editBtn')}</button>`;openModal(t('infoMaterial'),body,foot)}
 function statusOf(m){const av=availableQty(m);if(av<=0)return ['out',t('noStock')];if(Number(m.minQuantity||0)>0 && av<=Number(m.minQuantity||0))return ['low',t('lowStock')];return ['ok',t('inStock')]}
 
@@ -1095,10 +1260,13 @@ function purchaseStatusOf(m){
   return ['instock','noorder','needorder','ordered'].includes(v)?v:(Number(m.quantity||0)>0?'instock':'noorder');
 }
 function materialStateOf(m){
+  const stock=stockNumForUnit(m.quantity,m.unit);
+  const reserved=reservedQty(m);
   const available=availableQty(m);
   const min=Number(m.minQuantity||0);
   const ordered=orderedQty(m);
   const purchase=purchaseStatusOf(m);
+  if(reserved>stock) return ['needorder', purchaseStatusLabel('needorder')];
   if(ordered>0 || purchase==='ordered') return ['ordered', purchaseStatusLabel('ordered')];
   if(purchase==='needorder') return ['needorder', purchaseStatusLabel('needorder')];
   if(available<=0) return ['noorder', purchaseStatusLabel('noorder')];
@@ -1147,18 +1315,92 @@ function normalizeSku(v){return String(v||'').trim().toUpperCase().replace(/\s+/
 function findMaterialBySku(sku){const n=normalizeSku(sku);return data.materials.find(m=>normalizeSku(m.sku)===n)}
 function quickUnitBySku(sku){const n=normalizeSku(sku);const prefix=n.split('-')[0];const map={A:'м²',P:'м²',K:'м³',F:'м²',SP:'м²',B:'шт',G:'шт',S:'шт',SK:'шт',D:'шт',L:'шт',R:'шт',KA:'шт',M:'шт',KR:'шт',FT:'шт',DET:'шт'};return map[prefix]||''}
 function updateQuickAddInfo(){const box=document.getElementById('quickAddBox');const info=document.getElementById('quickInfo');if(!box||!info)return;const sku=quickSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent=t('enterSku');return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">${t('quantity')}: ${mat.quantity} ${unitLabel(mat.unit)}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`${t('notFoundSku')}. ${t('unit')}: <b>${unitLabel(unit)}</b>`:t('materialNotFound');}
-async function quickAddStock(){if(!requireAuth())return;const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=Number(document.getElementById('quickQty')?.value);if(!sku){toast(t('enterSkuMsg'));return}const mat=findMaterialBySku(sku);if(!mat){toast(t('notFoundSku'));updateQuickAddInfo();return}const addQty=normalizeQtyForUnit(qty,mat.unit||'шт');if(addQty===null){toast((mat.unit||'шт')==='шт'?t('enterIntPositive'):t('enterPositive'));return}const oldQty=stockNumForUnit(mat.quantity,mat.unit);mat.quantity=stockNumForUnit(oldQty+addQty,mat.unit);mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('quickQty').value='';document.getElementById('quickSku').select();toast(`${t('added')} ${formatQty(addQty,mat.unit)} ${unitLabel(mat.unit)}: ${materialTitle(mat)}`)}
+async function quickAddStock(){
+  if(!requireAuth())return;
+  const sku=normalizeSku(document.getElementById('quickSku')?.value);
+  const qty=Number(document.getElementById('quickQty')?.value);
+  if(!sku){toast(t('enterSkuMsg'));return}
+  const mat=findMaterialBySku(sku);
+  if(!mat){toast(t('notFoundSku'));updateQuickAddInfo();return}
+  const addQty=normalizeQtyForUnit(qty,mat.unit||'шт');
+  if(addQty===null){toast((mat.unit||'шт')==='шт'?t('enterIntPositive'):t('enterPositive'));return}
+  const oldQty=stockNumForUnit(mat.quantity,mat.unit);
+  const oldAttrs={...(mat.attributes||{})};
+  applyMaterialReceipt(mat,addQty);
+  const ok=await updateMaterialInSupabase(mat);
+  if(!ok){mat.quantity=oldQty;mat.attributes=oldAttrs;return}
+  await loadMaterialsFromSupabase();
+  refreshOrdersAfterStockChange();
+  renderAll();
+  document.getElementById('quickQty').value='';
+  document.getElementById('quickSku').select();
+  toast(`${t('added')} ${formatQty(addQty,mat.unit)} ${unitLabel(mat.unit)}: ${materialTitle(mat)}`);
+}
 function updateWriteOffInfo(){const box=document.getElementById('quickWriteOffBox');const info=document.getElementById('writeOffInfo');if(!box||!info)return;const sku=writeOffSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent=t('enterSku');return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">${t('quantity')}: ${mat.quantity} ${unitLabel(mat.unit)}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`${t('notFoundSku')}. ${t('unit')}: <b>${unitLabel(unit)}</b>`:t('materialNotFound');}
 async function quickWriteOffStock(){if(!requireAuth())return;const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=Number(document.getElementById('writeOffQty')?.value);if(!sku){toast(t('enterSkuMsg'));return}const mat=findMaterialBySku(sku);if(!mat){toast(t('notFoundSku'));updateWriteOffInfo();return}const writeQty=normalizeQtyForUnit(qty,mat.unit||'шт');if(writeQty===null){toast((mat.unit||'шт')==='шт'?t('enterIntPositive'):t('enterPositive'));return}const oldQty=stockNumForUnit(mat.quantity,mat.unit);if(oldQty<writeQty){if(!confirm(`На складе только ${formatQty(oldQty,mat.unit)} ${unitLabel(mat.unit)}. Списать всё и поставить 0?`))return;mat.quantity=0}else{mat.quantity=stockNumForUnit(oldQty-writeQty,mat.unit)}mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('writeOffQty').value='';document.getElementById('writeOffSku').select();toast(`${t('writtenOff')} ${formatQty(writeQty,mat.unit)} ${unitLabel(mat.unit)}: ${materialTitle(mat)}`)}
+
+function toggleAdvancedFilters(){
+  const panel=document.getElementById('proFilterPanel');
+  const btn=document.getElementById('advancedFiltersBtn');
+  if(!panel)return;
+  panel.classList.toggle('show');
+  if(btn)btn.classList.toggle('primary',panel.classList.contains('show'));
+}
+function setQuickFilter(value){
+  activeQuickFilter=value||'all';
+  document.querySelectorAll('#quickFilterRow .filter-chip').forEach(b=>b.classList.toggle('active',b.dataset.filter===activeQuickFilter));
+  const st=document.getElementById('stockStateFilter');
+  if(st){
+    if(['needorder','ordered'].includes(activeQuickFilter)) st.value=activeQuickFilter;
+    else if(activeQuickFilter==='out') st.value='out';
+    else if(activeQuickFilter==='low') st.value='low';
+    else if(activeQuickFilter==='all'||activeQuickFilter==='problem'||activeQuickFilter==='reserved') st.value='';
+  }
+  stockPage=1;
+  renderAll();
+}
+function materialMatchesProfessionalFilters(m){
+  const state=materialStateOf(m)[0];
+  const unit=document.getElementById('unitFilter')?.value||'';
+  const stateFilter=document.getElementById('stockStateFilter')?.value||'';
+  const supplier=(document.getElementById('supplierFilter')?.value||'').toLowerCase().trim();
+  const order=(document.getElementById('orderFilter')?.value||'').toLowerCase().trim();
+  const attrs=m.attributes||{};
+  const reserved=reservedQty(m);
+  const ordered=orderedQty(m);
+  const available=availableQty(m);
+  const qty=stockNumForUnit(m.quantity,m.unit);
+  const isProblem=available<=0 || state==='low' || state==='needorder' || reserved>qty;
+  if(unit && m.unit!==unit) return false;
+  if(stateFilter && state!==stateFilter) return false;
+  if(supplier && !String(attrs.supplier||'').toLowerCase().includes(supplier)) return false;
+  if(order && !String(attrs.order||'').toLowerCase().includes(order)) return false;
+  if(activeQuickFilter==='problem' && !isProblem) return false;
+  if(activeQuickFilter==='reserved' && reserved<=0) return false;
+  if(activeQuickFilter==='needorder' && state!=='needorder') return false;
+  if(activeQuickFilter==='ordered' && state!=='ordered') return false;
+  if(activeQuickFilter==='out' && !(state==='out'||state==='noorder')) return false;
+  if(activeQuickFilter==='low' && state!=='low') return false;
+  return true;
+}
+function refreshQuickFilterChips(){
+  document.querySelectorAll('#quickFilterRow .filter-chip').forEach(b=>b.classList.toggle('active',b.dataset.filter===activeQuickFilter));
+}
+
 function renderFilters(){
-  const cf=document.getElementById('categoryFilter');cf.innerHTML=`<option value="">${t('allCategories')}</option>`+Object.keys(CATEGORIES).map(c=>`<option value="${c}">${categoryLabel(c)}</option>`).join('');
+  const cf=document.getElementById('categoryFilter');
+  if(!cf)return;
+  const currentCat=cf.value||'';
+  cf.innerHTML=`<option value="">${t('allCategories')}</option>`+Object.keys(CATEGORIES).map(c=>`<option value="${c}" ${currentCat===c?'selected':''}>${categoryLabel(c)}</option>`).join('');
   cf.onchange=()=>{stockPage=1;updateSubFilter();renderAll()};
-  document.getElementById('subcategoryFilter').onchange=()=>{stockPage=1;renderAll()};
-  document.getElementById('searchInput').oninput=()=>{const t=document.getElementById('topSearchInput'); if(t&&t.value!==document.getElementById('searchInput').value)t.value=document.getElementById('searchInput').value; stockPage=1;renderAll()};
+  const subEl=document.getElementById('subcategoryFilter');
+  if(subEl) subEl.onchange=()=>{stockPage=1;renderAll()};
+  const search=document.getElementById('searchInput');
+  if(search) search.oninput=()=>{const t=document.getElementById('topSearchInput'); if(t&&t.value!==search.value)t.value=search.value; stockPage=1;renderAll()};
   const top=document.getElementById('topSearchInput'); if(top) top.oninput=()=>{document.getElementById('searchInput').value=top.value;stockPage=1;renderAll()};
 }
-function updateSubFilter(){const cat=document.getElementById('categoryFilter').value;const sf=document.getElementById('subcategoryFilter');let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option>${s}</option>`).join('')}
-function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
+function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
+function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;document.getElementById('stats').innerHTML=`<div class="stat"><div><span>${t('totalItems')}</span><b>${total}</b></div><div class="sico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></div></div><div class="stat"><div><span>${t('categories')}</span><b>${cats}</b></div><div class="sico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></div></div><div class="stat"><div><span>${t('lowStock')}</span><b>${low}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg></div></div><div class="stat"><div><span>${t('outStock')}</span><b>${out}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></div></div>`}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${m.category}${m.subcategory?' · '+m.subcategory:''}</span>`}
 function renderStock(){
@@ -1174,18 +1416,48 @@ function renderStock(){
   const pages=Array.from({length:totalPages},(_,i)=>i+1).filter(p=>p===1||p===totalPages||Math.abs(p-stockPage)<=1);
   let last=0;
   const pageButtons=pages.map(p=>{const gap=p-last>1?`<span class="muted">…</span>`:'';last=p;return gap+`<button class="pagebtn ${p===stockPage?'active':''}" onclick="setStockPage(${p})">${p}</button>`}).join('');
-  box.innerHTML=`<div class="stock-table-wrap"><table class="stock-table"><thead><tr>${columns.map(([k,label])=>`<th ${sortable.includes(k)?'class="sortable" onclick="setSort(\''+k+'\')"':''}>${label}${sortable.includes(k)?' ↕':''}</th>`).join('')}</tr></thead><tbody>${pageRows.map(m=>{const st=materialStateOf(m);const dims=materialDimensions(m)||'—';const density=materialDensity(m);const available=availableQty(m);const ordered=orderedQty(m);const reserved=reservedQty(m);return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td><div class="stock-title"><div class="stock-main">${escapeHtml(materialDisplayName(m))}</div></div></td><td>${escapeHtml(categoryLabel(m.category)||'—')}</td><td><div class="stock-dims">${escapeHtml(dims)}</div></td><td>${escapeHtml(density)}</td><td><div class="stock-mini"><span class="main-val">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit))}</span>${reserved>0?`<span class="sub-val">резерв ${escapeHtml(qtyWithUnit(reserved,m.unit))}</span>`:''}</div></td><td><span class="stock-qty-cell ${available<=0?'zero':'available'}">${escapeHtml(qtyWithUnit(available,m.unit))}</span></td><td><span class="stock-qty-cell ${ordered>0?'ordered':'ok'}">${escapeHtml(qtyWithUnit(ordered,m.unit))}</span></td><td>${escapeHtml(formatQty(stockNumForUnit(m.minQuantity,m.unit),m.unit))}</td><td><span class="status ${st[0]}">${st[1]}</span></td><td>${materialPdfButton(m)}</td></tr>`}).join('')}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${startIndex+1}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button>${stockPage<totalPages?`<button class="pagebtn more" onclick="setStockPage(${stockPage+1})">${t('loadMore')}</button>`:''}</div></div>`
+  box.innerHTML=`<div class="stock-table-wrap"><table class="stock-table"><thead><tr>${columns.map(([k,label])=>`<th ${sortable.includes(k)?'class="sortable" onclick="setSort(\''+k+'\')"':''}>${label}${sortable.includes(k)?' ↕':''}</th>`).join('')}</tr></thead><tbody>${pageRows.map(m=>{const st=materialStateOf(m);const dims=materialDimensions(m)||'—';const density=materialDensity(m);const available=availableQty(m);const ordered=orderedQty(m);const reserved=reservedQty(m);return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td><div class="stock-title"><div class="stock-main">${escapeHtml(materialDisplayName(m))}</div></div></td><td>${escapeHtml(categoryLabel(m.category)||'—')}</td><td><div class="stock-dims">${escapeHtml(dims)}</div></td><td>${escapeHtml(density)}</td><td><div class="stock-mini"><span class="main-val">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit))}</span>${reserved>0?`<span class="sub-val">резерв ${escapeHtml(qtyWithUnit(reserved,m.unit))}</span><span class="reserve-line" title="${escapeHtml(reservationOrdersShort(m))}">${escapeHtml(reservationOrdersShort(m))}</span>`:''}</div></td><td><span class="stock-qty-cell ${available<=0?'zero':'available'}">${escapeHtml(qtyWithUnit(available,m.unit))}</span></td><td><span class="stock-qty-cell ${ordered>0?'ordered':'ok'}">${escapeHtml(qtyWithUnit(ordered,m.unit))}</span></td><td>${escapeHtml(formatQty(stockNumForUnit(m.minQuantity,m.unit),m.unit))}</td><td><span class="status ${st[0]}">${st[1]}</span></td><td>${materialPdfButton(m)}</td></tr>`}).join('')}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${startIndex+1}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button>${stockPage<totalPages?`<button class="pagebtn more" onclick="setStockPage(${stockPage+1})">${t('loadMore')}</button>`:''}</div></div>`
 }
 function setStockPage(page){stockPage=page;renderStock()}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPage=1;renderStock()}
-function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';stockPage=1;updateSubFilter();renderAll()}
-function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
-function openModal(title,body,foot){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modalFoot').innerHTML=foot;document.getElementById('modalBackdrop').classList.add('show')}
+function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';document.getElementById('subcategoryFilter').value='';['stockStateFilter','unitFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['supplierFilter','orderFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});activeQuickFilter='all';refreshQuickFilterChips();stockPage=1;updateSubFilter();renderAll()}
+let modalStack=[];
+function pushModalState(){
+  const backdrop=document.getElementById('modalBackdrop');
+  if(!backdrop?.classList.contains('show'))return;
+  const modal=document.querySelector('#modalBackdrop .modal');
+  modalStack.push({
+    title:document.getElementById('modalTitle').textContent,
+    body:document.getElementById('modalBody').innerHTML,
+    foot:document.getElementById('modalFoot').innerHTML,
+    wide:!!modal?.classList.contains('wide')
+  });
+}
+function restoreModalState(state){
+  document.getElementById('modalTitle').textContent=state.title;
+  document.getElementById('modalBody').innerHTML=state.body;
+  document.getElementById('modalFoot').innerHTML=state.foot;
+  document.getElementById('modalBackdrop').classList.add('show');
+  document.querySelector('#modalBackdrop .modal')?.classList.toggle('wide',!!state.wide);
+  if(document.getElementById('orderMaterialsBox')){
+    updateOrderTimeTotal();
+    rebuildOrderMaterialOptions();
+    refreshOrderMaterialRows();
+  }
+}
+function closeModal(){
+  const previous=modalStack.pop();
+  if(previous){restoreModalState(previous);return;}
+  document.getElementById('modalBackdrop').classList.remove('show');
+  document.querySelector('#modalBackdrop .modal')?.classList.remove('wide');
+}
+function openModal(title,body,foot){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modalFoot').innerHTML=foot;document.getElementById('modalBackdrop').classList.add('show');document.querySelector('#modalBackdrop .modal')?.classList.remove('wide')}
 
 const ADD_CATEGORIES = ['Поролон','Ткань','Древесина','Фанера','ДСП','Крепёж','Фурнитура'];
 function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'hintFabric','Древесина':'hintWood','Фанера':'hintPlywood','ДСП':'hintChipboard','Крепёж':'hintFasteners','Фурнитура':'hintHardware'};return t(map[cat]||'')}
-function openAddCategoryModal(){
+function openAddCategoryModal(fromOrder=false){
   if(!requireAuth())return;
+  if(fromOrder)pushModalState();
   const body=`<div class="step-title"><span>1</span> ${t('whatAdd')}</div><div class="category-picker">${ADD_CATEGORIES.map(cat=>`<button class="category-card" type="button" onclick="selectMaterialCategory('${cat}')"><div class="cat-ico">${CATEGORIES[cat]?.icon||'+'}</div><div><b>${categoryLabel(cat)}</b><span>${categoryHint(cat)}</span></div></button>`).join('')}</div>`;
   const foot=`<button class="btn" onclick="closeModal()">${t('cancel')}</button>`;
   openModal(t('addMaterial').replace('＋ ',''),body,foot);
@@ -1303,12 +1575,13 @@ async function saveFoamMaterial(id=''){
   if(!ok)return;
   closeModal();
   await loadMaterialsFromSupabase();
+  if(document.getElementById('orderMaterialsBox')){rebuildOrderMaterialOptions();refreshOrderMaterialRows();}
   toast(t('savedMaterial'));
 }
 
 function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">Нет</option><option value="true" ${attrs[key]?'selected':''}>Да</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
 function openMaterialModal(id=null, presetCategory='Ткань'){if(!requireAuth())return;const foundMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null; if(id && !foundMaterial){toast('Материал не найден'); return;} if(foundMaterial && foundMaterial.category==='Поролон'){openFoamModal(id);return;} const preset=CATEGORIES[presetCategory]?presetCategory:'Ткань'; const firstSub=(CATEGORIES[preset]?.subs||[])[0]||''; const m=foundMaterial||{category:preset,subcategory:firstSub,attributes:{},unit:CATEGORIES[preset]?.unit||'м²',quantity:0,minQuantity:0};const autoSku=!id;const body=`<div class="step-title"><span>1</span> ${t('materialBasic')}</div><div class="form-grid"><div class="field"><label>${t('sku')}</label><input id="mSku" class="input" value="${m.sku||nextSku(m.category,m.subcategory,id||'')}"><div class="hint">${t('skuAutoHint')}</div></div><div class="field"><label>${t('name')}</label><input id="mName" class="input" value="${m.name||''}"></div><div class="field"><label>${t('category')}</label><select id="mCat" class="select">${Object.keys(CATEGORIES).map(c=>`<option value="${c}" ${m.category===c?'selected':''}>${categoryLabel(c)}</option>`).join('')}</select></div><div class="field"><label>${t('subcategory')}</label><select id="mSub" class="select"></select></div></div><div class="step-title"><span>2</span> ${t('materialAttrs')}</div><div class="form-grid" id="attrBox"></div><div class="step-title"><span>3</span> ${t('materialStock')}</div><div class="form-grid"><div class="field">${purchaseStatusLabelBlock(purchaseStatusSelect('mPurchaseStatus',defaultPurchaseStatus(m)))}</div><div class="field"><label>${t('minQuantity')}</label><input id="mMin" type="number" step="${stockStep(m.unit||'м²')}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(m.minQuantity||0,m.unit||'м²'),m.unit||'м²')}" inputmode="decimal"></div>${stockTripleInputs('m',{ordered:(m.attributes||{}).orderedQty||0,reserved:(m.attributes||{}).reservedQty||0,qty:m.quantity||0},m.unit||'м²')}<div class="field"><label>${t('unit')}</label><input id="mUnit" class="input" value="${m.unit||'м²'}"></div></div>`;const foot=`<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" onclick="saveMaterial('${id||''}')">${t('save')}</button>`;openModal(id?t('edit'):t('addMaterial'),body,foot);const catEl=document.getElementById('mCat'),subEl=document.getElementById('mSub'),unitEl=document.getElementById('mUnit'),skuEl=document.getElementById('mSku');function refreshSku(){if(autoSku)skuEl.value=nextSku(catEl.value,subEl.value,id||'')}function redraw(){const cat=catEl.value;const subs=CATEGORIES[cat].subs||[];subEl.innerHTML=`<option value="">${t('noSubcategory')}</option>`+subs.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');unitEl.value=CATEGORIES[cat].unit;syncStockInputs('m',unitEl.value);document.getElementById('attrBox').innerHTML=materialFields(cat,subEl.value,m.attributes||{});refreshSku()}catEl.onchange=()=>{m.subcategory='';redraw()};subEl.onchange=()=>{document.getElementById('attrBox').innerHTML=materialFields(catEl.value,subEl.value,m.attributes||{});refreshSku()};unitEl.oninput=()=>syncStockInputs('m',unitEl.value);redraw()}
-async function saveMaterial(id){const cat=document.getElementById('mCat').value;const attrs={};document.querySelectorAll('.attr').forEach(i=>attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value);attrs.purchaseStatus=document.getElementById('mPurchaseStatus')?.value||'instock';const unit=mUnit.value||'м²';const q=normalizeStockValue(mQty.value,unit,true), mn=normalizeStockValue(mMin.value,unit,true), rs=normalizeStockValue(mReserved.value,unit,true), od=normalizeStockValue(mOrdered.value,unit,true);if(q===null||mn===null||rs===null||od===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}attrs.reservedQty=rs;attrs.orderedQty=od;const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||'Без названия',category:cat,subcategory:mSub.value,attributes:attrs,unit,quantity:q,minQuantity:mn,lastUpdated:today()};const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;closeModal();await loadMaterialsFromSupabase();toast(t('savedMaterial'))}
+async function saveMaterial(id){const cat=document.getElementById('mCat').value;const attrs={};document.querySelectorAll('.attr').forEach(i=>attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value);attrs.purchaseStatus=document.getElementById('mPurchaseStatus')?.value||'instock';const unit=mUnit.value||'м²';const q=normalizeStockValue(mQty.value,unit,true), mn=normalizeStockValue(mMin.value,unit,true), rs=normalizeStockValue(mReserved.value,unit,true), od=normalizeStockValue(mOrdered.value,unit,true);if(q===null||mn===null||rs===null||od===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}attrs.reservedQty=rs;attrs.orderedQty=od;const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||'Без названия',category:cat,subcategory:mSub.value,attributes:attrs,unit,quantity:q,minQuantity:mn,lastUpdated:today()};const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;closeModal();await loadMaterialsFromSupabase();if(document.getElementById('orderMaterialsBox')){rebuildOrderMaterialOptions();refreshOrderMaterialRows();}toast(t('savedMaterial'))}
 async function deleteMaterial(id){if(!confirm('Удалить материал?'))return;const ok=await deleteMaterialFromSupabase(id);if(!ok)return;data.models.forEach(m=>m.items=m.items.filter(i=>i.materialId!==id));await loadMaterialsFromSupabase();toast('Материал удалён')}
 function changeQty(id,delta){const m=data.materials.find(x=>String(x.id)===String(id));const val=prompt('На сколько изменить остаток?',delta);if(val===null)return;m.quantity=Number((Number(m.quantity)+Number(val)).toFixed(3));m.lastUpdated=today();save();renderAll()}
 function openModelModal(id=null){const model=id?data.models.find(x=>String(x.id)===String(id)):{name:'',note:'',items:[]};const options=data.materials.map(m=>`<option value="${m.id}">${m.sku} — ${materialTitle(m)} (${unitLabel(m.unit)})</option>`).join('');const itemRows=(model.items||[]).map((it,idx)=>modelItemRow(options,it,idx)).join('');const body=`<div class="form-grid"><div class="field"><label>Название модели</label><input id="modelName" class="input" value="${model.name||''}"></div><div class="field"><label>Заметка</label><input id="modelNote" class="input" value="${model.note||''}"></div><div class="field full"><label>Материалы на 1 изделие</label><div id="modelItems">${itemRows}</div><button class="btn small" style="margin-top:8px" onclick="addModelItem()">+ Добавить материал</button><button class="btn small" style="margin-top:8px" onclick="openAddCategoryModal()">+ Новый материал</button></div></div>`;const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveModel('${id||''}')">Сохранить</button>`;openModal(id?t('editBtn'):t('newModel'),body,foot);window.currentMaterialOptions=options}
@@ -1317,18 +1590,82 @@ function addModelItem(){document.getElementById('modelItems').insertAdjacentHTML
 function saveModel(id){const items=[...document.querySelectorAll('.model-input-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.mi-material').value));return {materialId:mat?.id,qty:Number(r.querySelector('.mi-qty').value||0),unit:mat?.unit||''}}).filter(i=>i.materialId);const obj={id:id||uid(),name:modelName.value.trim()||'Без названия',note:modelNote.value.trim(),items};if(id)data.models=data.models.map(x=>String(x.id)===String(id)?obj:x);else data.models.push(obj);save();closeModal();renderAll();toast('Модель сохранена')}
 function renderModels(){const box=document.getElementById('modelsGrid');if(!data.models.length){box.innerHTML='<div class="empty"><b>Моделей пока нет</b>Создайте модель и укажите материалы на 1 изделие.</div>';return}box.innerHTML=data.models.map(m=>`<div class="model-card"><h3>${m.name}</h3><p class="muted">${m.note||'Без заметки'}</p><div class="materials-list">${m.items.map(i=>{const mat=data.materials.find(x=>String(x.id)===String(i.materialId));return `<div class="line-item"><span>${mat?mat.name:'Удалённый материал'}</span><b>${i.qty} ${i.unit}</b></div>`}).join('')||'<span class="muted">Материалы не указаны</span>'}</div><div class="actions" style="margin-top:12px"><button class="btn small" onclick="openModelModal('${m.id}')">Править</button><button class="btn small danger" onclick="deleteModel('${m.id}')">Удалить</button></div></div>`).join('')}
 function deleteModel(id){if(!confirm('Удалить модель?'))return;data.models=data.models.filter(x=>String(x.id)!==String(id));data.orders=data.orders.filter(o=>String(o.modelId)!==String(id));save();renderAll()}
-function openOrderModal(){const body=`<div class="form-grid"><div class="field"><label>Номер заказа</label><input id="oNum" class="input" value="ORD-${Date.now().toString().slice(-4)}"></div><div class="field"><label>Клиент</label><input id="oClient" class="input"></div><div class="field"><label>Модель</label><select id="oModel" class="select">${data.models.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select><div class="hint"><button class="btn small" onclick="openModelModal()">+ Новая модель</button></div></div><div class="field"><label>Количество изделий</label><input id="oQty" type="number" class="input" value="1"></div><div class="field"><label>Статус</label><select id="oStatus" class="select"><option>Новый</option><option>В работе</option><option>Готов</option></select></div></div>`;const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveOrder()">Создать</button>`;openModal('Новый заказ',body,foot)}
-function saveOrder(){data.orders.push({id:uid(),number:oNum.value,client:oClient.value,modelId:oModel.value,qty:Number(oQty.value||1),status:oStatus.value});save();closeModal();renderAll()}
-function renderOrders(){const box=document.getElementById('ordersGrid');if(!data.orders.length){box.innerHTML='<div class="empty"><b>Заказов пока нет</b>Создайте заказ и выберите модель.</div>';return}box.innerHTML=data.orders.map(o=>{const model=data.models.find(m=>String(m.id)===String(o.modelId));const lines=(model?.items||[]).map(i=>{const mat=data.materials.find(m=>String(m.id)===String(i.materialId));const need=Number(i.qty)*Number(o.qty);const have=Number(mat?.quantity||0);const ok=have>=need;return `<div class="line-item"><span>${mat?mat.name:'Удалённый материал'}<br><small class="muted">нужно ${need} ${i.unit}, есть ${have} ${i.unit}</small></span><b class="${ok?'ok-text':'danger-text'}">${ok?'Хватает':'Не хватает '+(need-have).toFixed(2)}</b></div>`}).join('');return `<div class="order-card"><h3>${o.number}</h3><p class="muted">${o.client||'Клиент не указан'} · ${model?.name||'Модель удалена'} · ${o.qty} шт.</p><span class="badge">${o.status}</span><div class="materials-list">${lines||'<span class="muted">Нет материалов для расчёта</span>'}</div><div class="actions" style="margin-top:12px"><button class="btn small danger" onclick="deleteOrder('${o.id}')">Удалить</button></div></div>`}).join('')}
-function deleteOrder(id){data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();renderAll()}
+
+const ORDER_STATUSES=['Новый','В работе','Ожидает материалы','Готов','Отменён'];
+const ORDER_MATERIAL_CATS=['Поролон','Ткань','Древесина','Фурнитура'];
+function orderStatusClass(st){return {'Новый':'new','В работе':'work','Ожидает материалы':'wait','Готов':'done','Отменён':'cancel'}[st]||'new'}
+function orderTimeText(min){min=Math.max(0,Math.round(Number(min||0)));const h=Math.floor(min/60),m=min%60;return h?`${h} ч ${String(m).padStart(2,'0')} мин`:`${m} мин`}
+function nextOrderNumber(excludeId=''){let max=0;(data.orders||[]).forEach(o=>{if(String(o.id)===String(excludeId))return;const m=String(o.number||'').match(/^Z-(\d{4})$/);if(m)max=Math.max(max,Number(m[1]));});return `Z-${String(max+1).padStart(4,'0')}`}
+function orderMaterials(o){return Array.isArray(o.materials)?o.materials:[]}
+function orderSteps(o){return Array.isArray(o.steps)?o.steps:[{name:'Оклейка',minutes:0},{name:'Столярка',minutes:0},{name:'Швейный цех',minutes:0},{name:'Упаковка',minutes:0}]}
+function calcOrderMinutes(o){return orderSteps(o).reduce((s,x)=>s+Number(x.minutes||0),0)}
+function materialReservedOutsideOrder(matId,excludeOrderId=''){return (data.orders||[]).filter(o=>String(o.id)!==String(excludeOrderId)&&!['Готов','Отменён'].includes(o.status)).flatMap(orderMaterials).filter(i=>String(i.materialId)===String(matId)).reduce((s,i)=>s+Number(i.qty||0),0)}
+function orderItemAvailability(item,excludeOrderId=''){const m=data.materials.find(x=>String(x.id)===String(item.materialId));if(!m)return {ok:false,missing:Number(item.qty||0),available:0,stock:0,unit:item.unit||'',mat:null};const stock=stockNumForUnit(m.quantity,m.unit);const reservedOther=materialReservedOutsideOrder(m.id,excludeOrderId);const available=Math.max(0,stock-reservedOther);const need=Number(item.qty||0);return {ok:available>=need,missing:Math.max(0,need-available),available,stock,unit:m.unit,mat:m}}
+function orderHasMaterialProblem(o){return orderMaterials(o).some(i=>!orderItemAvailability(i,o.id).ok)}
+function orderMaterialSummary(o){const items=orderMaterials(o);if(!items.length)return '<span class="muted">Материалы не указаны</span>';return items.slice(0,2).map(i=>{const m=data.materials.find(x=>String(x.id)===String(i.materialId));const av=orderItemAvailability(i,o.id);return `<b>${escapeHtml(m?materialTitle(m):'Удалённый материал')}</b> — ${escapeHtml(qtyWithUnit(i.qty,av.unit||i.unit))}${av.ok?'':' · не хватает '+escapeHtml(qtyWithUnit(av.missing,av.unit||i.unit))}`}).join('<br>')+(items.length>2?`<br><span class="muted">+ ещё ${items.length-2}</span>`:'')}
+function syncMaterialReservations(){const totals={};(data.orders||[]).forEach(o=>{if(['Готов','Отменён'].includes(o.status))return;orderMaterials(o).forEach(i=>{if(i.materialId)totals[i.materialId]=(totals[i.materialId]||0)+Number(i.qty||0)})});(data.materials||[]).forEach(m=>{m.attributes=m.attributes||{};m.attributes.reservedQty=stockNumForUnit(totals[m.id]||0,m.unit)})}
+async function persistReservationMaterials(){syncMaterialReservations();for(const m of data.materials){await updateMaterialInSupabase(m)}}
+function openOrderModal(id=''){
+  if(!requireAuth())return;
+  const o=id?data.orders.find(x=>String(x.id)===String(id)):null;
+  const number=o?.number||nextOrderNumber();
+  const steps=orderSteps(o||{});
+  const mats=orderMaterials(o||{});
+  const body=`<div class="form-grid">
+    <div class="field"><label>№ заказа</label><input id="orderNumber" class="input" value="${escapeHtml(number)}" ${o?'':'disabled'}><label class="manual-number"><input id="manualOrderNumber" type="checkbox" ${o?'checked':''} onchange="toggleManualOrderNumber()"> Ввести номер вручную</label><div class="hint">Автонумерация создаёт Z-0001, Z-0002 и дальше.</div></div>
+    <div class="field"><label>Заказчик</label><input id="orderClient" class="input" value="${escapeHtml(o?.client||'')}" placeholder="Имя или компания"></div>
+    <div class="field"><label>Статус</label><select id="orderStatus" class="select">${ORDER_STATUSES.map(st=>`<option ${((o?.status)||'Новый')===st?'selected':''}>${st}</option>`).join('')}</select></div>
+    <div class="field"><label>Дата</label><input id="orderDate" type="date" class="input" value="${escapeHtml(o?.date||today())}"></div>
+    <div class="field full"><label>Комментарий</label><textarea id="orderComment" placeholder="Комментарий технолога, особенности заказа...">${escapeHtml(o?.comment||'')}</textarea></div>
+  </div>
+  <div class="order-form-section"><div class="order-section-head"><h4>Технология <span class="order-time-total" id="orderTimeTotal">0 мин</span></h4><button class="btn small" onclick="addOrderStep()">＋ Добавить этап</button></div><div id="orderStepsBox">${steps.map(s=>orderStepRow(s)).join('')}</div></div>
+  <div class="order-form-section"><div class="order-section-head"><h4>Материалы <button class="info-btn" type="button" onclick="showOrderReserveInfo()">i</button></h4><div class="actions"><button class="btn small" onclick="addOrderMaterialRow()">＋ Добавить материал</button><button class="btn small" onclick="openAddCategoryModal(true)">＋ Добавить новый материал на склад</button></div></div><div id="orderMaterialsBox">${mats.map(i=>orderMaterialRow(i,id)).join('')}</div><div class="hint">На складе не уменьшается сразу. Доступно = На складе − резерв других заказов. Резерв этого заказа пересчитывается после сохранения.</div></div>`;
+  const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveOrder('${id||''}')">Сохранить</button>`;
+  openModal(id?'Редактировать заказ':'Добавить заказ',body,foot);
+  document.querySelector('#modalBackdrop .modal')?.classList.add('wide');
+  updateOrderTimeTotal();refreshOrderMaterialRows();
+}
+function toggleManualOrderNumber(){const cb=document.getElementById('manualOrderNumber'),inp=document.getElementById('orderNumber');if(!inp||!cb)return;inp.disabled=!cb.checked;if(!cb.checked)inp.value=nextOrderNumber()}
+function orderStepRow(s={name:'',minutes:0}){return `<div class="order-row order-step-row"><div class="field"><label>Этап</label><input class="input step-name" value="${escapeHtml(s.name||'')}"></div><div class="field"><label>Минуты</label><input class="input step-min" type="number" min="0" step="1" value="${Number(s.minutes||0)}" oninput="updateOrderTimeTotal()"></div><button class="btn small danger" onclick="this.closest('.order-step-row').remove();updateOrderTimeTotal()">×</button></div>`}
+function addOrderStep(){document.getElementById('orderStepsBox').insertAdjacentHTML('beforeend',orderStepRow({name:'Новый этап',minutes:0}));updateOrderTimeTotal()}
+function updateOrderTimeTotal(){const total=[...document.querySelectorAll('.step-min')].reduce((s,i)=>s+Number(i.value||0),0);const el=document.getElementById('orderTimeTotal');if(el)el.textContent=`${total} мин · ${orderTimeText(total)}`}
+function materialOptions(category='',selected=''){return (data.materials||[]).filter(m=>!category||m.category===category).map(m=>`<option value="${m.id}" ${String(m.id)===String(selected)?'selected':''}>${escapeHtml(m.sku||'')} — ${escapeHtml(materialTitle(m))}</option>`).join('')}
+function orderMaterialRow(i={},excludeOrderId=''){const cat=i.category||'Поролон';const mat=data.materials.find(m=>String(m.id)===String(i.materialId));const unit=mat?.unit||i.unit||'';return `<div class="order-material-row"><div class="field"><label>Категория</label><select class="select om-cat" onchange="refreshOneOrderMaterialRow(this)">${ORDER_MATERIAL_CATS.map(c=>`<option value="${c}" ${cat===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Материал</label><select class="select om-material" onchange="refreshOrderMaterialRows()">${materialOptions(cat,i.materialId)}</select></div><div class="field"><label>Количество</label><input class="input om-qty" type="number" min="0" step="0.01" value="${Number(i.qty||0)}" oninput="refreshOrderMaterialRows()"></div><div class="field"><label>Ед.</label><div class="readonly-pill om-unit">${escapeHtml(unit||'—')}</div></div><div class="material-check om-check">Выберите материал</div><button class="btn small danger" onclick="this.closest('.order-material-row').remove()">×</button></div>`}
+function addOrderMaterialRow(){document.getElementById('orderMaterialsBox').insertAdjacentHTML('beforeend',orderMaterialRow());refreshOrderMaterialRows()}
+function refreshOneOrderMaterialRow(sel){const row=sel.closest('.order-material-row');const matSel=row.querySelector('.om-material');matSel.innerHTML=materialOptions(sel.value,'');refreshOrderMaterialRows()}
+function rebuildOrderMaterialOptions(){document.querySelectorAll('.order-material-row').forEach(row=>{const cat=row.querySelector('.om-cat')?.value||'';const sel=row.querySelector('.om-material');if(!sel)return;const selected=sel.value;sel.innerHTML=materialOptions(cat,selected);});}
+function refreshOrderMaterialRows(){document.querySelectorAll('.order-material-row').forEach(row=>{const id=row.querySelector('.om-material')?.value;const qty=Number(row.querySelector('.om-qty')?.value||0);const m=data.materials.find(x=>String(x.id)===String(id));const unit=row.querySelector('.om-unit');const check=row.querySelector('.om-check');if(unit)unit.textContent=m?.unit||'—';if(!check)return;if(!m){check.className='material-check warn om-check';check.innerHTML='Материал не выбран';return}const av=orderItemAvailability({materialId:id,qty},'');check.className='material-check om-check '+(av.ok?'ok':'bad');check.innerHTML=av.ok?`Материалы доступны<br><span class="muted">На складе ${qtyWithUnit(av.stock,m.unit)}, доступно ${qtyWithUnit(av.available,m.unit)}</span>`:`Не хватает материала<br><span class="muted">Нужно ${qtyWithUnit(qty,m.unit)}, доступно ${qtyWithUnit(av.available,m.unit)}, заказать ${qtyWithUnit(av.missing,m.unit)}</span>`})}
+function showOrderReserveInfo(){alert('Резерв заказа не списывает склад сразу.\n\nНа складе — физический остаток.\nЗарезервировано — нужно для незавершённых заказов.\nДоступно = На складе − Зарезервировано.\n\nПри завершении заказа резерв списывается со склада, а резерв освобождается.')}
+async function saveOrder(id=''){
+  const steps=[...document.querySelectorAll('.order-step-row')].map(r=>({name:r.querySelector('.step-name').value.trim()||'Этап',minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0)))}));
+  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));return {category:r.querySelector('.om-cat')?.value||mat?.category||'',materialId:mat?.id||'',qty:stockNumForUnit(r.querySelector('.om-qty')?.value||0,mat?.unit||'м²'),unit:mat?.unit||''}}).filter(i=>i.materialId&&i.qty>0);
+  let status=document.getElementById('orderStatus')?.value||'Новый';
+  const draft={id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),comment:document.getElementById('orderComment').value.trim(),date:document.getElementById('orderDate').value||today(),status,steps,materials};
+  if(status!=='Готов'&&status!=='Отменён'&&orderHasMaterialProblem(draft))draft.status='Ожидает материалы';
+  if(id)data.orders=data.orders.map(o=>String(o.id)===String(id)?draft:o);else data.orders.push(draft);
+  save(); await persistReservationMaterials(); closeModal(); await loadMaterialsFromSupabase(); renderAll(); toast('Заказ сохранён');
+}
+function filteredOrders(){const q=(document.getElementById('orderSearchInput')?.value||'').toLowerCase().trim();const st=document.getElementById('orderStatusFilter')?.value||'';const client=document.getElementById('orderClientFilter')?.value||'';const date=document.getElementById('orderDateFilter')?.value||'';const prob=document.getElementById('orderProblemFilter')?.value||'';return (data.orders||[]).filter(o=>{const mats=orderMaterials(o).map(i=>data.materials.find(m=>String(m.id)===String(i.materialId))).filter(Boolean).map(materialTitle).join(' ');const hay=(o.number+' '+o.client+' '+mats).toLowerCase();const hasProb=orderHasMaterialProblem(o);return (!q||hay.includes(q))&&(!st||o.status===st)&&(!client||o.client===client)&&(!date||o.date===date)&&(!prob||(prob==='problem'?hasProb:!hasProb))}).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))}
+function renderOrderStats(){const orders=data.orders||[];const stats=[['Всего заказов',orders.length],['В работе',orders.filter(o=>o.status==='В работе').length],['Ожидают материалы',orders.filter(o=>o.status==='Ожидает материалы'||orderHasMaterialProblem(o)).length],['Завершено',orders.filter(o=>o.status==='Готов').length]];const box=document.getElementById('orderStats');if(box)box.innerHTML=stats.map(([l,v])=>`<div class="stat"><div><span>${l}</span><b>${v}</b></div></div>`).join('')}
+function renderOrderClientFilter(){const el=document.getElementById('orderClientFilter');if(!el)return;const current=el.value;const clients=[...new Set((data.orders||[]).map(o=>o.client).filter(Boolean))].sort();el.innerHTML='<option value="">Все заказчики</option>'+clients.map(c=>`<option ${c===current?'selected':''}>${escapeHtml(c)}</option>`).join('')}
+function orderActionMenu(id){return `<div class="action-menu" id="orderMenu_${id}"><button class="action-menu-btn" type="button" onclick="toggleOrderMenu(event,'${id}')">⋯</button><div class="action-menu-list"><button type="button" onclick="openOrderView('${id}')">Открыть</button><button type="button" onclick="openOrderModal('${id}')">Редактировать</button><button type="button" onclick="completeOrder('${id}')">Завершить</button><button type="button" onclick="cancelOrder('${id}')">Отменить</button><button type="button" class="danger" onclick="deleteOrder('${id}')">Удалить</button></div></div>`}
+function closeOrderMenus(){document.querySelectorAll('.action-menu.open').forEach(x=>x.classList.remove('open'))}
+function toggleOrderMenu(e,id){e.stopPropagation();const el=document.getElementById('orderMenu_'+id);const was=el?.classList.contains('open');closeOrderMenus();if(el&&!was)el.classList.add('open')}
+function renderOrders(){renderOrderStats();renderOrderClientFilter();const box=document.getElementById('ordersTable')||document.getElementById('ordersGrid');if(!box)return;const rows=filteredOrders();if(!rows.length){box.innerHTML='<div class="empty"><b>Заказов пока нет</b>Создайте заказ и зарезервируйте материалы со склада.</div>';return}box.innerHTML=`<div class="order-table-wrap"><table class="order-table"><thead><tr><th>№</th><th>Заказчик</th><th>Время</th><th>Статус</th><th>Дата</th><th></th></tr></thead><tbody>${rows.map(o=>{const min=calcOrderMinutes(o);const problems=orderHasMaterialProblem(o);return `<tr ondblclick="openOrderView('${o.id}')"><td><span class="stock-sku">${escapeHtml(o.number)}</span></td><td class="order-client-cell"><div class="name">${escapeHtml(o.client||'—')}</div>${o.comment?`<div class="sub">${escapeHtml(o.comment)}</div>`:''}${problems?`<div class="sub danger-text">Есть нехватка материалов — откройте заказ</div>`:''}</td><td class="order-time-cell"><b>${min} мин</b><br><span class="muted">${orderTimeText(min)}</span></td><td><span class="status ${orderStatusClass(o.status)}">${escapeHtml(o.status)}</span></td><td>${escapeHtml(o.date||'—')}</td><td>${orderActionMenu(o.id)}</td></tr>`}).join('')}</tbody></table></div>`}
+function openOrderView(id){const o=data.orders.find(x=>String(x.id)===String(id));if(!o)return;const min=calcOrderMinutes(o);const mats=orderMaterials(o).map(i=>{const av=orderItemAvailability(i,o.id);return `<div class="line-item"><span>${escapeHtml(av.mat?materialTitle(av.mat):'Удалённый материал')}<br><small class="muted">Нужно ${escapeHtml(qtyWithUnit(i.qty,av.unit||i.unit))}, доступно ${escapeHtml(qtyWithUnit(av.available,av.unit||i.unit))}</small></span><b class="${av.ok?'ok-text':'danger-text'}">${av.ok?'Материалы доступны':'Не хватает '+escapeHtml(qtyWithUnit(av.missing,av.unit||i.unit))}</b></div>`}).join('')||'<span class="muted">Материалы не указаны</span>';const steps=orderSteps(o).map(s=>`<div class="line-item"><span>${escapeHtml(s.name)}</span><b>${Number(s.minutes||0)} мин</b></div>`).join('');const body=`<div class="order-view-grid"><div class="order-view-card"><small>Заказчик</small><b>${escapeHtml(o.client||'—')}</b></div><div class="order-view-card"><small>Статус</small><span class="status ${orderStatusClass(o.status)}">${escapeHtml(o.status)}</span></div><div class="order-view-card"><small>Общее время</small><b>${min} мин · ${orderTimeText(min)}</b></div><div class="order-view-card"><small>Дата</small><b>${escapeHtml(o.date||'—')}</b></div><div class="order-view-card full"><small>Технология</small>${steps}</div><div class="order-view-card full"><small>Материалы</small>${mats}</div><div class="order-view-card full"><small>Комментарий</small>${escapeHtml(o.comment||'—')}</div></div>`;openModal(o.number,body,`<button class="btn" onclick="openOrderModal('${o.id}')">Редактировать</button><button class="btn primary" onclick="closeModal()">Закрыть</button>`)}
+async function completeOrder(id){const o=data.orders.find(x=>String(x.id)===String(id));if(!o)return;if(orderHasMaterialProblem(o)&&!confirm('Есть нехватка материалов. Всё равно завершить?'))return;if(!confirm('Завершить заказ и списать зарезервированные материалы со склада?'))return;for(const i of orderMaterials(o)){const m=data.materials.find(x=>String(x.id)===String(i.materialId));if(m)m.quantity=Math.max(0,stockNumForUnit(m.quantity,m.unit)-Number(i.qty||0))}o.status='Готов';save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast('Заказ завершён, материалы списаны')}
+async function cancelOrder(id){const o=data.orders.find(x=>String(x.id)===String(id));if(!o)return;if(!confirm('Отменить заказ и освободить резерв материалов?'))return;o.status='Отменён';save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast('Заказ отменён, резерв освобождён')}
+async function deleteOrder(id){if(!confirm('Удалить заказ и освободить резерв материалов?'))return;data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast('Заказ удалён')}
+function clearOrderFilters(){['orderSearchInput','orderDateFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['orderStatusFilter','orderClientFilter','orderProblemFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});renderOrders()}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mebel-sklad-data.json';a.click()}
 function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();renderAll();toast('Данные загружены')}catch(err){alert('Ошибка JSON')}};r.readAsText(f)}
 function wipeData(){if(!confirm('Очистить все данные?'))return;data={materials:[],models:[],orders:[]};save();renderAll()}
-function renderAll(){renderStats();renderStock();renderModels();renderOrders();applyI18n()}
+function renderAll(){renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();applyI18n()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm('Вернуть демо-данные? Текущие данные будут заменены.')){data=demoData();save();renderAll();toast('Демо восстановлено')}};
 
 function toggleMobileSidebar(){document.body.classList.toggle("sidebar-open")}
 function closeMobileSidebar(){document.body.classList.remove("sidebar-open")}
+document.addEventListener("click",()=>closeOrderMenus());
 renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickAddStock()}} updateQuickAddInfo();const ws=document.getElementById('writeOffSku'), wq=document.getElementById('writeOffQty'); if(ws){ws.oninput=updateWriteOffInfo;ws.onkeydown=e=>{if(e.key==='Enter')wq?.focus()}} if(wq){wq.onkeydown=e=>{if(e.key==='Enter')quickWriteOffStock()}} updateWriteOffInfo();checkSession();
 </script>
 </body>
