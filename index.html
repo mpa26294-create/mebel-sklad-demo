@@ -2524,6 +2524,34 @@ function closeModal(){
 }
 function openModal(title,body,foot){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modalFoot').innerHTML=foot;document.getElementById('modalBackdrop').classList.add('show');document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide');updateModalBackButton()}
 
+function isMaterialAddedInsideOrderModal(){
+  return modalStack.some(state=>String(state.body||'').includes('orderMaterialsBox'));
+}
+async function finishMaterialSaveAndReturn(newSku='', category=''){
+  const shouldReturnToOrder=isMaterialAddedInsideOrderModal();
+  await loadMaterialsFromSupabase();
+  if(shouldReturnToOrder){
+    goBackModal();
+    const created=(data.materials||[]).find(m=>String(m.sku||'')===String(newSku||''));
+    const box=document.getElementById('orderMaterialsBox');
+    if(created && box){
+      box.insertAdjacentHTML('beforeend', orderMaterialRow({category:created.category||category||'Поролон', materialId:created.id, perUnitQty:0}, window.currentOrderEditId||''));
+    }
+    if(document.getElementById('orderMaterialsBox')){
+      rebuildOrderMaterialOptions();
+      refreshOrderMaterialRows();
+    }
+    toast(t('savedMaterial'));
+    return;
+  }
+  closeModal();
+  if(document.getElementById('orderMaterialsBox')){
+    rebuildOrderMaterialOptions();
+    refreshOrderMaterialRows();
+  }
+  toast(t('savedMaterial'));
+}
+
 const ADD_CATEGORIES = ['Поролон','Ткань','Древесина','Фанера','ДСП','Крепёж','Фурнитура'];
 function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'hintFabric','Древесина':'hintWood','Фанера':'hintPlywood','ДСП':'hintChipboard','Крепёж':'hintFasteners','Фурнитура':'hintHardware'};return t(map[cat]||'')}
 function openAddCategoryModal(fromOrder=false){
@@ -2651,10 +2679,14 @@ async function saveFoamMaterial(id=''){
   };
   const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
   if(!ok)return;
-  closeModal();
-  await loadMaterialsFromSupabase();
-  if(document.getElementById('orderMaterialsBox')){rebuildOrderMaterialOptions();refreshOrderMaterialRows();}
-  toast(t('savedMaterial'));
+  if(id){
+    closeModal();
+    await loadMaterialsFromSupabase();
+    if(document.getElementById('orderMaterialsBox')){rebuildOrderMaterialOptions();refreshOrderMaterialRows();}
+    toast(t('savedMaterial'));
+    return;
+  }
+  await finishMaterialSaveAndReturn(sku,'Поролон');
 }
 
 function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">Нет</option><option value="true" ${attrs[key]?'selected':''}>Да</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
@@ -2682,7 +2714,7 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
   unitEl.oninput=()=>syncStockInputs('m',unitEl.value);
   redraw();
 }
-async function saveMaterial(id){const cat=document.getElementById('mCat').value;const attrs={};document.querySelectorAll('.attr').forEach(i=>attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value);const unit=mUnit.value||'м²';const q=normalizeStockValue(mQty.value,unit,true), mn=normalizeStockValue(mMin.value,unit,true);const rs=document.getElementById('mReserved')?normalizeStockValue(mReserved.value,unit,true):0;const od=document.getElementById('mOrdered')?normalizeStockValue(mOrdered.value,unit,true):0;if(q===null||mn===null||rs===null||od===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}attrs.purchaseStatus=document.getElementById('mPurchaseStatus')?.value || (q>0?'instock':'noorder');attrs.reservedQty=rs;attrs.orderedQty=od;const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||'Без названия',category:cat,subcategory:mSub.value,attributes:attrs,unit,quantity:q,minQuantity:mn,lastUpdated:today()};const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;closeModal();await loadMaterialsFromSupabase();if(document.getElementById('orderMaterialsBox')){rebuildOrderMaterialOptions();refreshOrderMaterialRows();}toast(t('savedMaterial'))}
+async function saveMaterial(id){const cat=document.getElementById('mCat').value;const attrs={};document.querySelectorAll('.attr').forEach(i=>attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value);const unit=mUnit.value||'м²';const q=normalizeStockValue(mQty.value,unit,true), mn=normalizeStockValue(mMin.value,unit,true);const rs=document.getElementById('mReserved')?normalizeStockValue(mReserved.value,unit,true):0;const od=document.getElementById('mOrdered')?normalizeStockValue(mOrdered.value,unit,true):0;if(q===null||mn===null||rs===null||od===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}attrs.purchaseStatus=document.getElementById('mPurchaseStatus')?.value || (q>0?'instock':'noorder');attrs.reservedQty=rs;attrs.orderedQty=od;const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||'Без названия',category:cat,subcategory:mSub.value,attributes:attrs,unit,quantity:q,minQuantity:mn,lastUpdated:today()};const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;if(id){closeModal();await loadMaterialsFromSupabase();if(document.getElementById('orderMaterialsBox')){rebuildOrderMaterialOptions();refreshOrderMaterialRows();}toast(t('savedMaterial'));return;}await finishMaterialSaveAndReturn(obj.sku,obj.category)}
 async function deleteMaterial(id){
   const mat=data.materials.find(x=>String(x.id)===String(id));
   const title=mat?materialTitle(mat):'материал';
