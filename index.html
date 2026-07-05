@@ -1504,6 +1504,11 @@
   border-color:#ddd6fe!important;
 }
 
+
+
+/* v5.43: no purchase controls inside add/edit order form */
+#orderMaterialsBox .om-purchase{display:none!important}
+
 </style>
 </head>
 <body class="auth-locked">
@@ -1603,7 +1608,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><div class="modal-head-title"><button class="modal-back-btn" id="modalBackBtn" type="button" onclick="goBackModal()">‹ Назад</button><h3 id="modalTitle">Добавить</h3></div><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v5.40 - Simplified Add Material</div>
+<div class="version-badge" id="appVersionBadge">v5.43 - No Purchase In Order Form</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 function refreshOrderMaterialPurchaseButtons(){
@@ -1630,7 +1635,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v5.40 - Simplified Add Material';
+const APP_VERSION = 'v5.43 - No Purchase In Order Form';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -3095,14 +3100,6 @@ function orderMaterialRow(i={},excludeOrderId=''){
     <div class="field"><label>Ед.</label><div class="readonly-pill om-unit">${escapeHtml(unit||'—')}</div></div>
     <button class="btn small danger order-line-remove" type="button" onclick="this.closest('.order-material-row').remove();refreshOrderMaterialRows()">×</button>
     <div class="material-check om-check">Выберите материал</div>
-    <div class="om-purchase">
-      <div class="om-purchase-head"><div class="om-purchase-title">Закупка по нехватке</div><div class="om-purchase-missing">Нехватка: <span class="om-missing-text">0</span></div></div>
-      <div class="om-purchase-grid">
-        <div class="field"><label>Статус</label><select class="select om-purchase-status" onchange="refreshOrderMaterialRows()"><option value="need" ${ps==='need'?'selected':''}>Нужно заказать</option><option value="ordered" ${ps==='ordered'?'selected':''}>Заказано</option><option value="none" ${ps==='none'?'selected':''}>Не нужно</option></select></div>
-        <div class="field"><label>Количество</label><input class="input om-purchase-qty" type="number" min="0" step="0.01" value="${pq||''}" oninput="refreshOrderMaterialRows()"></div>
-        <div class="field"><label>№ закупки / поставщик</label><input class="input om-purchase-no" value="${escapeHtml(pno)}" placeholder="например PO-102 или Supplier"></div>
-      </div>
-    </div>
   </div>`
 }
 function addOrderMaterialRow(){document.getElementById('orderMaterialsBox').insertAdjacentHTML('beforeend',orderMaterialRow());refreshOrderMaterialRows()}
@@ -3118,20 +3115,12 @@ function refreshOrderMaterialRows(){
     const unit=row.querySelector('.om-unit');
     const totalEl=row.querySelector('.om-total-qty');
     const check=row.querySelector('.om-check');
-    const purchase=row.querySelector('.om-purchase');
-    const purchaseQty=row.querySelector('.om-purchase-qty');
-    const missingText=row.querySelector('.om-missing-text');
     if(unit)unit.textContent=m?.unit||'—';
     if(totalEl)totalEl.textContent=m?qtyWithUnit(totalQty,m.unit):'—';
     if(!check)return;
-    if(!m){check.className='material-check warn om-check';check.innerHTML='Материал не выбран';if(purchase)purchase.classList.remove('show');return}
+    if(!m){check.className='material-check warn om-check';check.innerHTML='Материал не выбран';return}
     const av=orderItemAvailability({materialId:id,qty:totalQty},window.currentOrderEditId||'');
-    const ps=row.querySelector('.om-purchase-status')?.value||'need';
-    if(missingText)missingText.textContent=qtyWithUnit(av.missing,m.unit);
-    if(purchase){const show=av.missing>0 || ps==='ordered' || Number(purchaseQty?.value||0)>0;purchase.classList.toggle('show',show)}
-    if(av.missing>0 && purchaseQty && !purchaseQty.value)purchaseQty.value=inputQtyValue(av.missing,m.unit);
-    const pQty=Number(purchaseQty?.value||0);
-    const effective={materialId:id,qty:totalQty,perUnitQty:perUnit,unit:m.unit,purchaseStatus:ps,purchaseQty:pQty};
+    const effective={materialId:id,qty:totalQty,perUnitQty:perUnit,unit:m.unit,purchaseStatus:'none',purchaseQty:0};
     const st=orderMaterialLineState(effective,window.currentOrderEditId||'');
     check.className='material-check om-check '+(st.kind==='ok'?'ok':st.kind==='blue'?'warn':st.kind==='warn'?'warn':'bad');
     if(st.kind==='ok'){
@@ -3148,7 +3137,7 @@ function refreshOrderMaterialRows(){
 async function saveOrder(id=''){
   const steps=[...document.querySelectorAll('.order-step-row')].map(r=>({name:r.querySelector('.step-name').value.trim()||'Этап',minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0)))}));
   const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');const av=orderItemAvailability({materialId:mat.id,qty},id);const ps=r.querySelector('.om-purchase-status')?.value||'need';const rawPurchaseQty=r.querySelector('.om-purchase-qty')?.value;const purchaseQty=av.missing>0?stockNumForUnit(rawPurchaseQty||av.missing,mat.unit):0;return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:av.missing>0?ps:'none',purchaseQty,purchaseNo:r.querySelector('.om-purchase-no')?.value?.trim()||''}}).filter(i=>i&&i.materialId&&i.qty>0);
+  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:'none',purchaseQty:0,purchaseNo:''}}).filter(i=>i&&i.materialId&&i.qty>0);
   const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
   let status=(prev&&['Готов','Отменён','В производстве'].includes(prev.status))?prev.status:'Новый';
   const draft={id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',comment:document.getElementById('orderComment').value.trim(),date:document.getElementById('orderDate').value||today(),status,steps,materials};
@@ -3259,14 +3248,6 @@ function orderMaterialRow(i={},excludeOrderId=''){
     <div class="field"><label>${u42('unit')}</label><div class="readonly-pill om-unit">${escapeHtml(unit||'—')}</div></div>
     <button class="btn small danger order-line-remove" type="button" onclick="this.closest('.order-material-row').remove();refreshOrderMaterialRows()">×</button>
     <div class="material-check om-check">${u42('selectMaterial')}</div>
-    <div class="om-purchase">
-      <div class="om-purchase-head"><div class="om-purchase-title">${u42('purchaseMissing')}</div><div class="om-purchase-missing">${u42('missing')}: <span class="om-missing-text">0</span></div></div>
-      <div class="om-purchase-grid">
-        <div class="field"><label>${u42('status')}</label><select class="select om-purchase-status" onchange="refreshOrderMaterialRows()"><option value="need" ${ps==='need'?'selected':''}>${u42('needOrder')}</option><option value="ordered" ${ps==='ordered'?'selected':''}>${u42('ordered')}</option><option value="none" ${ps==='none'?'selected':''}>${u42('notNeeded')}</option></select></div>
-        <div class="field"><label>${u42('quantity')}</label><input class="input om-purchase-qty" type="number" min="0" step="0.01" value="${pq||''}" oninput="refreshOrderMaterialRows()"></div>
-        <div class="field"><label>${u42('purchaseNo')}</label><input class="input om-purchase-no" value="${escapeHtml(pno)}" placeholder="${u42('purchaseNoPh')}"></div>
-      </div>
-    </div>
   </div>`
 }
 function refreshOrderMaterialRows(){
@@ -3279,20 +3260,12 @@ function refreshOrderMaterialRows(){
     const unit=row.querySelector('.om-unit');
     const totalEl=row.querySelector('.om-total-qty');
     const check=row.querySelector('.om-check');
-    const purchase=row.querySelector('.om-purchase');
-    const purchaseQty=row.querySelector('.om-purchase-qty');
-    const missingText=row.querySelector('.om-missing-text');
     if(unit)unit.textContent=m?.unit||'—';
     if(totalEl)totalEl.textContent=m?qtyWithUnit(totalQty,m.unit):'—';
     if(!check)return;
-    if(!m){check.className='material-check warn om-check';check.innerHTML=u42('selectMaterial');if(purchase)purchase.classList.remove('show');return}
+    if(!m){check.className='material-check warn om-check';check.innerHTML=u42('selectMaterial');return}
     const av=orderItemAvailability({materialId:id,qty:totalQty},window.currentOrderEditId||'');
-    const ps=row.querySelector('.om-purchase-status')?.value||'need';
-    if(missingText)missingText.textContent=qtyWithUnit(av.missing,m.unit);
-    if(purchase){const show=av.missing>0 || ps==='ordered' || Number(purchaseQty?.value||0)>0;purchase.classList.toggle('show',show)}
-    if(av.missing>0 && purchaseQty && !purchaseQty.value)purchaseQty.value=inputQtyValue(av.missing,m.unit);
-    const pQty=Number(purchaseQty?.value||0);
-    const effective={materialId:id,qty:totalQty,perUnitQty:perUnit,unit:m.unit,purchaseStatus:ps,purchaseQty:pQty};
+    const effective={materialId:id,qty:totalQty,perUnitQty:perUnit,unit:m.unit,purchaseStatus:'none',purchaseQty:0};
     const st=orderMaterialLineState(effective,window.currentOrderEditId||'');
     check.className='material-check om-check '+(st.kind==='ok'?'ok':st.kind==='blue'?'warn':st.kind==='warn'?'warn':'bad');
     if(st.kind==='ok') check.innerHTML=`<div><b>${u42('availableMat')}</b></div><div class="muted">${u42('stock')} ${qtyWithUnit(av.stock,m.unit)} · ${u42('available')} ${qtyWithUnit(av.available,m.unit)} · ${u42('need')} ${qtyWithUnit(totalQty,m.unit)}</div>`;
@@ -3304,7 +3277,7 @@ function refreshOrderMaterialRows(){
 async function saveOrder(id=''){
   const steps=[...document.querySelectorAll('.order-step-row')].map(r=>({name:r.querySelector('.step-name').value.trim()||u42('stage'),minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0)))}));
   const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');const av=orderItemAvailability({materialId:mat.id,qty},id);const ps=r.querySelector('.om-purchase-status')?.value||'need';const rawPurchaseQty=r.querySelector('.om-purchase-qty')?.value;const purchaseQty=av.missing>0?stockNumForUnit(rawPurchaseQty||av.missing,mat.unit):0;return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:av.missing>0?ps:'none',purchaseQty,purchaseNo:r.querySelector('.om-purchase-no')?.value?.trim()||''}}).filter(i=>i&&i.materialId&&i.qty>0);
+  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:'none',purchaseQty:0,purchaseNo:''}}).filter(i=>i&&i.materialId&&i.qty>0);
   const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
   let status=(prev&&['Готов','Отменён','В производстве'].includes(prev.status))?prev.status:'Новый';
   const draft={id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',comment:document.getElementById('orderComment').value.trim(),date:document.getElementById('orderDate').value||today(),status,steps,materials};
