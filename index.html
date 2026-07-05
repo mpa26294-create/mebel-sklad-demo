@@ -3326,6 +3326,110 @@ function openOrderView(id){
   openModal(o.number,body,`<button class="btn" onclick="openOrderModal('${o.id}')">${u42('edit')}</button><button class="btn primary" onclick="closeModal()">${u42('close')}</button>`);
 }
 
+
+
+/* v5.44: keep order form draft when adding new material from order modal */
+let pendingOrderDraftV44 = null;
+
+function captureOrderFormDraftV44(){
+  const numberEl=document.getElementById('orderNumber');
+  if(!numberEl || !document.getElementById('orderMaterialsBox')) return null;
+  const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
+  const steps=[...document.querySelectorAll('.order-step-row')].map(r=>({
+    name:r.querySelector('.step-name')?.value?.trim()||'',
+    minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min')?.value||0)))
+  }));
+  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{
+    const cat=r.querySelector('.om-cat')?.value||'Поролон';
+    const materialId=r.querySelector('.om-material')?.value||'';
+    const mat=data.materials.find(m=>String(m.id)===String(materialId));
+    const unit=mat?.unit||r.querySelector('.om-unit')?.textContent?.trim()||'';
+    const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,unit||'м²');
+    return {category:cat,materialId,perUnitQty,qty:stockNumForUnit(perUnitQty*productQty,unit||'м²'),unit,purchaseStatus:'none',purchaseQty:0,purchaseNo:''};
+  }).filter(i=>i.category||i.materialId);
+  return {
+    id: window.currentOrderEditId||'',
+    number:numberEl.value||'',
+    manual:!!document.getElementById('manualOrderNumber')?.checked,
+    client:document.getElementById('orderClient')?.value||'',
+    productQty,
+    dueDate:document.getElementById('orderDueDate')?.value||'',
+    date:document.getElementById('orderDate')?.value||today(),
+    comment:document.getElementById('orderComment')?.value||'',
+    steps,
+    materials
+  };
+}
+
+function restoreOrderFormDraftV44(draft,newMaterial){
+  if(!draft) return false;
+  openOrderModal(draft.id||'');
+  const set=(id,val)=>{const el=document.getElementById(id); if(el) el.value=val??'';};
+  set('orderNumber',draft.number||nextOrderNumber(draft.id||''));
+  set('orderClient',draft.client||'');
+  set('orderProductQty',draft.productQty||1);
+  set('orderDueDate',draft.dueDate||'');
+  set('orderDate',draft.date||today());
+  set('orderComment',draft.comment||'');
+  const manual=document.getElementById('manualOrderNumber');
+  const num=document.getElementById('orderNumber');
+  if(manual && num){manual.checked=!!draft.manual || !!draft.id; num.disabled=!manual.checked;}
+  const stepsBox=document.getElementById('orderStepsBox');
+  if(stepsBox) stepsBox.innerHTML=(draft.steps&&draft.steps.length?draft.steps:[{name:'',minutes:0}]).map(s=>orderStepRow(s)).join('');
+  const mats=[...(draft.materials||[])];
+  if(newMaterial && !mats.some(i=>String(i.materialId)===String(newMaterial.id))){
+    mats.push({category:newMaterial.category||'Поролон', materialId:newMaterial.id, perUnitQty:0, qty:0, unit:newMaterial.unit||'', purchaseStatus:'none', purchaseQty:0, purchaseNo:''});
+  }
+  const matsBox=document.getElementById('orderMaterialsBox');
+  if(matsBox) matsBox.innerHTML=mats.map(i=>orderMaterialRow(i,draft.id||'')).join('');
+  updateOrderTimeTotal();
+  rebuildOrderMaterialOptions?.();
+  refreshOrderMaterialRows();
+  return true;
+}
+
+function openAddCategoryModal(fromOrder=false){
+  if(!requireAuth())return;
+  if(fromOrder){
+    pendingOrderDraftV44=captureOrderFormDraftV44();
+    pushModalState();
+  }
+  const body=`<div class="step-title"><span>1</span> ${t('whatAdd')}</div><div class="category-picker">${ADD_CATEGORIES.map(cat=>`<button class="category-card" type="button" onclick="selectMaterialCategory('${cat}')"><div class="cat-ico">${CATEGORIES[cat]?.icon||'+'}</div><div><b>${categoryLabel(cat)}</b><span>${categoryHint(cat)}</span></div></button>`).join('')}</div>`;
+  const foot=`<button class="btn" onclick="${pendingOrderDraftV44?'restoreOrderFormDraftV44(pendingOrderDraftV44);pendingOrderDraftV44=null':'closeModal()'}">${t('cancel')}</button>`;
+  openModal(t('addMaterial').replace('＋ ',''),body,foot);
+}
+
+async function finishMaterialSaveAndReturn(newSku='', category=''){
+  await loadMaterialsFromSupabase();
+  const created=(data.materials||[]).find(m=>String(m.sku||'')===String(newSku||''));
+  if(pendingOrderDraftV44){
+    restoreOrderFormDraftV44(pendingOrderDraftV44, created || (newSku?{id:'',sku:newSku,category}:null));
+    pendingOrderDraftV44=null;
+    toast(t('savedMaterial'));
+    return;
+  }
+  const shouldReturnToOrder=isMaterialAddedInsideOrderModal();
+  if(shouldReturnToOrder){
+    goBackModal();
+    const box=document.getElementById('orderMaterialsBox');
+    if(created && box){
+      box.insertAdjacentHTML('beforeend', orderMaterialRow({category:created.category||category||'Поролон', materialId:created.id, perUnitQty:0}, window.currentOrderEditId||''));
+    }
+    if(document.getElementById('orderMaterialsBox')){
+      rebuildOrderMaterialOptions?.();
+      refreshOrderMaterialRows();
+    }
+    toast(t('savedMaterial'));
+    return;
+  }
+  closeModal();
+  if(document.getElementById('orderMaterialsBox')){
+    rebuildOrderMaterialOptions?.();
+    refreshOrderMaterialRows();
+  }
+  toast(t('savedMaterial'));
+}
+
 function renderAll(){renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();applyI18n()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
 
