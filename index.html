@@ -2018,6 +2018,74 @@ html:has(body.modal-open){
 .production-side .clean-card{background:#fff!important;}
 @media(max-width:920px){.production-shell{grid-template-columns:1fr}.production-op{grid-template-columns:1fr 1fr}.production-op .field,.production-op .btn{grid-column:1/-1}.production-side{order:-1}}
 
+
+
+/* v5.64: visible order action buttons */
+.order-row-action-buttons{display:flex;align-items:center;justify-content:flex-end;gap:8px;white-space:nowrap}
+.order-row-action-buttons .btn{height:34px!important;min-height:34px!important;border-radius:10px!important;padding:0 12px!important;font-size:12px!important;font-weight:600!important;box-shadow:none!important}
+.order-row-action-buttons .btn.production-btn{background:#17181b!important;color:#fff!important;border-color:#17181b!important;box-shadow:0 8px 18px rgba(0,0,0,.08)!important}
+.order-row-action-buttons .btn.open-btn{background:#fff!important;color:#30343b!important;border-color:#e5e7eb!important}
+#orders .order-table th:nth-child(6),#orders .order-table td:nth-child(6){width:250px!important;text-align:right!important}
+@media(max-width:900px){.order-row-action-buttons{gap:6px}.order-row-action-buttons .btn{padding:0 10px!important}.order-row-action-buttons .btn.production-btn span{display:none}}
+/* v5.67: production button only active when technology is filled */
+.order-row-action-buttons .btn.production-btn.disabled{
+  background:#f3f4f6!important;
+  color:#9aa1ad!important;
+  border-color:#e5e7eb!important;
+  box-shadow:none!important;
+  cursor:not-allowed!important;
+  pointer-events:auto!important;
+}
+.order-row-action-buttons .btn.production-btn.disabled:hover{
+  background:#f3f4f6!important;
+  color:#9aa1ad!important;
+}
+.tech-required-note{
+  margin-top:6px;
+  color:#8a8f99;
+  font-size:11px;
+  white-space:nowrap;
+}
+
+
+
+
+/* v5.65: profile and audit history */
+.audit-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+.audit-card{border:1px solid #e8ebf0;border-radius:16px;background:#fbfcfd;padding:14px;box-shadow:none}
+.audit-card h5{margin:0 0 10px;font-size:13px;font-weight:650;color:#111;display:flex;align-items:center;gap:8px}
+.audit-card small{display:block;text-transform:uppercase;letter-spacing:.06em;color:#8a8f99;font-size:10px;margin-bottom:4px}
+.audit-kv{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 0;border-top:1px solid #eef0f4;color:#606977;font-size:12px}
+.audit-kv:first-of-type{border-top:0}
+.audit-kv b{font-weight:650;color:#111;text-align:right;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.audit-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;-webkit-overflow-scrolling:touch;padding-right:2px}
+.audit-item{display:grid;grid-template-columns:9px 1fr;gap:10px;align-items:start;border:1px solid #eef0f4;border-radius:13px;background:#fff;padding:10px 11px}
+.audit-dot{width:9px;height:9px;border-radius:50%;background:#17181b;margin-top:5px}
+.audit-item b{display:block;font-size:12px;color:#111;font-weight:650;line-height:1.25}
+.audit-item span{display:block;margin-top:4px;color:#667085;font-size:11px;line-height:1.3}
+.audit-empty{color:#8a8f99;font-size:12px;padding:10px 0}
+.profile-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid #e8ebf0;border-radius:999px;background:#fff;padding:6px 10px;font-size:12px;color:#30343b;font-weight:550}
+.profile-avatar{width:20px;height:20px;border-radius:999px;background:#f0f1f3;display:grid;place-items:center;font-size:11px;color:#111;font-weight:700}
+.order-row-action-buttons{display:flex;align-items:center;gap:8px;justify-content:flex-end;white-space:nowrap}.order-row-action-buttons .btn{height:34px!important;min-height:34px!important;border-radius:10px!important;padding:0 12px!important;font-size:12px!important}.order-row-action-buttons .production-btn{background:#17181b!important;color:#fff!important;border-color:#17181b!important}.order-row-action-buttons .open-btn{background:#fff!important;color:#111!important;border-color:#e5e7eb!important}
+@media(max-width:920px){.audit-profile-grid{grid-template-columns:1fr}.audit-kv{grid-template-columns:1fr}.audit-kv b{text-align:left}.order-row-action-buttons{justify-content:flex-start}}
+
+
+
+/* v5.69: cancelled order material freeze + recount */
+.status.cancel-review{background:#fff8e7!important;color:#8a650e!important;border-color:#f2dfaa!important}
+.cancel-review-box{border:1px solid #f2dfaa;border-radius:16px;background:#fffdf6;padding:14px;margin-top:14px}
+.cancel-review-box h5{margin:0 0 6px;font-size:14px;color:#111;font-weight:650}
+.cancel-review-box p{margin:0 0 12px;color:#6f7480;font-size:12px;line-height:1.4}
+.cancel-review-list{display:flex;flex-direction:column;gap:10px}
+.cancel-review-row{border:1px solid #f2dfaa;border-radius:14px;background:#fff;padding:12px;display:grid;grid-template-columns:minmax(220px,1fr) 110px 110px 110px;gap:10px;align-items:end}
+.cancel-review-row b{font-weight:650;color:#111}.cancel-review-row small{display:block;margin-top:3px;color:#8a8f99}
+.cancel-review-row .field label{font-size:10px;text-transform:uppercase;letter-spacing:.055em;color:#8a8f99}
+.cancel-review-row .input{height:38px!important;border-radius:11px!important}
+.cancel-review-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.frozen-pill{display:inline-flex;align-items:center;border-radius:999px;border:1px solid #f2dfaa;background:#fff8e7;color:#8a650e;padding:4px 8px;font-size:11px;font-weight:650}
+.material-frozen-note{border:1px solid #f2dfaa;border-radius:14px;background:#fffdf6;padding:12px;margin-top:12px;color:#8a650e;font-size:12px;line-height:1.35}
+@media(max-width:820px){.cancel-review-row{grid-template-columns:1fr}.cancel-review-actions{display:grid;grid-template-columns:1fr}}
+
 </style>
 </head>
 <body class="auth-locked">
@@ -2117,7 +2185,7 @@ html:has(body.modal-open){
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><div class="modal-head-title"><button class="modal-back-btn" id="modalBackBtn" type="button" onclick="goBackModal()">‹ Назад</button><h3 id="modalTitle">Добавить</h3></div><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v5.63 - Production Status Opens</div>
+<div class="version-badge" id="appVersionBadge">v5.75 - Simple Ordered History</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 function refreshOrderMaterialPurchaseButtons(){
@@ -2136,6 +2204,309 @@ function refreshOrderMaterialPurchaseButtons(){
   }
 }
 
+
+
+/* v5.70: detailed audit history for every changed field */
+function auditCloneV570(obj){try{return JSON.parse(JSON.stringify(obj||null))}catch(e){return null}}
+function auditCleanValV570(v){
+  if(v===undefined||v===null||v==='')return '—';
+  if(typeof v==='boolean')return v?'Да':'Нет';
+  if(typeof v==='number')return Number.isInteger(v)?String(v):String(Number(v.toFixed(3))).replace('.',',');
+  return String(v);
+}
+function auditChangedTextV570(label,oldVal,newVal){return `${label}: ${auditCleanValV570(oldVal)} → ${auditCleanValV570(newVal)}`}
+function auditPushDiffV570(list,label,oldVal,newVal){
+  const a=auditCleanValV570(oldVal), b=auditCleanValV570(newVal);
+  if(a!==b)list.push(auditChangedTextV570(label,oldVal,newVal));
+}
+function auditJoinV570(parts,max=6){
+  const arr=(parts||[]).filter(Boolean);
+  if(arr.length<=max)return arr.join('; ');
+  return arr.slice(0,max).join('; ')+`; ещё ${arr.length-max}`;
+}
+function auditAttrLabelV570(key){
+  const map={
+    materialType:'Тип материала',manufacturer:'Производитель',collection:'Коллекция / код',color:'Цвет',rollWidth:'Ширина рулона',rollLength:'Длина рулона',area:'Площадь',
+    grade:'Марка / плотность',thickness:'Толщина',width:'Ширина',length:'Длина',height:'Высота',supplier:'Поставщик',order:'№ закупки / поставщик',tags:'Теги',
+    crossSection:'Сечение',woodType:'Порода',limited:'Лимитированная партия',laminated:'Ламинированная',decor:'Цвет / декор',thread:'Резьба',strengthClass:'Класс прочности',type:'Тип',size:'Размер',diameter:'Диаметр',pdfName:'PDF'
+  };
+  return map[key]||key;
+}
+function auditMaterialFieldDiffsV570(prev,next){
+  const diffs=[];
+  if(!prev||!next)return diffs;
+  auditPushDiffV570(diffs,'Артикул',prev.sku,next.sku);
+  auditPushDiffV570(diffs,'Название',prev.name,next.name);
+  auditPushDiffV570(diffs,'Категория',prev.category,next.category);
+  auditPushDiffV570(diffs,'Подкатегория',prev.subcategory,next.subcategory);
+  auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
+  auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
+  auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl']);
+  const pa=prev.attributes||{}, na=next.attributes||{};
+  Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
+    if(ignore.has(k))return;
+    auditPushDiffV570(diffs,auditAttrLabelV570(k),pa[k],na[k]);
+  });
+  return diffs;
+}
+function auditStepDiffsV570(prevSteps,nextSteps){
+  const diffs=[];
+  const old=prevSteps||[], neu=nextSteps||[];
+  const max=Math.max(old.length,neu.length);
+  for(let i=0;i<max;i++){
+    const a=old[i]||{}, b=neu[i]||{};
+    const oldName=a.name||'', newName=b.name||'';
+    if(!old[i]&&neu[i]){diffs.push(`Добавлен этап: ${newName||'Этап'} · ${Number(b.minutes||0)} мин`);continue;}
+    if(old[i]&&!neu[i]){diffs.push(`Удалён этап: ${oldName||'Этап'}`);continue;}
+    if(oldName!==newName)diffs.push(`Этап ${i+1}: ${oldName||'—'} → ${newName||'—'}`);
+    const am=Number(a.minutes||0), bm=Number(b.minutes||0);
+    if(am!==bm)diffs.push(`${newName||oldName||('Этап '+(i+1))}: ${am} → ${bm} мин`);
+  }
+  return diffs;
+}
+function auditOrderMaterialLabelV570(item){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(item&&item.materialId));
+  return m?(m.sku||m.name||item.materialId):(item&&item.materialId)||'материал';
+}
+function auditOrderMaterialDiffsV570(prevMats,nextMats){
+  const diffs=[];
+  const old=prevMats||[], neu=nextMats||[];
+  const ids=Array.from(new Set([...old.map(x=>String(x.materialId)),...neu.map(x=>String(x.materialId))]));
+  ids.forEach(id=>{
+    const a=old.find(x=>String(x.materialId)===id), b=neu.find(x=>String(x.materialId)===id);
+    const label=auditOrderMaterialLabelV570(b||a||{materialId:id});
+    if(!a&&b){diffs.push(`Добавлен материал ${label}: ${qtyWithUnit(Number(b.qty||0),b.unit||'')}`);return;}
+    if(a&&!b){diffs.push(`Удалён материал ${label}: было ${qtyWithUnit(Number(a.qty||0),a.unit||'')}`);return;}
+    if(a&&b){
+      if(Number(a.perUnitQty||0)!==Number(b.perUnitQty||0))diffs.push(`${label} на 1 изделие: ${qtyWithUnit(Number(a.perUnitQty||0),b.unit||a.unit||'')} → ${qtyWithUnit(Number(b.perUnitQty||0),b.unit||a.unit||'')}`);
+      if(Number(a.qty||0)!==Number(b.qty||0))diffs.push(`${label} всего: ${qtyWithUnit(Number(a.qty||0),b.unit||a.unit||'')} → ${qtyWithUnit(Number(b.qty||0),b.unit||a.unit||'')}`);
+    }
+  });
+  return diffs;
+}
+function auditOrderFieldDiffsV570(prev,next){
+  const diffs=[];
+  if(!prev||!next)return diffs;
+  auditPushDiffV570(diffs,'Номер заказа',prev.number,next.number);
+  auditPushDiffV570(diffs,'Заказчик',prev.client,next.client);
+  auditPushDiffV570(diffs,'Количество изделий',orderProductQty(prev),orderProductQty(next));
+  auditPushDiffV570(diffs,'Срок сдачи',prev.dueDate,next.dueDate);
+  auditPushDiffV570(diffs,'Дата создания',prev.date,next.date);
+  auditPushDiffV570(diffs,'Комментарий',prev.comment,next.comment);
+  return diffs;
+}
+
+if(typeof saveOrder==='function'){
+  const __saveOrderV570=saveOrder;
+  saveOrder=async function(id=''){
+    const prev=id?auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))):null;
+    await __saveOrderV570(id);
+    const next=id?auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))):auditCloneV570((data.orders||[])[(data.orders||[]).length-1]);
+    if(prev&&next){
+      const fieldDiffs=auditOrderFieldDiffsV570(prev,next);
+      const techDiffs=auditStepDiffsV570(prev.steps,next.steps);
+      const matDiffs=auditOrderMaterialDiffsV570(prev.materials,next.materials);
+      if(false&&fieldDiffs.length)auditAdd('order_fields_changed','order',next.id,next.number,`Изменены данные заказа: ${auditJoinV570(fieldDiffs)}`,{diffs:fieldDiffs});
+      if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
+      if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
+    }
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.75 - Simple Ordered History';
+  };
+}
+
+if(typeof updateMaterialInSupabase==='function'){
+  const __updateMaterialV570=updateMaterialInSupabase;
+  updateMaterialInSupabase=async function(m){
+    const prev=auditCloneV570((data.materials||[]).find(x=>String(x.id)===String(m&&m.id)));
+    const next=auditCloneV570(m);
+    const ok=await __updateMaterialV570(m);
+    if(ok&&prev&&next){
+      const diffs=auditMaterialFieldDiffsV570(prev,next);
+      if(false&&diffs.length)auditAdd('material_fields_changed','material',next.id,next.sku||next.name,`Изменены поля материала: ${auditJoinV570(diffs)}`,{diffs});
+    }
+    return ok;
+  };
+}
+
+// More detailed rows in audit lists: show changed fields under the main history line.
+const __auditListHtmlV570=auditListHtml;
+auditListHtml=function(entity,entityId){
+  const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+  return `<div class="audit-list">${rows.map(r=>{const details=(r.meta&&Array.isArray(r.meta.diffs)&&r.meta.diffs.length)?`<span>${r.meta.diffs.map(x=>'• '+escapeHtml(x)).join('<br>')}</span>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${details}</div></div>`}).join('')}</div>`;
+};
+auditListHtmlOrder=function(o){
+  let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+  return `<div class="audit-list">${rows.map(r=>{const details=(r.meta&&Array.isArray(r.meta.diffs)&&r.meta.diffs.length)?`<span>${r.meta.diffs.map(x=>'• '+escapeHtml(x)).join('<br>')}</span>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${details}</div></div>`}).join('')}</div>`;
+};
+
+
+
+/* v5.71: short and clean change history */
+function auditAutoNameFromGradeV571(prev,next){
+  const pa=(prev&&prev.attributes)||{}, na=(next&&next.attributes)||{};
+  if((prev&&prev.category)!=='Поролон' || (next&&next.category)!=='Поролон')return false;
+  const oldGrade=String(pa.grade||'').trim();
+  const newGrade=String(na.grade||'').trim();
+  const oldName=String((prev&&prev.name)||'').trim();
+  const newName=String((next&&next.name)||'').trim();
+  if(!oldGrade || !newGrade || oldGrade===newGrade)return false;
+  // If material name changed only because the grade is included in the generated name,
+  // do not write a separate "Название" change. The real user change is grade/density.
+  const oldWithout=oldName.replace(oldGrade,'').replace(/\s+/g,' ').trim();
+  const newWithout=newName.replace(newGrade,'').replace(/\s+/g,' ').trim();
+  return oldWithout===newWithout;
+}
+function auditMaterialFieldDiffsV571(prev,next){
+  const diffs=[];
+  if(!prev||!next)return diffs;
+  auditPushDiffV570(diffs,'Артикул',prev.sku,next.sku);
+  if(!auditAutoNameFromGradeV571(prev,next))auditPushDiffV570(diffs,'Название',prev.name,next.name);
+  auditPushDiffV570(diffs,'Категория',prev.category,next.category);
+  auditPushDiffV570(diffs,'Подкатегория',prev.subcategory,next.subcategory);
+  auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
+  auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
+  auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl','area']);
+  const pa=prev.attributes||{}, na=next.attributes||{};
+  Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
+    if(ignore.has(k))return;
+    auditPushDiffV570(diffs,auditAttrLabelV570(k),pa[k],na[k]);
+  });
+  return diffs;
+}
+function auditMainTextV571(prefix,diffs){
+  const arr=(diffs||[]).filter(Boolean);
+  if(!arr.length)return prefix;
+  if(arr.length===1)return `${prefix}: ${arr[0]}`;
+  return `${prefix}: ${auditJoinV570(arr,4)}`;
+}
+
+if(typeof updateMaterialInSupabase==='function'){
+  const __updateMaterialV571=updateMaterialInSupabase;
+  updateMaterialInSupabase=async function(m){
+    const prev=auditCloneV570((data.materials||[]).find(x=>String(x.id)===String(m&&m.id)));
+    const next=auditCloneV570(m);
+    const ok=await __updateMaterialV571(m);
+    if(ok&&prev&&next){
+      const diffs=auditMaterialFieldDiffsV571(prev,next);
+      if(diffs.length)auditAdd('material_fields_changed','material',next.id,next.sku||next.name,auditMainTextV571('Изменено',diffs),{diffs});
+    }
+    return ok;
+  };
+}
+
+if(typeof saveOrder==='function'){
+  const __saveOrderV571=saveOrder;
+  saveOrder=async function(id=''){
+    const prev=id?auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))):null;
+    await __saveOrderV571(id);
+    const next=id?auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))):auditCloneV570((data.orders||[])[(data.orders||[]).length-1]);
+    if(prev&&next){
+      const fieldDiffs=auditOrderFieldDiffsV570(prev,next);
+      const techDiffs=auditStepDiffsV570(prev.steps,next.steps);
+      const matDiffs=auditOrderMaterialDiffsV570(prev.materials,next.materials);
+      if(fieldDiffs.length)auditAdd('order_fields_changed','order',next.id,next.number,auditMainTextV571('Изменено в заказе',fieldDiffs),{diffs:fieldDiffs});
+      if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
+      if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
+    }
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.75 - Simple Ordered History';
+  };
+}
+
+// In history cards show only one short clear line. Details are kept in meta for future export, but not duplicated visually.
+if(typeof auditFor==='function'){
+  auditListHtml=function(entity,entityId){
+    const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+  auditListHtmlOrder=function(o){
+    let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+}
+
+
+
+/* v5.72: do not treat generated foam name as real name change */
+function auditExtractArrowV572(diff){
+  const text=String(diff||'');
+  const i=text.indexOf(':');
+  const body=i>=0?text.slice(i+1).trim():text;
+  const parts=body.split('→');
+  if(parts.length<2)return null;
+  return {old:parts[0].trim(), next:parts.slice(1).join('→').trim()};
+}
+function auditIsFoamGeneratedNameDiffV572(nameDiff, gradeDiff){
+  if(!nameDiff || !gradeDiff)return false;
+  const n=auditExtractArrowV572(nameDiff);
+  const g=auditExtractArrowV572(gradeDiff);
+  if(!n || !g)return false;
+  const oldName=String(n.old||'').trim();
+  const newName=String(n.next||'').trim();
+  const oldGrade=String(g.old||'').trim();
+  const newGrade=String(g.next||'').trim();
+  if(!oldGrade || !newGrade)return false;
+  if(!/^Название\s*:/i.test(String(nameDiff)))return false;
+  if(!/^(Марка\s*\/\s*плотность|Марка\s*\/\s*Плотность)\s*:/i.test(String(gradeDiff)))return false;
+  const oldBase=oldName.replace(oldGrade,'').replace(/\s+/g,' ').trim();
+  const newBase=newName.replace(newGrade,'').replace(/\s+/g,' ').trim();
+  if(oldBase && oldBase===newBase)return true;
+  return oldName.includes(oldGrade) && newName.includes(newGrade) && oldName.replace(oldGrade,'')===newName.replace(newGrade,'');
+}
+function auditCleanDiffsV572(diffs){
+  const arr=(diffs||[]).filter(Boolean).map(String);
+  const grade=arr.find(x=>/^(Марка\s*\/\s*плотность|Марка\s*\/\s*Плотность)\s*:/i.test(x));
+  return arr.filter(x=>{
+    if(/^Название\s*:/i.test(x) && auditIsFoamGeneratedNameDiffV572(x,grade))return false;
+    return true;
+  });
+}
+function auditMaterialFieldDiffsV571(prev,next){
+  const diffs=[];
+  if(!prev||!next)return diffs;
+  auditPushDiffV570(diffs,'Артикул',prev.sku,next.sku);
+  auditPushDiffV570(diffs,'Название',prev.name,next.name);
+  auditPushDiffV570(diffs,'Категория',prev.category,next.category);
+  auditPushDiffV570(diffs,'Подкатегория',prev.subcategory,next.subcategory);
+  auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
+  auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
+  auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl','area']);
+  const pa=prev.attributes||{}, na=next.attributes||{};
+  Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
+    if(ignore.has(k))return;
+    auditPushDiffV570(diffs,auditAttrLabelV570(k),pa[k],na[k]);
+  });
+  return auditCleanDiffsV572(diffs);
+}
+function auditMainTextV571(prefix,diffs){
+  const arr=auditCleanDiffsV572(diffs||[]);
+  if(!arr.length)return prefix;
+  if(arr.length===1)return `${prefix}: ${arr[0]}`;
+  return `${prefix}: ${auditJoinV570(arr,4)}`;
+}
+function auditDisplayTextV572(row){
+  if(row && row.type==='material_fields_changed' && row.meta && Array.isArray(row.meta.diffs)){
+    const diffs=auditCleanDiffsV572(row.meta.diffs);
+    if(diffs.length)return auditMainTextV571('Изменено',diffs);
+  }
+  return row&&row.text?row.text:'';
+}
+if(typeof auditFor==='function'){
+  auditListHtml=function(entity,entityId){
+    const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+  auditListHtmlOrder=function(o){
+    let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+}
+
+const __renderAllV570=renderAll;
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.75 - Simple Ordered History';}
+
 </script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -2144,7 +2515,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v5.63 - Production Status Opens';
+const APP_VERSION = 'v5.75 - Simple Ordered History';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -2657,7 +3028,188 @@ async function printMaterialPdf(id){const url=await materialPdfUrl(id);if(!url)r
 .category-card,.order-form-section,.form-grid .field .input,.form-grid .field .select{border-radius:14px!important;}
 @media(max-width:920px){.modal{width:calc(100vw - 24px)!important;max-height:92vh!important}.modal-body{padding:18px!important}.modal-foot{padding:12px 18px!important}.order-view-grid,.clean-modal-grid,.order-material-clean-shell{grid-template-columns:1fr!important}.clean-action-grid{grid-template-columns:1fr!important}.modal-foot{flex-wrap:wrap!important}.modal-foot .btn{flex:1!important}}
 
-</style></head><body><iframe src="${url}" onload="setTimeout(()=>{window.focus();window.print()},800)"></iframe></body></html>`);w.document.close()}
+</style></head><body><iframe src="${url}" onload="setTimeout(()=>{window.focus();window.print()},800)"></iframe>
+
+
+<style>
+/* v5.77: global site history section */
+.history-toolbar{display:grid;grid-template-columns:minmax(260px,1.2fr) 170px 170px 190px auto auto;gap:10px;align-items:center;padding:16px;border-bottom:1px solid var(--line)}
+.history-list{display:flex;flex-direction:column;background:#fff}
+.history-row{display:grid;grid-template-columns:150px 1fr 210px 42px;gap:14px;align-items:center;padding:14px 16px;border-bottom:1px solid #eef0f4;background:#fff;cursor:pointer;transition:background .16s,box-shadow .16s}
+.history-row:hover{background:#fbfcfd;box-shadow:inset 3px 0 0 #17181b}
+.history-time{color:#667085;font-size:12px;line-height:1.35;white-space:nowrap}
+.history-main b{display:block;font-size:13px;color:#111;font-weight:650;line-height:1.3}
+.history-main span{display:block;margin-top:4px;color:#667085;font-size:12px;line-height:1.3}
+.history-user{font-size:12px;color:#667085;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-go{width:34px;height:34px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#111;display:grid;place-items:center;font-size:18px}
+.history-type{display:inline-flex;align-items:center;height:24px;border:1px solid #e8ebf0;border-radius:999px;background:#fbfcfd;color:#4b5563;padding:0 9px;font-size:11px;font-weight:600;margin-right:7px}
+.history-type.material{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}.history-type.order{background:#f5f3ff;color:#6d45b9;border-color:#ddd6fe}.history-type.production{background:#ecfdf3;color:#287047;border-color:#bfe8cc}.history-type.system{background:#f8fafc;color:#4b5563;border-color:#e2e8f0}
+.history-empty{padding:70px 20px;text-align:center;color:#667085}.history-empty b{display:block;color:#111;font-size:18px;margin-bottom:7px}
+.history-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:26px}
+@media(max-width:1100px){.history-toolbar{grid-template-columns:1fr 1fr}.history-summary{grid-template-columns:repeat(2,1fr)}.history-row{grid-template-columns:120px 1fr 34px}.history-user{display:none}}
+@media(max-width:720px){.history-toolbar,.history-summary{grid-template-columns:1fr}.history-row{grid-template-columns:1fr 34px}.history-time{grid-column:1/-1}.history-main{grid-column:1}.history-go{grid-column:2;grid-row:2}}
+</style>
+<script>
+/* v5.77: full site history / audit tree */
+(function(){
+  const VERSION='v5.77 - Global History';
+  function ready(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn); else fn(); }
+  function safeEsc(v){ return (typeof escapeHtml==='function') ? escapeHtml(v) : String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+  function rowText(row){
+    try{ return (typeof auditDisplayTextV572==='function') ? auditDisplayTextV572(row) : (row&&row.text)||''; }catch(e){ return (row&&row.text)||''; }
+  }
+  function cleanRow(row){
+    if(!row) return false;
+    if(typeof auditIsGenericMaterialUpdateV576==='function' && auditIsGenericMaterialUpdateV576(row)) return false;
+    if(typeof auditIsGenericOrderUpdateV576==='function' && auditIsGenericOrderUpdateV576(row)) return false;
+    const txt=String(rowText(row)||'').trim();
+    if(!txt) return false;
+    if(/^Материал\s+.+\s+измен[её]н$/i.test(txt)) return false;
+    if(/^Заказ\s+.+\s+измен[её]н$/i.test(txt)) return false;
+    return true;
+  }
+  function allRows(){
+    const rows=(typeof auditLoad==='function'?auditLoad():[]).filter(cleanRow);
+    return rows.sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+  }
+  function sectionLabel(entity){
+    if(entity==='material') return 'Склад';
+    if(entity==='order') return 'Заказы';
+    if(entity==='production') return 'Производство';
+    return 'Система';
+  }
+  function entityClass(entity){
+    if(entity==='material') return 'material';
+    if(entity==='order') return 'order';
+    if(entity==='production') return 'production';
+    return 'system';
+  }
+  function eventAction(row){
+    const t=String(row.type||'');
+    if(t.includes('create')) return 'Создание';
+    if(t.includes('receive')) return 'Поступление';
+    if(t.includes('write')||t.includes('stock_minus')) return 'Списание';
+    if(t.includes('purchase')||t.includes('ordered')) return 'Закупка';
+    if(t.includes('cancel')) return 'Отмена';
+    if(t.includes('production')) return 'Производство';
+    if(t.includes('order_link')||t.includes('order_qty')||t.includes('materials')) return 'Материалы заказа';
+    if(t.includes('technology')) return 'Технология';
+    if(t.includes('changed')||t.includes('edit')) return 'Изменение';
+    return 'Действие';
+  }
+  function auditDateShort(iso){
+    try{return auditTime(iso)}catch(e){const d=new Date(iso||Date.now());return isNaN(d)?'—':d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+  }
+  function auditDateOnly(iso){
+    const d=new Date(iso||Date.now());
+    if(isNaN(d)) return '';
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function openFromHistory(id){
+    const row=allRows().find(r=>String(r.id)===String(id)) || (typeof auditLoad==='function'?auditLoad():[]).find(r=>String(r.id)===String(id));
+    if(!row) return;
+    if(row.entity==='material' && typeof openMaterialDetail==='function') return openMaterialDetail(row.entityId);
+    if(row.entity==='order' && typeof openOrderView==='function') return openOrderView(row.entityId);
+    if(row.entity==='order' && typeof openProductionModal==='function' && String(row.type||'').includes('production')) return openProductionModal(row.entityId);
+  }
+  window.openHistoryEntityV577=openFromHistory;
+  function filteredHistory(){
+    const q=String(document.getElementById('historySearchInput')?.value||'').toLowerCase().trim();
+    const section=String(document.getElementById('historySectionFilter')?.value||'');
+    const action=String(document.getElementById('historyActionFilter')?.value||'');
+    const user=String(document.getElementById('historyUserFilter')?.value||'');
+    const date=String(document.getElementById('historyDateFilter')?.value||'');
+    return allRows().filter(r=>{
+      const text=[rowText(r),r.entityTitle,r.by,r.type,sectionLabel(r.entity)].join(' ').toLowerCase();
+      if(q && !text.includes(q)) return false;
+      if(section && String(r.entity)!==section) return false;
+      if(action && eventAction(r)!==action) return false;
+      if(user && String(r.by||'')!==user) return false;
+      if(date && auditDateOnly(r.at)!==date) return false;
+      return true;
+    });
+  }
+  function renderHistoryStats(){
+    const rows=allRows();
+    const todayStr=auditDateOnly(new Date().toISOString());
+    const todayRows=rows.filter(r=>auditDateOnly(r.at)===todayStr).length;
+    const mat=rows.filter(r=>r.entity==='material').length;
+    const ord=rows.filter(r=>r.entity==='order').length;
+    const users=new Set(rows.map(r=>r.by).filter(Boolean)).size;
+    const box=document.getElementById('historyStats');
+    if(!box) return;
+    box.innerHTML=`<div class="stat"><div><span>Всего событий</span><b>${rows.length}</b></div></div><div class="stat"><div><span>Сегодня</span><b>${todayRows}</b></div></div><div class="stat"><div><span>Склад / Заказы</span><b>${mat} / ${ord}</b></div></div><div class="stat"><div><span>Пользователей</span><b>${users}</b></div></div>`;
+  }
+  function fillHistoryFilters(){
+    const rows=allRows();
+    const userSel=document.getElementById('historyUserFilter');
+    const actionSel=document.getElementById('historyActionFilter');
+    if(userSel){
+      const cur=userSel.value;
+      const users=[...new Set(rows.map(r=>r.by).filter(Boolean))].sort();
+      userSel.innerHTML='<option value="">Все пользователи</option>'+users.map(u=>`<option value="${safeEsc(u)}">${safeEsc(u)}</option>`).join('');
+      userSel.value=cur;
+    }
+    if(actionSel){
+      const cur=actionSel.value;
+      const actions=[...new Set(rows.map(eventAction).filter(Boolean))].sort();
+      actionSel.innerHTML='<option value="">Все действия</option>'+actions.map(a=>`<option value="${safeEsc(a)}">${safeEsc(a)}</option>`).join('');
+      actionSel.value=cur;
+    }
+  }
+  window.renderSiteHistory=function(){
+    const box=document.getElementById('historyTable');
+    if(!box) return;
+    renderHistoryStats();
+    fillHistoryFilters();
+    const rows=filteredHistory();
+    if(!rows.length){ box.innerHTML='<div class="history-empty"><b>Истории пока нет</b>Здесь появятся все добавления, изменения, поступления, списания, закупки и действия по заказам.</div>'; return; }
+    box.innerHTML=`<div class="history-list">${rows.slice(0,300).map(r=>{
+      const entity=sectionLabel(r.entity), cls=entityClass(r.entity), txt=rowText(r), title=r.entityTitle||r.entityId||'—';
+      return `<div class="history-row" onclick="openHistoryEntityV577('${safeEsc(r.id)}')"><div class="history-time">${safeEsc(auditDateShort(r.at))}</div><div class="history-main"><b><span class="history-type ${cls}">${safeEsc(entity)}</span>${safeEsc(txt)}</b><span>${safeEsc(title)} · ${safeEsc(eventAction(r))}</span></div><div class="history-user">${safeEsc(r.by||'—')}</div><button class="history-go" type="button">›</button></div>`;
+    }).join('')}</div>${rows.length>300?`<div class="table-foot"><span>Показано 300 из ${rows.length}</span></div>`:''}`;
+  };
+  window.clearHistoryFiltersV577=function(){
+    ['historySearchInput','historyDateFilter'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    ['historySectionFilter','historyActionFilter','historyUserFilter'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    renderSiteHistory();
+  };
+  function injectHistoryUI(){
+    const nav=document.getElementById('mainNav');
+    if(nav && !nav.querySelector('[data-section="history"]')){
+      const btn=document.createElement('button');
+      btn.dataset.section='history';
+      btn.innerHTML='<span class="ico"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span> История';
+      const settings=[...nav.querySelectorAll('button')].find(b=>b.textContent.includes('Настройки')||b.dataset.section==='settings');
+      nav.insertBefore(btn, settings||null);
+    }
+    const main=document.querySelector('.main');
+    if(main && !document.getElementById('history')){
+      main.insertAdjacentHTML('beforeend',`<section id="history" class="section"><div class="topbar"><div class="title"><h2>История</h2><p>Все добавления, изменения и движения по сайту</p></div></div><div class="history-summary" id="historyStats"></div><div class="panel"><div class="history-toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="historySearchInput" placeholder="Поиск по материалу, заказу, пользователю..." oninput="renderSiteHistory()"></div><select class="select" id="historySectionFilter" onchange="renderSiteHistory()"><option value="">Все разделы</option><option value="material">Склад</option><option value="order">Заказы</option><option value="production">Производство</option></select><select class="select" id="historyActionFilter" onchange="renderSiteHistory()"><option value="">Все действия</option></select><select class="select" id="historyUserFilter" onchange="renderSiteHistory()"><option value="">Все пользователи</option></select><input class="input" type="date" id="historyDateFilter" onchange="renderSiteHistory()"><button class="btn" onclick="clearHistoryFiltersV577()">Сбросить</button></div><div id="historyTable"></div></div></section>`);
+    }
+  }
+  ready(function(){
+    injectHistoryUI();
+    const av=document.getElementById('appVersionBadge'); if(av) av.textContent=VERSION;
+    renderSiteHistory();
+  });
+  const oldApply=window.applyI18n;
+  if(typeof oldApply==='function'){
+    window.applyI18n=function(){ oldApply(); const hb=document.querySelector('#mainNav [data-section="history"]'); if(hb) hb.innerHTML='<span class="ico"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span> История'; const av=document.getElementById('appVersionBadge'); if(av) av.textContent=VERSION; };
+  }
+  const oldRenderAll=window.renderAll;
+  if(typeof oldRenderAll==='function'){
+    window.renderAll=function(){ oldRenderAll(); injectHistoryUI(); renderSiteHistory(); const av=document.getElementById('appVersionBadge'); if(av) av.textContent=VERSION; };
+  }
+  const oldAuditAdd=window.auditAdd;
+  if(typeof oldAuditAdd==='function'){
+    window.auditAdd=function(){ const r=oldAuditAdd.apply(this,arguments); try{renderSiteHistory();}catch(e){} return r; };
+  }
+})();
+</script>
+
+</body></html>`);w.document.close()}
 function detailItem(label,value,full=false){return `<div class="detail-card ${full?'full':''}"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${value?escapeHtml(value):'—'}</div></div>`}
 function stockNum(v){const n=Number(String(v??0).replace(',','.'));return Number.isFinite(n)?Number(n.toFixed(3)):0}
 function stockNumForUnit(v,unit){const n=stockNum(v);return unit==='шт'?Math.trunc(n):n}
@@ -4604,13 +5156,1388 @@ calcOrderOverallPercent=function(o){
   return __calcOrderOverallPercentV562(o);
 };
 
+
+
+/* v5.64: open production with clear button, not by status */
+function orderStatusCellHtml(o,auto){
+  if(auto==='Не хватает материалов'){
+    return `<button type="button" class="status ${orderStatusClass(auto)} status-action" onclick="toggleOrderMissing(event,'${o.id}')">${escapeHtml(orderStatusText42 ? orderStatusText42(auto) : auto)} ${missingExpandedOrders.has(o.id)?'⌃':'⌄'}</button>`;
+  }
+  const text = (typeof orderStatusText42==='function') ? orderStatusText42(auto) : auto;
+  return `<span class="status ${orderStatusClass(auto)}">${escapeHtml(text)}</span>`;
+}
+function orderActionMenu(id){
+  return `<div class="action-menu" id="orderMenu_${id}"><button class="action-menu-btn" type="button" onclick="toggleOrderMenu(event,'${id}')">⋯</button><div class="action-menu-list"><button type="button" onclick="openOrderModal('${id}')">${typeof u42==='function'?u42('edit'):'Редактировать'}</button><button type="button" onclick="startOrderWork('${id}')">${typeof u42==='function'?u42('toWork'):'В работу'}</button><button type="button" onclick="completeOrder('${id}')">${typeof u42==='function'?u42('complete'):'Завершить'}</button><button type="button" onclick="cancelOrder('${id}')">${typeof u42==='function'?u42('cancelOrder'):'Отменить'}</button><button type="button" class="danger" onclick="deleteOrder('${id}')">${typeof u42==='function'?u42('delete'):'Удалить'}</button></div></div>`;
+}
+function orderRowActions(id){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+  const techReady=hasOrderTechnology(o&&o.steps);
+  const prodClick=techReady?`openOrderProduction('${id}')`:`toast('Сначала заполните технологию: укажите минуты хотя бы в одном этапе')`;
+  const prodTitle=techReady?'Открыть производство':'Сначала заполните технологию';
+  const prodClass=techReady?'production-btn':'production-btn disabled';
+  return `<div class="order-row-action-buttons"><button class="btn open-btn" type="button" onclick="openOrderView('${id}')">Открыть</button><button class="btn ${prodClass}" type="button" title="${prodTitle}" onclick="${prodClick}">🛠 <span>Производство</span></button>${orderActionMenu(id)}</div>`;
+}
+function renderOrders(){
+  renderOrderStats();
+  renderOrderClientFilter();
+  const box=document.getElementById('ordersTable')||document.getElementById('ordersGrid');
+  if(!box)return;
+  const rows=filteredOrders();
+  if(!rows.length){box.innerHTML=`<div class="empty"><b>${typeof u42==='function'?u42('noOrders'):'Заказов пока нет'}</b>${typeof u42==='function'?u42('noOrdersHint'):'Создайте заказ и зарезервируйте материалы со склада.'}</div>`;return;}
+  box.innerHTML=`<div class="order-table-wrap"><table class="order-table"><thead><tr><th>№</th><th>${typeof u42==='function'?u42('orderClient'):'Заказчик'}</th><th>${typeof u42==='function'?u42('time'):'Время'}</th><th>${typeof u42==='function'?u42('status'):'Статус'}</th><th>${typeof u42==='function'?u42('deadline'):'Срок'}</th><th></th></tr></thead><tbody>${rows.map(o=>{const min=calcOrderMinutes(o);const auto=calcOrderAutoStatus(o);const expanded=expandedOrders.has(o.id);const matPct=calcOrderMaterialPercent(o);const oq=orderProductQty(o);const compact=orderMaterials(o).slice(0,3).map(i=>{const m=data.materials.find(x=>String(x.id)===String(i.materialId));return m?`${m.sku||''} ${formatQty(i.qty,m.unit)}${unitLabel(m.unit)}`:''}).filter(Boolean).join(' · ');const deadlineClass=orderDeadlineClass({...o,status:auto});const main=`<tr ondblclick="openOrderView('${o.id}')"><td><button class="order-expand-btn" type="button" onclick="toggleOrderExpand(event,'${o.id}')">${expanded?'⌃':'⌄'}</button><span class="stock-sku">${escapeHtml(o.number)}</span></td><td class="order-client-cell"><div class="name">${escapeHtml(o.client||'—')}</div><div class="order-qty-pill">${typeof u42==='function'?u42('items'):'изделий'}: <b>${oq}</b></div>${compact?`<div class="order-compact-materials">${escapeHtml(compact)}${orderMaterials(o).length>3?' · …':''}</div>`:''}${o.comment?`<div class="sub">${escapeHtml(o.comment)}</div>`:''}</td><td class="order-time-cell"><b>${min} ${(typeof u42==='function'?u42('minutes'):'мин').toLowerCase()}</b><br><span class="muted">${orderTimeText(min)}</span></td><td>${orderStatusCellHtml(o,auto)}<div class="sub">${typeof u42==='function'?u42('materialPct'):'материалы'} ${matPct}%</div></td><td><span class="order-deadline ${deadlineClass}">${escapeHtml(formatDeadline(o))}</span><div class="sub">${typeof u42==='function'?u42('created'):'создан'} ${escapeHtml(o.date||'—')}</div></td><td>${orderRowActions(o.id)}</td></tr>`;return main+(missingExpandedOrders.has(o.id)?orderMissingRow({...o,status:auto}):'')+(expanded?orderExpandedRow({...o,status:auto}):'')}).join('')}</tbody></table></div>`;
+}
+
 function renderAll(){renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();applyI18n()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
+
+
+
+/* v5.65: profiles + audit history */
+const AUDIT_STORE_KEY='furnicore_audit_v1';
+const APP_VERSION_V565='v5.75 - Simple Ordered History';
+function auditNow(){return new Date().toISOString()}
+function actorName(){return (currentUser&&currentUser.email)||localStorage.getItem('furnicore_actor_name')||'Неизвестный пользователь'}
+function actorShort(email){const v=String(email||actorName());return v.includes('@')?v.split('@')[0]:v}
+function auditLoad(){try{return JSON.parse(localStorage.getItem(AUDIT_STORE_KEY)||'[]')}catch(e){return []}}
+function auditSave(list){try{localStorage.setItem(AUDIT_STORE_KEY,JSON.stringify((list||[]).slice(0,600)))}catch(e){console.warn(e)}}
+function auditAdd(type,entity,entityId,entityTitle,text,meta={}){
+  const row={id:uid(),at:auditNow(),by:actorName(),type,entity,entityId:String(entityId||''),entityTitle:String(entityTitle||''),text:String(text||''),meta};
+  const list=auditLoad();list.unshift(row);auditSave(list);return row;
+}
+function auditFor(entity,entityId){return auditLoad().filter(x=>x.entity===entity&&String(x.entityId)===String(entityId)).slice(0,60)}
+function auditTime(iso){const d=new Date(iso||Date.now());return Number.isNaN(d.getTime())?'—':d.toLocaleString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function auditUserHtml(user){const u=escapeHtml(user||'—');return `<span class="profile-chip"><span class="profile-avatar">${escapeHtml(String(user||'?').slice(0,1).toUpperCase())}</span>${u}</span>`}
+function auditListHtml(entity,entityId){const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`}
+function metaVal(obj,key,fallback='—'){return obj&&obj[key]?obj[key]:fallback}
+function ensureMeta(obj){if(!obj.meta||typeof obj.meta!=='object')obj.meta={};return obj.meta}
+function hasOrderTechnology(steps){return (steps||[]).some(s=>Number(s&&s.minutes||0)>0)}
+function auditListHtmlOrder(o){let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`}
+function orderProfileHtml(o){const m=ensureMeta(o);const hasTech=hasOrderTechnology(o.steps);return `<div class="audit-profile-grid"><div class="audit-card"><h5>Профиль заказа</h5><div class="audit-kv"><span>Создал заказ</span><b>${escapeHtml(metaVal(m,'createdBy'))}</b></div><div class="audit-kv"><span>Дата создания</span><b>${escapeHtml(m.createdAt?auditTime(m.createdAt):(o.date||'—'))}</b></div><div class="audit-kv"><span>Технологию сделал</span><b>${escapeHtml(hasTech?metaVal(m,'technologyBy'):'—')}</b></div><div class="audit-kv"><span>Последнее изменение</span><b>${escapeHtml(metaVal(m,'updatedBy'))}</b></div></div><div class="audit-card"><h5>История заказа</h5>${auditListHtmlOrder(o)}</div></div>`}
+function materialProfileHtml(m){const a=m.attributes||{};return `<div class="audit-profile-grid"><div class="audit-card"><h5>Профиль материала</h5><div class="audit-kv"><span>Добавил материал</span><b>${escapeHtml(a.createdBy||'—')}</b></div><div class="audit-kv"><span>Дата добавления</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>Последнее движение</span><b>${escapeHtml(a.stockChangedBy||a.updatedBy||'—')}</b></div><div class="audit-kv"><span>Последнее изменение</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>История материала</h5>${auditListHtml('material',m.id)}</div></div>`}
+function appendModalAudit(html){const body=document.getElementById('modalBody');if(body && !body.querySelector('.audit-profile-grid')) body.insertAdjacentHTML('beforeend',html)}
+function stepsSignature(steps){return JSON.stringify((steps||[]).map(s=>({name:String(s.name||''),minutes:Number(s.minutes||0)})))}
+function setOrderMetaForSave(draft,prev){const now=auditNow();const meta=Object.assign({},prev&&prev.meta?prev.meta:{});if(!prev){meta.createdBy=actorName();meta.createdAt=now;}meta.updatedBy=actorName();meta.updatedAt=now;const techChanged=!prev || stepsSignature(prev.steps)!==stepsSignature(draft.steps);if(hasOrderTechnology(draft.steps) && techChanged){meta.technologyBy=actorName();meta.technologyAt=now;}if(!hasOrderTechnology(draft.steps)){delete meta.technologyBy;delete meta.technologyAt;}draft.meta=meta;return draft;}
+
+// Save order with creator/technologist metadata and audit.
+saveOrder=async function(id=''){
+  const steps=[...document.querySelectorAll('.order-step-row')].map(r=>({name:r.querySelector('.step-name').value.trim()||u42('stage'),minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0)))}));
+  const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
+  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:'none',purchaseQty:0,purchaseNo:''}}).filter(i=>i&&i.materialId&&i.qty>0);
+  const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
+  let status=(prev&&['Готов','Отменён','В производстве','В работе'].includes(prev.status))?prev.status:'Новый';
+  let draft={id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',comment:document.getElementById('orderComment').value.trim(),date:document.getElementById('orderDate').value||today(),status,steps,materials,production:prev&&prev.production?prev.production:{logs:[]}};
+  draft=setOrderMetaForSave(draft,prev);
+  draft.status=calcOrderAutoStatus(draft);
+  if(id)data.orders=data.orders.map(o=>String(o.id)===String(id)?draft:o);else data.orders.push(draft);
+  auditAdd(prev?'order_update':'order_create','order',draft.id,draft.number,prev?`Заказ ${draft.number} изменён`:`Заказ ${draft.number} создан`);
+  if(hasOrderTechnology(draft.steps) && (!prev || stepsSignature(prev.steps)!==stepsSignature(draft.steps)))auditAdd('technology','order',draft.id,draft.number,`Технология заказа заполнена/изменена`);
+  save(); await persistReservationMaterials(); closeModal(); await loadMaterialsFromSupabase(); renderAll(); toast(u42('orderSaved'));
+}
+
+const __insertMaterialV565=insertMaterialToSupabase;
+insertMaterialToSupabase=async function(m){m.attributes=m.attributes||{};const now=auditNow();m.attributes.createdBy=actorName();m.attributes.createdAt=now;m.attributes.updatedBy=actorName();m.attributes.updatedAt=now;const ok=await __insertMaterialV565(m);if(ok)auditAdd('material_create','material',m.id||m.sku,m.sku||m.name,`Материал ${m.sku||m.name||''} добавлен`);return ok;}
+const __updateMaterialV565=updateMaterialInSupabase;
+updateMaterialInSupabase=async function(m){m.attributes=m.attributes||{};m.attributes.updatedBy=actorName();m.attributes.updatedAt=auditNow();const ok=await __updateMaterialV565(m);if(ok)auditAdd('material_update','material',m.id,m.sku||m.name,`Материал ${m.sku||m.name||''} изменён`);return ok;}
+const __deleteMaterialV565=deleteMaterialFromSupabase;
+deleteMaterialFromSupabase=async function(id){const m=(data.materials||[]).find(x=>String(x.id)===String(id));const ok=await __deleteMaterialV565(id);if(ok&&m)auditAdd('material_delete','material',m.id,m.sku||m.name,`Материал ${m.sku||m.name||''} удалён`);return ok;}
+
+const __quickAddStockV565=quickAddStock;
+quickAddStock=async function(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=document.getElementById('quickQty')?.value;await __quickAddStockV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd('stock_in','material',m.id,m.sku,`Поступление на склад: +${qtyWithUnit(Number(qty||0),m.unit)}`);}}
+const __quickWriteOffV565=quickWriteOffStock;
+quickWriteOffStock=async function(){const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=document.getElementById('writeOffQty')?.value;await __quickWriteOffV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd('stock_out','material',m.id,m.sku,`Списание со склада: −${qtyWithUnit(Number(qty||0),m.unit)}`);}}
+
+const __adjustMaterialQtyV565=adjustMaterialQty;
+adjustMaterialQty=async function(id,dir){const m=(data.materials||[]).find(x=>String(x.id)===String(id));const qty=document.getElementById('detailQtyChange')?.value;await __adjustMaterialQtyV565(id,dir);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd(dir>0?'stock_in':'stock_out','material',m.id,m.sku||m.name,`${dir>0?'Поступление':'Списание'} через карточку: ${dir>0?'+':'−'}${qtyWithUnit(Number(qty||0),m.unit)}`);}}
+
+const __startOrderWorkV565=startOrderWork;
+startOrderWork=function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(o)auditAdd('order_status','order',o.id,o.number,`Заказ переведён в работу`);return __startOrderWorkV565(id)}
+const __recordProductionV565=recordProductionStep;
+recordProductionStep=function(orderId,stepIndex){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));const step=orderSteps(o||{})[stepIndex]||{};const qty=document.getElementById('prodQty_'+stepIndex)?.value;const res=__recordProductionV565(orderId,stepIndex);if(o&&Number(qty)>0)auditAdd('production','order',o.id,o.number,`Производство: ${step.name||'операция'} · сделано ${Math.trunc(Number(qty||0))} изделий`);return res;}
+if(typeof completeOrder==='function'){const __completeOrderV565=completeOrder;completeOrder=function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(o)auditAdd('order_status','order',o.id,o.number,`Заказ завершён`);return __completeOrderV565(id)}}
+if(typeof cancelOrder==='function'){const __cancelOrderV565=cancelOrder;cancelOrder=function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(o)auditAdd('order_status','order',o.id,o.number,`Заказ отменён`);return __cancelOrderV565(id)}}
+const __saveOrderMaterialPurchaseV565=saveOrderMaterialPurchase;
+saveOrderMaterialPurchase=function(orderId,materialId,opts={}){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));auditAdd('purchase','order',orderId,o?.number||'',`Закупка по материалу ${m?m.sku||m.name:materialId} сохранена`);if(m)auditAdd('purchase','material',m.id,m.sku||m.name,`Материал заказан для заказа ${o?.number||''}`);return __saveOrderMaterialPurchaseV565(orderId,materialId,opts)}
+if(typeof receiveOrderMaterialPurchase==='function'){const __receiveOrderMaterialV565=receiveOrderMaterialPurchase;receiveOrderMaterialPurchase=function(orderId,materialId){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));if(o)auditAdd('receive','order',o.id,o.number,`Материал ${m?m.sku||m.name:materialId} принят на склад`);if(m)auditAdd('receive','material',m.id,m.sku||m.name,`Принято по заказу ${o?.number||''}`);return __receiveOrderMaterialV565(orderId,materialId)}}
+if(typeof cancelOrderMaterialPurchase==='function'){const __cancelPurchaseV565=cancelOrderMaterialPurchase;cancelOrderMaterialPurchase=function(orderId,materialId){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));if(o)auditAdd('purchase_cancel','order',o.id,o.number,`Закупка материала ${m?m.sku||m.name:materialId} отменена`);if(m)auditAdd('purchase_cancel','material',m.id,m.sku||m.name,`Закупка отменена для заказа ${o?.number||''}`);return __cancelPurchaseV565(orderId,materialId)}}
+
+const __openMaterialDetailsV565=openMaterialDetails;
+openMaterialDetails=function(id){__openMaterialDetailsV565(id);setTimeout(()=>{const m=(data.materials||[]).find(x=>String(x.id)===String(id));if(m)appendModalAudit(materialProfileHtml(m));},0)}
+const __openOrderViewV565=openOrderView;
+openOrderView=function(id){__openOrderViewV565(id);setTimeout(()=>{const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(o)appendModalAudit(orderProfileHtml(o));},0)}
+const __openOrderProductionV565=openOrderProduction;
+openOrderProduction=function(id){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+  if(!hasOrderTechnology(o&&o.steps)){
+    toast('Сначала заполните технологию: укажите минуты хотя бы в одном этапе');
+    return;
+  }
+  __openOrderProductionV565(id);
+  setTimeout(()=>{const ord=(data.orders||[]).find(x=>String(x.id)===String(id));if(ord)appendModalAudit(orderProfileHtml(ord));},0);
+}
+const __renderAuthBoxV565=renderAuthBox;
+renderAuthBox=function(){__renderAuthBoxV565();try{const u=document.querySelector('#authBox .user span');if(u)u.textContent='профиль активен';}catch(e){}}
+const __renderAllV565=renderAll;
+renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION_V565;}
 
 function toggleMobileSidebar(){document.body.classList.toggle("sidebar-open")}
 function closeMobileSidebar(){document.body.classList.remove("sidebar-open")}
 document.addEventListener("click",()=>closeOrderMenus());
 renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickAddStock()}} updateQuickAddInfo();const ws=document.getElementById('writeOffSku'), wq=document.getElementById('writeOffQty'); if(ws){ws.oninput=updateWriteOffInfo;ws.onkeydown=e=>{if(e.key==='Enter')wq?.focus()}} if(wq){wq.onkeydown=e=>{if(e.key==='Enter')quickWriteOffStock()}} updateWriteOffInfo();checkSession();
+
+
+/* v5.68: fix order complete/cancel actions */
+function closeOrderMenuAfterAction(id){
+  try{ closeOrderMenus(); }catch(e){}
+  const el=document.getElementById('orderMenu_'+id);
+  if(el) el.classList.remove('open');
+}
+async function completeOrder(id){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+  if(!o){ toast('Заказ не найден'); return; }
+  o.status='Готов';
+  o.completedAt=new Date().toISOString();
+  o.updatedAt=new Date().toISOString();
+  o.updatedBy=profileUserName();
+  try{ auditAdd('order_status','order',o.id,o.number,`Заказ завершён`); }catch(e){}
+  save();
+  try{ syncMaterialReservations(); }catch(e){}
+  try{ await persistReservationMaterials(); }catch(e){}
+  renderAll();
+  closeOrderMenuAfterAction(id);
+  toast('Заказ завершён');
+}
+async function cancelOrder(id){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+  if(!o){ toast('Заказ не найден'); return; }
+  if(!confirm('Отменить заказ и освободить резерв материалов?')) return;
+  o.status='Отменён';
+  o.cancelledAt=new Date().toISOString();
+  o.updatedAt=new Date().toISOString();
+  o.updatedBy=profileUserName();
+  try{ auditAdd('order_status','order',o.id,o.number,`Заказ отменён`); }catch(e){}
+  save();
+  try{ syncMaterialReservations(); }catch(e){}
+  try{ await persistReservationMaterials(); }catch(e){}
+  renderAll();
+  closeOrderMenuAfterAction(id);
+  toast('Заказ отменён');
+}
+
+/* v5.69: cancel order does not blindly release consumed materials */
+function orderProductionStarted(o){
+  try{return productionLogs(o).reduce((sum,l)=>sum+Number(l.qty||0),0)>0;}catch(e){return ((o&&o.production&&Array.isArray(o.production.logs))?o.production.logs:[]).reduce((sum,l)=>sum+Number(l.qty||0),0)>0;}
+}
+function ensureCancelReview(o){
+  if(!o.cancelReview)o.cancelReview={status:'pending',createdAt:new Date().toISOString(),createdBy:profileUserName(),items:[]};
+  const existing=o.cancelReview.items||[];
+  const map=new Map(existing.map(x=>[String(x.materialId),x]));
+  o.cancelReview.items=orderMaterials(o).map(i=>{
+    const old=map.get(String(i.materialId))||{};
+    return {materialId:i.materialId,qty:Number(i.qty||0),unit:i.unit||old.unit||'',returnQty:Number(old.returnQty||0),writeOffQty:Number(old.writeOffQty||0)};
+  });
+  return o.cancelReview;
+}
+function cancelReviewPending(o){return !!(o&&o.cancelReview&&o.cancelReview.status==='pending');}
+function cancelReviewHtml(o){
+  if(!cancelReviewPending(o))return '';
+  const rows=(o.cancelReview.items||[]).map((i,idx)=>{
+    const m=(data.materials||[]).find(x=>String(x.id)===String(i.materialId));
+    const unit=i.unit||(m&&m.unit)||'';
+    return `<div class="cancel-review-row" data-idx="${idx}">
+      <div><b>${escapeHtml(m?materialTitle(m):'Удалённый материал')}</b><small>Заморожено после отмены: ${escapeHtml(qtyWithUnit(i.qty,unit))}</small></div>
+      <div class="field"><label>Вернуть</label><input class="input cr-return" type="number" min="0" step="${stockStep(unit)}" value="${inputQtyValue(i.returnQty,unit)}"></div>
+      <div class="field"><label>Списать</label><input class="input cr-writeoff" type="number" min="0" step="${stockStep(unit)}" value="${inputQtyValue(i.writeOffQty,unit)}"></div>
+      <div><span class="frozen-pill">Пересчёт</span></div>
+    </div>`;
+  }).join('') || '<div class="muted">Материалы для пересчёта не найдены</div>';
+  return `<div class="cancel-review-box"><h5>Материалы после отмены</h5><p>Заказ уже был в работе. Резерв заморожен и не возвращается в доступный остаток, пока кладовщик не пересчитает: сколько вернуть в доступное, а сколько списать как расход.</p><div class="cancel-review-list">${rows}</div><div class="cancel-review-actions"><button class="btn" onclick="autoFillCancelReview('${o.id}')">Остаток вернуть</button><button class="btn primary" onclick="saveCancelReview('${o.id}')">Сохранить пересчёт</button></div></div>`;
+}
+function autoFillCancelReview(orderId){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId)); if(!o||!cancelReviewPending(o))return;
+  document.querySelectorAll('.cancel-review-row').forEach(row=>{
+    const idx=Number(row.dataset.idx||0); const it=o.cancelReview.items[idx]; if(!it)return;
+    const ret=row.querySelector('.cr-return'); const wr=row.querySelector('.cr-writeoff');
+    if(ret)ret.value=inputQtyValue(it.qty,it.unit); if(wr)wr.value=inputQtyValue(0,it.unit);
+  });
+}
+async function saveCancelReview(orderId){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+  if(!o||!cancelReviewPending(o)){toast('Пересчёт не требуется');return;}
+  const rows=[...document.querySelectorAll('.cancel-review-row')];
+  let ok=true, msg='';
+  rows.forEach(row=>{
+    const idx=Number(row.dataset.idx||0), it=o.cancelReview.items[idx]; if(!it)return;
+    const unit=it.unit||'';
+    const ret=normalizeStockValue(row.querySelector('.cr-return')?.value||0,unit,true);
+    const wr=normalizeStockValue(row.querySelector('.cr-writeoff')?.value||0,unit,true);
+    if(ret===null||wr===null){ok=false;msg='Проверьте числа в пересчёте';return;}
+    if(Number((ret+wr).toFixed(3))>Number(Number(it.qty||0).toFixed(3))){ok=false;msg='Вернуть + списать не может быть больше замороженного резерва';return;}
+    it.returnQty=ret; it.writeOffQty=wr;
+  });
+  if(!ok){toast(msg);return;}
+  for(const it of o.cancelReview.items||[]){
+    const m=(data.materials||[]).find(x=>String(x.id)===String(it.materialId));
+    if(m&&Number(it.writeOffQty||0)>0){
+      m.quantity=stockNumForUnit(Math.max(0,Number(m.quantity||0)-Number(it.writeOffQty||0)),m.unit);
+      m.lastUpdated=today();
+      m.attributes=m.attributes||{};
+      m.attributes.stockChangedBy=profileUserName();
+      m.attributes.stockChangedAt=new Date().toISOString();
+      try{auditAdd('stock_out','material',m.id,m.sku||m.name,`Списание после отмены заказа ${o.number}: −${qtyWithUnit(it.writeOffQty,m.unit)}`);}catch(e){}
+    }
+  }
+  o.cancelReview.status='resolved';
+  o.cancelReview.resolvedAt=new Date().toISOString();
+  o.cancelReview.resolvedBy=profileUserName();
+  o.updatedAt=new Date().toISOString();
+  o.updatedBy=profileUserName();
+  try{auditAdd('cancel_recount','order',o.id,o.number,'Материалы после отмены пересчитаны');}catch(e){}
+  save();
+  try{syncMaterialReservations();}catch(e){}
+  try{await persistReservationMaterials();}catch(e){}
+  renderAll();
+  openOrderView(orderId);
+  toast('Пересчёт сохранён');
+}
+
+syncMaterialReservations=function(){
+  const totals={};
+  (data.orders||[]).forEach(o=>{
+    if(['Готов','Отменён'].includes(o.status))return;
+    orderMaterials(o).forEach(i=>{if(i.materialId)totals[i.materialId]=(totals[i.materialId]||0)+Number(i.qty||0)});
+  });
+  const frozen={};
+  (data.orders||[]).forEach(o=>{
+    if(String(o.status)!=='Отменён'||!cancelReviewPending(o))return;
+    (o.cancelReview.items||[]).forEach(i=>{if(i.materialId)frozen[i.materialId]=(frozen[i.materialId]||0)+Number(i.qty||0)});
+  });
+  (data.materials||[]).forEach(m=>{m.attributes=m.attributes||{};m.attributes.frozenQty=stockNumForUnit(frozen[m.id]||0,m.unit);m.attributes.reservedQty=stockNumForUnit((totals[m.id]||0)+(frozen[m.id]||0),m.unit);});
+};
+
+async function cancelOrder(id){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+  if(!o){toast('Заказ не найден');return;}
+  closeOrderMenuAfterAction(id);
+  if(orderProductionStarted(o)){
+    if(!confirm('Заказ уже был в работе. Отменить и заморозить материалы до пересчёта?'))return;
+    o.status='Отменён';
+    o.cancelledAt=new Date().toISOString();
+    o.updatedAt=new Date().toISOString();
+    o.updatedBy=profileUserName();
+    ensureCancelReview(o);
+    try{auditAdd('order_cancel_freeze','order',o.id,o.number,'Заказ отменён. Материалы заморожены до пересчёта');}catch(e){}
+    save();
+    try{syncMaterialReservations(); await persistReservationMaterials();}catch(e){}
+    renderAll();
+    openOrderView(id);
+    toast('Заказ отменён, материалы заморожены');
+    return;
+  }
+  if(!confirm('Отменить заказ? Резерв будет освобождён, так как производство не начиналось.'))return;
+  o.status='Отменён';
+  o.cancelledAt=new Date().toISOString();
+  o.updatedAt=new Date().toISOString();
+  o.updatedBy=profileUserName();
+  o.cancelReview=null;
+  try{auditAdd('order_status','order',o.id,o.number,'Заказ отменён. Резерв освобождён');}catch(e){}
+  save();
+  try{syncMaterialReservations(); await persistReservationMaterials();}catch(e){}
+  renderAll();
+  toast('Заказ отменён, резерв освобождён');
+}
+
+const __openOrderViewV569=openOrderView;
+openOrderView=function(id){
+  __openOrderViewV569(id);
+  setTimeout(()=>{
+    const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+    const body=document.getElementById('modalBody');
+    if(o&&body&&cancelReviewPending(o)&&!body.querySelector('.cancel-review-box')){
+      body.insertAdjacentHTML('beforeend',cancelReviewHtml(o));
+    }
+  },0);
+};
+
+const __renderOrdersV569=renderOrders;
+renderOrders=function(){
+  __renderOrdersV569();
+  try{
+    (data.orders||[]).filter(cancelReviewPending).forEach(o=>{
+      [...document.querySelectorAll('.order-table tbody tr')].forEach(tr=>{
+        if(tr.textContent.includes(o.number||'')){
+          const statusCell=tr.children[3];
+          if(statusCell&&!statusCell.querySelector('.cancel-review')) statusCell.insertAdjacentHTML('afterbegin','<span class="status cancel-review">Отменён · пересчёт</span><div class="sub">материалы заморожены</div>');
+        }
+      });
+    });
+  }catch(e){}
+};
+
+const __openMaterialDetailsV569=openMaterialDetails;
+openMaterialDetails=function(id){
+  __openMaterialDetailsV569(id);
+  setTimeout(()=>{
+    const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+    const body=document.getElementById('modalBody');
+    const frozen=Number((m&&m.attributes&&m.attributes.frozenQty)||0);
+    if(m&&body&&frozen>0&&!body.querySelector('.material-frozen-note')){
+      const side=body.querySelector('.material-detail-side')||body;
+      side.insertAdjacentHTML('beforeend',`<div class="material-frozen-note"><b>Заморожено после отмены:</b><br>${escapeHtml(qtyWithUnit(frozen,m.unit))}<br><span>Требуется пересчёт в заказе, после этого остаток станет доступным или будет списан.</span></div>`);
+    }
+  },0);
+};
+
+const __completeOrderV569=completeOrder;
+completeOrder=async function(id){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+  if(o&&cancelReviewPending(o)){toast('Сначала завершите пересчёт замороженных материалов');return;}
+  return __completeOrderV569(id);
+};
+
+renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.75 - Simple Ordered History';}
+
+
+
+/* v5.70: detailed audit history for every changed field */
+function auditCloneV570(obj){try{return JSON.parse(JSON.stringify(obj||null))}catch(e){return null}}
+function auditCleanValV570(v){
+  if(v===undefined||v===null||v==='')return '—';
+  if(typeof v==='boolean')return v?'Да':'Нет';
+  if(typeof v==='number')return Number.isInteger(v)?String(v):String(Number(v.toFixed(3))).replace('.',',');
+  return String(v);
+}
+function auditChangedTextV570(label,oldVal,newVal){return `${label}: ${auditCleanValV570(oldVal)} → ${auditCleanValV570(newVal)}`}
+function auditPushDiffV570(list,label,oldVal,newVal){
+  const a=auditCleanValV570(oldVal), b=auditCleanValV570(newVal);
+  if(a!==b)list.push(auditChangedTextV570(label,oldVal,newVal));
+}
+function auditJoinV570(parts,max=6){
+  const arr=(parts||[]).filter(Boolean);
+  if(arr.length<=max)return arr.join('; ');
+  return arr.slice(0,max).join('; ')+`; ещё ${arr.length-max}`;
+}
+function auditAttrLabelV570(key){
+  const map={
+    materialType:'Тип материала',manufacturer:'Производитель',collection:'Коллекция / код',color:'Цвет',rollWidth:'Ширина рулона',rollLength:'Длина рулона',area:'Площадь',
+    grade:'Марка / плотность',thickness:'Толщина',width:'Ширина',length:'Длина',height:'Высота',supplier:'Поставщик',order:'№ закупки / поставщик',tags:'Теги',
+    crossSection:'Сечение',woodType:'Порода',limited:'Лимитированная партия',laminated:'Ламинированная',decor:'Цвет / декор',thread:'Резьба',strengthClass:'Класс прочности',type:'Тип',size:'Размер',diameter:'Диаметр',pdfName:'PDF'
+  };
+  return map[key]||key;
+}
+function auditMaterialFieldDiffsV570(prev,next){
+  const diffs=[];
+  if(!prev||!next)return diffs;
+  auditPushDiffV570(diffs,'Артикул',prev.sku,next.sku);
+  auditPushDiffV570(diffs,'Название',prev.name,next.name);
+  auditPushDiffV570(diffs,'Категория',prev.category,next.category);
+  auditPushDiffV570(diffs,'Подкатегория',prev.subcategory,next.subcategory);
+  auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
+  auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
+  auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl']);
+  const pa=prev.attributes||{}, na=next.attributes||{};
+  Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
+    if(ignore.has(k))return;
+    auditPushDiffV570(diffs,auditAttrLabelV570(k),pa[k],na[k]);
+  });
+  return diffs;
+}
+function auditStepDiffsV570(prevSteps,nextSteps){
+  const diffs=[];
+  const old=prevSteps||[], neu=nextSteps||[];
+  const max=Math.max(old.length,neu.length);
+  for(let i=0;i<max;i++){
+    const a=old[i]||{}, b=neu[i]||{};
+    const oldName=a.name||'', newName=b.name||'';
+    if(!old[i]&&neu[i]){diffs.push(`Добавлен этап: ${newName||'Этап'} · ${Number(b.minutes||0)} мин`);continue;}
+    if(old[i]&&!neu[i]){diffs.push(`Удалён этап: ${oldName||'Этап'}`);continue;}
+    if(oldName!==newName)diffs.push(`Этап ${i+1}: ${oldName||'—'} → ${newName||'—'}`);
+    const am=Number(a.minutes||0), bm=Number(b.minutes||0);
+    if(am!==bm)diffs.push(`${newName||oldName||('Этап '+(i+1))}: ${am} → ${bm} мин`);
+  }
+  return diffs;
+}
+function auditOrderMaterialLabelV570(item){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(item&&item.materialId));
+  return m?(m.sku||m.name||item.materialId):(item&&item.materialId)||'материал';
+}
+function auditOrderMaterialDiffsV570(prevMats,nextMats){
+  const diffs=[];
+  const old=prevMats||[], neu=nextMats||[];
+  const ids=Array.from(new Set([...old.map(x=>String(x.materialId)),...neu.map(x=>String(x.materialId))]));
+  ids.forEach(id=>{
+    const a=old.find(x=>String(x.materialId)===id), b=neu.find(x=>String(x.materialId)===id);
+    const label=auditOrderMaterialLabelV570(b||a||{materialId:id});
+    if(!a&&b){diffs.push(`Добавлен материал ${label}: ${qtyWithUnit(Number(b.qty||0),b.unit||'')}`);return;}
+    if(a&&!b){diffs.push(`Удалён материал ${label}: было ${qtyWithUnit(Number(a.qty||0),a.unit||'')}`);return;}
+    if(a&&b){
+      if(Number(a.perUnitQty||0)!==Number(b.perUnitQty||0))diffs.push(`${label} на 1 изделие: ${qtyWithUnit(Number(a.perUnitQty||0),b.unit||a.unit||'')} → ${qtyWithUnit(Number(b.perUnitQty||0),b.unit||a.unit||'')}`);
+      if(Number(a.qty||0)!==Number(b.qty||0))diffs.push(`${label} всего: ${qtyWithUnit(Number(a.qty||0),b.unit||a.unit||'')} → ${qtyWithUnit(Number(b.qty||0),b.unit||a.unit||'')}`);
+    }
+  });
+  return diffs;
+}
+function auditOrderFieldDiffsV570(prev,next){
+  const diffs=[];
+  if(!prev||!next)return diffs;
+  auditPushDiffV570(diffs,'Номер заказа',prev.number,next.number);
+  auditPushDiffV570(diffs,'Заказчик',prev.client,next.client);
+  auditPushDiffV570(diffs,'Количество изделий',orderProductQty(prev),orderProductQty(next));
+  auditPushDiffV570(diffs,'Срок сдачи',prev.dueDate,next.dueDate);
+  auditPushDiffV570(diffs,'Дата создания',prev.date,next.date);
+  auditPushDiffV570(diffs,'Комментарий',prev.comment,next.comment);
+  return diffs;
+}
+
+if(typeof saveOrder==='function'){
+  const __saveOrderV570=saveOrder;
+  saveOrder=async function(id=''){
+    const prev=id?auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))):null;
+    await __saveOrderV570(id);
+    const next=id?auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))):auditCloneV570((data.orders||[])[(data.orders||[]).length-1]);
+    if(prev&&next){
+      const fieldDiffs=auditOrderFieldDiffsV570(prev,next);
+      const techDiffs=auditStepDiffsV570(prev.steps,next.steps);
+      const matDiffs=auditOrderMaterialDiffsV570(prev.materials,next.materials);
+      if(false&&fieldDiffs.length)auditAdd('order_fields_changed','order',next.id,next.number,`Изменены данные заказа: ${auditJoinV570(fieldDiffs)}`,{diffs:fieldDiffs});
+      if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
+      if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
+    }
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.75 - Simple Ordered History';
+  };
+}
+
+if(typeof updateMaterialInSupabase==='function'){
+  const __updateMaterialV570=updateMaterialInSupabase;
+  updateMaterialInSupabase=async function(m){
+    const prev=auditCloneV570((data.materials||[]).find(x=>String(x.id)===String(m&&m.id)));
+    const next=auditCloneV570(m);
+    const ok=await __updateMaterialV570(m);
+    if(ok&&prev&&next){
+      const diffs=auditMaterialFieldDiffsV570(prev,next);
+      if(false&&diffs.length)auditAdd('material_fields_changed','material',next.id,next.sku||next.name,`Изменены поля материала: ${auditJoinV570(diffs)}`,{diffs});
+    }
+    return ok;
+  };
+}
+
+// More detailed rows in audit lists: show changed fields under the main history line.
+const __auditListHtmlV570=auditListHtml;
+auditListHtml=function(entity,entityId){
+  const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+  return `<div class="audit-list">${rows.map(r=>{const details=(r.meta&&Array.isArray(r.meta.diffs)&&r.meta.diffs.length)?`<span>${r.meta.diffs.map(x=>'• '+escapeHtml(x)).join('<br>')}</span>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${details}</div></div>`}).join('')}</div>`;
+};
+auditListHtmlOrder=function(o){
+  let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+  return `<div class="audit-list">${rows.map(r=>{const details=(r.meta&&Array.isArray(r.meta.diffs)&&r.meta.diffs.length)?`<span>${r.meta.diffs.map(x=>'• '+escapeHtml(x)).join('<br>')}</span>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${details}</div></div>`}).join('')}</div>`;
+};
+
+
+
+/* v5.71: short and clean change history */
+function auditAutoNameFromGradeV571(prev,next){
+  const pa=(prev&&prev.attributes)||{}, na=(next&&next.attributes)||{};
+  if((prev&&prev.category)!=='Поролон' || (next&&next.category)!=='Поролон')return false;
+  const oldGrade=String(pa.grade||'').trim();
+  const newGrade=String(na.grade||'').trim();
+  const oldName=String((prev&&prev.name)||'').trim();
+  const newName=String((next&&next.name)||'').trim();
+  if(!oldGrade || !newGrade || oldGrade===newGrade)return false;
+  // If material name changed only because the grade is included in the generated name,
+  // do not write a separate "Название" change. The real user change is grade/density.
+  const oldWithout=oldName.replace(oldGrade,'').replace(/\s+/g,' ').trim();
+  const newWithout=newName.replace(newGrade,'').replace(/\s+/g,' ').trim();
+  return oldWithout===newWithout;
+}
+function auditMaterialFieldDiffsV571(prev,next){
+  const diffs=[];
+  if(!prev||!next)return diffs;
+  auditPushDiffV570(diffs,'Артикул',prev.sku,next.sku);
+  if(!auditAutoNameFromGradeV571(prev,next))auditPushDiffV570(diffs,'Название',prev.name,next.name);
+  auditPushDiffV570(diffs,'Категория',prev.category,next.category);
+  auditPushDiffV570(diffs,'Подкатегория',prev.subcategory,next.subcategory);
+  auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
+  auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
+  auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl','area']);
+  const pa=prev.attributes||{}, na=next.attributes||{};
+  Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
+    if(ignore.has(k))return;
+    auditPushDiffV570(diffs,auditAttrLabelV570(k),pa[k],na[k]);
+  });
+  return diffs;
+}
+function auditMainTextV571(prefix,diffs){
+  const arr=(diffs||[]).filter(Boolean);
+  if(!arr.length)return prefix;
+  if(arr.length===1)return `${prefix}: ${arr[0]}`;
+  return `${prefix}: ${auditJoinV570(arr,4)}`;
+}
+
+if(typeof updateMaterialInSupabase==='function'){
+  const __updateMaterialV571=updateMaterialInSupabase;
+  updateMaterialInSupabase=async function(m){
+    const prev=auditCloneV570((data.materials||[]).find(x=>String(x.id)===String(m&&m.id)));
+    const next=auditCloneV570(m);
+    const ok=await __updateMaterialV571(m);
+    if(ok&&prev&&next){
+      const diffs=auditMaterialFieldDiffsV571(prev,next);
+      if(diffs.length)auditAdd('material_fields_changed','material',next.id,next.sku||next.name,auditMainTextV571('Изменено',diffs),{diffs});
+    }
+    return ok;
+  };
+}
+
+if(typeof saveOrder==='function'){
+  const __saveOrderV571=saveOrder;
+  saveOrder=async function(id=''){
+    const prev=id?auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))):null;
+    await __saveOrderV571(id);
+    const next=id?auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))):auditCloneV570((data.orders||[])[(data.orders||[]).length-1]);
+    if(prev&&next){
+      const fieldDiffs=auditOrderFieldDiffsV570(prev,next);
+      const techDiffs=auditStepDiffsV570(prev.steps,next.steps);
+      const matDiffs=auditOrderMaterialDiffsV570(prev.materials,next.materials);
+      if(fieldDiffs.length)auditAdd('order_fields_changed','order',next.id,next.number,auditMainTextV571('Изменено в заказе',fieldDiffs),{diffs:fieldDiffs});
+      if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
+      if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
+    }
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.75 - Simple Ordered History';
+  };
+}
+
+// In history cards show only one short clear line. Details are kept in meta for future export, but not duplicated visually.
+if(typeof auditFor==='function'){
+  auditListHtml=function(entity,entityId){
+    const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+  auditListHtmlOrder=function(o){
+    let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+}
+
+
+
+/* v5.72: do not treat generated foam name as real name change */
+function auditExtractArrowV572(diff){
+  const text=String(diff||'');
+  const i=text.indexOf(':');
+  const body=i>=0?text.slice(i+1).trim():text;
+  const parts=body.split('→');
+  if(parts.length<2)return null;
+  return {old:parts[0].trim(), next:parts.slice(1).join('→').trim()};
+}
+function auditIsFoamGeneratedNameDiffV572(nameDiff, gradeDiff){
+  if(!nameDiff || !gradeDiff)return false;
+  const n=auditExtractArrowV572(nameDiff);
+  const g=auditExtractArrowV572(gradeDiff);
+  if(!n || !g)return false;
+  const oldName=String(n.old||'').trim();
+  const newName=String(n.next||'').trim();
+  const oldGrade=String(g.old||'').trim();
+  const newGrade=String(g.next||'').trim();
+  if(!oldGrade || !newGrade)return false;
+  if(!/^Название\s*:/i.test(String(nameDiff)))return false;
+  if(!/^(Марка\s*\/\s*плотность|Марка\s*\/\s*Плотность)\s*:/i.test(String(gradeDiff)))return false;
+  const oldBase=oldName.replace(oldGrade,'').replace(/\s+/g,' ').trim();
+  const newBase=newName.replace(newGrade,'').replace(/\s+/g,' ').trim();
+  if(oldBase && oldBase===newBase)return true;
+  return oldName.includes(oldGrade) && newName.includes(newGrade) && oldName.replace(oldGrade,'')===newName.replace(newGrade,'');
+}
+function auditCleanDiffsV572(diffs){
+  const arr=(diffs||[]).filter(Boolean).map(String);
+  const grade=arr.find(x=>/^(Марка\s*\/\s*плотность|Марка\s*\/\s*Плотность)\s*:/i.test(x));
+  return arr.filter(x=>{
+    if(/^Название\s*:/i.test(x) && auditIsFoamGeneratedNameDiffV572(x,grade))return false;
+    return true;
+  });
+}
+function auditMaterialFieldDiffsV571(prev,next){
+  const diffs=[];
+  if(!prev||!next)return diffs;
+  auditPushDiffV570(diffs,'Артикул',prev.sku,next.sku);
+  auditPushDiffV570(diffs,'Название',prev.name,next.name);
+  auditPushDiffV570(diffs,'Категория',prev.category,next.category);
+  auditPushDiffV570(diffs,'Подкатегория',prev.subcategory,next.subcategory);
+  auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
+  auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
+  auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl','area']);
+  const pa=prev.attributes||{}, na=next.attributes||{};
+  Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
+    if(ignore.has(k))return;
+    auditPushDiffV570(diffs,auditAttrLabelV570(k),pa[k],na[k]);
+  });
+  return auditCleanDiffsV572(diffs);
+}
+function auditMainTextV571(prefix,diffs){
+  const arr=auditCleanDiffsV572(diffs||[]);
+  if(!arr.length)return prefix;
+  if(arr.length===1)return `${prefix}: ${arr[0]}`;
+  return `${prefix}: ${auditJoinV570(arr,4)}`;
+}
+function auditDisplayTextV572(row){
+  if(row && row.type==='material_fields_changed' && row.meta && Array.isArray(row.meta.diffs)){
+    const diffs=auditCleanDiffsV572(row.meta.diffs);
+    if(diffs.length)return auditMainTextV571('Изменено',diffs);
+  }
+  return row&&row.text?row.text:'';
+}
+if(typeof auditFor==='function'){
+  auditListHtml=function(entity,entityId){
+    const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+  auditListHtmlOrder=function(o){
+    let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+}
+
+const __renderAllV570=renderAll;
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.75 - Simple Ordered History';}
+
 </script>
+
+<script>
+/* v5.73: material creator/date audit fallback and migration */
+const APP_VERSION_V573 = 'v5.75 - Simple Ordered History';
+
+function auditMaterialFallbackFromHistoryV573(m){
+  const rows = (typeof auditFor === 'function') ? auditFor('material', m && m.id) : [];
+  const oldest = rows.length ? rows[rows.length - 1] : null;
+  const createRow = [...rows].reverse().find(r =>
+    r && (
+      r.type === 'material_create' ||
+      /материал.+(добавлен|создан)/i.test(String(r.text || ''))
+    )
+  );
+  return {
+    by: (createRow && createRow.by) || (oldest && oldest.by) || '',
+    at: (createRow && createRow.at) || (oldest && oldest.at) || ''
+  };
+}
+
+function ensureMaterialAuditMetaV573(m, options = {}){
+  if(!m) return m;
+  m.attributes = m.attributes || {};
+  const a = m.attributes;
+  const hist = auditMaterialFallbackFromHistoryV573(m);
+  const now = (typeof auditNow === 'function') ? auditNow() : new Date().toISOString();
+  const actor = (typeof actorName === 'function') ? actorName() : ((currentUser && currentUser.email) || 'Неизвестный пользователь');
+
+  let changed = false;
+
+  if(!a.createdBy){
+    a.createdBy = hist.by || a.updatedBy || a.stockChangedBy || actor;
+    changed = true;
+  }
+  if(!a.createdAt){
+    a.createdAt = hist.at || a.updatedAt || a.stockChangedAt || m.createdAt || m.lastUpdated || now;
+    changed = true;
+  }
+  if(!a.updatedBy){
+    a.updatedBy = a.stockChangedBy || a.createdBy || actor;
+    changed = true;
+  }
+  if(!a.updatedAt){
+    a.updatedAt = a.stockChangedAt || a.createdAt || now;
+    changed = true;
+  }
+
+  if(options.persist && changed && typeof materialToDb === 'function' && supabaseClient && m.id){
+    // Silent one-time migration for old materials.
+    try{
+      supabaseClient.from('materials').update(materialToDb(m)).eq('id', m.id).then(()=>{}).catch(()=>{});
+    }catch(e){}
+  }
+  return m;
+}
+
+if(typeof dbToMaterial === 'function'){
+  const __dbToMaterialV573 = dbToMaterial;
+  dbToMaterial = function(row){
+    const m = __dbToMaterialV573(row);
+    if(row && row.created_at && !m.createdAt) m.createdAt = row.created_at;
+    return ensureMaterialAuditMetaV573(m);
+  };
+}
+
+if(typeof loadMaterialsFromSupabase === 'function'){
+  const __loadMaterialsFromSupabaseV573 = loadMaterialsFromSupabase;
+  loadMaterialsFromSupabase = async function(){
+    await __loadMaterialsFromSupabaseV573();
+    if(Array.isArray(data && data.materials)){
+      data.materials.forEach(m => ensureMaterialAuditMetaV573(m));
+    }
+    const av=document.getElementById('appVersionBadge');
+    if(av) av.textContent = APP_VERSION_V573;
+  };
+}
+
+if(typeof insertMaterialToSupabase === 'function'){
+  const __insertMaterialV573 = insertMaterialToSupabase;
+  insertMaterialToSupabase = async function(m){
+    const now = (typeof auditNow === 'function') ? auditNow() : new Date().toISOString();
+    const actor = (typeof actorName === 'function') ? actorName() : ((currentUser && currentUser.email) || 'Неизвестный пользователь');
+    m.attributes = m.attributes || {};
+    m.attributes.createdBy = m.attributes.createdBy || actor;
+    m.attributes.createdAt = m.attributes.createdAt || now;
+    m.attributes.updatedBy = actor;
+    m.attributes.updatedAt = now;
+    return await __insertMaterialV573(m);
+  };
+}
+
+if(typeof updateMaterialInSupabase === 'function'){
+  const __updateMaterialV573 = updateMaterialInSupabase;
+  updateMaterialInSupabase = async function(m){
+    const actor = (typeof actorName === 'function') ? actorName() : ((currentUser && currentUser.email) || 'Неизвестный пользователь');
+    const now = (typeof auditNow === 'function') ? auditNow() : new Date().toISOString();
+    m.attributes = m.attributes || {};
+    ensureMaterialAuditMetaV573(m);
+    m.attributes.updatedBy = actor;
+    m.attributes.updatedAt = now;
+    return await __updateMaterialV573(m);
+  };
+}
+
+if(typeof materialProfileHtml === 'function'){
+  materialProfileHtml = function(m){
+    ensureMaterialAuditMetaV573(m, {persist:true});
+    const a=m.attributes||{};
+    return `<div class="audit-profile-grid"><div class="audit-card"><h5>Профиль материала</h5><div class="audit-kv"><span>Добавил материал</span><b>${escapeHtml(a.createdBy||'—')}</b></div><div class="audit-kv"><span>Дата добавления</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>Последнее движение</span><b>${escapeHtml(a.stockChangedBy||a.updatedBy||'—')}</b></div><div class="audit-kv"><span>Последнее изменение</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>История материала</h5>${auditListHtml('material',m.id)}</div></div>`;
+  };
+}
+
+if(typeof openMaterialDetails === 'function'){
+  const __openMaterialDetailsV573 = openMaterialDetails;
+  openMaterialDetails = function(id){
+    const m = data.materials.find(x=>String(x.id)===String(id));
+    if(m) ensureMaterialAuditMetaV573(m, {persist:true});
+    return __openMaterialDetailsV573(id);
+  };
+}
+
+if(typeof renderAll === 'function'){
+  const __renderAllV573 = renderAll;
+  renderAll = function(){
+    if(Array.isArray(data && data.materials)) data.materials.forEach(m=>ensureMaterialAuditMetaV573(m));
+    __renderAllV573();
+    const av=document.getElementById('appVersionBadge');
+    if(av) av.textContent = APP_VERSION_V573;
+  };
+}
+</script>
+
+
+<script>
+/* v5.74: precise purchase audit history */
+const APP_VERSION_V574 = 'v5.75 - Simple Ordered History';
+
+window.__suppressGenericMaterialUpdateAuditV574 = false;
+
+if(typeof auditAdd === 'function'){
+  const __auditAddV574 = auditAdd;
+  auditAdd = function(type, entity, entityId, title, text, meta){
+    if(window.__suppressGenericMaterialUpdateAuditV574 && entity === 'material' && type === 'material_update'){
+      return null;
+    }
+    return __auditAddV574(type, entity, entityId, title, text, meta);
+  };
+}
+
+function auditQtyChangeTextV574(label, oldQty, newQty, unit){
+  return `${label}: ${qtyWithUnit(Number(oldQty||0), unit||'шт')} → ${qtyWithUnit(Number(newQty||0), unit||'шт')}`;
+}
+function materialShortNameV574(m){
+  return (m && (m.sku || m.name || materialTitle(m))) || 'материал';
+}
+function orderShortNameV574(o){
+  return (o && (o.number || o.id)) || 'заказ';
+}
+
+if(typeof setMaterialOrderedQty === 'function'){
+  setMaterialOrderedQty = function(id){
+    const m=data.materials.find(x=>String(x.id)===String(id));
+    if(!m){toast(t('notFoundMaterial'));return;}
+    const unit=m.unit||'шт';
+    const q=normalizeStockValue(document.getElementById('detailOrderedQty')?.value||0,unit,true);
+    if(q===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}
+
+    const oldAttrs={...(m.attributes||{})};
+    const oldOrdered=orderedManualQty(m);
+    const oldAlloc=(oldAttrs.manualPurchaseOrders||[]).length;
+
+    m.attributes=m.attributes||{};
+    m.attributes.orderedQty=q;
+    m.attributes.manualPurchaseOrders=buildManualPurchaseAllocations(m,q);
+    m.attributes.purchaseStatus=q>0?'ordered':(stockNeededToOrderQty(m)>0?'needorder':'instock');
+    m.lastUpdated=today();
+
+    window.__suppressGenericMaterialUpdateAuditV574 = true;
+    updateMaterialInSupabase(m).then(async ok=>{
+      window.__suppressGenericMaterialUpdateAuditV574 = false;
+      if(!ok){m.attributes=oldAttrs;return;}
+
+      const newAlloc=(m.attributes.manualPurchaseOrders||[]).length;
+      const main = q>0
+        ? auditQtyChangeTextV574('Заказано поставщику', oldOrdered, q, unit)
+        : auditQtyChangeTextV574('Заказ поставщику сброшен', oldOrdered, 0, unit);
+      const extra = q>0 && newAlloc ? ` · привязано к заказам: ${newAlloc}` : '';
+      auditAdd('material_purchase_manual','material',m.id,m.sku||m.name,`${main}${extra}`,{
+        diffs:[main, `Заказы: ${oldAlloc} → ${newAlloc}`]
+      });
+
+      await loadMaterialsFromSupabase();
+      renderAll();
+      openMaterialDetails(id);
+      const linked=m.attributes.manualPurchaseOrders?.length?` · заказов: ${m.attributes.manualPurchaseOrders.length}`:'';
+      toast(q>0?`Заказано ${qtyWithUnit(q,unit)}${linked}`:'Заказанное сброшено');
+    }).catch(err=>{
+      window.__suppressGenericMaterialUpdateAuditV574 = false;
+      m.attributes=oldAttrs;
+      console.error(err);
+      toast('Ошибка обновления');
+    });
+  };
+}
+
+if(typeof saveOrderMaterialPurchase === 'function'){
+  saveOrderMaterialPurchase = function(orderId,materialId,opts={}){
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+    if(!o)return;
+    const item=orderMaterials(o).find(i=>String(i.materialId)===String(materialId));
+    const m=data.materials.find(x=>String(x.id)===String(materialId));
+    if(!item||!m)return;
+    const unit=m.unit||item.unit||'шт';
+    const q=normalizeStockValue(document.getElementById('singlePurchaseQty')?.value||0,unit,true);
+    if(q===null || q<=0){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}
+
+    const oldStatus=item.purchaseStatus||'none';
+    const oldQty=stockNumForUnit(item.purchaseQty||0,unit);
+    const oldNo=item.purchaseNo||'';
+    const newNo=document.getElementById('singlePurchaseNo')?.value?.trim()||'';
+
+    item.purchaseStatus='ordered';
+    item.purchaseQty=q;
+    item.purchaseNo=newNo;
+    o.status=calcOrderAutoStatus(o);
+    save();
+
+    const qtyDiff=auditQtyChangeTextV574('Заказано поставщику', oldQty, q, unit);
+    const noDiff = oldNo!==newNo ? `№ закупки / поставщик: ${auditCleanValV570(oldNo)} → ${auditCleanValV570(newNo)}` : '';
+    const statusDiff = oldStatus!=='ordered' ? `Статус закупки: ${auditCleanValV570(oldStatus)} → Заказано` : '';
+    const diffs=[qtyDiff,statusDiff,noDiff].filter(Boolean);
+    auditAdd('purchase','order',o.id,o.number,`Материал ${materialShortNameV574(m)} заказан: ${qtyWithUnit(q,unit)}`,{diffs});
+    auditAdd('purchase','material',m.id,m.sku||m.name,`Заказано для ${orderShortNameV574(o)}: ${qtyWithUnit(q,unit)}`,{diffs});
+
+    renderAll();
+    if(opts.clear){
+      const qty=document.getElementById('singlePurchaseQty');
+      const no=document.getElementById('singlePurchaseNo');
+      if(qty)qty.value='';
+      if(no)no.value='';
+    }
+    if(opts.close===false){
+      openOrderMaterialPurchase(orderId,materialId);
+    }else{
+      closeModal();
+    }
+    toast(opts.toastText||'Закупка обновлена');
+  };
+}
+
+if(typeof receiveOrderMaterialPurchase === 'function'){
+  const __receiveOrderMaterialV574 = receiveOrderMaterialPurchase;
+  receiveOrderMaterialPurchase = async function(orderId,materialId){
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+    const item=o?orderMaterials(o).find(i=>String(i.materialId)===String(materialId)):null;
+    const m=data.materials.find(x=>String(x.id)===String(materialId));
+    const unit=m?.unit||item?.unit||'шт';
+    const qty=stockNumForUnit(orderItemPurchaseQty(item||{},0),unit);
+    window.__suppressGenericMaterialUpdateAuditV574 = true;
+    const res = await __receiveOrderMaterialV574(orderId,materialId);
+    window.__suppressGenericMaterialUpdateAuditV574 = false;
+    if(o&&m&&qty>0){
+      auditAdd('receive','order',o.id,o.number,`Материал ${materialShortNameV574(m)} принят: +${qtyWithUnit(qty,unit)}`);
+      auditAdd('receive','material',m.id,m.sku||m.name,`Поступление по ${orderShortNameV574(o)}: +${qtyWithUnit(qty,unit)}`);
+    }
+    return res;
+  };
+}
+
+if(typeof cancelOrderMaterialPurchase === 'function'){
+  cancelOrderMaterialPurchase = function(orderId,materialId){
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+    const item=o?orderMaterials(o).find(i=>String(i.materialId)===String(materialId)):null;
+    const m=data.materials.find(x=>String(x.id)===String(materialId));
+    if(!item)return;
+    const unit=m?.unit||item.unit||'шт';
+    const oldQty=stockNumForUnit(item.purchaseQty||0,unit);
+    const oldNo=item.purchaseNo||'';
+    item.purchaseStatus='need';
+    item.purchaseQty=0;
+    item.purchaseNo='';
+    o.status=calcOrderAutoStatus(o);
+    save();
+    const diff=auditQtyChangeTextV574('Заказ поставщику отменён', oldQty, 0, unit);
+    const diffs=[diff, oldNo?`№ закупки / поставщик: ${auditCleanValV570(oldNo)} → —`:null].filter(Boolean);
+    if(o)auditAdd('purchase_cancel','order',o.id,o.number,`Закупка материала ${materialShortNameV574(m)} отменена`,{diffs});
+    if(m)auditAdd('purchase_cancel','material',m.id,m.sku||m.name,`Закупка для ${orderShortNameV574(o)} отменена: ${qtyWithUnit(oldQty,unit)} → 0 ${unitLabel(unit)}`,{diffs});
+    renderAll();
+    openOrderMaterialPurchase(orderId,materialId);
+    toast('Заказ поставщику отменён');
+  };
+}
+
+if(typeof auditDisplayTextV572 === 'function'){
+  const __auditDisplayTextV574 = auditDisplayTextV572;
+  auditDisplayTextV572 = function(row){
+    if(row && row.type==='material_update' && /^Материал\s+.+\s+изменён$/i.test(String(row.text||''))){
+      return 'Материал изменён';
+    }
+    return __auditDisplayTextV574(row);
+  };
+}
+
+if(typeof renderAll === 'function'){
+  const __renderAllV574 = renderAll;
+  renderAll = function(){
+    __renderAllV574();
+    const av=document.getElementById('appVersionBadge');
+    if(av) av.textContent = APP_VERSION_V574;
+  };
+}
+</script>
+
+
+
+<script>
+/* v5.75: simple ordered audit text */
+const APP_VERSION_V575 = 'v5.75 - Simple Ordered History';
+
+function auditSimpleOrderedTextV575(qty, unit){
+  return `Заказано: ${qtyWithUnit(Number(qty||0), unit||'шт')}`;
+}
+function auditSimpleCancelOrderedTextV575(qty, unit){
+  return `Заказ отменён: ${qtyWithUnit(Number(qty||0), unit||'шт')}`;
+}
+function auditParseOrderedArrowV575(text){
+  const s=String(text||'');
+  const m=s.match(/Заказано\s+поставщику:\s*[^→]+→\s*([^·;]+)/i);
+  if(m && m[1]) return `Заказано: ${m[1].trim()}`;
+  return null;
+}
+
+if(typeof setMaterialOrderedQty === 'function'){
+  setMaterialOrderedQty = function(id){
+    const m=data.materials.find(x=>String(x.id)===String(id));
+    if(!m){toast(t('notFoundMaterial'));return;}
+    const unit=m.unit||'шт';
+    const q=normalizeStockValue(document.getElementById('detailOrderedQty')?.value||0,unit,true);
+    if(q===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}
+
+    const oldAttrs={...(m.attributes||{})};
+    const oldOrdered=orderedManualQty(m);
+    const oldAlloc=(oldAttrs.manualPurchaseOrders||[]).length;
+
+    m.attributes=m.attributes||{};
+    m.attributes.orderedQty=q;
+    m.attributes.manualPurchaseOrders=buildManualPurchaseAllocations(m,q);
+    m.attributes.purchaseStatus=q>0?'ordered':(stockNeededToOrderQty(m)>0?'needorder':'instock');
+    m.lastUpdated=today();
+
+    window.__suppressGenericMaterialUpdateAuditV574 = true;
+    updateMaterialInSupabase(m).then(async ok=>{
+      window.__suppressGenericMaterialUpdateAuditV574 = false;
+      if(!ok){m.attributes=oldAttrs;return;}
+
+      const newAlloc=(m.attributes.manualPurchaseOrders||[]).length;
+      const text = q>0 ? auditSimpleOrderedTextV575(q, unit) : auditSimpleCancelOrderedTextV575(oldOrdered, unit);
+      const diffs = q>0
+        ? [`Количество: ${qtyWithUnit(oldOrdered,unit)} → ${qtyWithUnit(q,unit)}`, `Заказы: ${oldAlloc} → ${newAlloc}`]
+        : [`Количество: ${qtyWithUnit(oldOrdered,unit)} → ${qtyWithUnit(0,unit)}`];
+      auditAdd('material_purchase_manual','material',m.id,m.sku||m.name,text,{diffs});
+
+      await loadMaterialsFromSupabase();
+      renderAll();
+      openMaterialDetails(id);
+      const linked=m.attributes.manualPurchaseOrders?.length?` · заказов: ${m.attributes.manualPurchaseOrders.length}`:'';
+      toast(q>0?`Заказано ${qtyWithUnit(q,unit)}${linked}`:'Заказанное сброшено');
+    }).catch(err=>{
+      window.__suppressGenericMaterialUpdateAuditV574 = false;
+      m.attributes=oldAttrs;
+      console.error(err);
+      toast('Ошибка обновления');
+    });
+  };
+}
+
+if(typeof saveOrderMaterialPurchase === 'function'){
+  saveOrderMaterialPurchase = function(orderId,materialId,opts={}){
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+    if(!o)return;
+    const item=orderMaterials(o).find(i=>String(i.materialId)===String(materialId));
+    const m=data.materials.find(x=>String(x.id)===String(materialId));
+    if(!item||!m)return;
+    const unit=m.unit||item.unit||'шт';
+    const q=normalizeStockValue(document.getElementById('singlePurchaseQty')?.value||0,unit,true);
+    if(q===null || q<=0){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}
+
+    const oldStatus=item.purchaseStatus||'none';
+    const oldQty=stockNumForUnit(item.purchaseQty||0,unit);
+    const oldNo=item.purchaseNo||'';
+    const newNo=document.getElementById('singlePurchaseNo')?.value?.trim()||'';
+
+    item.purchaseStatus='ordered';
+    item.purchaseQty=q;
+    item.purchaseNo=newNo;
+    o.status=calcOrderAutoStatus(o);
+    save();
+
+    const qtyDiff=`Количество: ${qtyWithUnit(oldQty,unit)} → ${qtyWithUnit(q,unit)}`;
+    const noDiff = oldNo!==newNo ? `№ закупки / поставщик: ${auditCleanValV570(oldNo)} → ${auditCleanValV570(newNo)}` : '';
+    const statusDiff = oldStatus!=='ordered' ? `Статус закупки: ${auditCleanValV570(oldStatus)} → Заказано` : '';
+    const diffs=[qtyDiff,statusDiff,noDiff].filter(Boolean);
+    auditAdd('purchase','order',o.id,o.number,`Материал ${materialShortNameV574(m)} заказан: ${qtyWithUnit(q,unit)}`,{diffs});
+    auditAdd('purchase','material',m.id,m.sku||m.name,auditSimpleOrderedTextV575(q,unit),{diffs});
+
+    renderAll();
+    if(opts.clear){
+      const qty=document.getElementById('singlePurchaseQty');
+      const no=document.getElementById('singlePurchaseNo');
+      if(qty)qty.value='';
+      if(no)no.value='';
+    }
+    if(opts.close===false){
+      openOrderMaterialPurchase(orderId,materialId);
+    }else{
+      closeModal();
+    }
+    toast(opts.toastText||'Закупка обновлена');
+  };
+}
+
+if(typeof cancelOrderMaterialPurchase === 'function'){
+  cancelOrderMaterialPurchase = function(orderId,materialId){
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+    const item=o?orderMaterials(o).find(i=>String(i.materialId)===String(materialId)):null;
+    const m=data.materials.find(x=>String(x.id)===String(materialId));
+    if(!item)return;
+    const unit=m?.unit||item.unit||'шт';
+    const oldQty=stockNumForUnit(item.purchaseQty||0,unit);
+    const oldNo=item.purchaseNo||'';
+    item.purchaseStatus='need';
+    item.purchaseQty=0;
+    item.purchaseNo='';
+    o.status=calcOrderAutoStatus(o);
+    save();
+    const diffs=[`Количество: ${qtyWithUnit(oldQty,unit)} → ${qtyWithUnit(0,unit)}`, oldNo?`№ закупки / поставщик: ${auditCleanValV570(oldNo)} → —`:null].filter(Boolean);
+    if(o)auditAdd('purchase_cancel','order',o.id,o.number,`Закупка материала ${materialShortNameV574(m)} отменена`,{diffs});
+    if(m)auditAdd('purchase_cancel','material',m.id,m.sku||m.name,auditSimpleCancelOrderedTextV575(oldQty,unit),{diffs});
+    renderAll();
+    openOrderMaterialPurchase(orderId,materialId);
+    toast('Заказ поставщику отменён');
+  };
+}
+
+if(typeof auditDisplayTextV572 === 'function'){
+  const __auditDisplayTextV575 = auditDisplayTextV572;
+  auditDisplayTextV572 = function(row){
+    const parsed = auditParseOrderedArrowV575(row && row.text);
+    if(parsed) return parsed;
+    return __auditDisplayTextV575(row);
+  };
+}
+
+if(typeof renderAll === 'function'){
+  const __renderAllV575 = renderAll;
+  renderAll = function(){
+    __renderAllV575();
+    const av=document.getElementById('appVersionBadge');
+    if(av) av.textContent = APP_VERSION_V575;
+  };
+}
+</script>
+
+
+<script>
+/* v5.76: clean material history for order changes */
+const APP_VERSION_V576 = 'v5.76 - Clean Material Order History';
+
+function auditIsGenericMaterialUpdateV576(row){
+  if(!row) return false;
+  const txt = String(row.text||'').trim();
+  return row.entity === 'material' && row.type === 'material_update' && /^Материал\s+.+\s+изменён$/i.test(txt);
+}
+function auditIsGenericOrderUpdateV576(row){
+  if(!row) return false;
+  const txt = String(row.text||'').trim();
+  return row.entity === 'order' && row.type === 'order_update' && /^Заказ\s+.+\s+изменён$/i.test(txt);
+}
+function auditVisibleRowsV576(entity, entityId){
+  let rows = auditFor(entity, entityId) || [];
+  return rows.filter(r => !auditIsGenericMaterialUpdateV576(r) && !auditIsGenericOrderUpdateV576(r));
+}
+function auditMaterialLabelV576(m){
+  if(!m) return 'материал';
+  return m.sku || m.name || 'материал';
+}
+function auditOrderLabelV576(o){
+  return (o && o.number) ? o.number : 'заказ';
+}
+function auditOrderMaterialRowsV576(order){
+  return (orderMaterials(order)||[]).map(x => ({
+    materialId: String(x.materialId||''),
+    qty: Number(x.qty||0),
+    perUnitQty: Number(x.perUnitQty||0),
+    unit: x.unit || ((data.materials||[]).find(m=>String(m.id)===String(x.materialId))||{}).unit || ''
+  }));
+}
+function auditOrderMaterialChangesForMaterialsV576(prev,next){
+  const oldRows = auditOrderMaterialRowsV576(prev||{});
+  const newRows = auditOrderMaterialRowsV576(next||{});
+  const ids = Array.from(new Set([...oldRows.map(x=>x.materialId), ...newRows.map(x=>x.materialId)])).filter(Boolean);
+  const orderNo = auditOrderLabelV576(next||prev);
+  ids.forEach(id=>{
+    const before = oldRows.find(x=>x.materialId===id);
+    const after = newRows.find(x=>x.materialId===id);
+    const m = (data.materials||[]).find(x=>String(x.id)===String(id));
+    const unit = (after&&after.unit) || (before&&before.unit) || (m&&m.unit) || '';
+    if(!before && after){
+      auditAdd('material_order_link','material',id,auditMaterialLabelV576(m),`Добавлен в заказ ${orderNo}: ${qtyWithUnit(after.qty,unit)}`);
+      return;
+    }
+    if(before && !after){
+      auditAdd('material_order_unlink','material',id,auditMaterialLabelV576(m),`Удалён из заказа ${orderNo}: ${qtyWithUnit(before.qty,unit)}`);
+      return;
+    }
+    if(before && after && Number(before.qty||0)!==Number(after.qty||0)){
+      auditAdd('material_order_qty','material',id,auditMaterialLabelV576(m),`Изменено в заказе ${orderNo}: ${qtyWithUnit(before.qty,unit)} → ${qtyWithUnit(after.qty,unit)}`);
+    }
+  });
+}
+
+if(typeof saveOrder === 'function'){
+  const __saveOrderV576 = saveOrder;
+  saveOrder = async function(id=''){
+    const prev = id ? auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))) : null;
+    const result = await __saveOrderV576(id);
+    const next = id ? auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))) : auditCloneV570((data.orders||[])[(data.orders||[]).length-1]);
+    if(prev && next){
+      try{ auditOrderMaterialChangesForMaterialsV576(prev,next); }catch(e){ console.warn('material order audit skipped', e); }
+    }
+    return result;
+  };
+}
+
+// Hide empty generic rows and keep history readable.
+if(typeof auditFor === 'function'){
+  auditListHtml = function(entity, entityId){
+    const rows = auditVisibleRowsV576(entity, entityId);
+    if(!rows.length) return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+  auditListHtmlOrder = function(o){
+    let rows = auditVisibleRowsV576('order', o.id);
+    if(!hasOrderTechnology(o.steps)) rows = rows.filter(r=>r.type!=='technology');
+    if(!rows.length) return '<div class="audit-empty">Истории пока нет.</div>';
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+  };
+}
+
+if(typeof renderAll === 'function'){
+  const __renderAllV576 = renderAll;
+  renderAll = function(){
+    __renderAllV576();
+    const av=document.getElementById('appVersionBadge');
+    if(av) av.textContent = APP_VERSION_V576;
+  };
+}
+</script>
+
+
+
+<style>
+/* v5.77: global site history section */
+.history-toolbar{display:grid;grid-template-columns:minmax(260px,1.2fr) 170px 170px 190px auto auto;gap:10px;align-items:center;padding:16px;border-bottom:1px solid var(--line)}
+.history-list{display:flex;flex-direction:column;background:#fff}
+.history-row{display:grid;grid-template-columns:150px 1fr 210px 42px;gap:14px;align-items:center;padding:14px 16px;border-bottom:1px solid #eef0f4;background:#fff;cursor:pointer;transition:background .16s,box-shadow .16s}
+.history-row:hover{background:#fbfcfd;box-shadow:inset 3px 0 0 #17181b}
+.history-time{color:#667085;font-size:12px;line-height:1.35;white-space:nowrap}
+.history-main b{display:block;font-size:13px;color:#111;font-weight:650;line-height:1.3}
+.history-main span{display:block;margin-top:4px;color:#667085;font-size:12px;line-height:1.3}
+.history-user{font-size:12px;color:#667085;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-go{width:34px;height:34px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#111;display:grid;place-items:center;font-size:18px}
+.history-type{display:inline-flex;align-items:center;height:24px;border:1px solid #e8ebf0;border-radius:999px;background:#fbfcfd;color:#4b5563;padding:0 9px;font-size:11px;font-weight:600;margin-right:7px}
+.history-type.material{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}.history-type.order{background:#f5f3ff;color:#6d45b9;border-color:#ddd6fe}.history-type.production{background:#ecfdf3;color:#287047;border-color:#bfe8cc}.history-type.system{background:#f8fafc;color:#4b5563;border-color:#e2e8f0}
+.history-empty{padding:70px 20px;text-align:center;color:#667085}.history-empty b{display:block;color:#111;font-size:18px;margin-bottom:7px}
+.history-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:26px}
+@media(max-width:1100px){.history-toolbar{grid-template-columns:1fr 1fr}.history-summary{grid-template-columns:repeat(2,1fr)}.history-row{grid-template-columns:120px 1fr 34px}.history-user{display:none}}
+@media(max-width:720px){.history-toolbar,.history-summary{grid-template-columns:1fr}.history-row{grid-template-columns:1fr 34px}.history-time{grid-column:1/-1}.history-main{grid-column:1}.history-go{grid-column:2;grid-row:2}}
+</style>
+<script>
+/* v5.77: full site history / audit tree */
+(function(){
+  const VERSION='v5.77 - Global History';
+  function ready(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn); else fn(); }
+  function safeEsc(v){ return (typeof escapeHtml==='function') ? escapeHtml(v) : String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+  function rowText(row){
+    try{ return (typeof auditDisplayTextV572==='function') ? auditDisplayTextV572(row) : (row&&row.text)||''; }catch(e){ return (row&&row.text)||''; }
+  }
+  function cleanRow(row){
+    if(!row) return false;
+    if(typeof auditIsGenericMaterialUpdateV576==='function' && auditIsGenericMaterialUpdateV576(row)) return false;
+    if(typeof auditIsGenericOrderUpdateV576==='function' && auditIsGenericOrderUpdateV576(row)) return false;
+    const txt=String(rowText(row)||'').trim();
+    if(!txt) return false;
+    if(/^Материал\s+.+\s+измен[её]н$/i.test(txt)) return false;
+    if(/^Заказ\s+.+\s+измен[её]н$/i.test(txt)) return false;
+    return true;
+  }
+  function allRows(){
+    const rows=(typeof auditLoad==='function'?auditLoad():[]).filter(cleanRow);
+    return rows.sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+  }
+  function sectionLabel(entity){
+    if(entity==='material') return 'Склад';
+    if(entity==='order') return 'Заказы';
+    if(entity==='production') return 'Производство';
+    return 'Система';
+  }
+  function entityClass(entity){
+    if(entity==='material') return 'material';
+    if(entity==='order') return 'order';
+    if(entity==='production') return 'production';
+    return 'system';
+  }
+  function eventAction(row){
+    const t=String(row.type||'');
+    if(t.includes('create')) return 'Создание';
+    if(t.includes('receive')) return 'Поступление';
+    if(t.includes('write')||t.includes('stock_minus')) return 'Списание';
+    if(t.includes('purchase')||t.includes('ordered')) return 'Закупка';
+    if(t.includes('cancel')) return 'Отмена';
+    if(t.includes('production')) return 'Производство';
+    if(t.includes('order_link')||t.includes('order_qty')||t.includes('materials')) return 'Материалы заказа';
+    if(t.includes('technology')) return 'Технология';
+    if(t.includes('changed')||t.includes('edit')) return 'Изменение';
+    return 'Действие';
+  }
+  function auditDateShort(iso){
+    try{return auditTime(iso)}catch(e){const d=new Date(iso||Date.now());return isNaN(d)?'—':d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+  }
+  function auditDateOnly(iso){
+    const d=new Date(iso||Date.now());
+    if(isNaN(d)) return '';
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function openFromHistory(id){
+    const row=allRows().find(r=>String(r.id)===String(id)) || (typeof auditLoad==='function'?auditLoad():[]).find(r=>String(r.id)===String(id));
+    if(!row) return;
+    if(row.entity==='material' && typeof openMaterialDetail==='function') return openMaterialDetail(row.entityId);
+    if(row.entity==='order' && typeof openOrderView==='function') return openOrderView(row.entityId);
+    if(row.entity==='order' && typeof openProductionModal==='function' && String(row.type||'').includes('production')) return openProductionModal(row.entityId);
+  }
+  window.openHistoryEntityV577=openFromHistory;
+  function filteredHistory(){
+    const q=String(document.getElementById('historySearchInput')?.value||'').toLowerCase().trim();
+    const section=String(document.getElementById('historySectionFilter')?.value||'');
+    const action=String(document.getElementById('historyActionFilter')?.value||'');
+    const user=String(document.getElementById('historyUserFilter')?.value||'');
+    const date=String(document.getElementById('historyDateFilter')?.value||'');
+    return allRows().filter(r=>{
+      const text=[rowText(r),r.entityTitle,r.by,r.type,sectionLabel(r.entity)].join(' ').toLowerCase();
+      if(q && !text.includes(q)) return false;
+      if(section && String(r.entity)!==section) return false;
+      if(action && eventAction(r)!==action) return false;
+      if(user && String(r.by||'')!==user) return false;
+      if(date && auditDateOnly(r.at)!==date) return false;
+      return true;
+    });
+  }
+  function renderHistoryStats(){
+    const rows=allRows();
+    const todayStr=auditDateOnly(new Date().toISOString());
+    const todayRows=rows.filter(r=>auditDateOnly(r.at)===todayStr).length;
+    const mat=rows.filter(r=>r.entity==='material').length;
+    const ord=rows.filter(r=>r.entity==='order').length;
+    const users=new Set(rows.map(r=>r.by).filter(Boolean)).size;
+    const box=document.getElementById('historyStats');
+    if(!box) return;
+    box.innerHTML=`<div class="stat"><div><span>Всего событий</span><b>${rows.length}</b></div></div><div class="stat"><div><span>Сегодня</span><b>${todayRows}</b></div></div><div class="stat"><div><span>Склад / Заказы</span><b>${mat} / ${ord}</b></div></div><div class="stat"><div><span>Пользователей</span><b>${users}</b></div></div>`;
+  }
+  function fillHistoryFilters(){
+    const rows=allRows();
+    const userSel=document.getElementById('historyUserFilter');
+    const actionSel=document.getElementById('historyActionFilter');
+    if(userSel){
+      const cur=userSel.value;
+      const users=[...new Set(rows.map(r=>r.by).filter(Boolean))].sort();
+      userSel.innerHTML='<option value="">Все пользователи</option>'+users.map(u=>`<option value="${safeEsc(u)}">${safeEsc(u)}</option>`).join('');
+      userSel.value=cur;
+    }
+    if(actionSel){
+      const cur=actionSel.value;
+      const actions=[...new Set(rows.map(eventAction).filter(Boolean))].sort();
+      actionSel.innerHTML='<option value="">Все действия</option>'+actions.map(a=>`<option value="${safeEsc(a)}">${safeEsc(a)}</option>`).join('');
+      actionSel.value=cur;
+    }
+  }
+  window.renderSiteHistory=function(){
+    const box=document.getElementById('historyTable');
+    if(!box) return;
+    renderHistoryStats();
+    fillHistoryFilters();
+    const rows=filteredHistory();
+    if(!rows.length){ box.innerHTML='<div class="history-empty"><b>Истории пока нет</b>Здесь появятся все добавления, изменения, поступления, списания, закупки и действия по заказам.</div>'; return; }
+    box.innerHTML=`<div class="history-list">${rows.slice(0,300).map(r=>{
+      const entity=sectionLabel(r.entity), cls=entityClass(r.entity), txt=rowText(r), title=r.entityTitle||r.entityId||'—';
+      return `<div class="history-row" onclick="openHistoryEntityV577('${safeEsc(r.id)}')"><div class="history-time">${safeEsc(auditDateShort(r.at))}</div><div class="history-main"><b><span class="history-type ${cls}">${safeEsc(entity)}</span>${safeEsc(txt)}</b><span>${safeEsc(title)} · ${safeEsc(eventAction(r))}</span></div><div class="history-user">${safeEsc(r.by||'—')}</div><button class="history-go" type="button">›</button></div>`;
+    }).join('')}</div>${rows.length>300?`<div class="table-foot"><span>Показано 300 из ${rows.length}</span></div>`:''}`;
+  };
+  window.clearHistoryFiltersV577=function(){
+    ['historySearchInput','historyDateFilter'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    ['historySectionFilter','historyActionFilter','historyUserFilter'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    renderSiteHistory();
+  };
+  function injectHistoryUI(){
+    const nav=document.getElementById('mainNav');
+    if(nav && !nav.querySelector('[data-section="history"]')){
+      const btn=document.createElement('button');
+      btn.dataset.section='history';
+      btn.innerHTML='<span class="ico"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span> История';
+      const settings=[...nav.querySelectorAll('button')].find(b=>b.textContent.includes('Настройки')||b.dataset.section==='settings');
+      nav.insertBefore(btn, settings||null);
+    }
+    const main=document.querySelector('.main');
+    if(main && !document.getElementById('history')){
+      main.insertAdjacentHTML('beforeend',`<section id="history" class="section"><div class="topbar"><div class="title"><h2>История</h2><p>Все добавления, изменения и движения по сайту</p></div></div><div class="history-summary" id="historyStats"></div><div class="panel"><div class="history-toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="historySearchInput" placeholder="Поиск по материалу, заказу, пользователю..." oninput="renderSiteHistory()"></div><select class="select" id="historySectionFilter" onchange="renderSiteHistory()"><option value="">Все разделы</option><option value="material">Склад</option><option value="order">Заказы</option><option value="production">Производство</option></select><select class="select" id="historyActionFilter" onchange="renderSiteHistory()"><option value="">Все действия</option></select><select class="select" id="historyUserFilter" onchange="renderSiteHistory()"><option value="">Все пользователи</option></select><input class="input" type="date" id="historyDateFilter" onchange="renderSiteHistory()"><button class="btn" onclick="clearHistoryFiltersV577()">Сбросить</button></div><div id="historyTable"></div></div></section>`);
+    }
+  }
+  ready(function(){
+    injectHistoryUI();
+    const av=document.getElementById('appVersionBadge'); if(av) av.textContent=VERSION;
+    renderSiteHistory();
+  });
+  const oldApply=window.applyI18n;
+  if(typeof oldApply==='function'){
+    window.applyI18n=function(){ oldApply(); const hb=document.querySelector('#mainNav [data-section="history"]'); if(hb) hb.innerHTML='<span class="ico"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span> История'; const av=document.getElementById('appVersionBadge'); if(av) av.textContent=VERSION; };
+  }
+  const oldRenderAll=window.renderAll;
+  if(typeof oldRenderAll==='function'){
+    window.renderAll=function(){ oldRenderAll(); injectHistoryUI(); renderSiteHistory(); const av=document.getElementById('appVersionBadge'); if(av) av.textContent=VERSION; };
+  }
+  const oldAuditAdd=window.auditAdd;
+  if(typeof oldAuditAdd==='function'){
+    window.auditAdd=function(){ const r=oldAuditAdd.apply(this,arguments); try{renderSiteHistory();}catch(e){} return r; };
+  }
+})();
+</script>
+
 </body>
 </html>
