@@ -3019,8 +3019,6 @@ renderAuthBox=function(){__renderAuthBoxV565();try{const u=document.querySelecto
 const __renderAllV565=renderAll;
 renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION_V565;}
 
-function toggleMobileSidebar(){document.body.classList.toggle("sidebar-open")}
-function closeMobileSidebar(){document.body.classList.remove("sidebar-open")}
 document.addEventListener("click",()=>closeOrderMenus());
 renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickAddStock()}} updateQuickAddInfo();const ws=document.getElementById('writeOffSku'), wq=document.getElementById('writeOffQty'); if(ws){ws.oninput=updateWriteOffInfo;ws.onkeydown=e=>{if(e.key==='Enter')wq?.focus()}} if(wq){wq.onkeydown=e=>{if(e.key==='Enter')quickWriteOffStock()}} updateWriteOffInfo();if(location.protocol==='file:'){try{currentUser={email:'local-preview@furnicore'};setAuthLocked(false);renderAuthBox();renderAll();updateQuickAddInfo();updateWriteOffInfo();}catch(e){console.error(e);}}else{checkSession();}
 
