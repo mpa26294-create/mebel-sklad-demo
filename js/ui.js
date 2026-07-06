@@ -1,3 +1,4 @@
+// FurniCore UI helpers
 function toggleMobileSidebar() {
   document.body.classList.toggle("sidebar-open");
 }
@@ -8,7 +9,9 @@ function closeMobileSidebar() {
 
 function setVersion() {
   const av = document.getElementById("appVersionBadge");
-  if (av && typeof APP_VERSION !== "undefined") {
+  if (av && typeof VERSION !== "undefined") {
+    av.textContent = VERSION;
+  } else if (av && typeof APP_VERSION !== "undefined") {
     av.textContent = APP_VERSION;
   }
 }
