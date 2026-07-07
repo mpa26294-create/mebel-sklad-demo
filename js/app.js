@@ -1,7 +1,7 @@
 // FurniCore app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
-const FURNICORE_BUILD_VERSION = "v5.92.4 - Version Cleanup";
+const FURNICORE_BUILD_VERSION = "v5.92.5 - Utils Extracted";
 
 function applyBuildVersion() {
   const badge = document.getElementById("appVersionBadge");

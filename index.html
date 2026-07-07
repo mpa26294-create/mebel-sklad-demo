@@ -103,7 +103,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><div class="modal-head-title"><button class="modal-back-btn" id="modalBackBtn" type="button" onclick="goBackModal()">‹ Назад</button><h3 id="modalTitle">Добавить</h3></div><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v5.92.4 - Version Cleanup</div>
+<div class="version-badge" id="appVersionBadge">v5.92.5 - Utils Extracted</div>
 
 
 <script src="js/ui.js"></script>
@@ -232,7 +232,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.4 - Version Cleanup';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';
   };
 }
 
@@ -331,7 +331,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.4 - Version Cleanup';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';
   };
 }
 
@@ -426,9 +426,10 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.4 - Version Cleanup';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';}
 
 </script>
+<script src="js/utils.js"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
 const SUPABASE_KEY = "sb_publishable_79Dh3acmslYiBSUyZ9LQBQ_5GGmBS0G";
@@ -436,7 +437,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v5.92.4 - Version Cleanup';
+const APP_VERSION = 'v5.92.5 - Utils Extracted';
 const I18N = {
   ru: {
     appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
@@ -458,10 +459,6 @@ let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
 const CATEGORY_I18N_KEYS={'Поролон':'catFoam','Ткань':'catFabric','Древесина':'catWood','Фанера':'catPlywood','ДСП':'catChipboard','Крепёж':'catFasteners','Фурнитура':'catHardware'};
 function categoryLabel(cat){return t(CATEGORY_I18N_KEYS[cat]||cat)}
-function unitLabel(unit){return unit==='шт'?t('unitPieces'):unit==='м²'?t('unitM2'):unit||''}
-function formatQty(qty,unit){const n=Number(qty||0);if(unit==='шт')return String(Math.trunc(n));return String(Number(n.toFixed(3))).replace('.',',')}
-function inputQtyValue(qty,unit){const n=Number(qty||0);if(unit==='шт')return String(Math.trunc(n));return String(Number(n.toFixed(3)))}
-function qtyWithUnit(qty,unit){return `${formatQty(qty,unit)} ${unitLabel(unit)}`.trim()}
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 function langButtons(){
   return `<div class="lang-switch">
@@ -762,8 +759,6 @@ let sortKey='name', sortDir=1;
 let activeQuickFilter='all';
 let stockPage=1;
 const stockPageSize=15;
-function uid(){return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random())}
-function today(){return new Date().toISOString().slice(0,10)}
 function demoData(){
   const materials=[
     {id:uid(),sku:'A-0001',category:'Ткань',subcategory:'',name:'Велюр Bellagio 12',attributes:{materialType:'Ткань',manufacturer:'Bellagio Textile',collection:'Bellagio',color:'Графит',rollWidth:1.4,rollLength:25,area:35},unit:'м.п.',quantity:25,minQuantity:5,lastUpdated:today()},
@@ -781,7 +776,6 @@ function demoData(){
 function loadData(){try{const saved=localStorage.getItem(storeKey);if(saved){const parsed=JSON.parse(saved);return {materials:[],models:parsed.models||[],orders:parsed.orders||[]}}const d=demoData();return {materials:[],models:d.models||[],orders:d.orders||[]}}catch(e){return {materials:[],models:[],orders:[]}}}
 function save(){try{localStorage.setItem(storeKey,JSON.stringify({materials:[],models:data.models||[],orders:data.orders||[]}))}catch(e){console.warn(e)}}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
-function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function attrText(m){return materialCompactText(m) || '—'}
 function materialDimensions(m){const a=m.attributes||{};return [a.width,a.length,a.height].filter(Boolean).length?`${a.width||'?'}×${a.length||'?'}×${a.height||'?'} мм`:''}
 function materialCompactText(m){const a=m.attributes||{};if(m.category==='Поролон'){return [a.supplier, a.order, a.tags].filter(Boolean).join(' · ')}return Object.entries(a).filter(([k,v])=>!['pdfPath','pdfUrl','pdfName','purchaseStatus','reservedQty','orderedQty'].includes(k)&&v!==''&&v!==null&&v!==false&&v!==undefined).map(([k,v])=>String(v)).join(' · ')}
@@ -3233,7 +3227,7 @@ completeOrder=async function(id){
   return __completeOrderV569(id);
 };
 
-renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.4 - Version Cleanup';}
+renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';}
 
 
 
@@ -3342,7 +3336,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.4 - Version Cleanup';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';
   };
 }
 
@@ -3441,7 +3435,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.4 - Version Cleanup';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';
   };
 }
 
@@ -3536,7 +3530,7 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.4 - Version Cleanup';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';}
 
 </script>
 
@@ -4117,7 +4111,7 @@ if(typeof renderAll === 'function'){
 <script>
 /* v5.77: full site history / audit tree */
 (function(){
-  const VERSION='v5.78 - Auth Screen Scroll Fixed';
+  const VERSION='v5.92.5 - Utils Extracted';
   function ready(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn); else fn(); }
   function safeEsc(v){ return (typeof escapeHtml==='function') ? escapeHtml(v) : String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
   function rowText(row){
@@ -4311,7 +4305,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.79: auth overlay cannot block the app after session check */
 (function(){
-  const VERSION='v5.92.4 - Version Cleanup';
+  const VERSION='v5.92.5 - Utils Extracted';
 
   
 
@@ -4437,7 +4431,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.88: local HTML preview without login + safe auth */
 (function(){
-  const VERSION='v5.92.4 - Version Cleanup';
+  const VERSION='v5.92.5 - Utils Extracted';
   const isLocal=location.protocol==='file:';
   function unlockLocal(){
     if(!isLocal) return;
