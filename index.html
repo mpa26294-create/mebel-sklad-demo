@@ -103,7 +103,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><div class="modal-head-title"><button class="modal-back-btn" id="modalBackBtn" type="button" onclick="goBackModal()">‹ Назад</button><h3 id="modalTitle">Добавить</h3></div><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v5.92.5 - Utils Extracted</div>
+<div class="version-badge" id="appVersionBadge">v5.92.6 - Translations Extracted</div>
 
 
 <script src="js/ui.js"></script>
@@ -232,7 +232,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.6 - Translations Extracted';
   };
 }
 
@@ -331,7 +331,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.6 - Translations Extracted';
   };
 }
 
@@ -426,10 +426,11 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.6 - Translations Extracted';}
 
 </script>
 <script src="js/utils.js"></script>
+<script src="js/translations.js"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
 const SUPABASE_KEY = "sb_publishable_79Dh3acmslYiBSUyZ9LQBQ_5GGmBS0G";
@@ -437,54 +438,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v5.92.5 - Utils Extracted';
-const I18N = {
-  ru: {
-    appTitle:'FurniCore', appSubtitle:'учёт материалов', section:'Раздел', stock:'Склад', orders:'Заказы', models:'Модели мебели', refs:'Справочники', settings:'Настройки',
-    stockTitle:'Склад', stockDesc:'Учёт остатков материалов на складе', addMaterial:'＋ Добавить материал', totalItems:'Всего позиций', categories:'Категорий', lowStock:'Заканчивается', outStock:'Нет в наличии',
-    quickIn:'Быстрое поступление', quickOut:'Быстрое списание', foundMaterial:'Найденный материал', add:'Добавить', writeOff:'Списать', number:'Число', filters:'Фильтры', reset:'Сбросить',
-    searchTop:'Поиск по названию, артикулу, атрибутам...', searchFull:'Поиск по названию, артикулу, цвету, атрибутам...', allCategories:'Все категории', allSubcategories:'Все подкатегории', enterSku:'Введите артикул — единица измерения определится автоматически', skuIn:'Артикул, например A-0001', skuOut:'Артикул, например P-0001',
-    sku:'Артикул', name:'Название', category:'Категория', subcategory:'Подкатегория', attributes:'Атрибуты', quantity:'Остаток', unit:'Ед. изм.', minQuantity:'Мин. остаток', status:'Статус', actions:'Действия', inStock:'В наличии', noStock:'Нет в наличии', noMaterialsTitle:'Материалы не найдены', noMaterialsDesc:'Измените поиск или добавьте новую позицию.',
-    login:'Вход', loginTitle:'Вход', loginDesc:'Введите email и пароль. Склад откроется только после входа.', loginButton:'Войти', logout:'Выйти', noSignup:'Без регистрации. Доступ выдаёт администратор.', loginHint:'Склад скрыт до входа. Доступ выдаёт администратор.', accessOk:'доступ разрешён', email:'email', password:'пароль', fillEmailPass:'Введите email и пароль', wrongLogin:'Неверный email или пароль', loginRequired:'Сначала войдите', loggedIn:'Вход выполнен', loggedOut:'Вы вышли',
-    orderTitle:'Заказы', orderDesc:'Выберите модель и сразу увидите, каких материалов не хватает', newOrder:'+ Новый заказ', modelTitle:'Модели мебели', modelDesc:'Состав материалов на одно изделие', newModel:'+ Новая модель', settingsDesc:'Простое обслуживание данных', exportImport:'Экспорт / импорт', jsonHint:'Можно сохранить данные в JSON и потом загрузить обратно.', downloadJson:'Скачать JSON', uploadJson:'Загрузить JSON', wipe:'Очистить всё', checking:'Проверка входа...', save:'Сохранить', cancel:'Отмена', savedMaterial:'Материал сохранён', enterPositive:'Введите количество больше 0', enterSkuMsg:'Введите артикул', notFoundSku:'Материал с таким артикулом не найден', materialNotFound:'Материал не найден. Проверьте артикул', added:'Добавлено', writtenOff:'Списано', forgotPassword:'Забыли пароль?', resetPassword:'Сброс пароля', resetDesc:'Введите email. Мы отправим ссылку для смены пароля.', sendReset:'Отправить ссылку', backToLogin:'Назад ко входу', resetSent:'Если email существует, ссылка отправлена.', newPassword:'Новый пароль', updatePassword:'Обновить пароль', passwordUpdated:'Пароль обновлён. Теперь войдите заново.', quickInLabel:'Быстрое поступление', quickOutLabel:'Быстрое списание', shown:'Показано', of:'из', itemsWord:'позиций', showBy:'Показывать по', edit:'Редактировать', delete:'Удалить', materialBasic:'Основное', materialAttrs:'Атрибуты', materialStock:'Остаток', skuAutoHint:'Артикул создаётся автоматически по категории. Можно изменить вручную.', noSubcategory:'Без подкатегории', catFoam:'Поролон', catFabric:'Ткань', catWood:'Древесина', catPlywood:'Фанера', catChipboard:'ДСП', catFasteners:'Крепёж', catHardware:'Фурнитура', hintFoam:'детали, плотность, размеры', hintFabric:'рулоны, цвет, коллекция', hintWood:'брус, доска, порода', hintPlywood:'листы и толщина', hintChipboard:'листы, декор, ламинация', hintFasteners:'шурупы, болты, гайки', hintHardware:'механизмы, ножки, клей', whatAdd:'Что добавить?', addFoamTitle:'Добавить поролон', editFoamTitle:'Редактировать поролон', foamStep:'Поролон', skuPrefixHint:'Начало DET. уже стоит, дальше допишите номер или код детали.', gradeDensity:'Марка / Плотность', gradePlaceholder:'Например ST-3040', widthMm:'Ширина, мм', lengthMm:'Длина, мм', heightMm:'Высота, мм', accountingUnit:'Единица учёта', unitHelp:'Выберите, как учитывать этот поролон: по деталям или по площади.', unitPieces:'шт', unitM2:'м²', qtyWithUnit:'Количество', supplier:'Поставщик', supplierPlaceholder:'Название поставщика', order:'Заказ', orderPlaceholder:'Номер заказа / закупки', pdfUpload:'Загрузка PDF', pdfNotSelected:'PDF не выбран', choosePdf:'Выбрать PDF', pdfStorageHint:'PDF загружается в Supabase Storage bucket: material-pdfs.', tags:'Теги', tagsPlaceholder:'Например: сиденье, спинка, серый', infoMaterial:'Информация о материале', dimensions:'Размеры', openPdf:'Открыть PDF', editBtn:'Редактировать', changeStock:'Изменить остаток', stockAdded:'Остаток добавлен', stockWrittenOff:'Остаток списан', enterIntPositive:'Введите целое количество больше 0', enterQtyPositive:'Введите количество больше 0', noNegativeStock:'Нельзя списать больше, чем есть на складе', notFoundMaterial:'Материал не найден', pdfOpenError:'Ошибка открытия PDF', pdfNotFound:'PDF не найден', noPopupPrint:'Разрешите всплывающие окна для печати', loadMore:'Загрузить ещё', back:'Назад', currentPdf:'Открыть текущий PDF', onlyPdf:'Можно загружать только PDF', pdfUploadError:'Ошибка загрузки PDF', fieldMinZero:'Поле должно быть 0 или больше', fieldWhole:'Поле должно быть целым числом', material:'Материал', size:'Размер' 
-  },
-  en: {
-    appTitle:'FurniCore', appSubtitle:'materials management', section:'Section', stock:'Warehouse', orders:'Orders', models:'Furniture models', refs:'Directories', settings:'Settings', stockTitle:'Warehouse', stockDesc:'Material stock control', addMaterial:'＋ Add material', totalItems:'Total items', categories:'Categories', lowStock:'Low stock', outStock:'Out of stock', quickIn:'Quick receipt', quickOut:'Quick write-off', foundMaterial:'Found material', add:'Add', writeOff:'Write off', number:'Number', filters:'Filters', reset:'Reset', searchTop:'Search by name, SKU, attributes...', searchFull:'Search by name, SKU, color, attributes...', allCategories:'All categories', allSubcategories:'All subcategories', enterSku:'Enter SKU — unit will be detected automatically', skuIn:'SKU, e.g. A-0001', skuOut:'SKU, e.g. P-0001', sku:'SKU', name:'Name', category:'Category', subcategory:'Subcategory', attributes:'Attributes', quantity:'Stock', unit:'Unit', minQuantity:'Min. stock', status:'Status', actions:'Actions', inStock:'In stock', noStock:'Out of stock', noMaterialsTitle:'No materials found', noMaterialsDesc:'Change search or add a new item.', login:'Login', loginTitle:'Login', loginDesc:'Enter email and password. The warehouse opens only after login.', loginButton:'Sign in', logout:'Sign out', noSignup:'No self-registration. Access is granted by administrator.', loginHint:'Warehouse is hidden until login. Access is granted by administrator.', accessOk:'access granted', email:'email', password:'password', fillEmailPass:'Enter email and password', wrongLogin:'Wrong email or password', loginRequired:'Please sign in first', loggedIn:'Signed in', loggedOut:'Signed out', orderTitle:'Orders', orderDesc:'Select a model and immediately see missing materials', newOrder:'+ New order', modelTitle:'Furniture models', modelDesc:'Materials per one product', newModel:'+ New model', settingsDesc:'Simple data maintenance', exportImport:'Export / import', jsonHint:'You can save data as JSON and load it back later.', downloadJson:'Download JSON', uploadJson:'Upload JSON', wipe:'Clear all', checking:'Checking session...', save:'Save', cancel:'Cancel', savedMaterial:'Material saved', enterPositive:'Enter a quantity greater than 0', enterSkuMsg:'Enter SKU', notFoundSku:'Material with this SKU was not found', materialNotFound:'Material not found. Check SKU', added:'Added', writtenOff:'Written off', forgotPassword:'Forgot password?', resetPassword:'Password reset', resetDesc:'Enter your email. We will send a password reset link.', sendReset:'Send reset link', backToLogin:'Back to login', resetSent:'If this email exists, a reset link was sent.', newPassword:'New password', updatePassword:'Update password', passwordUpdated:'Password updated. Please sign in again.', quickInLabel:'Quick receipt', quickOutLabel:'Quick write-off', shown:'Showing', of:'of', itemsWord:'items', showBy:'Show by', edit:'Edit', delete:'Delete', materialBasic:'Basic info', materialAttrs:'Attributes', materialStock:'Stock', skuAutoHint:'SKU is generated automatically by category. You can change it manually.', noSubcategory:'No subcategory', catFoam:'Foam', catFabric:'Fabric', catWood:'Wood', catPlywood:'Plywood', catChipboard:'Chipboard', catFasteners:'Fasteners', catHardware:'Hardware', hintFoam:'parts, density, dimensions', hintFabric:'rolls, color, collection', hintWood:'timber, boards, species', hintPlywood:'sheets and thickness', hintChipboard:'sheets, decor, lamination', hintFasteners:'screws, bolts, nuts', hintHardware:'mechanisms, legs, glue', whatAdd:'What to add?', addFoamTitle:'Add foam', editFoamTitle:'Edit foam', foamStep:'Foam', skuPrefixHint:'DET. prefix is already set; add the part number or code.', gradeDensity:'Grade / Density', gradePlaceholder:'For example ST-3040', widthMm:'Width, mm', lengthMm:'Length, mm', heightMm:'Height, mm', accountingUnit:'Accounting unit', unitHelp:'Choose how to track this foam: by parts or by area.', unitPieces:'pcs', unitM2:'m²', qtyWithUnit:'Quantity', supplier:'Supplier', supplierPlaceholder:'Supplier name', order:'Order', orderPlaceholder:'Order / purchase number', pdfUpload:'PDF upload', pdfNotSelected:'No PDF selected', choosePdf:'Choose PDF', pdfStorageHint:'PDF is uploaded to Supabase Storage bucket: material-pdfs.', tags:'Tags', tagsPlaceholder:'For example: seat, backrest, grey', infoMaterial:'Material information', dimensions:'Dimensions', openPdf:'Open PDF', editBtn:'Edit', changeStock:'Change stock', stockAdded:'Stock added', stockWrittenOff:'Stock written off', enterIntPositive:'Enter a whole number greater than 0', enterQtyPositive:'Enter a quantity greater than 0', noNegativeStock:'Cannot write off more than available stock', notFoundMaterial:'Material not found', pdfOpenError:'PDF opening error', pdfNotFound:'PDF not found', noPopupPrint:'Allow pop-ups to print', loadMore:'Load more', back:'Back', currentPdf:'Open current PDF', onlyPdf:'Only PDF files can be uploaded', pdfUploadError:'PDF upload error', fieldMinZero:'Field must be 0 or greater', fieldWhole:'Field must be a whole number', material:'Material', size:'Size' 
-  },
-  lv: {
-    appTitle:'FurniCore', appSubtitle:'materiālu uzskaite', section:'Sadaļa', stock:'Noliktava', orders:'Pasūtījumi', models:'Mēbeļu modeļi', refs:'Katalogi', settings:'Iestatījumi', stockTitle:'Noliktava', stockDesc:'Materiālu atlikumu uzskaite', addMaterial:'＋ Pievienot materiālu', totalItems:'Pozīcijas kopā', categories:'Kategorijas', lowStock:'Beidzas', outStock:'Nav noliktavā', quickIn:'Ātra pieņemšana', quickOut:'Ātra norakstīšana', foundMaterial:'Atrasts materiāls', add:'Pievienot', writeOff:'Norakstīt', number:'Skaits', filters:'Filtri', reset:'Atiestatīt', searchTop:'Meklēt pēc nosaukuma, artikula, atribūtiem...', searchFull:'Meklēt pēc nosaukuma, artikula, krāsas, atribūtiem...', allCategories:'Visas kategorijas', allSubcategories:'Visas apakškategorijas', enterSku:'Ievadiet artikulu — mērvienība noteiksies automātiski', skuIn:'Artikuls, piem. A-0001', skuOut:'Artikuls, piem. P-0001', sku:'Artikuls', name:'Nosaukums', category:'Kategorija', subcategory:'Apakškategorija', attributes:'Atribūti', quantity:'Atlikums', unit:'Mērv.', minQuantity:'Min. atlikums', status:'Statuss', actions:'Darbības', inStock:'Ir noliktavā', noStock:'Nav noliktavā', noMaterialsTitle:'Materiāli nav atrasti', noMaterialsDesc:'Mainiet meklēšanu vai pievienojiet jaunu pozīciju.', login:'Ieeja', loginTitle:'Ieeja', loginDesc:'Ievadiet email un paroli. Noliktava atvērsies tikai pēc ieejas.', loginButton:'Ieiet', logout:'Iziet', noSignup:'Bez reģistrācijas. Piekļuvi piešķir administrators.', loginHint:'Noliktava ir paslēpta līdz ieejai. Piekļuvi piešķir administrators.', accessOk:'piekļuve atļauta', email:'email', password:'parole', fillEmailPass:'Ievadiet email un paroli', wrongLogin:'Nepareizs email vai parole', loginRequired:'Vispirms ieejiet sistēmā', loggedIn:'Ieeja veikta', loggedOut:'Jūs izgājāt', orderTitle:'Pasūtījumi', orderDesc:'Izvēlieties modeli un uzreiz redzēsiet trūkstošos materiālus', newOrder:'+ Jauns pasūtījums', modelTitle:'Mēbeļu modeļi', modelDesc:'Materiāli vienam izstrādājumam', newModel:'+ Jauns modelis', settingsDesc:'Vienkārša datu apkope', exportImport:'Eksports / imports', jsonHint:'Datus var saglabāt JSON failā un vēlāk ielādēt atpakaļ.', downloadJson:'Lejupielādēt JSON', uploadJson:'Augšupielādēt JSON', wipe:'Dzēst visu', checking:'Pārbauda ieeju...', save:'Saglabāt', cancel:'Atcelt', savedMaterial:'Materiāls saglabāts', enterPositive:'Ievadiet daudzumu lielāku par 0', enterSkuMsg:'Ievadiet artikulu', notFoundSku:'Materiāls ar šo artikulu nav atrasts', materialNotFound:'Materiāls nav atrasts. Pārbaudiet artikulu', added:'Pievienots', writtenOff:'Norakstīts', forgotPassword:'Aizmirsāt paroli?', resetPassword:'Paroles atiestatīšana', resetDesc:'Ievadiet email. Nosūtīsim saiti paroles maiņai.', sendReset:'Nosūtīt saiti', backToLogin:'Atpakaļ uz ieeju', resetSent:'Ja email eksistē, saite tika nosūtīta.', newPassword:'Jauna parole', updatePassword:'Atjaunot paroli', passwordUpdated:'Parole atjaunota. Lūdzu, ieejiet vēlreiz.', quickInLabel:'Ātra pieņemšana', quickOutLabel:'Ātra norakstīšana', shown:'Parādīts', of:'no', itemsWord:'pozīcijām', showBy:'Rādīt pa', edit:'Labot', delete:'Dzēst', materialBasic:'Pamatinformācija', materialAttrs:'Atribūti', materialStock:'Atlikums', skuAutoHint:'Artikuls tiek izveidots automātiski pēc kategorijas. To var mainīt.', noSubcategory:'Bez apakškategorijas', catFoam:'Porolons', catFabric:'Audums', catWood:'Koksne', catPlywood:'Saplāksnis', catChipboard:'KSP', catFasteners:'Stiprinājumi', catHardware:'Furnitūra', hintFoam:'detaļas, blīvums, izmēri', hintFabric:'ruļļi, krāsa, kolekcija', hintWood:'brusas, dēļi, koksne', hintPlywood:'loksnes un biezums', hintChipboard:'loksnes, dekors, laminācija', hintFasteners:'skrūves, bultas, uzgriežņi', hintHardware:'mehānismi, kājas, līme', whatAdd:'Ko pievienot?', addFoamTitle:'Pievienot porolonu', editFoamTitle:'Labot porolonu', foamStep:'Porolons', skuPrefixHint:'DET. sākums jau ir ievadīts; pievienojiet detaļas numuru vai kodu.', gradeDensity:'Marka / blīvums', gradePlaceholder:'Piemēram ST-3040', widthMm:'Platums, mm', lengthMm:'Garums, mm', heightMm:'Augstums, mm', accountingUnit:'Uzskaites vienība', unitHelp:'Izvēlieties, kā uzskaitīt porolonu: pa detaļām vai pēc platības.', unitPieces:'gab.', unitM2:'m²', qtyWithUnit:'Daudzums', supplier:'Piegādātājs', supplierPlaceholder:'Piegādātāja nosaukums', order:'Pasūtījums', orderPlaceholder:'Pasūtījuma / iepirkuma numurs', pdfUpload:'PDF augšupielāde', pdfNotSelected:'PDF nav izvēlēts', choosePdf:'Izvēlēties PDF', pdfStorageHint:'PDF tiek augšupielādēts Supabase Storage bucket: material-pdfs.', tags:'Tagi', tagsPlaceholder:'Piemēram: sēdeklis, atzveltne, pelēks', infoMaterial:'Materiāla informācija', dimensions:'Izmēri', openPdf:'Atvērt PDF', editBtn:'Labot', changeStock:'Mainīt atlikumu', stockAdded:'Atlikums pievienots', stockWrittenOff:'Atlikums norakstīts', enterIntPositive:'Ievadiet veselu skaitli lielāku par 0', enterQtyPositive:'Ievadiet daudzumu lielāku par 0', noNegativeStock:'Nevar norakstīt vairāk, nekā ir noliktavā', notFoundMaterial:'Materiāls nav atrasts', pdfOpenError:'PDF atvēršanas kļūda', pdfNotFound:'PDF nav atrasts', noPopupPrint:'Atļaujiet uznirstošos logus drukāšanai', loadMore:'Ielādēt vēl', back:'Atpakaļ', currentPdf:'Atvērt pašreizējo PDF', onlyPdf:'Var augšupielādēt tikai PDF', pdfUploadError:'PDF augšupielādes kļūda', fieldMinZero:'Laukam jābūt 0 vai lielākam', fieldWhole:'Laukam jābūt veselam skaitlim', material:'Materiāls', size:'Izmērs' 
-  }
-};
-let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
-function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
-const CATEGORY_I18N_KEYS={'Поролон':'catFoam','Ткань':'catFabric','Древесина':'catWood','Фанера':'catPlywood','ДСП':'catChipboard','Крепёж':'catFasteners','Фурнитура':'catHardware'};
-function categoryLabel(cat){return t(CATEGORY_I18N_KEYS[cat]||cat)}
+const APP_VERSION = 'v5.92.6 - Translations Extracted';
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
-function langButtons(){
-  return `<div class="lang-switch">
-    <button type="button" onclick="setLang('ru')" class="${currentLang==='ru'?'active':''}">RU</button>
-    <button type="button" onclick="setLang('en')" class="${currentLang==='en'?'active':''}">EN</button>
-    <button type="button" onclick="setLang('lv')" class="${currentLang==='lv'?'active':''}">LV</button>
-  </div>`;
-}
-
-function sideLangButtons(){ return `<div class="side-lang"><button type="button" onclick="setLang('ru')" class="${currentLang==='ru'?'active':''}">RU</button><button type="button" onclick="setLang('en')" class="${currentLang==='en'?'active':''}">EN</button><button type="button" onclick="setLang('lv')" class="${currentLang==='lv'?'active':''}">LV</button></div>`; }
-function setLang(lang){ currentLang=lang; localStorage.setItem('furnicore_lang', lang); renderAuthBox(); renderAll(); applyI18n(); }
-function applyI18n(){
-  document.documentElement.lang=currentLang==='lv'?'lv':currentLang==='en'?'en':'ru'; document.title=t('appTitle');
-  const qs=(s)=>document.querySelector(s);
-  if(qs('.brand h1')) qs('.brand h1').textContent=t('appTitle'); if(qs('.brand p')) qs('.brand p').textContent=t('appSubtitle'); if(qs('.nav-title')) qs('.nav-title').textContent=t('section');
-  const nav=document.querySelectorAll('#mainNav button'); const navKeys=['stock','orders','models','refs','settings']; nav.forEach((b,i)=>{ const span=b.querySelector('.ico'); b.innerHTML=(span?span.outerHTML:'')+' '+t(navKeys[i]); });
-  const pairs=[['#stock .title h2','stockTitle'],['#stock .title p','stockDesc'],['#orders .title h2','orderTitle'],['#orders .title p','orderDesc'],['#models .title h2','modelTitle'],['#models .title p','modelDesc'],['#settings .title h2','settings'],['#settings .title p','settingsDesc']]; pairs.forEach(([sel,key])=>{const el=qs(sel); if(el) el.textContent=t(key);});
-  const b1=qs('#stock .topbar .btn.primary'); if(b1) b1.textContent=t('addMaterial'); const b2=qs('#orders .btn.primary'); if(b2) b2.textContent=t('newOrder'); const b3=qs('#models .btn.primary'); if(b3) b3.textContent=t('newModel');
-  const labelMap=[['#quickAddBox .field:nth-child(1) label','quickInLabel'],['#quickAddBox .field:nth-child(2) label','foundMaterial'],['#quickAddBox .field:nth-child(3) label','add'],['#quickWriteOffBox .field:nth-child(1) label','quickOutLabel'],['#quickWriteOffBox .field:nth-child(2) label','foundMaterial'],['#quickWriteOffBox .field:nth-child(3) label','writeOff']]; labelMap.forEach(([sel,key])=>{const el=qs(sel); if(el) el.textContent=t(key);});
-  const qBtn=qs('#quickAddBox button'); if(qBtn) qBtn.textContent=t('add'); const wBtn=qs('#quickWriteOffBox button'); if(wBtn) wBtn.textContent=t('writeOff'); const toolBtns=document.querySelectorAll('.toolbar .btn'); if(toolBtns[0]) toolBtns[0].textContent=t('filters'); if(toolBtns[1]) toolBtns[1].textContent=t('reset');
-  const si=qs('#settings h3'); if(si) si.textContent=t('exportImport'); const sp=qs('#settings p.muted'); if(sp) sp.textContent=t('jsonHint'); const sb=document.querySelectorAll('#settings .actions .btn'); if(sb[0]) sb[0].textContent=t('downloadJson'); if(sb[1]) sb[1].childNodes[0].textContent=t('uploadJson'); if(sb[2]) sb[2].textContent=t('wipe');
-  renderFilters(); updateSubFilter();
-  const ph={topSearchInput:'searchTop',searchInput:'searchFull',quickSku:'skuIn',writeOffSku:'skuOut',quickQty:'number',writeOffQty:'number',loginEmail:'email',loginPassword:'password'}; Object.entries(ph).forEach(([id,key])=>{ const el=document.getElementById(id); if(el) el.placeholder=t(key); });
-  const qInfo=document.getElementById('quickInfo'); if(qInfo && !document.getElementById('quickSku')?.value) qInfo.textContent=t('enterSku'); const wInfo=document.getElementById('writeOffInfo'); if(wInfo && !document.getElementById('writeOffSku')?.value) wInfo.textContent=t('enterSku');
-  const av=document.getElementById('appVersionBadge'); if(av) av.textContent=APP_VERSION;
-}
 
 
 function isLoggedIn(){ return !!currentUser; }
@@ -3227,7 +3182,7 @@ completeOrder=async function(id){
   return __completeOrderV569(id);
 };
 
-renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';}
+renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.6 - Translations Extracted';}
 
 
 
@@ -3336,7 +3291,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.6 - Translations Extracted';
   };
 }
 
@@ -3435,7 +3390,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.6 - Translations Extracted';
   };
 }
 
@@ -3530,7 +3485,7 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Utils Extracted';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.6 - Translations Extracted';}
 
 </script>
 
@@ -4111,7 +4066,7 @@ if(typeof renderAll === 'function'){
 <script>
 /* v5.77: full site history / audit tree */
 (function(){
-  const VERSION='v5.92.5 - Utils Extracted';
+  const VERSION='v5.92.6 - Translations Extracted';
   function ready(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn); else fn(); }
   function safeEsc(v){ return (typeof escapeHtml==='function') ? escapeHtml(v) : String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
   function rowText(row){
@@ -4305,7 +4260,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.79: auth overlay cannot block the app after session check */
 (function(){
-  const VERSION='v5.92.5 - Utils Extracted';
+  const VERSION='v5.92.6 - Translations Extracted';
 
   
 
@@ -4431,7 +4386,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.88: local HTML preview without login + safe auth */
 (function(){
-  const VERSION='v5.92.5 - Utils Extracted';
+  const VERSION='v5.92.6 - Translations Extracted';
   const isLocal=location.protocol==='file:';
   function unlockLocal(){
     if(!isLocal) return;
