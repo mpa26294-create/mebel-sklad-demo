@@ -1,7 +1,7 @@
 // FurniCore app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
-const FURNICORE_BUILD_VERSION = "v5.92.8 - Orders Utilities";
+const FURNICORE_BUILD_VERSION = "v5.92.9 - Orders Main Logic";
 
 function applyBuildVersion() {
   const badge = document.getElementById("appVersionBadge");
