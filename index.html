@@ -1056,7 +1056,7 @@ function saveModel(id){const items=[...document.querySelectorAll('.model-input-r
 function renderModels(){const box=document.getElementById('modelsGrid');if(!data.models.length){box.innerHTML='<div class="empty"><b>Моделей пока нет</b>Создайте модель и укажите материалы на 1 изделие.</div>';return}box.innerHTML=data.models.map(m=>`<div class="model-card"><h3>${m.name}</h3><p class="muted">${m.note||'Без заметки'}</p><div class="materials-list">${m.items.map(i=>{const mat=data.materials.find(x=>String(x.id)===String(i.materialId));return `<div class="line-item"><span>${mat?mat.name:'Удалённый материал'}</span><b>${i.qty} ${i.unit}</b></div>`}).join('')||'<span class="muted">Материалы не указаны</span>'}</div><div class="actions" style="margin-top:12px"><button class="btn small" onclick="openModelModal('${m.id}')">Править</button><button class="btn small danger" onclick="deleteModel('${m.id}')">Удалить</button></div></div>`).join('')}
 function deleteModel(id){if(!confirm('Удалить модель?'))return;data.models=data.models.filter(x=>String(x.id)!==String(id));data.orders=data.orders.filter(o=>String(o.modelId)!==String(id));save();renderAll()}
 
-const ORDER_STATUSES=['Новый','Готов к работе','Не хватает материалов','Материалы заказаны','В работе','Готов','Отменён'];
+const ORDER_STATUSES=['Новый','Готов к работе','Не хватает материалов','Материалы заказаны','В работе','Завершён','Отменён'];
 const ORDER_MATERIAL_CATS=['Поролон','Ткань','Древесина','Фурнитура'];
 let expandedOrders = new Set();
 let missingExpandedOrders = new Set();
@@ -1288,7 +1288,7 @@ const UI42 = {
 };
 function u42(k){return (UI42[currentLang]&&UI42[currentLang][k])||UI42.ru[k]||k}
 function orderStatusText42(st){const ru={
-  'Новый':{en:'New',lv:'Jauns'}, 'Готов к работе':{en:'Ready to work',lv:'Gatavs darbam'}, 'Не хватает материалов':{en:'Missing materials',lv:'Trūkst materiālu'}, 'Материалы заказаны':{en:'Materials ordered',lv:'Materiāli pasūtīti'}, 'В работе':{en:'In progress',lv:'Darbā'}, 'Готов':{en:'Done',lv:'Gatavs'}, 'Отменён':{en:'Cancelled',lv:'Atcelts'}, 'В производстве':{en:'In production',lv:'Ražošanā'}, 'Нужно заказать':{en:'Need to order',lv:'Jāpasūta'}};return currentLang==='ru'?st:(ru[st]?.[currentLang]||st)}
+  'Новый':{en:'New',lv:'Jauns'}, 'Готов к работе':{en:'Ready to work',lv:'Gatavs darbam'}, 'Не хватает материалов':{en:'Missing materials',lv:'Trūkst materiālu'}, 'Материалы заказаны':{en:'Materials ordered',lv:'Materiāli pasūtīti'}, 'В работе':{en:'In progress',lv:'Darbā'}, 'Готов':{en:'Completed',lv:'Pabeigts'}, 'Завершён':{en:'Completed',lv:'Pabeigts'}, 'Отменён':{en:'Cancelled',lv:'Atcelts'}, 'В производстве':{en:'In production',lv:'Ražošanā'}, 'Нужно заказать':{en:'Need to order',lv:'Jāpasūta'}};return currentLang==='ru'?st:(ru[st]?.[currentLang]||st)}
 const oldApplyI18n42=applyI18n;
 applyI18n=function(){
   oldApplyI18n42();
@@ -1555,7 +1555,7 @@ saveOrder=async function(id=''){
   const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
   const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:'none',purchaseQty:0,purchaseNo:''}}).filter(i=>i&&i.materialId&&i.qty>0);
   const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
-  let status=(prev&&['Готов','Отменён','В производстве','В работе'].includes(prev.status))?prev.status:'Новый';
+  let status=(prev&&(orderIsTerminal(prev.status)||['В производстве','В работе'].includes(prev.status)))?prev.status:'Новый';
   let draft={id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',comment:document.getElementById('orderComment').value.trim(),date:document.getElementById('orderDate').value||today(),status,steps,materials,production:prev&&prev.production?prev.production:{logs:[]}};
   draft=setOrderMetaForSave(draft,prev);
   draft.status=calcOrderAutoStatus(draft);
@@ -1606,7 +1606,7 @@ openOrderProduction=function(id){
   setTimeout(()=>{const ord=(data.orders||[]).find(x=>String(x.id)===String(id));if(ord)appendModalAudit(orderProfileHtml(ord));},0);
 }
 const __renderAuthBoxV565=renderAuthBox;
-renderAuthBox=function(){__renderAuthBoxV565();try{const u=document.querySelector('#authBox .user span');if(u)u.textContent='профиль активен';}catch(e){}}
+renderAuthBox=function(){__renderAuthBoxV565();try{const u=document.querySelector('#authBox .user span');if(u)u.textContent=t('profileActive');}catch(e){}}
 const __renderAllV565=renderAll;
 renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;}
 
@@ -1732,12 +1732,12 @@ async function saveCancelReview(orderId){
 syncMaterialReservations=function(){
   const totals={};
   (data.orders||[]).forEach(o=>{
-    if(['Готов','Отменён'].includes(o.status))return;
+    if(orderIsTerminal(o.status))return;
     orderMaterials(o).forEach(i=>{if(i.materialId)totals[i.materialId]=(totals[i.materialId]||0)+Number(i.qty||0)});
   });
   const frozen={};
   (data.orders||[]).forEach(o=>{
-    if(String(o.status)!=='Отменён'||!cancelReviewPending(o))return;
+    if(!orderIsCancelled(o.status)||!cancelReviewPending(o))return;
     (o.cancelReview.items||[]).forEach(i=>{if(i.materialId)frozen[i.materialId]=(frozen[i.materialId]||0)+Number(i.qty||0)});
   });
   (data.materials||[]).forEach(m=>{m.attributes=m.attributes||{};m.attributes.frozenQty=stockNumForUnit(frozen[m.id]||0,m.unit);m.attributes.reservedQty=stockNumForUnit((totals[m.id]||0)+(frozen[m.id]||0),m.unit);});
@@ -1792,6 +1792,11 @@ renderOrders=function(){
   __renderOrdersV569();
   try{
     (data.orders||[]).filter(cancelReviewPending).forEach(o=>{
+      const card=[...document.querySelectorAll('.order-erp-card')].find(el=>String(el.dataset.orderId)===String(o.id));
+      const cardStatus=card&&card.querySelector('.order-card-state');
+      if(cardStatus&&!cardStatus.querySelector('.cancel-review')){
+        cardStatus.insertAdjacentHTML('afterbegin','<span class="status cancel-review">Отменён · пересчёт</span><div class="sub">материалы заморожены</div>');
+      }
       [...document.querySelectorAll('.order-table tbody tr')].forEach(tr=>{
         if(tr.textContent.includes(o.number||'')){
           const statusCell=tr.children[3];
@@ -1848,6 +1853,7 @@ renderAll=function(){__renderAllV565();const av=document.getElementById('appVers
 @media(max-width:720px){.history-toolbar,.history-summary{grid-template-columns:1fr}.history-row{grid-template-columns:1fr 34px}.history-time{grid-column:1/-1}.history-main{grid-column:1}.history-go{grid-column:2;grid-row:2}}
 </style>
 <script src="js/history.js"></script>
+<script>installOrderStatusHandlers();</script>
 
 
 
