@@ -103,7 +103,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><div class="modal-head-title"><button class="modal-back-btn" id="modalBackBtn" type="button" onclick="goBackModal()">‹ Назад</button><h3 id="modalTitle">Добавить</h3></div><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v5.92.9 - Orders Main Logic</div>
+<div class="version-badge" id="appVersionBadge">v5.93.0 - Orders Modals</div>
 
 
 <script src="js/ui.js"></script>
@@ -232,7 +232,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - Orders Main Logic';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';
   };
 }
 
@@ -331,7 +331,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - Orders Main Logic';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';
   };
 }
 
@@ -426,7 +426,7 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - Orders Main Logic';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';}
 
 </script>
 <script src="js/utils.js"></script>
@@ -439,7 +439,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v5.92.9 - Orders Main Logic';
+const APP_VERSION = 'v5.93.0 - Orders Modals';
 </script>
 <script src="js/auth.js"></script>
 <script src="js/materials.js"></script>
@@ -1591,121 +1591,6 @@ function saveOrderMaterialPurchase(orderId,materialId,opts={}){
   toast(opts.toastText||'Закупка обновлена');
 }
 async function persistReservationMaterials(){syncMaterialReservations();for(const m of data.materials){await updateMaterialInSupabase(m)}}
-function openOrderModal(id=''){
-  if(!requireAuth())return;
-  window.currentOrderEditId=id||'';
-  const o=id?data.orders.find(x=>String(x.id)===String(id)):null;
-  const number=o?.number||nextOrderNumber();
-  const steps=orderSteps(o||{});
-  const mats=orderMaterials(o||{});
-  const body=`<div class="form-grid">
-    <div class="field"><label>№ заказа</label><input id="orderNumber" class="input" value="${escapeHtml(number)}" ${o?'':'disabled'}><label class="manual-number"><input id="manualOrderNumber" type="checkbox" ${o?'checked':''} onchange="toggleManualOrderNumber()"> Ввести номер вручную</label><div class="hint">Автонумерация создаёт Z-0001, Z-0002 и дальше.</div></div>
-    <div class="field"><label>Заказчик</label><input id="orderClient" class="input" value="${escapeHtml(o?.client||'')}" placeholder="Имя или компания"></div>
-    <div class="field"><label>Количество изделий</label><input id="orderProductQty" type="number" min="1" step="1" class="input" value="${orderProductQty(o||{})}" oninput="refreshOrderMaterialRows();updateOrderTimeTotal()"><div class="hint">Например: один заказ = 100 диванов.</div></div>
-    <div class="field"><label>Закончить до</label><input id="orderDueDate" type="date" class="input" value="${escapeHtml(o?.dueDate||'')}"><div class="hint">Плановая дата сдачи заказа.</div></div>
-    <div class="field"><label>Дата создания</label><input id="orderDate" type="date" class="input" value="${escapeHtml(o?.date||today())}"></div>
-    <div class="field full"><label>Комментарий</label><textarea id="orderComment" placeholder="Комментарий технолога, особенности заказа...">${escapeHtml(o?.comment||'')}</textarea></div>
-  </div>
-  <div class="order-form-section"><div class="order-section-head"><h4>Технология <span class="order-time-total" id="orderTimeTotal">0 мин</span></h4><button class="btn small" onclick="addOrderStep()">＋ Добавить этап</button></div><div id="orderStepsBox">${steps.map(s=>orderStepRow(s)).join('')}</div></div>
-  <div class="order-form-section"><div class="order-section-head"><h4>Материалы <button class="info-btn" type="button" onclick="showOrderReserveInfo(event)">i</button></h4><div class="actions"><button class="btn small" onclick="addOrderMaterialRow()">＋ Добавить материал</button><button class="btn small" onclick="openAddCategoryModal(true)">＋ Добавить новый материал на склад</button></div></div><div id="orderMaterialsBox">${mats.map(i=>orderMaterialRow(i,id)).join('')}</div><div class="hint">На складе не уменьшается сразу. Доступно = На складе − резерв других заказов. Резерв этого заказа пересчитывается после сохранения.</div></div>`;
-  const foot=`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="saveOrder('${id||''}')">Сохранить</button>`;
-  openModal(id?'Редактировать заказ':'Добавить заказ',body,foot);
-  document.querySelector('#modalBackdrop .modal')?.classList.add('wide');
-  updateOrderTimeTotal();refreshOrderMaterialRows();
-}
-function toggleManualOrderNumber(){const cb=document.getElementById('manualOrderNumber'),inp=document.getElementById('orderNumber');if(!inp||!cb)return;inp.disabled=!cb.checked;if(!cb.checked)inp.value=nextOrderNumber()}
-function orderStepRow(s={name:'',minutes:0}){return `<div class="order-row order-step-row"><div class="field"><label>Этап</label><input class="input step-name" value="${escapeHtml(s.name||'')}"></div><div class="field"><label>Минуты</label><input class="input step-min" type="number" min="0" step="1" value="${Number(s.minutes||0)}" oninput="updateOrderTimeTotal()"></div><button class="btn small danger" onclick="this.closest('.order-step-row').remove();updateOrderTimeTotal()">×</button></div>`}
-function addOrderStep(){document.getElementById('orderStepsBox').insertAdjacentHTML('beforeend',orderStepRow({name:'Новый этап',minutes:0}));updateOrderTimeTotal()}
-function updateOrderTimeTotal(){const total=[...document.querySelectorAll('.step-min')].reduce((s,i)=>s+Number(i.value||0),0);const el=document.getElementById('orderTimeTotal');if(el)el.textContent=`${total} мин · ${orderTimeText(total)}`}
-function materialOptions(category='',selected=''){return (data.materials||[]).filter(m=>!category||m.category===category).map(m=>`<option value="${m.id}" ${String(m.id)===String(selected)?'selected':''}>${escapeHtml(m.sku||'')} — ${escapeHtml(materialTitle(m))}</option>`).join('')}
-function orderMaterialRow(i={},excludeOrderId=''){
-  const cat=i.category||'Поролон';
-  const mat=data.materials.find(m=>String(m.id)===String(i.materialId));
-  const unit=mat?.unit||i.unit||'';
-  const ps=orderItemPurchaseStatus(i)||'need';
-  const pq=Number(i.purchaseQty||0);
-  const pno=i.purchaseNo||'';
-  const oq=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  const perUnit=Number(i.perUnitQty||((Number(i.qty||0)>0&&oq>0)?Number(i.qty||0)/oq:0));
-  return `<div class="order-material-row">
-    <div class="field"><label>Категория</label><select class="select om-cat" onchange="refreshOneOrderMaterialRow(this)">${ORDER_MATERIAL_CATS.map(c=>`<option value="${c}" ${cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
-    <div class="field"><label>Материал</label><select class="select om-material" onchange="refreshOrderMaterialRows()">${materialOptions(cat,i.materialId)}</select></div>
-    <div class="field"><label>На 1 изделие</label><input class="input om-per-unit" type="number" min="0" step="0.01" value="${Number(perUnit||0)}" oninput="refreshOrderMaterialRows()"><div class="hint">расход на 1 изделие</div></div>
-    <div class="field"><label>Всего нужно</label><div class="readonly-pill om-total-qty">0</div></div>
-    <div class="field"><label>Ед.</label><div class="readonly-pill om-unit">${escapeHtml(unit||'—')}</div></div>
-    <button class="btn small danger order-line-remove" type="button" onclick="this.closest('.order-material-row').remove();refreshOrderMaterialRows()">×</button>
-    <div class="material-check om-check">Выберите материал</div>
-  </div>`
-}
-function addOrderMaterialRow(){document.getElementById('orderMaterialsBox').insertAdjacentHTML('beforeend',orderMaterialRow());refreshOrderMaterialRows()}
-function refreshOneOrderMaterialRow(sel){const row=sel.closest('.order-material-row');const matSel=row.querySelector('.om-material');matSel.innerHTML=materialOptions(sel.value,'');refreshOrderMaterialRows()}
-function rebuildOrderMaterialOptions(){document.querySelectorAll('.order-material-row').forEach(row=>{const cat=row.querySelector('.om-cat')?.value||'';const sel=row.querySelector('.om-material');if(!sel)return;const selected=sel.value;sel.innerHTML=materialOptions(cat,selected);});}
-function refreshOrderMaterialRows(){
-  const orderQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  document.querySelectorAll('.order-material-row').forEach(row=>{
-    const id=row.querySelector('.om-material')?.value;
-    const perUnit=Number(row.querySelector('.om-per-unit')?.value||0);
-    const m=data.materials.find(x=>String(x.id)===String(id));
-    const totalQty=m?stockNumForUnit(perUnit*orderQty,m.unit||'м²'):0;
-    const unit=row.querySelector('.om-unit');
-    const totalEl=row.querySelector('.om-total-qty');
-    const check=row.querySelector('.om-check');
-    if(unit)unit.textContent=m?.unit||'—';
-    if(totalEl)totalEl.textContent=m?qtyWithUnit(totalQty,m.unit):'—';
-    if(!check)return;
-    if(!m){check.className='material-check warn om-check';check.innerHTML='Материал не выбран';return}
-    const av=orderItemAvailability({materialId:id,qty:totalQty},window.currentOrderEditId||'');
-    const effective={materialId:id,qty:totalQty,perUnitQty:perUnit,unit:m.unit,purchaseStatus:'none',purchaseQty:0};
-    const st=orderMaterialLineState(effective,window.currentOrderEditId||'');
-    check.className='material-check om-check '+(st.kind==='ok'?'ok':st.kind==='blue'?'warn':st.kind==='warn'?'warn':'bad');
-    if(st.kind==='ok'){
-      check.innerHTML=`<div><b>Материалы доступны</b></div><div class="muted">На складе ${qtyWithUnit(av.stock,m.unit)} · доступно ${qtyWithUnit(av.available,m.unit)} · нужно ${qtyWithUnit(totalQty,m.unit)}</div>`
-    }else if(st.kind==='blue'){
-      check.innerHTML=`<div><b>Материал заказан</b></div><div class="muted">Нужно ${qtyWithUnit(totalQty,m.unit)} · доступно ${qtyWithUnit(av.available,m.unit)} · заказано ${qtyWithUnit(st.purchaseQty,m.unit)}</div>`
-    }else if(st.kind==='warn'){
-      check.innerHTML=`<div><b>Не заказано</b></div><div class="muted">Нужно ${qtyWithUnit(totalQty,m.unit)} · доступно ${qtyWithUnit(av.available,m.unit)} · нехватка ${qtyWithUnit(av.missing,m.unit)}</div>`
-    }else{
-      check.innerHTML=`<div><b>Не хватает материала</b></div><div class="muted">Нужно ${qtyWithUnit(totalQty,m.unit)} · доступно ${qtyWithUnit(av.available,m.unit)} · заказать ${qtyWithUnit(st.purchaseQty,m.unit)}</div>`
-    }
-  })
-}
-async function saveOrder(id=''){
-  const steps=[...document.querySelectorAll('.order-step-row')].map(r=>({name:r.querySelector('.step-name').value.trim()||'Этап',minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0)))}));
-  const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:'none',purchaseQty:0,purchaseNo:''}}).filter(i=>i&&i.materialId&&i.qty>0);
-  const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
-  let status=(prev&&['Готов','Отменён','В производстве'].includes(prev.status))?prev.status:'Новый';
-  const draft={id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',comment:document.getElementById('orderComment').value.trim(),date:document.getElementById('orderDate').value||today(),status,steps,materials};
-  draft.status=calcOrderAutoStatus(draft);
-  if(id)data.orders=data.orders.map(o=>String(o.id)===String(id)?draft:o);else data.orders.push(draft);
-  save(); await persistReservationMaterials(); closeModal(); await loadMaterialsFromSupabase(); renderAll(); toast('Заказ сохранён');
-}
-function openOrderView(id){
-  const o=data.orders.find(x=>String(x.id)===String(id));
-  if(!o)return;
-  const min=calcOrderMinutes(o);
-  const oq=orderProductQty(o);
-  const mats=orderMaterials(o).map(i=>{
-    const st=orderMaterialLineState(i,o.id);
-    const av=st.av;
-    const unit=av.unit||i.unit;
-    const per=orderItemPerUnitQty(i,o);
-    const m=av.mat;
-    let cls=st.kind==='ok'?'ok-text':st.kind==='blue'?'material-chip-blue':'danger-text';
-    let statusText=st.label;
-    if(av.missing>0){
-      if(st.purchaseStatus==='ordered') statusText=`Заказано ${qtyWithUnit(st.purchaseQty||av.missing,unit)}`;
-      else statusText=`Нужно заказать ${qtyWithUnit(st.purchaseQty||av.missing,unit)}`;
-    }
-    const actions=`<div class="order-purchase-actions"><button class="btn" type="button" onclick="openOrderMaterialPurchase('${o.id}','${i.materialId}')">Подробно</button></div>`;
-    const p=av.missing>0?`<br><small class="muted">Закупка: ${orderPurchaseLabel(st.purchaseStatus)} ${qtyWithUnit(st.purchaseQty || av.missing,unit)}${i.purchaseNo?' · '+escapeHtml(i.purchaseNo):''}</small>`:'';
-    return `<div class="line-item"><span>${escapeHtml(m?materialTitle(m):'Удалённый материал')}<br><small class="muted">На 1 изделие ${escapeHtml(qtyWithUnit(per,unit))} · всего нужно ${escapeHtml(qtyWithUnit(i.qty,unit))}<br>доступно ${escapeHtml(qtyWithUnit(av.available,unit))}</small>${p}${actions}</span><b class="${cls}">${escapeHtml(statusText)}${av.missing>0?' · не хватает '+escapeHtml(qtyWithUnit(av.missing,unit)):''}</b></div>`;
-  }).join('')||'<span class="muted">Материалы не указаны</span>';
-  const steps=orderSteps(o).map(s=>`<div class="line-item"><span>${escapeHtml(s.name)}</span><b>${Number(s.minutes||0)} мин</b></div>`).join('');
-  const auto=calcOrderAutoStatus(o);
-  const body=`<div class="order-view-grid"><div class="order-view-card"><small>Заказчик</small><b>${escapeHtml(o.client||'—')}</b></div><div class="order-view-card"><small>Количество изделий</small><b>${oq}</b></div><div class="order-view-card"><small>Общее время</small><b>${min} мин · ${orderTimeText(min)}</b></div><div class="order-view-card"><small>Срок сдачи</small><b class="order-deadline ${orderDeadlineClass({...o,status:auto})}">${escapeHtml(formatDeadline(o))}</b></div><div class="order-view-card"><small>Дата создания</small><b>${escapeHtml(o.date||'—')}</b></div><div class="order-view-card full"><small>Технология</small>${steps}</div><div class="order-view-card full"><small>Материалы</small>${mats}</div><div class="order-view-card full"><small>Комментарий</small>${escapeHtml(o.comment||'—')}</div></div>`;
-  openModal(o.number,body,`<button class="btn danger" onclick="deleteOrder('${o.id}')">Удалить заказ</button><span style="flex:1"></span><button class="btn" onclick="openOrderModal('${o.id}')">Редактировать</button><button class="btn primary" onclick="closeModal()">Закрыть</button>`);
-}
 async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm('Удалить заказ и освободить резерв материалов?'))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast('Заказ удалён')}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mebel-sklad-data.json';a.click()}
 function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();renderAll();toast('Данные загружены')}catch(err){alert('Ошибка JSON')}};r.readAsText(f)}
@@ -1733,85 +1618,6 @@ applyI18n=function(){
   const search=document.getElementById('orderSearchInput'); if(search) search.placeholder=u42('searchOrderPh');
   renderOrderClientFilter();
 };
-function openOrderModal(id=''){
-  if(!requireAuth())return;
-  window.currentOrderEditId=id||'';
-  const o=id?data.orders.find(x=>String(x.id)===String(id)):null;
-  const number=o?.number||nextOrderNumber();
-  const steps=orderSteps(o||{});
-  const mats=orderMaterials(o||{});
-  const body=`<div class="form-grid">
-    <div class="field"><label>${u42('orderNo')}</label><input id="orderNumber" class="input" value="${escapeHtml(number)}" ${o?'':'disabled'}><label class="manual-number"><input id="manualOrderNumber" type="checkbox" ${o?'checked':''} onchange="toggleManualOrderNumber()"> ${u42('manualNo')}</label><div class="hint">${u42('autoNo')}</div></div>
-    <div class="field"><label>${u42('client')}</label><input id="orderClient" class="input" value="${escapeHtml(o?.client||'')}" placeholder="${u42('clientPh')}"></div>
-    <div class="field"><label>${u42('productQty')}</label><input id="orderProductQty" type="number" min="1" step="1" class="input" value="${orderProductQty(o||{})}" oninput="refreshOrderMaterialRows();updateOrderTimeTotal()"><div class="hint">${u42('productHint')}</div></div>
-    <div class="field"><label>${u42('due')}</label><input id="orderDueDate" type="date" class="input" value="${escapeHtml(o?.dueDate||'')}"><div class="hint">${u42('dueHint')}</div></div>
-    <div class="field"><label>${u42('createdDate')}</label><input id="orderDate" type="date" class="input" value="${escapeHtml(o?.date||today())}"></div>
-    <div class="field full"><label>${u42('comment')}</label><textarea id="orderComment" placeholder="${u42('commentPh')}">${escapeHtml(o?.comment||'')}</textarea></div>
-  </div>
-  <div class="order-form-section"><div class="order-section-head"><h4>${u42('technology')} <span class="order-time-total" id="orderTimeTotal">0 ${u42('minutes').toLowerCase()}</span></h4><button class="btn small" onclick="addOrderStep()">${u42('addStep')}</button></div><div id="orderStepsBox">${steps.map(s=>orderStepRow(s)).join('')}</div></div>
-  <div class="order-form-section"><div class="order-section-head"><h4>${u42('materials')} <button class="info-btn" type="button" onclick="showOrderReserveInfo(event)">i</button></h4><div class="actions"><button class="btn small" onclick="addOrderMaterialRow()">${u42('addMaterial')}</button><button class="btn small" onclick="openAddCategoryModal(true)">${u42('addNewStock')}</button></div></div><div id="orderMaterialsBox">${mats.map(i=>orderMaterialRow(i,id)).join('')}</div><div class="hint">${u42('reserveHint')}</div></div>`;
-  const foot=`<button class="btn" onclick="closeModal()">${u42('cancel')}</button><button class="btn primary" onclick="saveOrder('${id||''}')">${u42('save')}</button>`;
-  openModal(id?u42('editOrder'):u42('addOrder'),body,foot);
-  document.querySelector('#modalBackdrop .modal')?.classList.add('wide');
-  updateOrderTimeTotal();refreshOrderMaterialRows();
-}
-function orderStepRow(s={name:'',minutes:0}){return `<div class="order-row order-step-row"><div class="field"><label>${u42('stage')}</label><input class="input step-name" value="${escapeHtml(s.name||'')}"></div><div class="field"><label>${u42('minutes')}</label><input class="input step-min" type="number" min="0" step="1" value="${Number(s.minutes||0)}" oninput="updateOrderTimeTotal()"></div><button class="btn small danger" onclick="this.closest('.order-step-row').remove();updateOrderTimeTotal()">×</button></div>`}
-function addOrderStep(){document.getElementById('orderStepsBox').insertAdjacentHTML('beforeend',orderStepRow({name:u42('newStage'),minutes:0}));updateOrderTimeTotal()}
-function updateOrderTimeTotal(){const perOne=[...document.querySelectorAll('.step-min')].reduce((s,i)=>s+Number(i.value||0),0);const qty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});const total=perOne*qty;const el=document.getElementById('orderTimeTotal');if(el)el.textContent=`${total} ${u42('minutes').toLowerCase()} · ${orderTimeText(total)}`}
-function orderMaterialRow(i={},excludeOrderId=''){
-  const cat=i.category||'Поролон';
-  const mat=data.materials.find(m=>String(m.id)===String(i.materialId));
-  const unit=mat?.unit||i.unit||'';
-  const ps=orderItemPurchaseStatus(i)||'need';
-  const pq=Number(i.purchaseQty||0);
-  const pno=i.purchaseNo||'';
-  const oq=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  const perUnit=Number(i.perUnitQty||((Number(i.qty||0)>0&&oq>0)?Number(i.qty||0)/oq:0));
-  return `<div class="order-material-row">
-    <div class="field"><label>${u42('category')}</label><select class="select om-cat" onchange="refreshOneOrderMaterialRow(this)">${ORDER_MATERIAL_CATS.map(c=>`<option value="${c}" ${cat===c?'selected':''}>${categoryLabel(c)}</option>`).join('')}</select></div>
-    <div class="field"><label>${u42('material')}</label><select class="select om-material" onchange="refreshOrderMaterialRows()">${materialOptions(cat,i.materialId)}</select></div>
-    <div class="field"><label>${u42('perOne')}</label><input class="input om-per-unit" type="number" min="0" step="0.01" value="${Number(perUnit||0)}" oninput="refreshOrderMaterialRows()"><div class="hint">${u42('perOneHint')}</div></div>
-    <div class="field"><label>${u42('totalNeed')}</label><div class="readonly-pill om-total-qty">0</div></div>
-    <div class="field"><label>${u42('unit')}</label><div class="readonly-pill om-unit">${escapeHtml(unit||'—')}</div></div>
-    <button class="btn small danger order-line-remove" type="button" onclick="this.closest('.order-material-row').remove();refreshOrderMaterialRows()">×</button>
-    <div class="material-check om-check">${u42('selectMaterial')}</div>
-  </div>`
-}
-function refreshOrderMaterialRows(){
-  const orderQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  document.querySelectorAll('.order-material-row').forEach(row=>{
-    const id=row.querySelector('.om-material')?.value;
-    const perUnit=Number(row.querySelector('.om-per-unit')?.value||0);
-    const m=data.materials.find(x=>String(x.id)===String(id));
-    const totalQty=m?stockNumForUnit(perUnit*orderQty,m.unit||'м²'):0;
-    const unit=row.querySelector('.om-unit');
-    const totalEl=row.querySelector('.om-total-qty');
-    const check=row.querySelector('.om-check');
-    if(unit)unit.textContent=m?.unit||'—';
-    if(totalEl)totalEl.textContent=m?qtyWithUnit(totalQty,m.unit):'—';
-    if(!check)return;
-    if(!m){check.className='material-check warn om-check';check.innerHTML=u42('selectMaterial');return}
-    const av=orderItemAvailability({materialId:id,qty:totalQty},window.currentOrderEditId||'');
-    const effective={materialId:id,qty:totalQty,perUnitQty:perUnit,unit:m.unit,purchaseStatus:'none',purchaseQty:0};
-    const st=orderMaterialLineState(effective,window.currentOrderEditId||'');
-    check.className='material-check om-check '+(st.kind==='ok'?'ok':st.kind==='blue'?'warn':st.kind==='warn'?'warn':'bad');
-    if(st.kind==='ok') check.innerHTML=`<div><b>${u42('availableMat')}</b></div><div class="muted">${u42('stock')} ${qtyWithUnit(av.stock,m.unit)} · ${u42('available')} ${qtyWithUnit(av.available,m.unit)} · ${u42('need')} ${qtyWithUnit(totalQty,m.unit)}</div>`;
-    else if(st.kind==='blue') check.innerHTML=`<div><b>${u42('materialOrdered')}</b></div><div class="muted">${u42('need')} ${qtyWithUnit(totalQty,m.unit)} · ${u42('available')} ${qtyWithUnit(av.available,m.unit)} · ${u42('ordered').toLowerCase()} ${qtyWithUnit(st.purchaseQty,m.unit)}</div>`;
-    else if(st.kind==='warn') check.innerHTML=`<div><b>${u42('notOrdered')}</b></div><div class="muted">${u42('need')} ${qtyWithUnit(totalQty,m.unit)} · ${u42('available')} ${qtyWithUnit(av.available,m.unit)} · ${u42('missing').toLowerCase()} ${qtyWithUnit(av.missing,m.unit)}</div>`;
-    else check.innerHTML=`<div><b>${u42('missingMaterial')}</b></div><div class="muted">${u42('need')} ${qtyWithUnit(totalQty,m.unit)} · ${u42('available')} ${qtyWithUnit(av.available,m.unit)} · ${u42('toOrder')} ${qtyWithUnit(st.purchaseQty,m.unit)}</div>`;
-  })
-}
-async function saveOrder(id=''){
-  const steps=[...document.querySelectorAll('.order-step-row')].map(r=>({name:r.querySelector('.step-name').value.trim()||u42('stage'),minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0)))}));
-  const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:'none',purchaseQty:0,purchaseNo:''}}).filter(i=>i&&i.materialId&&i.qty>0);
-  const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
-  let status=(prev&&['Готов','Отменён','В производстве'].includes(prev.status))?prev.status:'Новый';
-  const draft={id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',comment:document.getElementById('orderComment').value.trim(),date:document.getElementById('orderDate').value||today(),status,steps,materials};
-  draft.status=calcOrderAutoStatus(draft);
-  if(id)data.orders=data.orders.map(o=>String(o.id)===String(id)?draft:o);else data.orders.push(draft);
-  save(); await persistReservationMaterials(); closeModal(); await loadMaterialsFromSupabase(); renderAll(); toast(u42('orderSaved'));
-}
 async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm(u42('deleteConfirm')))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast(u42('orderDeleted'))}
 function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();renderAll();toast(u42('dataLoaded'))}catch(err){alert(u42('jsonError'))}};r.readAsText(f)}
 function wipeData(){if(!confirm(u42('wipeConfirm')))return;data={materials:[],models:[],orders:[]};save();renderAll()}
@@ -1819,15 +1625,6 @@ function wipeData(){if(!confirm(u42('wipeConfirm')))return;data={materials:[],mo
 
 
 /* v5.42 extra translations for order details */
-function openOrderView(id){
-  const o=data.orders.find(x=>String(x.id)===String(id)); if(!o)return;
-  const min=calcOrderMinutes(o); const oq=orderProductQty(o);
-  const mats=orderMaterials(o).map(i=>{const st=orderMaterialLineState(i,o.id);const av=st.av;const unit=av.unit||i.unit;const per=orderItemPerUnitQty(i,o);const m=av.mat;let cls=st.kind==='ok'?'ok-text':st.kind==='blue'?'material-chip-blue':'danger-text';let statusText=st.label;if(av.missing>0){statusText=st.purchaseStatus==='ordered'?`${u42('ordered')} ${qtyWithUnit(st.purchaseQty||av.missing,unit)}`:`${u42('needOrder')} ${qtyWithUnit(st.purchaseQty||av.missing,unit)}`;}const actions=`<div class="order-purchase-actions"><button class="btn" type="button" onclick="openOrderMaterialPurchase('${o.id}','${i.materialId}')">${u42('details')}</button></div>`;const p=av.missing>0?`<br><small class="muted">${u42('procurement')}: ${orderPurchaseLabel(st.purchaseStatus)} ${qtyWithUnit(st.purchaseQty || av.missing,unit)}${i.purchaseNo?' · '+escapeHtml(i.purchaseNo):''}</small>`:'';const miss=av.missing>0?` · ${u42('missing').toLowerCase()} ${escapeHtml(qtyWithUnit(av.missing,unit))}`:'';return `<div class="line-item"><span>${escapeHtml(m?materialTitle(m):u42('deletedMaterial'))}<br><small class="muted">${u42('perOne')} ${escapeHtml(qtyWithUnit(per,unit))} · ${u42('totalNeedSmall')} ${escapeHtml(qtyWithUnit(i.qty,unit))}<br>${u42('available')} ${escapeHtml(qtyWithUnit(av.available,unit))}</small>${p}${actions}</span><b class="${cls}">${escapeHtml(statusText)}${miss}</b></div>`}).join('')||`<span class="muted">${currentLang==='ru'?'Материалы не указаны':currentLang==='en'?'Materials not specified':'Materiāli nav norādīti'}</span>`;
-  const steps=orderSteps(o).map(s=>`<div class="line-item"><span>${escapeHtml(s.name)}</span><b>${Number(s.minutes||0)} ${u42('minutes').toLowerCase()}</b></div>`).join('');
-  const auto=calcOrderAutoStatus(o);
-  const body=`<div class="order-view-grid"><div class="order-view-card"><small>${u42('orderClient')}</small><b>${escapeHtml(o.client||'—')}</b></div><div class="order-view-card"><small>${u42('productQtyShort')}</small><b>${oq}</b></div><div class="order-view-card"><small>${u42('totalTime')}</small><b>${min} ${u42('minutes').toLowerCase()} · ${orderTimeText(min)}</b></div><div class="order-view-card"><small>${u42('deadlineFull')}</small><b class="order-deadline ${orderDeadlineClass({...o,status:auto})}">${escapeHtml(formatDeadline(o))}</b></div><div class="order-view-card"><small>${u42('createdDate')}</small><b>${escapeHtml(o.date||'—')}</b></div><div class="order-view-card full"><small>${u42('steps')}</small>${steps}</div><div class="order-view-card full"><small>${u42('materials')}</small>${mats}</div><div class="order-view-card full"><small>${u42('comment')}</small>${escapeHtml(o.comment||'—')}</div></div>`;
-  openModal(o.number,body,`<button class="btn" onclick="openOrderModal('${o.id}')">${u42('edit')}</button><button class="btn primary" onclick="closeModal()">${u42('close')}</button>`);
-}
 
 
 
@@ -1948,24 +1745,6 @@ openModal=function(title,body,foot){
   },0);
 };
 
-function openOrderView(id){
-  const o=data.orders.find(x=>String(x.id)===String(id)); if(!o)return;
-  const min=calcOrderMinutes(o); const oq=orderProductQty(o);
-  const auto=calcOrderAutoStatus(o);
-  const steps=orderSteps(o).map(s=>`<div class="line-item"><span>${escapeHtml(s.name)}</span><b>${Number(s.minutes||0)} ${u42('minutes').toLowerCase()}</b></div>`).join('');
-  const mats=orderMaterials(o).map(i=>{
-    const st=orderMaterialLineState(i,o.id);const av=st.av;const unit=av.unit||i.unit;const per=orderItemPerUnitQty(i,o);const m=av.mat;
-    let cls=st.kind==='ok'?'ok-text':st.kind==='blue'?'material-chip-blue':'danger-text';
-    let statusText=st.label;
-    if(av.missing>0){statusText=st.purchaseStatus==='ordered'?`${u42('ordered')} ${qtyWithUnit(st.purchaseQty||av.missing,unit)}`:`${u42('needOrder')} ${qtyWithUnit(st.purchaseQty||av.missing,unit)}`;}
-    const p=av.missing>0?`<br><small class="muted">${u42('procurement')}: ${orderPurchaseLabel(st.purchaseStatus)} ${qtyWithUnit(st.purchaseQty || av.missing,unit)}${i.purchaseNo?' · '+escapeHtml(i.purchaseNo):''}</small>`:'';
-    const miss=av.missing>0?` · ${u42('missing').toLowerCase()} ${escapeHtml(qtyWithUnit(av.missing,unit))}`:'';
-    return `<div class="line-item"><span>${escapeHtml(m?materialTitle(m):u42('deletedMaterial'))}<br><small class="muted">${u42('perOne')} ${escapeHtml(qtyWithUnit(per,unit))} · ${u42('totalNeedSmall')} ${escapeHtml(qtyWithUnit(i.qty,unit))}<br>${u42('available')} ${escapeHtml(qtyWithUnit(av.available,unit))}</small>${p}<div class="order-purchase-actions"><button class="btn" type="button" onclick="openOrderMaterialPurchase('${o.id}','${i.materialId}')">${u42('details')}</button></div></span><b class="${cls}">${escapeHtml(statusText)}${miss}</b></div>`;
-  }).join('')||`<span class="muted">${currentLang==='ru'?'Материалы не указаны':currentLang==='en'?'Materials not specified':'Materiāli nav norādīti'}</span>`;
-  const body=`<div class="order-view-grid"><div class="order-view-card"><small>${u42('orderClient')}</small><b>${escapeHtml(o.client||'—')}</b></div><div class="order-view-card"><small>${u42('productQtyShort')}</small><b>${oq}</b></div><div class="order-view-card"><small>${u42('totalTime')}</small><b>${min} ${u42('minutes').toLowerCase()} · ${orderTimeText(min)}</b></div><div class="order-view-card"><small>${u42('deadlineFull')}</small><b class="order-deadline ${orderDeadlineClass({...o,status:auto})}">${escapeHtml(formatDeadline(o))}</b></div><div class="order-view-card"><small>${u42('createdDate')}</small><b>${escapeHtml(o.date||'—')}</b></div><div class="order-view-card full"><small>${u42('steps')}</small>${steps}</div><div class="order-view-card full"><small>${u42('materials')}</small>${mats}</div><div class="order-view-card full"><small>${u42('comment')}</small>${escapeHtml(o.comment||'—')}</div></div>`;
-  openModal(o.number,body,`<button class="btn danger" style="margin-right:auto" onclick="deleteOrder('${o.id}')">Удалить заказ</button><button class="btn primary" onclick="openOrderModal('${o.id}')">${u42('edit')}</button>`);
-  setCleanModalClass('order-clean-modal');
-}
 
 function openOrderMaterialPurchase(orderId,materialId,editMode=false){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId)); if(!o)return;
@@ -1984,8 +1763,6 @@ function openOrderMaterialPurchase(orderId,materialId,editMode=false){
 
 const __openAddCategoryModalV557=openAddCategoryModal;
 openAddCategoryModal=function(fromOrder=false){ __openAddCategoryModalV557(fromOrder); setCleanModalClass('add-clean-modal'); };
-const __openOrderModalV557=openOrderModal;
-openOrderModal=function(id=''){ __openOrderModalV557(id); setCleanModalClass('form-clean-modal'); };
 const __openModelModalV557=openModelModal;
 openModelModal=function(id=null){ __openModelModalV557(id); setCleanModalClass('form-clean-modal'); };
 
@@ -2086,13 +1863,6 @@ calcOrderOverallPercent=function(o){
 /* v5.64: open production with clear button, not by status */
   renderOrderStats();
   renderOrderClientFilter();
-  const box=document.getElementById('ordersTable')||document.getElementById('ordersGrid');
-  if(!box)return;
-  const rows=filteredOrders();
-  if(!rows.length){box.innerHTML=`<div class="empty"><b>${typeof u42==='function'?u42('noOrders'):'Заказов пока нет'}</b>${typeof u42==='function'?u42('noOrdersHint'):'Создайте заказ и зарезервируйте материалы со склада.'}</div>`;return;}
-  box.innerHTML=`<div class="order-table-wrap"><table class="order-table"><thead><tr><th>№</th><th>${typeof u42==='function'?u42('orderClient'):'Заказчик'}</th><th>${typeof u42==='function'?u42('time'):'Время'}</th><th>${typeof u42==='function'?u42('status'):'Статус'}</th><th>${typeof u42==='function'?u42('deadline'):'Срок'}</th><th></th></tr></thead><tbody>${rows.map(o=>{const min=calcOrderMinutes(o);const auto=calcOrderAutoStatus(o);const expanded=expandedOrders.has(o.id);const matPct=calcOrderMaterialPercent(o);const oq=orderProductQty(o);const compact=orderMaterials(o).slice(0,3).map(i=>{const m=data.materials.find(x=>String(x.id)===String(i.materialId));return m?`${m.sku||''} ${formatQty(i.qty,m.unit)}${unitLabel(m.unit)}`:''}).filter(Boolean).join(' · ');const deadlineClass=orderDeadlineClass({...o,status:auto});const main=`<tr ondblclick="openOrderView('${o.id}')"><td><button class="order-expand-btn" type="button" onclick="toggleOrderExpand(event,'${o.id}')">${expanded?'⌃':'⌄'}</button><span class="stock-sku">${escapeHtml(o.number)}</span></td><td class="order-client-cell"><div class="name">${escapeHtml(o.client||'—')}</div><div class="order-qty-pill">${typeof u42==='function'?u42('items'):'изделий'}: <b>${oq}</b></div>${compact?`<div class="order-compact-materials">${escapeHtml(compact)}${orderMaterials(o).length>3?' · …':''}</div>`:''}${o.comment?`<div class="sub">${escapeHtml(o.comment)}</div>`:''}</td><td class="order-time-cell"><b>${min} ${(typeof u42==='function'?u42('minutes'):'мин').toLowerCase()}</b><br><span class="muted">${orderTimeText(min)}</span></td><td>${orderStatusCellHtml(o,auto)}<div class="sub">${typeof u42==='function'?u42('materialPct'):'материалы'} ${matPct}%</div></td><td><span class="order-deadline ${deadlineClass}">${escapeHtml(formatDeadline(o))}</span><div class="sub">${typeof u42==='function'?u42('created'):'создан'} ${escapeHtml(o.date||'—')}</div></td><td>${orderRowActions(o.id)}</td></tr>`;return main+(missingExpandedOrders.has(o.id)?orderMissingRow({...o,status:auto}):'')+(expanded?orderExpandedRow({...o,status:auto}):'')}).join('')}</tbody></table></div>`;
-}
-
 function renderAll(){renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();applyI18n()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
 
@@ -2397,7 +2167,7 @@ completeOrder=async function(id){
   return __completeOrderV569(id);
 };
 
-renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - Orders Main Logic';}
+renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';}
 
 
 
@@ -2506,7 +2276,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - Orders Main Logic';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';
   };
 }
 
@@ -2605,7 +2375,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - Orders Main Logic';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';
   };
 }
 
@@ -2700,7 +2470,7 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - Orders Main Logic';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';}
 
 </script>
 
@@ -3281,7 +3051,7 @@ if(typeof renderAll === 'function'){
 <script>
 /* v5.77: full site history / audit tree */
 (function(){
-  const VERSION='v5.92.9 - Orders Main Logic';
+  const VERSION='v5.93.0 - Orders Modals';
   function ready(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn); else fn(); }
   function safeEsc(v){ return (typeof escapeHtml==='function') ? escapeHtml(v) : String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
   function rowText(row){
@@ -3475,7 +3245,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.79: auth overlay cannot block the app after session check */
 (function(){
-  const VERSION='v5.92.9 - Orders Main Logic';
+  const VERSION='v5.93.0 - Orders Modals';
 
   
 
@@ -3601,7 +3371,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.88: local HTML preview without login + safe auth */
 (function(){
-  const VERSION='v5.92.9 - Orders Main Logic';
+  const VERSION='v5.93.0 - Orders Modals';
   const isLocal=location.protocol==='file:';
   function unlockLocal(){
     if(!isLocal) return;
