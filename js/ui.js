@@ -7,6 +7,13 @@ function closeMobileSidebar() {
   document.body.classList.remove("sidebar-open");
 }
 
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 920) closeMobileSidebar();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && document.body.classList.contains("sidebar-open")) closeMobileSidebar();
+});
+
 function setVersion() {
   const av = document.getElementById("appVersionBadge");
   if (av && typeof VERSION !== "undefined") {
@@ -46,6 +53,7 @@ function closeModal(){
 }
 
 function openModal(title,body,foot){
+  closeMobileSidebar();
   document.getElementById('modalTitle').textContent=title;
   document.getElementById('modalBody').innerHTML=body;
   document.getElementById('modalFoot').innerHTML=foot;
