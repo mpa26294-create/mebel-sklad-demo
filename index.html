@@ -103,7 +103,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><div class="modal-head-title"><button class="modal-back-btn" id="modalBackBtn" type="button" onclick="goBackModal()">‹ Назад</button><h3 id="modalTitle">Добавить</h3></div><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v5.92.9 - UI Extracted</div>
+<div class="version-badge" id="appVersionBadge">v5.92.5 - Materials Step 1</div>
 
 
 <script src="js/ui.js"></script>
@@ -232,7 +232,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - UI Extracted';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Materials Step 1';
   };
 }
 
@@ -331,7 +331,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - UI Extracted';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Materials Step 1';
   };
 }
 
@@ -426,7 +426,7 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - UI Extracted';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Materials Step 1';}
 
 </script>
 <script src="js/utils.js"></script>
@@ -439,9 +439,10 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v5.92.9 - UI Extracted';
+const APP_VERSION = 'v5.92.5 - Materials Step 1';
 </script>
 <script src="js/auth.js"></script>
+<script src="js/materials.js"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -802,13 +803,6 @@ async function printMaterialPdf(id){const url=await materialPdfUrl(id);if(!url)r
 
 </body></html>`);w.document.close()}
 function detailItem(label,value,full=false){return `<div class="detail-card ${full?'full':''}"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${value?escapeHtml(value):'—'}</div></div>`}
-function stockNum(v){const n=Number(String(v??0).replace(',','.'));return Number.isFinite(n)?Number(n.toFixed(3)):0}
-function stockNumForUnit(v,unit){const n=stockNum(v);return unit==='шт'?Math.trunc(n):n}
-function stockStep(unit){return unit==='шт'?'1':'0.01'}
-function stockDefaultValue(unit){return unit==='шт'?'1':'0.01'}
-function normalizeStockValue(value,unit,allowZero=true){const raw=String(value??'0').replace(',','.');const n=Number(raw);if(!Number.isFinite(n) || (allowZero?n<0:n<=0))return null;if(unit==='шт'){if(!Number.isInteger(n))return null;return n;}return Number(n.toFixed(3));}
-function reservedQty(m){return Math.max(0,stockNumForUnit((m.attributes||{}).reservedQty,m.unit))}
-function orderedManualQty(m){return Math.max(0,stockNumForUnit((m.attributes||{}).orderedQty,m.unit))}
 function materialOrderedOrders(matId){
   return (data.orders||[])
     .filter(o=>!['Готов','Отменён'].includes(o.status))
@@ -817,8 +811,6 @@ function materialOrderedOrders(matId){
 function orderedByOrdersQty(m){
   return Math.max(0,stockNumForUnit(materialOrderedOrders(m.id).reduce((s,r)=>s+Number(orderItemPurchaseQty(r.item,0)||0),0),m.unit));
 }
-function orderedQty(m){return Math.max(0,stockNumForUnit(orderedManualQty(m)+orderedByOrdersQty(m),m.unit))}
-function availableQty(m){const u=m.unit;return Math.max(0,stockNumForUnit(stockNumForUnit(m.quantity,u)-reservedQty(m),u))}
 function materialReservationOrders(matId){
   return (data.orders||[])
     .filter(o=>!['Готов','Отменён'].includes(o.status))
@@ -3043,7 +3035,7 @@ completeOrder=async function(id){
   return __completeOrderV569(id);
 };
 
-renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - UI Extracted';}
+renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Materials Step 1';}
 
 
 
@@ -3152,7 +3144,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - UI Extracted';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Materials Step 1';
   };
 }
 
@@ -3251,7 +3243,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - UI Extracted';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Materials Step 1';
   };
 }
 
@@ -3346,7 +3338,7 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.9 - UI Extracted';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.92.5 - Materials Step 1';}
 
 </script>
 
@@ -3927,7 +3919,7 @@ if(typeof renderAll === 'function'){
 <script>
 /* v5.77: full site history / audit tree */
 (function(){
-  const VERSION='v5.92.9 - UI Extracted';
+  const VERSION='v5.92.5 - Materials Step 1';
   function ready(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn); else fn(); }
   function safeEsc(v){ return (typeof escapeHtml==='function') ? escapeHtml(v) : String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
   function rowText(row){
@@ -4121,7 +4113,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.79: auth overlay cannot block the app after session check */
 (function(){
-  const VERSION='v5.92.9 - UI Extracted';
+  const VERSION='v5.92.5 - Materials Step 1';
 
   
 
@@ -4247,7 +4239,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.88: local HTML preview without login + safe auth */
 (function(){
-  const VERSION='v5.92.9 - UI Extracted';
+  const VERSION='v5.92.5 - Materials Step 1';
   const isLocal=location.protocol==='file:';
   function unlockLocal(){
     if(!isLocal) return;
