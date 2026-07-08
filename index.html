@@ -1551,7 +1551,8 @@ const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.on
 /* v5.65: profiles + audit history */
 // Save order with creator/technologist metadata and audit.
 saveOrder=async function(id=''){
-  const steps=[...document.querySelectorAll('.order-step-row')].map(r=>({name:r.querySelector('.step-name').value.trim()||u42('stage'),minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0)))}));
+  const existingOrderForSave=id?data.orders.find(o=>String(o.id)===String(id)):null;
+  const steps=[...document.querySelectorAll('.order-step-row')].map((r,index)=>({name:r.querySelector('.step-name').value.trim()||u42('stage'),minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0))),responsible:existingOrderForSave?.steps?.[index]?.responsible||''}));
   const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
   const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:'none',purchaseQty:0,purchaseNo:''}}).filter(i=>i&&i.materialId&&i.qty>0);
   const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
@@ -2049,6 +2050,33 @@ body:not(.auth-locked) .auth-screen{
     if(navBtn) setTimeout(()=>document.body.classList.remove('sidebar-open'),80);
   });
   setVersion();
+})();
+</script>
+<script>
+/* v5.94: production workflow stage entry */
+(function(){
+  const __openOrderModalV594=window.openOrderModal;
+  window.openOrderModal=function(id=''){
+    const o=id?(data.orders||[]).find(x=>String(x.id)===String(id)):null;
+    if(o&&typeof orderCompletionClosed==='function'&&orderCompletionClosed(o)){
+      toast(t('editLockedClosed'));
+      return;
+    }
+    return __openOrderModalV594(id);
+  };
+  window.openOrderProduction=function(id){
+    const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+    if(!o)return;
+    if(typeof hasOrderTechnology==='function'&&!hasOrderTechnology(o.steps)){
+      toast(t('technologyRequired'));
+      return;
+    }
+    if(typeof orderWorkflowSelection!=='undefined')orderWorkflowSelection.set(String(id),2);
+    const body=`<div id="orderWorkflowModal">${orderWorkflowStepperHtml(o,'modal')}${orderWorkflowContentHtml(o,true)}</div>`;
+    const editBtn=typeof orderCompletionClosed==='function'&&orderCompletionClosed(o)?'':`<button class="btn primary" onclick="openOrderModal('${o.id}')">${u42('edit')}</button>`;
+    openModal(o.number||t('orderStageProduction'),body,`<button class="btn" onclick="openOrderView('${o.id}')">${t('openOrderCard')}</button>${editBtn}`);
+    setCleanModalClass('order-clean-modal');
+  };
 })();
 </script>
 

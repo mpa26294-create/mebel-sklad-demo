@@ -903,7 +903,15 @@ if(typeof saveOrder === 'function'){
     const prev = id ? auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))) : null;
     const result = await __saveOrderV576(id);
     const next = id ? auditCloneV570((data.orders||[]).find(o=>String(o.id)===String(id))) : auditCloneV570((data.orders||[])[(data.orders||[]).length-1]);
+    if(!prev && next){
+      const alreadyLogged=auditFor('order',next.id).some(row=>row.type==='order_created'||row.type==='order_create');
+      if(!alreadyLogged)auditAdd('order_created','order',next.id,next.number,`Заказ ${next.number} создан`,{status:next.status||'Новый'});
+    }
     if(prev && next){
+      const beforeMaterials=new Map((prev.materials||[]).map(item=>[String(item.materialId),item]));
+      const afterMaterials=new Map((next.materials||[]).map(item=>[String(item.materialId),item]));
+      afterMaterials.forEach((item,key)=>{if(beforeMaterials.has(key))return;const m=(data.materials||[]).find(x=>String(x.id)===key);auditAdd('technology_material_added','order',next.id,next.number,`${t('historyMaterialAdded')}: ${m?materialTitle(m):key}`)});
+      beforeMaterials.forEach((item,key)=>{if(afterMaterials.has(key))return;const m=(data.materials||[]).find(x=>String(x.id)===key);auditAdd('technology_material_removed','order',next.id,next.number,`${t('historyMaterialRemoved')}: ${m?materialTitle(m):key}`)});
       try{ auditOrderMaterialChangesForMaterialsV576(prev,next); }catch(e){ console.warn('material order audit skipped', e); }
     }
     return result;
