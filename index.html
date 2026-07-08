@@ -20,7 +20,7 @@
     <button data-section="orders"><span class="ico"><svg viewBox="0 0 24 24"><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h6"/><rect x="5" y="3" width="14" height="18" rx="2"/></svg></span> Заказы</button>
     <button class="disabled" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 16l8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg></span> Модели мебели</button>
     <button class="disabled" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
-    <button class="disabled" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
+    <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
   </div>
   <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div></div>
 </aside>
@@ -88,6 +88,12 @@
 
     <section id="settings" class="section">
       <div class="topbar"><div class="title"><h2>Настройки</h2><p>Простое обслуживание данных</p></div></div>
+      <div class="panel notification-settings-panel">
+        <h3 id="notificationSettingsTitle">Уведомления</h3>
+        <p class="muted" id="notificationSettingsHint">Параметры Telegram Bot для уведомлений технологу.</p>
+        <div class="form-grid"><div class="field"><label id="telegramTokenLabel">Telegram bot token</label><input class="input" id="telegramBotToken" type="password" autocomplete="off" placeholder="123456:ABC..."></div><div class="field"><label id="telegramChatIdLabel">Telegram chat_id</label><input class="input" id="telegramChatId" autocomplete="off" placeholder="-100..."></div></div>
+        <button class="btn primary" id="saveNotificationSettingsBtn" type="button" onclick="saveNotificationSettings()">Сохранить</button>
+      </div>
       <div class="panel" style="padding:18px;max-width:720px">
         <h3 style="margin-top:0">Экспорт / импорт</h3>
         <p class="muted">Можно сохранить данные в JSON и потом загрузить обратно.</p>
@@ -103,7 +109,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><div class="modal-head-title"><button class="modal-back-btn" id="modalBackBtn" type="button" onclick="goBackModal()">‹ Назад</button><h3 id="modalTitle">Добавить</h3></div><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v5.93.0 - Orders Modals</div>
+<div class="version-badge" id="appVersionBadge">v5.95.6 - Ordered Material Quantity</div>
 
 
 <script src="js/ui.js"></script>
@@ -119,7 +125,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v5.93.4 - Mobile Menu Close Button';
+const APP_VERSION = 'v5.95.6 - Ordered Material Quantity';
 </script>
 <script src="js/auth.js"></script>
 <script src="js/materials.js"></script>
@@ -612,9 +618,11 @@ function pushModalState(){
   if(!backdrop?.classList.contains('show'))return;
   const modal=document.querySelector('#modalBackdrop .modal');
   const bodyEl=document.getElementById('modalBody');
+  const snapshot=bodyEl?.cloneNode(true);
+  if(snapshot&&bodyEl){const live=bodyEl.querySelectorAll('input,select,textarea'),copy=snapshot.querySelectorAll('input,select,textarea');live.forEach((field,index)=>{const target=copy[index];if(!target)return;if(field.matches('input[type="checkbox"],input[type="radio"]')){target.checked=field.checked;if(field.checked)target.setAttribute('checked','');else target.removeAttribute('checked')}else if(field.tagName==='SELECT'){target.value=field.value;[...target.options].forEach(option=>{if(option.value===field.value)option.setAttribute('selected','');else option.removeAttribute('selected')})}else if(field.tagName==='TEXTAREA'){target.value=field.value;target.textContent=field.value}else{target.value=field.value;target.setAttribute('value',field.value)}})}
   modalStack.push({
     title:document.getElementById('modalTitle').textContent,
-    body:bodyEl.innerHTML,
+    body:snapshot?snapshot.innerHTML:bodyEl.innerHTML,
     foot:document.getElementById('modalFoot').innerHTML,
     classes: modal ? Array.from(modal.classList).filter(c=>c!=='modal') : [],
     bodyScrollTop: bodyEl ? bodyEl.scrollTop : 0,
@@ -1382,6 +1390,14 @@ function openAddCategoryModal(fromOrder=false){
 async function finishMaterialSaveAndReturn(newSku='', category=''){
   await loadMaterialsFromSupabase();
   const created=(data.materials||[]).find(m=>String(m.sku||'')===String(newSku||''));
+  if(window.pendingTechnologyMaterialOrderId){
+    const orderId=window.pendingTechnologyMaterialOrderId;
+    window.pendingTechnologyMaterialOrderId='';
+    if(created&&typeof attachCreatedTechnologyMaterial==='function')await attachCreatedTechnologyMaterial(orderId,created);
+    else{if(typeof orderWorkflowSelection!=='undefined')orderWorkflowSelection.set(String(orderId),1);if(typeof modalStack!=='undefined')modalStack=[];openOrderProduction(orderId);}
+    toast(t('savedMaterial'));
+    return;
+  }
   if(pendingOrderDraftV44){
     restoreOrderFormDraftV44(pendingOrderDraftV44, created || (newSku?{id:'',sku:newSku,category}:null));
     pendingOrderDraftV44=null;
@@ -1543,28 +1559,14 @@ calcOrderOverallPercent=function(o){
 /* v5.64: open production with clear button, not by status */
   renderOrderStats();
   renderOrderClientFilter();
-function renderAll(){renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();applyI18n()}
+function renderAll(){renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
 
 
 
 /* v5.65: profiles + audit history */
 // Save order with creator/technologist metadata and audit.
-saveOrder=async function(id=''){
-  const existingOrderForSave=id?data.orders.find(o=>String(o.id)===String(id)):null;
-  const steps=[...document.querySelectorAll('.order-step-row')].map((r,index)=>({name:r.querySelector('.step-name').value.trim()||u42('stage'),minutes:Math.max(0,Math.round(Number(r.querySelector('.step-min').value||0))),responsible:existingOrderForSave?.steps?.[index]?.responsible||''}));
-  const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
-  const materials=[...document.querySelectorAll('.order-material-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.om-material')?.value));if(!mat)return null;const perUnitQty=stockNumForUnit(r.querySelector('.om-per-unit')?.value||0,mat.unit||'м²');const qty=stockNumForUnit(perUnitQty*productQty,mat.unit||'м²');return {category:r.querySelector('.om-cat')?.value||mat.category||'',materialId:mat.id||'',perUnitQty,qty,unit:mat.unit||'',purchaseStatus:'none',purchaseQty:0,purchaseNo:''}}).filter(i=>i&&i.materialId&&i.qty>0);
-  const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
-  let status=(prev&&(orderIsTerminal(prev.status)||['В производстве','В работе'].includes(prev.status)))?prev.status:'Новый';
-  let draft={id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',comment:document.getElementById('orderComment').value.trim(),date:document.getElementById('orderDate').value||today(),status,steps,materials,production:prev&&prev.production?prev.production:{logs:[]}};
-  draft=setOrderMetaForSave(draft,prev);
-  draft.status=calcOrderAutoStatus(draft);
-  if(id)data.orders=data.orders.map(o=>String(o.id)===String(id)?draft:o);else data.orders.push(draft);
-  auditAdd(prev?'order_update':'order_create','order',draft.id,draft.number,prev?`Заказ ${draft.number} изменён`:`Заказ ${draft.number} создан`);
-  if(hasOrderTechnology(draft.steps) && (!prev || stepsSignature(prev.steps)!==stepsSignature(draft.steps)))auditAdd('technology','order',draft.id,draft.number,`Технология заказа заполнена/изменена`);
-  save(); await persistReservationMaterials(); closeModal(); await loadMaterialsFromSupabase(); renderAll(); toast(u42('orderSaved'));
-}
+saveOrder=async function(id=''){return saveManagerOrder(id)}
 
 const __insertMaterialV565=insertMaterialToSupabase;
 insertMaterialToSupabase=async function(m){m.attributes=m.attributes||{};const now=auditNow();m.attributes.createdBy=actorName();m.attributes.createdAt=now;m.attributes.updatedBy=actorName();m.attributes.updatedAt=now;const ok=await __insertMaterialV565(m);if(ok)auditAdd('material_create','material',m.id||m.sku,m.sku||m.name,`Материал ${m.sku||m.name||''} добавлен`);return ok;}
@@ -1829,7 +1831,7 @@ completeOrder=async function(id){
   return __completeOrderV569(id);
 };
 
-renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';}
+renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;}
 
 
 
@@ -1893,7 +1895,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.79: auth overlay cannot block the app after session check */
 (function(){
-  const VERSION='v5.93.0 - Orders Modals';
+  const VERSION='v5.95.6 - Ordered Material Quantity';
 
   
 
@@ -2020,7 +2022,7 @@ body:not(.auth-locked) .auth-screen{
 <script>
 /* v5.88: local HTML preview without login + safe auth */
 (function(){
-  const VERSION='v5.93.0 - Orders Modals';
+  const VERSION='v5.95.6 - Ordered Material Quantity';
   const isLocal=location.protocol==='file:';
   function unlockLocal(){
     if(!isLocal) return;
@@ -2067,16 +2069,15 @@ body:not(.auth-locked) .auth-screen{
   window.openOrderProduction=function(id){
     const o=(data.orders||[]).find(x=>String(x.id)===String(id));
     if(!o)return;
-    if(typeof hasOrderTechnology==='function'&&!hasOrderTechnology(o.steps)){
-      toast(t('technologyRequired'));
-      return;
-    }
-    if(typeof orderWorkflowSelection!=='undefined')orderWorkflowSelection.set(String(id),2);
     const body=`<div id="orderWorkflowModal">${orderWorkflowStepperHtml(o,'modal')}${orderWorkflowContentHtml(o,true)}</div>`;
     const editBtn=typeof orderCompletionClosed==='function'&&orderCompletionClosed(o)?'':`<button class="btn primary" onclick="openOrderModal('${o.id}')">${u42('edit')}</button>`;
     openModal(o.number||t('orderStageProduction'),body,`<button class="btn" onclick="openOrderView('${o.id}')">${t('openOrderCard')}</button>${editBtn}`);
     setCleanModalClass('order-clean-modal');
   };
+  window.openOrderView=showOrderInfoModal;
+  window.startOrderWork=async function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;o.status='В работе';o.updatedAt=new Date().toISOString();o.updatedBy=profileUserName();if(typeof auditAdd==='function')auditAdd('order_status','order',o.id,o.number,t('historyOrderStarted'),{status:'В работе'});save();closeOrderMenus();renderAll();toast(t('orderMovedToWork'))};
+  window.completeOrder=async function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const ops=typeof productionOps==='function'?productionOps(o):[];if(!ops.length||productionDoneCount(o)!==ops.length){toast(t('orderProductionIncomplete'));closeOrderMenus();return}o.status='Завершён';o.completedAt=new Date().toISOString();o.updatedAt=o.completedAt;o.updatedBy=profileUserName();if(typeof auditAdd==='function')auditAdd('order_status','order',o.id,o.number,t('historyOrderCompleted'),{status:'Завершён'});save();closeOrderMenus();renderAll();toast(t('orderCompleted'))};
+  window.cancelOrder=async function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;if(!confirm(t('cancelOrderConfirm')))return;o.status='Отменён';o.cancelledAt=new Date().toISOString();o.updatedAt=o.cancelledAt;o.updatedBy=profileUserName();if(typeof auditAdd==='function')auditAdd('order_status','order',o.id,o.number,t('historyOrderCancelled'),{status:'Отменён'});save();try{syncMaterialReservations();await persistReservationMaterials()}catch(e){}closeOrderMenus();renderAll();toast(t('orderCancelled'))};
 })();
 </script>
 

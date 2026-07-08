@@ -88,7 +88,7 @@ function upgradeHistoryShell(){const section=document.getElementById('history');
 renderHistoryStats=function(){const rows=allRows(),todayKey=auditDateOnly(new Date().toISOString()),yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);const todayRows=rows.filter(r=>auditDateOnly(r.at)===todayKey).length,yesterdayRows=rows.filter(r=>auditDateOnly(r.at)===auditDateOnly(yesterday.toISOString())).length,weekRows=rows.filter(r=>Date.now()-new Date(r.at||0).getTime()<7*86400000).length,mat=rows.filter(r=>r.entity==='material').length,ord=rows.filter(r=>r.entity==='order').length,users=new Set(rows.map(r=>r.by).filter(Boolean)).size,box=document.getElementById('historyStats');if(!box)return;const cards=[['pulse',t('totalEvents'),rows.length,`${weekRows} ${t('historyWeek')}`],['calendar',t('today'),todayRows,`${todayRows-yesterdayRows>=0?'+':''}${todayRows-yesterdayRows} ${t('historyYesterdayCompare')}`],['box',t('warehouseOrders'),`${mat} / ${ord}`,t('historyUpdated')],['user',t('users'),users,t('historyActive')]];box.innerHTML=cards.map(([icon,label,value,note])=>`<div class="history-stat"><span class="history-stat-icon ${icon}">${icon==='calendar'?'▣':icon==='box'?'◇':icon==='user'?'♙':'⌁'}</span><div><small>${label}</small><b>${value}</b><em>${note}</em></div></div>`).join('')};
 renderSiteHistory=function(){const box=document.getElementById('historyTable');if(!box)return;upgradeHistoryShell();renderHistoryStats();fillHistoryFilters();const rows=filteredHistory();if(!rows.length){box.innerHTML=`<div class="history-empty"><b>${t('historyEmpty')}</b>${t('historyEmptyDesc')}</div>`;return}const groups=['today','yesterday','week','earlier'];box.innerHTML=`<div class="history-timeline">${groups.map(key=>{const items=rows.filter(r=>historyGroupKey(r.at)===key);return items.length?`<section class="history-group"><h3>${historyGroupTitle(key)}<span>${items.length}</span></h3>${items.slice(0,300).map(historyTimelineCard).join('')}</section>`:''}).join('')}</div>`};
 window.renderSiteHistory=renderSiteHistory;
-function initHistory(){injectHistoryUI();localizeHistoryUI();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.4 - Mobile Menu Close Button';renderSiteHistory()}
+function initHistory(){injectHistoryUI();localizeHistoryUI();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;renderSiteHistory()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initHistory);else initHistory();
 
 /* v5.70: detailed audit history for every changed field */
@@ -196,7 +196,7 @@ if(typeof saveOrder==='function'){
       if(false&&techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,`Изменена технология: ${auditJoinV570(techDiffs)}`,{diffs:techDiffs});
       if(false&&matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,`Изменены материалы заказа: ${auditJoinV570(matDiffs)}`,{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;
   };
 }
 
@@ -295,7 +295,7 @@ if(typeof saveOrder==='function'){
       if(techDiffs.length)auditAdd('technology_details_changed','order',next.id,next.number,auditMainTextV571('Изменена технология',techDiffs),{diffs:techDiffs});
       if(matDiffs.length)auditAdd('order_materials_changed','order',next.id,next.number,auditMainTextV571('Изменены материалы',matDiffs),{diffs:matDiffs});
     }
-    const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';
+    const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;
   };
 }
 
@@ -390,7 +390,7 @@ if(typeof auditFor==='function'){
 }
 
 const __renderAllV570=renderAll;
-renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent='v5.93.0 - Orders Modals';}
+renderAll=function(){__renderAllV570();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;}
 
 /* v5.73: material creator/date audit fallback and migration */
 
@@ -944,7 +944,7 @@ if(typeof renderAll === 'function'){
 
 /* v5.77: full site history / audit tree */
 (function(){
-  const VERSION='v5.93.4 - Mobile Menu Close Button';
+  const VERSION=APP_VERSION;
   const oldApply=window.applyI18n;
   if(typeof oldApply==='function'){
     window.applyI18n=function(){ oldApply(); localizeHistoryUI(); const av=document.getElementById('appVersionBadge'); if(av) av.textContent=VERSION; };
