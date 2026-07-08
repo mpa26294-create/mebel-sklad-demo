@@ -57,6 +57,12 @@ function openModal(title,body,foot){
   document.getElementById('modalTitle').textContent=title;
   document.getElementById('modalBody').innerHTML=body;
   document.getElementById('modalFoot').innerHTML=foot;
+  if(typeof modalStack!=='undefined'&&modalStack.length){
+    document.querySelectorAll('#modalFoot button,#modalFoot .btn').forEach(button=>{
+      const label=String(button.textContent||'').trim().replace(/^[←‹]\s*/,'').toLowerCase();
+      if(['назад','back','atpakaļ'].includes(label)&&!button.classList.contains('primary'))button.remove();
+    });
+  }
   document.getElementById('modalBackdrop').classList.add('show');
   lockPageForModal();
   document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact');
