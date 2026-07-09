@@ -1557,8 +1557,13 @@
 .category-tab.active{background:#17181b;color:#fff;border-color:#17181b;box-shadow:0 10px 22px rgba(17,24,39,.12)}
 .category-filter-row{display:grid;grid-template-columns:minmax(240px,1fr) 190px 170px auto auto;gap:10px;margin-bottom:14px;align-items:center}
 .category-filter-row .input,.category-filter-row .select{height:40px}
+.fabric-stock-type-switch{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px}
+.fabric-stock-type-switch button{height:34px;border:1px solid #e5e7eb;border-radius:999px;background:#fff;color:#30343b;padding:0 13px;font-size:12px;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.025)}
+.fabric-stock-type-switch button:hover{background:#f8fafc}
+.fabric-stock-type-switch button.active{background:#17181b;color:#fff;border-color:#17181b;box-shadow:0 8px 18px rgba(17,24,39,.12)}
+.fabric-type-pill{display:inline-flex;align-items:center;height:24px;border-radius:999px;border:1px solid #dbeafe;background:#eff6ff;color:#1d4ed8;padding:0 9px;font-size:11px;font-weight:700;white-space:nowrap}
 .smart-table-wrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff}
-.smart-stock-table{min-width:980px;width:100%;border-collapse:collapse}
+.smart-stock-table{min-width:1080px;width:100%;border-collapse:collapse}
 .smart-stock-table th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#667085;background:#fbfcfd;padding:11px 12px!important}
 .smart-stock-table td{padding:13px 12px!important}
 .smart-stock-table tbody tr:hover{background:#fbfcfd}
@@ -2307,14 +2312,23 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 /* Compact ERP order cards */
 #orders .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 #orders .order-stat-card{min-height:112px;display:flex;align-items:flex-start;gap:14px;padding:18px;border:1px solid #e7eaf0;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.045)}
+#stock .order-stat-card{min-height:112px;display:flex;align-items:flex-start;gap:14px;padding:18px;border:1px solid #e7eaf0;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.045)}
 #orders .order-stat-icon{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border-radius:13px;font-size:20px;font-weight:700;background:#f2eaff;color:#7c3aed}
+#stock .order-stat-icon{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border-radius:13px;font-size:20px;font-weight:700;background:#f2eaff;color:#7c3aed}
 #orders .order-stat-icon.ready{background:#e7f8ed;color:#18a558}
+#stock .order-stat-icon.ready{background:#e7f8ed;color:#18a558}
 #orders .order-stat-icon.missing{background:#fff1df;color:#e87b0d}
+#stock .order-stat-icon.missing{background:#fff1df;color:#e87b0d}
 #orders .order-stat-icon.ordered{background:#e8f1ff;color:#1769e0}
+#stock .order-stat-icon.ordered{background:#e8f1ff;color:#1769e0}
 #orders .order-stat-copy{min-width:0}
+#stock .order-stat-copy{min-width:0}
 #orders .order-stat-label{color:#58677e;font-size:12px;font-weight:600}
+#stock .order-stat-label{color:#58677e;font-size:12px;font-weight:600}
 #orders .order-stat-value{margin-top:5px;color:#101828;font-size:25px;font-weight:750;line-height:1}
+#stock .order-stat-value{margin-top:5px;color:#101828;font-size:25px;font-weight:750;line-height:1}
 #orders .order-stat-note{display:block;margin-top:9px;color:#7b8799;font-size:11px;font-style:normal;line-height:1.35}
+#stock .order-stat-note{display:block;margin-top:9px;color:#7b8799;font-size:11px;font-style:normal;line-height:1.35}
 #orders .orders-toolbar{align-items:stretch;gap:10px}
 #orders .orders-toolbar input,#orders .orders-toolbar select,#orders .orders-toolbar button{min-height:42px}
 #orders .order-card-list{display:flex;flex-direction:column;gap:12px;margin-top:14px}

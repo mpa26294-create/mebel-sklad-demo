@@ -317,7 +317,7 @@ function renderFilters(){
 }
 function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
 function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
-function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;document.getElementById('stats').innerHTML=`<div class="stat"><div><span>${t('totalItems')}</span><b>${total}</b></div><div class="sico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></div></div><div class="stat"><div><span>${t('categories')}</span><b>${cats}</b></div><div class="sico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></div></div><div class="stat"><div><span>${t('lowStock')}</span><b>${low}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg></div></div><div class="stat"><div><span>${t('outStock')}</span><b>${out}</b></div><div class="sico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></div></div>`}
+function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,'всего','▤'],['ready',t('categories'),cats,'категории','✓'],['missing',t('lowStock'),low,'требуют внимания','△'],['ordered',t('outStock'),out,'нет на складе','▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${m.category}${m.subcategory?' · '+m.subcategory:''}</span>`}
 function stockCategoryTabs(){
   const cats=['Ткань','Поролон','Древесина','Фанера','ДСП','Фурнитура','Крепёж'];
@@ -341,8 +341,10 @@ function stockFiltersForCategory(cat){
   }else{
     extra=`<select class="select" id="stockStateFilterLocal" onchange="stockPage=1;renderStock()"><option value="">${t('allStates')}</option><option value="needorder" ${document.getElementById('stockStateFilterLocal')?.value==='needorder'?'selected':''}>${t('needToOrder')}</option><option value="low" ${document.getElementById('stockStateFilterLocal')?.value==='low'?'selected':''}>${t('lowStock')}</option><option value="ok" ${document.getElementById('stockStateFilterLocal')?.value==='ok'?'selected':''}>${t('normal')}</option></select><span></span>`;
   }
-  return `<div class="category-filter-row"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="categorySearchInput" placeholder="${t(cat==='Ткань'?'searchFabric':'searchMaterials')}" value="${searchValue}" oninput="document.getElementById('searchInput').value=this.value;stockPage=1;renderStock()"></div>${extra}<button class="btn" onclick="toggleAdvancedFilters()">${t('filters')}</button><button class="btn" onclick="clearFilters()">${t('reset')}</button></div>`;
+  const fabricTypes=cat==='Ткань'?`<div class="fabric-stock-type-switch">${['','Ткань','Экокожа','Натуральная кожа'].map(type=>`<button class="${fabricStockTypeFilter===type?'active':''}" type="button" onclick="setFabricStockTypeFilter('${type}')">${type||'Все'}</button>`).join('')}</div>`:'';
+  return `<div class="category-filter-row"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="categorySearchInput" placeholder="${t(cat==='Ткань'?'searchFabric':'searchMaterials')}" value="${searchValue}" oninput="document.getElementById('searchInput').value=this.value;stockPage=1;renderStock()"></div>${extra}<button class="btn" onclick="toggleAdvancedFilters()">${t('filters')}</button><button class="btn" onclick="clearFilters()">${t('reset')}</button></div>${fabricTypes}`;
 }
+function setFabricStockTypeFilter(type){fabricStockTypeFilter=type;stockPage=1;renderStock()}
 function attentionMaterials(limit){
   const rows=(data.materials||[])
     .map(m=>({m,st:materialStateOf(m),need:stockNeededToOrderQty(m),available:availableQty(m)}))
@@ -391,7 +393,8 @@ function filteredMaterialsForSmartTable(cat){
     const color=(document.getElementById('fabricColorFilter')?.value||'').toLowerCase();
     rows=rows.filter(m=>{
       const a=m.attributes||{};
-      return (!coll||String(a.collection||'').toLowerCase()===coll) && (!color||String(a.color||'').toLowerCase().includes(color));
+      const type=String(a.materialType||'Ткань');
+      return (!fabricStockTypeFilter||type===fabricStockTypeFilter) && (!coll||String(a.collection||'').toLowerCase()===coll) && (!color||String(a.color||'').toLowerCase().includes(color));
     });
   }else{
     const st=document.getElementById('stockStateFilterLocal')?.value||'';
@@ -400,7 +403,7 @@ function filteredMaterialsForSmartTable(cat){
   return rows;
 }
 function tableColumnsByCategory(cat){
-  if(cat==='Ткань') return [t('sku'),t('name'),t('collectionCode'),t('color'),t('rollWidth'),t('stockLinear'),t('minLinear'),t('needToOrder'),t('condition')];
+  if(cat==='Ткань') return [t('sku'),t('name'),'Тип',t('collectionCode'),t('color'),t('rollWidth'),t('stockLinear'),t('minLinear'),t('needToOrder'),t('condition')];
   if(cat==='Поролон') return [t('sku'),t('material'),t('size'),t('densityGrade'),t('inStock'),t('available'),t('ordered'),t('minQuantity'),t('condition')];
   if(['Древесина','Фанера','ДСП'].includes(cat)) return [t('sku'),t('material'),t('typeSize'),t('woodGrade'),t('inStock'),t('available'),t('ordered'),t('minQuantity'),t('condition')];
   return [t('sku'),t('material'),t('description'),t('inStock'),t('available'),t('ordered'),t('minQuantity'),t('condition')];
@@ -416,7 +419,7 @@ function smartRowByCategory(m,cat){
   if(cat==='Ткань'){
     const color=a.color||'—';
     const type=a.materialType||'Ткань';
-    return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td>${escapeHtml(m.name||'—')}<div class="sub">${escapeHtml(type)}</div></td><td>${escapeHtml(a.collection||'—')}</td><td><span class="color-chip only" title="${escapeHtml(color)}" style="background:${materialColorStyle(color)}"></span></td><td>${escapeHtml(a.rollWidth?Number(a.rollWidth).toFixed(2)+' м':'—')}</td><td class="${stockNumForUnit(m.quantity,m.unit)<=Number(m.minQuantity||0)?'stock-warn':''}">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit))}</td><td>${escapeHtml(qtyWithUnit(m.minQuantity||0,m.unit))}</td><td class="${need>0?'stock-danger':''}">${escapeHtml(qtyWithUnit(need,m.unit))}</td><td>${state}</td></tr>`;
+    return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td>${escapeHtml(m.name||'—')}</td><td><span class="fabric-type-pill">${escapeHtml(type)}</span></td><td>${escapeHtml(a.collection||'—')}</td><td><span class="color-chip only" title="${escapeHtml(color)}" style="background:${materialColorStyle(color)}"></span></td><td>${escapeHtml(a.rollWidth?Number(a.rollWidth).toFixed(2)+' м':'—')}</td><td class="${stockNumForUnit(m.quantity,m.unit)<=Number(m.minQuantity||0)?'stock-warn':''}">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit))}</td><td>${escapeHtml(qtyWithUnit(m.minQuantity||0,m.unit))}</td><td class="${need>0?'stock-danger':''}">${escapeHtml(qtyWithUnit(need,m.unit))}</td><td>${state}</td></tr>`;
   }
   if(cat==='Поролон'){
     return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td>${escapeHtml(materialDisplayName(m))}</td><td>${escapeHtml(materialDimensions(m)||'—')}</td><td>${escapeHtml(materialDensity(m))}</td><td>${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit))}</td><td class="${av<=0?'stock-danger':''}">${escapeHtml(qtyWithUnit(av,m.unit))}</td><td>${escapeHtml(qtyWithUnit(ordered,m.unit))}</td><td>${escapeHtml(qtyWithUnit(m.minQuantity||0,m.unit))}</td><td>${state}</td></tr>`;
@@ -442,7 +445,7 @@ function renderStock(){
 }
 function setStockPage(page){stockPage=page;renderStock()}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPage=1;renderStock()}
-function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';document.getElementById('subcategoryFilter').value='';['stockStateFilter','unitFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['supplierFilter','orderFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});activeQuickFilter='all';refreshQuickFilterChips();stockPage=1;updateSubFilter();renderAll()}
+function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';document.getElementById('subcategoryFilter').value='';['stockStateFilter','unitFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['supplierFilter','orderFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});activeQuickFilter='all';fabricStockTypeFilter='';refreshQuickFilterChips();stockPage=1;updateSubFilter();renderAll()}
 
 function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'hintFabric','Древесина':'hintWood','Фанера':'hintPlywood','ДСП':'hintChipboard','Крепёж':'hintFasteners','Фурнитура':'hintHardware'};return t(map[cat]||'')}
 
