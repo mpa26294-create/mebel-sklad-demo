@@ -602,8 +602,31 @@ function setMaterialOrderedQty(id){
 
 async function adjustMaterialQty(id,dir){
   const input=document.getElementById('detailQtyChange');
+  const movementUnit=document.getElementById('detailQtyUnit')?.value||'';
   const m=data.materials.find(x=>String(x.id)===String(id));
   if(!m){toast(t('notFoundMaterial'));return;}
+  if(m.category==='Ткань'&&(m.unit||'')==='рулон'&&movementUnit==='м.п.'){
+    const meters=normalizeStockValue(input?.value||0,'м.п.',false);
+    if(meters===null){toast(t('enterQtyPositive'));return;}
+    const oldQty=stockNumForUnit(m.quantity,m.unit);
+    const oldAttrs={...(m.attributes||{})};
+    const rollLength=Number(oldAttrs.rollLength||oldAttrs.orderedRollLength||0);
+    if(!rollLength){toast('Укажите длину рулона, чтобы списывать в м.п.');return;}
+    const currentMeters=Number(oldAttrs.linearBalanceMeters||0)||oldQty*rollLength;
+    const nextMeters=dir>0?currentMeters+meters:currentMeters-meters;
+    if(nextMeters<0){toast(t('noNegativeStock'));return;}
+    m.attributes={...oldAttrs,linearBalanceMeters:Number(nextMeters.toFixed(3))};
+    m.quantity=stockNumForUnit(Math.ceil(nextMeters/rollLength),m.unit);
+    m.lastUpdated=today();
+    const ok=await updateMaterialInSupabase(m);
+    if(!ok){m.quantity=oldQty;m.attributes=oldAttrs;return;}
+    await loadMaterialsFromSupabase();
+    refreshOrdersAfterStockChange();
+    renderAll();
+    openMaterialDetails(id);
+    toast(dir>0?t('stockAdded'):t('stockWrittenOff'));
+    return;
+  }
   const delta=normalizeQtyForUnit(input?.value||0,m.unit||'шт');
   if(delta===null){toast((m.unit||'шт')==='шт'?t('enterIntPositive'):t('enterQtyPositive'));return;}
   const oldQty=stockNumForUnit(m.quantity,m.unit);
@@ -622,6 +645,16 @@ async function adjustMaterialQty(id,dir){
   renderAll();
   openMaterialDetails(id);
   toast(dir>0?t('stockAdded'):t('stockWrittenOff'));
+}
+function syncDetailQtyUnit(){
+  const unit=document.getElementById('detailQtyUnit')?.value||'';
+  const input=document.getElementById('detailQtyChange');
+  const label=document.getElementById('detailQtyLabel');
+  if(!input)return;
+  input.step=unit==='м.п.'?'0.01':stockStep(unit||'шт');
+  input.min=input.step;
+  input.value=unit==='м.п.'?'1':stockDefaultValue(unit||'шт');
+  if(label)label.textContent=`Изменить остаток, ${unitLabel(unit)}`;
 }
 
 async function quickAddStock(){
@@ -1818,7 +1851,7 @@ const __quickWriteOffV565=quickWriteOffStock;
 quickWriteOffStock=async function(){const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=document.getElementById('writeOffQty')?.value;await __quickWriteOffV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd('stock_out','material',m.id,m.sku,`Списание со склада: −${qtyWithUnit(Number(qty||0),m.unit)}`);}}
 
 const __adjustMaterialQtyV565=adjustMaterialQty;
-adjustMaterialQty=async function(id,dir){const m=(data.materials||[]).find(x=>String(x.id)===String(id));const qty=document.getElementById('detailQtyChange')?.value;await __adjustMaterialQtyV565(id,dir);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd(dir>0?'stock_in':'stock_out','material',m.id,m.sku||m.name,`${dir>0?'Поступление':'Списание'} через карточку: ${dir>0?'+':'−'}${qtyWithUnit(Number(qty||0),m.unit)}`);}}
+adjustMaterialQty=async function(id,dir){const m=(data.materials||[]).find(x=>String(x.id)===String(id));const qty=document.getElementById('detailQtyChange')?.value;const movementUnit=document.getElementById('detailQtyUnit')?.value||m?.unit;await __adjustMaterialQtyV565(id,dir);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd(dir>0?'stock_in':'stock_out','material',m.id,m.sku||m.name,`${dir>0?'Поступление':'Списание'} через карточку: ${dir>0?'+':'−'}${qtyWithUnit(Number(qty||0),movementUnit||m.unit)}`);}}
 
 const __startOrderWorkV565=startOrderWork;
 startOrderWork=function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(o)auditAdd('order_status','order',o.id,o.number,`Заказ переведён в работу`);return __startOrderWorkV565(id)}
