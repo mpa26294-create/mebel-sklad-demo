@@ -109,7 +109,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><div class="modal-head-title"><button class="modal-back-btn" id="modalBackBtn" type="button" onclick="goBackModal()">‹ Назад</button><h3 id="modalTitle">Добавить</h3></div><button class="btn small" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="appVersionBadge">v5.95.6 - Ordered Material Quantity</div>
+<div class="version-badge" id="appVersionBadge">v5.95.7 - Fabric Color Picker</div>
 
 
 <script src="js/ui.js"></script>
@@ -125,7 +125,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v5.95.6 - Ordered Material Quantity';
+const APP_VERSION = 'v5.95.7 - Fabric Color Picker';
 </script>
 <script src="js/auth.js"></script>
 <script src="js/materials.js"></script>
@@ -737,6 +737,7 @@ function openAddCategoryModal(fromOrder=false){
   openModal(t('addMaterial').replace('＋ ',''),body,foot);
 }
 function selectMaterialCategory(cat){
+  pushModalState();
   if(cat==='Поролон'){openFoamModal();return;}
   if(cat==='Ткань'){openFabricModal();return;}
   openMaterialModal(null,cat);
@@ -871,6 +872,33 @@ function fabricTypeFromMaterial(found, attrs){
 function fabricUnitByType(type){return type==='Ткань'?'м.п.':'м²'}
 function fabricStockLabelByType(type){return type==='Ткань'?'Остаток на складе, м.п.':'Площадь на складе, м²'}
 function fabricMinLabelByType(type){return type==='Ткань'?'Мин. остаток, м.п.':'Мин. остаток, м²'}
+const FABRIC_COLOR_OPTIONS=[
+  ['Бежевый','#d7c2a1'],['Молочный','#f3eee4'],['Серый','#8b929c'],['Графит','#343741'],
+  ['Чёрный','#111827'],['Белый','#f8fafc'],['Коричневый','#7a5235'],['Карамель','#b8794a'],
+  ['Красный','#b42323'],['Бордовый','#7f1d1d'],['Синий','#1d4ed8'],['Голубой','#7dd3fc'],
+  ['Зелёный','#16803c'],['Оливковый','#6b7f31'],['Жёлтый','#facc15'],['Оранжевый','#f97316'],
+  ['Розовый','#f9a8d4'],['Фиолетовый','#7c3aed']
+];
+function fabricColorValue(color){
+  return String(color||'').trim();
+}
+function fabricColorHex(color){
+  const label=fabricColorValue(color).toLowerCase();
+  const found=FABRIC_COLOR_OPTIONS.find(([name])=>name.toLowerCase()===label);
+  return found?.[1]||'#d1d5db';
+}
+function fabricColorPickerHtml(selected=''){
+  const value=fabricColorValue(selected);
+  const hasKnown=!value || FABRIC_COLOR_OPTIONS.some(([name])=>name.toLowerCase()===value.toLowerCase());
+  const options=hasKnown?FABRIC_COLOR_OPTIONS:[[value,fabricColorHex(value)],...FABRIC_COLOR_OPTIONS];
+  return `<div class="field full fabric-color-field"><label>Цвет</label><input type="hidden" id="fabricColor" value="${escapeHtml(value)}"><div class="fabric-color-picker">${options.map(([name,hex])=>`<button class="fabric-color-option ${value.toLowerCase()===name.toLowerCase()?'active':''}" type="button" data-color="${escapeHtml(name)}" onclick="selectFabricColor(this.dataset.color)"><span style="background:${hex}"></span><b>${escapeHtml(name)}</b></button>`).join('')}</div></div>`;
+}
+function selectFabricColor(color){
+  const value=fabricColorValue(color);
+  const input=document.getElementById('fabricColor');
+  if(input)input.value=value;
+  document.querySelectorAll('.fabric-color-option').forEach(btn=>btn.classList.toggle('active',String(btn.dataset.color||'').toLowerCase()===value.toLowerCase()));
+}
 function openFabricModal(id=null){
   if(!requireAuth())return;
   const isEdit=!!id;
@@ -901,7 +929,7 @@ function openFabricModal(id=null){
       <div class="field"><label>${t('name')}</label><input id="fabricName" class="input" value="${found?.name||''}" placeholder="Например: Велюр Bellagio 12"></div>
       <div class="field"><label>Производитель</label><input id="fabricManufacturer" class="input" value="${attrs.manufacturer||''}" placeholder="Название производителя"></div>
       <div class="field"><label>Коллекция / код</label><input id="fabricCollection" class="input" value="${attrs.collection||''}" placeholder="Коллекция или код материала"></div>
-      <div class="field"><label>Цвет</label><input id="fabricColor" class="input" value="${attrs.color||''}" placeholder="Например: графит"></div>
+      ${fabricColorPickerHtml(attrs.color||'')}
       <div class="field"><label>Единица учёта</label><input id="fabricUnitView" class="input fabric-readonly" value="${unit}" readonly><input id="fabricUnit" type="hidden" value="${unit}"></div>
       <div class="fabric-dynamic-area" id="fabricDynamicFields">
         <div class="field fabric-roll-field"><label>Ширина рулона, м</label><input id="fabricRollWidth" type="number" step="0.01" min="0" class="input" value="${attrs.rollWidth||''}" inputmode="decimal" oninput="updateFabricArea()"></div>

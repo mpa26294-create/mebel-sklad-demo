@@ -1518,7 +1518,15 @@
 .fabric-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .fabric-form-grid .field label{font-size:11px;text-transform:uppercase;letter-spacing:.055em;color:#7c8491}
 .fabric-form-grid .input,.fabric-form-grid .select{height:40px;border-radius:11px}
-@media(max-width:720px){.fabric-type-segment,.fabric-form-grid,.fabric-dynamic-area{grid-template-columns:1fr}.fabric-info-card{padding:12px}.fabric-type-btn{height:40px}}
+.fabric-color-field{grid-column:1/-1}
+.fabric-color-picker{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.fabric-color-option{min-height:42px;border:1px solid #e5e9f0;border-radius:12px;background:#fff;color:#30343b;display:flex;align-items:center;gap:8px;padding:7px 9px;font-size:12px;font-weight:500;transition:background .18s,border-color .18s,box-shadow .18s,transform .18s}
+.fabric-color-option:hover{background:#fbfcfd;border-color:#cfd6df}
+.fabric-color-option.active{border-color:#17181b;box-shadow:0 0 0 3px rgba(23,24,27,.08);background:#fff}
+.fabric-color-option span{width:20px;height:20px;border-radius:999px;border:1px solid rgba(17,24,39,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.45);flex:0 0 auto}
+.fabric-color-option b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:920px){.fabric-color-picker{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.fabric-type-segment,.fabric-form-grid,.fabric-dynamic-area{grid-template-columns:1fr}.fabric-info-card{padding:12px}.fabric-type-btn{height:40px}.fabric-color-picker{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 
 
