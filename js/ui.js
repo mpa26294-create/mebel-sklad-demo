@@ -48,12 +48,16 @@ function closeModal(){
   unlockBodyScrollForModal();
   document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact');
   modalStack=[];
+  const back=document.getElementById('modalBackBtn');
+  if(back)back.onclick=goBackModal;
   updateModalBackButton();
   unlockPageFromModal();
 }
 
 function openModal(title,body,foot){
   closeMobileSidebar();
+  const back=document.getElementById('modalBackBtn');
+  if(back)back.onclick=goBackModal;
   document.getElementById('modalTitle').textContent=title;
   document.getElementById('modalBody').innerHTML=body;
   document.getElementById('modalFoot').innerHTML=foot;
