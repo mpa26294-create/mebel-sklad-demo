@@ -2632,6 +2632,16 @@ body{background:#f7f8fb!important}
 #stock .smart-stock-table td{padding:10px 12px!important;font-size:12px;color:#344054}
 #stock .smart-stock-table td b{display:block;color:#111827;font-size:12px}
 #stock .smart-stock-table td small{display:block;margin-top:3px;color:#98a2b3;font-size:10px}
+.stock-erp-table{table-layout:auto}
+.stock-erp-table th,.stock-erp-table td{white-space:nowrap;vertical-align:middle}
+.stock-erp-table tbody tr{cursor:pointer;transition:background .12s ease}
+.stock-erp-table tbody tr:hover{background:#f7f9fc!important}
+.stock-erp-table .stock-material-title{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stock-erp-table .stock-num{text-align:right;font-variant-numeric:tabular-nums}
+.stock-erp-table th:nth-last-child(n+2):not(:first-child){white-space:nowrap}
+.stock-erp-table .stock-main-qty{font-size:13px!important;font-weight:750;color:#111827}
+.stock-erp-table .stock-sku{display:inline-flex;align-items:center;min-height:24px;padding:0 7px;border-radius:7px;background:#f3f5f8;color:#344054}
+.stock-erp-table .iconbtn{width:28px;height:28px;border-color:#e5e9f0;background:#fff}
 .stock-status-badge{display:inline-flex;align-items:center;min-height:24px;border-radius:999px;border:1px solid #dfe4ec;background:#f8fafc;color:#667085;padding:0 9px;font-size:10px;font-weight:750;white-space:nowrap}
 .stock-status-badge.ok{border-color:#bfe8cc;background:#ecfdf3;color:#287047}
 .stock-status-badge.low{border-color:#fed7aa;background:#fff7ed;color:#b54708}
@@ -2656,5 +2666,5 @@ body{background:#f7f8fb!important}
 .refs-shell{padding:2px 0 24px}.refs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.refs-card{padding:16px;border:1px solid #e7eaf0;border-radius:18px;background:#fff;box-shadow:0 14px 34px rgba(16,24,40,.045)}.refs-card>b,.refs-card b{display:block;color:#101828;font-size:14px}.refs-card small{display:block;margin-top:4px;color:#8490a3}.refs-chips{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0}.refs-chips span{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;background:#f6f2ff;color:#6d45d8;font-size:11px;font-weight:700}.refs-add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.refs-add .input,.refs-add .btn{height:40px;border-radius:12px}
 .product-footer{margin-top:14px;padding:14px 4px 0;border-top:1px solid #edf0f4;color:#98a2b3;font-size:11px;line-height:1.55}.product-footer b,.product-footer strong,.product-footer span,.product-footer em{display:block}.product-footer b{color:#667085;font-weight:750}.product-footer strong{color:#555c68;font-weight:650}.product-footer em{font-style:normal}
 @media(max-width:1100px){#stock .category-filter-row{grid-template-columns:1fr 1fr!important}.refs-grid{grid-template-columns:1fr}}
-@media(max-width:760px){#stock .topbar{gap:14px}#stock .search-top{width:100%}#stock .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps{grid-template-columns:1fr}.refs-add{grid-template-columns:1fr}}
+@media(max-width:760px){#stock .topbar{gap:14px}#stock .search-top{width:100%}#stock .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps{grid-template-columns:1fr}.refs-add{grid-template-columns:1fr}.stock-erp-table th:nth-child(4),.stock-erp-table td:nth-child(4),.stock-erp-table th:nth-child(5),.stock-erp-table td:nth-child(5),.stock-erp-table th:nth-child(6),.stock-erp-table td:nth-child(6){display:none}.stock-erp-table .stock-material-title{max-width:180px}}
 @media(max-width:560px){#stock .stats{grid-template-columns:1fr}#stock .category-filter-row{grid-template-columns:1fr!important}.stock-primary-tabs,.stock-secondary-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}}

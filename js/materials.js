@@ -489,22 +489,48 @@ function filteredMaterialsForSmartTable(){
   }
   return rows;
 }
+function stockTableText(key){const dict={ru:{manufacturer:'Производитель',color:'Цвет',rollWidth:'Ширина рулона',reserved:'Зарезервировано',ordered:'Заказано',actions:'Действия',grade:'Марка',density:'Плотность',hardness:'Жёсткость',thickness:'Толщина',sheetSize:'Размер листа',woodSpecies:'Порода',section:'Сечение',length:'Длина',sort:'Сорт',type:'Тип',size:'Размер',decor:'Цвет / декор'},en:{manufacturer:'Manufacturer',color:'Color',rollWidth:'Roll width',reserved:'Reserved',ordered:'Ordered',actions:'Actions',grade:'Grade',density:'Density',hardness:'Hardness',thickness:'Thickness',sheetSize:'Sheet size',woodSpecies:'Species',section:'Section',length:'Length',sort:'Grade',type:'Type',size:'Size',decor:'Color / decor'},lv:{manufacturer:'Ražotājs',color:'Krāsa',rollWidth:'Ruļļa platums',reserved:'Rezervēts',ordered:'Pasūtīts',actions:'Darbības',grade:'Marka',density:'Blīvums',hardness:'Cietība',thickness:'Biezums',sheetSize:'Loksnes izmērs',woodSpecies:'Suga',section:'Šķērsgriezums',length:'Garums',sort:'Šķira',type:'Tips',size:'Izmērs',decor:'Krāsa / dekors'}};return (dict[currentLang]||dict.ru)[key]||key}
+function stockSelectedTableCategory(rows){
+  const filterCat=document.getElementById('categoryFilter')?.value||'';
+  if(filterCat)return filterCat;
+  if(activeStockGroup==='fabrics')return fabricStockTypeFilter||'Ткань';
+  const cats=[...new Set((rows||[]).map(m=>m.category).filter(Boolean))];
+  return cats.length===1?cats[0]:'';
+}
+function isSheetMaterialCategory(cat){return ['Фанера','МДФ','ДСП','ДВП','OSB','Листовые материалы'].includes(cat)}
 function tableColumnsByCategory(cat){
-  return [t('sku'),t('material'),t('category'),t('unit'),t('stockParams'),t('inStock'),t('minQuantity'),t('needToOrder'),t('condition')];
+  const qty=[stockTableText('reserved'),stockTableText('ordered'),t('needToOrder'),t('condition')];
+  if(typeof isFabricCategory==='function'&&isFabricCategory(cat))return [t('sku'),t('material'),stockTableText('manufacturer'),stockTableText('color'),stockTableText('rollWidth'),t('inStock'),...qty];
+  if(cat==='Поролон')return [t('sku'),t('material'),stockTableText('grade'),stockTableText('density'),stockTableText('hardness'),stockTableText('thickness'),stockTableText('sheetSize'),t('inStock'),...qty];
+  if(cat==='Древесина')return [t('sku'),t('material'),stockTableText('woodSpecies'),stockTableText('section'),stockTableText('length'),stockTableText('sort'),t('inStock'),...qty];
+  if(isSheetMaterialCategory(cat))return [t('sku'),t('material'),stockTableText('type'),stockTableText('thickness'),stockTableText('sheetSize'),stockTableText('decor'),t('inStock'),...qty];
+  if(['Фурнитура','Крепёж'].includes(cat))return [t('sku'),t('material'),stockTableText('type'),stockTableText('size'),stockTableText('manufacturer'),t('inStock'),...qty];
+  if(cat==='Наполнители')return [t('sku'),t('material'),stockTableText('type'),stockTableText('density'),t('inStock'),...qty];
+  return [t('sku'),t('material'),t('category'),t('inStock'),stockTableText('reserved'),stockTableText('ordered'),t('needToOrder'),t('condition'),stockTableText('actions')];
 }
 function materialColorStyle(color){
   const c=String(color||'').toLowerCase();
   const map={графит:'#374151',серый:'#9ca3af',бежевый:'#d6c7b5',черный:'#111827',чёрный:'#111827',белый:'#f8fafc',коричневый:'#8b5e34',синий:'#3b82f6',зеленый:'#22c55e',зелёный:'#22c55e',красный:'#ef4444'};
   return map[c]||'#d1d5db';
 }
+function materialMaker(m){const a=m.attributes||{};return a.manufacturer||a.supplier||a.brand||a.producer||'—'}
+function stockAttr(m,...keys){const a=m.attributes||{};for(const k of keys){if(a[k]!==undefined&&a[k]!==null&&a[k]!=='')return a[k]}return ''}
+function stockDim(...values){return values.filter(v=>v!==undefined&&v!==null&&v!=='').join(' × ')||'—'}
+function stockMaterialNameCell(m,withMaker=true){const maker=materialMaker(m);return `<b class="stock-material-title">${escapeHtml(materialDisplayName(m))}</b>${withMaker&&maker!=='—'?`<small>${escapeHtml(maker)}</small>`:''}`}
+function stockQtyCell(value,unit,extra=''){return `<td class="stock-num ${extra}">${escapeHtml(qtyWithUnit(value,unit))}</td>`}
 function smartRowByCategory(m,cat){
   const a=m.attributes||{};const st=materialStateOf(m);const need=stockNeededToOrderQty(m);const av=availableQty(m);const ordered=orderedQty(m);
   const statusLabel=st[0]==='ok'?t('stockStatusNormal'):st[0]==='low'?t('stockStatusLow'):st[0]==='needorder'?t('stockStatusNeedOrder'):(['noorder','out'].includes(st[0])?t('stockStatusOut'):st[1]);
   const state=`<span class="stock-status-badge ${st[0]}">${statusLabel}</span>`;
-  const params=(typeof isFabricCategory==='function'&&isFabricCategory(m.category))
-    ? (m.category==='Кожа'?`${a.materialType||m.category}${a.color?` · ${a.color}`:''}`:`${a.materialType||m.category}${a.rollWidth?` · ${Number(a.rollWidth).toFixed(2)} м`:''}${a.rollLength?` × ${Number(a.rollLength).toFixed(2)} м`:''}${a.color?` · ${a.color}`:''}`)
-    : (materialCompactText(m)||'—');
-  return `<tr onclick="openMaterialDetails('${m.id}')"><td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td><td><b>${escapeHtml(materialDisplayName(m))}</b>${a.collection?`<small>${escapeHtml(a.collection)}</small>`:''}</td><td>${escapeHtml(categoryLabel(m.category))}</td><td>${escapeHtml(unitLabel(m.unit||'')||'—')}</td><td>${escapeHtml(params)}</td><td class="${av<=0?'stock-danger':''}">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit))}</td><td>${escapeHtml(qtyWithUnit(m.minQuantity||0,m.unit))}</td><td class="${need>0?'stock-danger':''}">${escapeHtml(qtyWithUnit(need,m.unit))}</td><td>${state}</td></tr>`;
+  const qtyCells=`${stockQtyCell(stockNumForUnit(m.quantity,m.unit),m.unit,av<=0?'stock-danger stock-main-qty':'stock-main-qty')}${stockQtyCell(reservedQty(m),m.unit)}${stockQtyCell(ordered,m.unit)}${stockQtyCell(need,m.unit,need>0?'stock-danger':'')}<td>${state}</td>`;
+  const sku=`<td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td>`;
+  if(typeof isFabricCategory==='function'&&isFabricCategory(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m,false)}</td><td>${escapeHtml(materialMaker(m))}</td><td>${a.color?`<span class="color-chip only" title="${escapeHtml(a.color)}" style="background:${materialColorStyle(a.color)}"></span> ${escapeHtml(a.color)}`:'—'}</td><td>${escapeHtml(a.rollWidthMm?`${a.rollWidthMm} мм`:a.rollWidth?`${Number(a.rollWidth).toFixed(2)} м`:'—')}</td>${qtyCells}</tr>`;
+  if(cat==='Поролон')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m,false)}</td><td>${escapeHtml(stockAttr(m,'grade','mark')||'—')}</td><td>${escapeHtml(stockAttr(m,'density')||'—')}</td><td>${escapeHtml(stockAttr(m,'hardness')||'—')}</td><td>${escapeHtml(stockAttr(m,'thickness')?`${stockAttr(m,'thickness')} мм`:'—')}</td><td>${escapeHtml(stockDim(stockAttr(m,'width'),stockAttr(m,'length')))}</td>${qtyCells}</tr>`;
+  if(cat==='Древесина')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(stockAttr(m,'woodType','species')||'—')}</td><td>${escapeHtml(stockAttr(m,'crossSection','section')||'—')}</td><td>${escapeHtml(stockAttr(m,'length')?`${stockAttr(m,'length')} м`:'—')}</td><td>${escapeHtml(stockAttr(m,'grade','sort')||'—')}</td>${qtyCells}</tr>`;
+  if(isSheetMaterialCategory(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(m.subcategory||stockAttr(m,'type')||categoryLabel(m.category))}</td><td>${escapeHtml(stockAttr(m,'thickness')?`${stockAttr(m,'thickness')} мм`:'—')}</td><td>${escapeHtml(stockDim(stockAttr(m,'width'),stockAttr(m,'length')))}</td><td>${escapeHtml(stockAttr(m,'color','decor')||'—')}</td>${qtyCells}</tr>`;
+  if(['Фурнитура','Крепёж'].includes(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(stockAttr(m,'type')||m.subcategory||'—')}</td><td>${escapeHtml(stockAttr(m,'size','diameter','length')||'—')}</td><td>${escapeHtml(materialMaker(m))}</td>${qtyCells}</tr>`;
+  if(cat==='Наполнители')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(stockAttr(m,'type')||m.subcategory||'—')}</td><td>${escapeHtml(stockAttr(m,'density')||'—')}</td>${qtyCells}</tr>`;
+  return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(categoryLabel(m.category))}</td>${qtyCells}<td><button class="iconbtn" type="button" onclick="event.stopPropagation();openMaterialDetails('${m.id}')" aria-label="${escapeHtml(t('open'))}">›</button></td></tr>`;
 }
 function renderStock(){
   const cf=document.getElementById('categoryFilter');
@@ -516,11 +542,12 @@ function renderStock(){
   stockPage=Math.min(Math.max(1,stockPage),totalPages);
   const startIndex=(stockPage-1)*stockPageSize;
   const pageRows=rows.slice(startIndex,startIndex+stockPageSize);
-  const cols=tableColumnsByCategory(cat);
+  const tableCat=stockSelectedTableCategory(rows);
+  const cols=tableColumnsByCategory(tableCat);
   const pages=Array.from({length:totalPages},(_,i)=>i+1).filter(p=>p===1||p===totalPages||Math.abs(p-stockPage)<=1);
   let last=0;
   const pageButtons=pages.map(p=>{const gap=p-last>1?`<span class="muted">…</span>`:'';last=p;return gap+`<button class="pagebtn ${p===stockPage?'active':''}" onclick="setStockPage(${p})">${p}</button>`}).join('');
-  box.innerHTML=`<div class="stock-workspace"><div class="stock-dashboard-row">${renderAttentionBlock()}${renderStockChartBlock()}</div><div class="stock-list-card"><div class="stock-list-top">${stockFiltersForCategory(cat)}${stockCategoryTabs()}</div><div class="smart-table-wrap stock-list-table"><table class="smart-stock-table"><thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${pageRows.length?pageRows.map(m=>smartRowByCategory(m,cat)).join(''):`<tr><td colspan="${cols.length}"><div class="empty"><b>${t('noMaterialsTitle')}</b>${t('addOrChangeFilters')}</div></td></tr>`}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${rows.length?startIndex+1:0}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button></div></div></div></div>`;
+  box.innerHTML=`<div class="stock-workspace"><div class="stock-dashboard-row">${renderAttentionBlock()}${renderStockChartBlock()}</div><div class="stock-list-card"><div class="stock-list-top">${stockFiltersForCategory(cat)}${stockCategoryTabs()}</div><div class="smart-table-wrap stock-list-table"><table class="smart-stock-table stock-erp-table"><thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${pageRows.length?pageRows.map(m=>smartRowByCategory(m,tableCat)).join(''):`<tr><td colspan="${cols.length}"><div class="empty"><b>${t('noMaterialsTitle')}</b>${t('addOrChangeFilters')}</div></td></tr>`}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${rows.length?startIndex+1:0}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button></div></div></div></div>`;
 }
 function setStockPage(page){stockPage=page;renderStock()}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPage=1;renderStock()}
