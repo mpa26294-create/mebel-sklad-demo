@@ -2467,6 +2467,122 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .technology-material-status.blue{background:#eff6ff;color:#175cd3}.technology-material-status>span{font-weight:700}.technology-order-controls{display:flex;align-items:center;gap:8px;margin-left:auto}.technology-order-controls label{font-size:9px;white-space:nowrap}.technology-order-controls .input{width:110px;height:30px!important;min-height:30px!important;background:#fff}.technology-order-controls .btn{min-height:30px;background:#fff}.ordered-text{color:#175cd3;font-weight:700}@media(max-width:700px){.technology-material-status{align-items:flex-start;flex-direction:column;gap:8px}.technology-order-controls{width:100%;margin-left:0;flex-wrap:wrap}.technology-order-controls .input{flex:1;min-width:90px}}
 .production-material-status.ordered{background:#eff6ff;color:#175cd3}
 
+/* Compact professional orders list */
+#orders .orders-toolbar{
+  display:grid!important;
+  grid-template-columns:minmax(260px,1.25fr) minmax(150px,.72fr) minmax(150px,.72fr) minmax(132px,.58fr) minmax(150px,.72fr) auto!important;
+  gap:8px!important;
+  align-items:center!important;
+}
+#orders .orders-toolbar .searchbox,
+#orders .orders-toolbar .input,
+#orders .orders-toolbar .select,
+#orders .orders-toolbar .btn{
+  height:38px!important;
+  min-height:38px!important;
+  border-radius:10px!important;
+}
+#orders .orders-toolbar .searchbox{min-width:0}
+#orders .orders-toolbar .searchbox .input{height:100%!important}
+#orders .orders-toolbar .btn{padding:0 14px;white-space:nowrap}
+#orders .order-card-list{gap:9px;margin-top:12px}
+#orders .order-erp-card{border-radius:12px;box-shadow:none}
+#orders .order-card-summary{
+  grid-template-columns:34px minmax(130px,.95fr) minmax(86px,.48fr) minmax(118px,.62fr) minmax(116px,.62fr) minmax(220px,1.15fr) auto;
+  gap:12px;
+  padding:12px 14px;
+}
+#orders .order-expand-btn{width:30px;height:30px;border-radius:8px;box-shadow:none}
+#orders .order-card-number b{
+  display:block;
+  color:#101828;
+  font-size:15px;
+  font-weight:760;
+  line-height:1.2;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#orders .order-card-number small{
+  display:block;
+  margin-top:4px;
+  color:#667085;
+  font-size:11px;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#orders .order-card-qty{
+  display:block;
+  min-width:0;
+  margin:0;
+  padding:0;
+  border-radius:0;
+  background:transparent;
+  color:#1d2939;
+  font-size:12px;
+  font-weight:650;
+}
+#orders .order-card-qty b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#orders .order-card-kv>small{
+  margin-bottom:5px;
+  color:#8490a3;
+  font-size:10px;
+  letter-spacing:0;
+  text-transform:none;
+}
+#orders .order-card-kv>b{font-size:12px;font-weight:700;line-height:1.25}
+#orders .order-card-kv>span{margin-top:3px;color:#667085;font-size:11px}
+#orders .order-card-time span{color:#b54708;font-weight:650}
+#orders .order-card-state{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:5px}
+#orders .order-card-state .status{max-width:100%;min-height:24px;padding:0 8px;border-radius:8px;font-size:11px}
+#orders .order-card-responsible{display:block;color:#667085;font-size:10px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#orders .order-card-mini-progress{width:100%;margin-top:2px;display:grid;grid-template-columns:minmax(72px,.9fr) minmax(70px,1fr);gap:4px 8px;align-items:center}
+#orders .order-card-mini-progress>div{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#667085;font-size:10px;line-height:1.1}
+#orders .order-card-mini-progress>div b{color:#344054;font-size:10px}
+#orders .order-card-mini-progress>i{height:3px;margin:0;background:#edf0f5}
+#orders .order-card-mini-progress>i b{background:#64748b}
+#orders .order-card-mini-progress>i:nth-of-type(2) b{background:#1677e8}
+#orders .order-card-actions{gap:6px}
+#orders .order-row-action-buttons{display:flex;align-items:center;gap:6px}
+#orders .order-row-action-buttons .production-btn{display:none!important}
+#orders .order-card-actions .btn{min-height:34px;padding:0 12px;border-radius:9px}
+#orders .action-menu-btn{width:34px;height:34px;border-radius:9px;box-shadow:none}
+#orders .action-menu-list{min-width:190px;border-radius:10px;box-shadow:0 14px 34px rgba(16,24,40,.12)}
+#orders .action-menu-list button{height:34px;font-size:12px}
+#orders .order-card-expanded{padding:13px 14px;background:#fafbfc}
+#orders .order-detail-progress{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+#orders .order-detail-progress>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid #e6eaf0;border-radius:10px;background:#fff}
+#orders .order-detail-progress span{color:#667085;font-size:11px}
+#orders .order-detail-progress b{color:#101828;font-size:12px}
+#orders .order-detail-progress i{grid-column:1/-1;height:4px;border-radius:999px;background:#edf0f5;overflow:hidden}
+#orders .order-detail-progress em{display:block;height:100%;border-radius:inherit;background:#64748b}
+#orders .order-detail-progress>div:nth-child(2) em{background:#1677e8}
+@media(max-width:1180px){
+  #orders .orders-toolbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)!important}
+  #orders .orders-toolbar .searchbox{grid-column:1/-1}
+  #orders .order-card-summary{grid-template-columns:34px minmax(120px,.9fr) minmax(82px,.48fr) minmax(108px,.62fr) minmax(210px,1fr) auto}
+  #orders .order-card-time{display:none}
+}
+@media(max-width:760px){
+  #orders .orders-toolbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+  #orders .orders-toolbar .searchbox{grid-column:1/-1!important}
+  #orders .order-card-summary{grid-template-columns:32px minmax(0,1fr) auto;gap:10px;padding:12px}
+  #orders .order-card-number{grid-column:2}
+  #orders .order-card-actions{grid-column:3;grid-row:1;align-self:center}
+  #orders .order-card-actions .open-btn{display:none}
+  #orders .order-card-qty,#orders .order-card-deadline,#orders .order-card-time,#orders .order-card-state{grid-column:1/-1;padding-top:8px;border-top:1px solid #edf0f4}
+  #orders .order-card-time{display:block}
+  #orders .order-card-mini-progress{grid-template-columns:minmax(0,1fr) minmax(86px,1fr)}
+  #orders .order-card-expanded{padding:10px}
+  #orders .order-detail-progress{grid-template-columns:1fr}
+}
+@media(max-width:420px){
+  #orders .orders-toolbar{grid-template-columns:1fr!important}
+  #orders .orders-toolbar .searchbox{grid-column:1!important}
+}
+
 /* v6.0: premium SaaS stock redesign */
 body{background:#f7f8fb!important}
 #stock .topbar{align-items:flex-start;margin-bottom:24px}
@@ -2479,6 +2595,18 @@ body{background:#f7f8fb!important}
 #stock .order-stat-card{min-height:110px!important;border-radius:18px!important;border-color:#e7eaf0!important;box-shadow:0 14px 34px rgba(16,24,40,.055)!important;transition:transform .18s ease,box-shadow .18s ease}
 #stock .order-stat-card:hover{transform:translateY(-1px);box-shadow:0 18px 42px rgba(16,24,40,.075)!important}
 #stock .quick-add{border-color:#e8ebf0;border-radius:18px;background:#fff;box-shadow:0 12px 32px rgba(16,24,40,.045)}
+#stock .quick-add{grid-template-columns:minmax(280px,1fr) 190px auto!important;gap:16px!important;align-items:end!important}
+#stock .quick-stock-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;justify-self:end;min-width:300px}
+#stock .quick-stock-actions .btn{height:44px;min-height:44px;border-radius:14px;font-size:14px;font-weight:650;padding:0 22px;white-space:nowrap}
+#stock .quick-stock-actions .btn.danger-fill{background:#fff!important;color:#b42323!important;border-color:#f2c9c9!important;box-shadow:0 8px 18px rgba(180,35,35,.06)!important}
+#stock .quick-stock-actions .btn.danger-fill:hover{background:#fff7f7!important;border-color:#efb7b7!important}
+@media(max-width:920px){
+  #stock .quick-stock-actions{width:100%;min-width:0;grid-template-columns:1fr 1fr;justify-self:stretch}
+  #stock .quick-stock-actions .btn{width:100%;padding:0 12px;font-size:16px}
+}
+@media(max-width:520px){
+  #stock .quick-stock-actions{grid-template-columns:1fr}
+}
 #stock .stock-dashboard-row{gap:16px}
 #stock .attention-card,#stock .stock-chart-card,#stock .stock-list-card{border-color:#e7eaf0!important;border-radius:18px!important;box-shadow:0 14px 34px rgba(16,24,40,.055)!important}
 #stock .stock-list-top{padding:18px 18px 0}

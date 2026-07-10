@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>FurniCore</title>
-  <link rel="stylesheet" href="css/style.css?v=6.0" />
+  <link rel="stylesheet" href="css/style.css?v=6.1" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -30,19 +30,16 @@
       <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><div class="search-top"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="topSearchInput" placeholder="Поиск по названию, артикулу, атрибутам..."/></div><button class="btn primary" onclick="openAddCategoryModal()">＋ Добавить материал</button></div></div>
       <div class="stats" id="stats"></div>
       <div class="quick-add" id="quickAddBox">
-        <div class="field"><label>Быстрое поступление</label><input class="input" id="quickSku" placeholder="Артикул, например A-0001" autocomplete="off"></div>
-        <div class="field"><label>Найденный материал</label><div class="quick-info" id="quickInfo">Введите артикул — единица измерения определится автоматически</div></div>
-        <div class="field"><label>Добавить</label><input class="input" id="quickQty" type="number" step="0.01" placeholder="Число"></div>
-        <button class="btn primary" onclick="quickAddStock()">Добавить</button>
-      </div>
-      <div class="quick-add" id="quickWriteOffBox">
-        <div class="field"><label>Быстрое списание</label><input class="input" id="writeOffSku" placeholder="Артикул, например P-0001" autocomplete="off"></div>
-        <div class="field"><label>Найденный материал</label><div class="quick-info" id="writeOffInfo">Введите артикул — единица измерения определится автоматически</div></div>
-        <div class="field"><label>Списать</label><input class="input" id="writeOffQty" type="number" step="0.01" placeholder="Число"></div>
-        <button class="btn danger-fill" onclick="quickWriteOffStock()">Списать</button>
+        <div class="field"><label>Артикул материала</label><input class="input" id="quickSku" placeholder="Артикул, например A-0001" autocomplete="off"></div>
+        <div class="field"><label>Количество</label><input class="input" id="quickQty" type="number" step="0.01" placeholder="Число"></div>
+        <div class="quick-stock-actions">
+          <button class="btn danger-fill" id="quickWriteOffModeBtn" type="button" onclick="quickRunOperation('writeOff')">Списать</button>
+          <button class="btn primary" id="quickAddModeBtn" type="button" onclick="quickRunOperation('add')">Добавить</button>
+        </div>
+        <div class="field full"><label>Найденный материал</label><div class="quick-info" id="quickInfo">Введите артикул — единица измерения определится автоматически</div></div>
       </div>
       <div class="panel">
-        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="searchInput" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><select class="select" id="subcategoryFilter"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
+        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="searchInput" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
         <div class="pro-filter-panel" id="proFilterPanel">
           <div class="quick-filter-row" id="quickFilterRow">
             <button class="filter-chip active" type="button" data-filter="all" onclick="setQuickFilter('all')">Все</button>
@@ -116,12 +113,12 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/ui.js?v=6.0"></script>
-<script src="js/app.js?v=6.0"></script>
+<script src="js/ui.js?v=6.1"></script>
+<script src="js/app.js?v=6.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/utils.js?v=6.0"></script>
-<script src="js/translations.js?v=6.0"></script>
-<script src="js/storage.js?v=6.0"></script>
+<script src="js/utils.js?v=6.1"></script>
+<script src="js/translations.js?v=6.1"></script>
+<script src="js/storage.js?v=6.1"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
 const SUPABASE_KEY = "sb_publishable_79Dh3acmslYiBSUyZ9LQBQ_5GGmBS0G";
@@ -131,9 +128,9 @@ let materialsSubscription = null;
 
 const APP_VERSION = 'v6.0 - SaaS Stock Redesign';
 </script>
-<script src="js/auth.js?v=6.0"></script>
-<script src="js/materials.js?v=6.0"></script>
-<script src="js/orders.js?v=6.0"></script>
+<script src="js/auth.js?v=6.1"></script>
+<script src="js/materials.js?v=6.2"></script>
+<script src="js/orders.js?v=6.1"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -144,14 +141,15 @@ async function startAppAfterLogin(){
 }
 
 function dbToMaterial(row){
+  const category=row.category||'';
   return {
     id: row.id,
     sku: row.article || '',
-    category: row.category || '',
+    category,
     subcategory: row.subcategory || '',
     name: row.name || '',
     attributes: row.attributes || {},
-    unit: row.unit || '',
+    unit: category==='Древесина'?'м³':(row.unit || ''),
     quantity: Number(row.quantity || 0),
     minQuantity: Number(row.min_quantity || 0),
     lastUpdated: row.created_at ? String(row.created_at).slice(0,10) : today()
@@ -246,9 +244,11 @@ function subscribeMaterials(){
 }
 
 const CATEGORIES = {
-  'Ткань': {icon:'◌', cls:'fabric', unit:'рулон', subs:['Ткань','Экокожа','Натуральная кожа','Велюр','Рогожка','Шенилл','Флок','Другие'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
+  'Ткань': {icon:'◌', cls:'fabric', unit:'рулон', subs:['Ткань'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
+  'Экокожа': {icon:'◒', cls:'fabric', unit:'рулон', subs:['Экокожа'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
+  'Кожа': {icon:'◓', cls:'fabric', unit:'м²', subs:['Кожа'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет']]},
   'Поролон': {icon:'◫', cls:'foam', unit:'м²', subs:[], fields:[['grade','Марка / плотность'],['thickness','Толщина, мм','number']]},
-  'Древесина': {icon:'▤', cls:'wood', unit:'шт', subs:['Брус','Доска','Брусок','Рейка'], fieldsBySub:{'Брус':[['crossSection','Сечение'],['length','Длина, м','number'],['count','Количество','number']],'Доска':[['thickness','Толщина, мм','number'],['width','Ширина, мм','number'],['length','Длина, м','number'],['count','Количество','number']],'Брусок':[['crossSection','Сечение'],['length','Длина, м','number'],['count','Количество','number']],'Рейка':[['crossSection','Сечение'],['length','Длина, м','number'],['count','Количество','number']]}},
+  'Древесина': {icon:'▤', cls:'wood', unit:'м³', subs:['Доска','Брус','Рейка','Мебельный щит'], fieldsBySub:{}},
   'Фанера': {icon:'▦', cls:'sheet', unit:'шт', subs:['Фанера'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество листов','number']]},
   'МДФ': {icon:'▦', cls:'sheet', unit:'шт', subs:['МДФ'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
   'ДСП': {icon:'◫', cls:'sheet', unit:'шт', subs:['ДСП'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
@@ -260,6 +260,8 @@ const CATEGORIES = {
 };
 const SKU_PREFIX = {
   'Ткань':'A',          // Audums
+  'Экокожа':'E',
+  'Кожа':'L',
   'Поролон':'P',       // Porolons
   'Древесина':'K',     // Koks
   'Фанера':'F',        // Finieris
@@ -323,9 +325,11 @@ const stockPageSize=15;
 const STOCK_REFS_DEFAULT={
   groups:[
     {id:'all',label:'Все',categories:[]},
-    {id:'fabrics',label:'Ткани',categories:['Ткань'],subs:['Ткань','Экокожа','Натуральная кожа','Велюр','Рогожка','Шенилл','Флок','Другие']},
+    {id:'fabric',label:'Ткань',categories:['Ткань'],subs:[]},
+    {id:'eco_leather',label:'Экокожа',categories:['Экокожа'],subs:[]},
+    {id:'leather',label:'Кожа',categories:['Кожа'],subs:[]},
     {id:'foam',label:'Поролон',categories:['Поролон'],subs:['Все']},
-    {id:'wood',label:'Древесина',categories:['Древесина'],subs:['Брус','Доска','Брусок','Рейка']},
+    {id:'wood',label:'Древесина',categories:['Древесина'],subs:['Доска','Брус','Рейка','Мебельный щит']},
     {id:'sheets',label:'Листовые материалы',categories:['Фанера','МДФ','ДСП','ДВП','OSB'],subs:['Фанера','МДФ','ДСП','ДВП','OSB']},
     {id:'hardware',label:'Фурнитура',categories:['Фурнитура'],subs:['Петли','Направляющие','Ножки','Опоры','Ручки','Газлифты','Колёсики']},
     {id:'fasteners',label:'Крепёж',categories:['Крепёж'],subs:['Болты','Гайки','Шурупы / саморезы','Скобы']},
@@ -340,6 +344,20 @@ function ensureStockRefs(){
   if(!data.settings.stockRefs)data.settings.stockRefs=JSON.parse(JSON.stringify(STOCK_REFS_DEFAULT));
   const refs=data.settings.stockRefs;
   refs.groups=Array.isArray(refs.groups)?refs.groups:JSON.parse(JSON.stringify(STOCK_REFS_DEFAULT.groups));
+  refs.groups=refs.groups.filter(g=>g.id!=='fabrics');
+  const wantedGroups=[
+    {id:'fabric',label:'Ткань',categories:['Ткань'],subs:[]},
+    {id:'eco_leather',label:'Экокожа',categories:['Экокожа'],subs:[]},
+    {id:'leather',label:'Кожа',categories:['Кожа'],subs:[]}
+  ];
+  const insertAt=Math.max(1,refs.groups.findIndex(g=>g.id==='foam'));
+  wantedGroups.reverse().forEach(group=>{
+    const existing=refs.groups.find(g=>g.id===group.id);
+    if(existing){Object.assign(existing,group);return;}
+    refs.groups.splice(insertAt,0,group);
+  });
+  const woodGroup=refs.groups.find(g=>g.id==='wood');
+  if(woodGroup)woodGroup.subs=['Доска','Брус','Рейка','Мебельный щит'];
   refs.customCategories=Array.isArray(refs.customCategories)?refs.customCategories:[];
   ['manufacturers','collections','suppliers'].forEach(k=>{if(!Array.isArray(refs[k]))refs[k]=[...(STOCK_REFS_DEFAULT[k]||[])]});
   STOCK_REFS_DEFAULT.groups.forEach(def=>{if(!refs.groups.some(g=>g.id===def.id))refs.groups.push({...def,subs:[...(def.subs||[])],categories:[...(def.categories||[])]})});
@@ -347,17 +365,18 @@ function ensureStockRefs(){
   return refs;
 }
 function stockRefs(){return ensureStockRefs()}
+function isFabricCategory(cat){return ['Ткань','Экокожа','Кожа'].includes(cat)}
 function stockGroupById(id){return stockRefs().groups.find(g=>g.id===id)||stockRefs().groups[0]}
 function materialGroupId(m){return (stockRefs().groups.find(g=>g.id!=='all'&&(g.categories||[]).includes(m.category))||{}).id||'all'}
 function stockSubValue(m){
   const a=m.attributes||{};
-  if(m.category==='Ткань')return m.subcategory||a.materialType||'Ткань';
+  if(isFabricCategory(m.category))return m.category;
   if(['Фанера','МДФ','ДСП','ДВП','OSB'].includes(m.category))return m.category;
   return m.subcategory||m.category||'Другие';
 }
 function demoData(){
   const materials=[
-    {id:uid(),sku:'A-0001',category:'Ткань',subcategory:'Ткань',name:'Велюр Bellagio 12',attributes:{materialType:'Ткань',manufacturer:'Bellagio Textile',collection:'Bellagio',color:'Графит',rollWidth:1.4,rollWidthMm:1400},unit:'м.п.',quantity:25,minQuantity:5,lastUpdated:today()},
+    {id:uid(),sku:'A-0001',category:'Ткань',subcategory:'Ткань',name:'Bella 23889',attributes:{materialType:'Ткань',manufacturer:'Bellagio Textile',collection:'Bellagio',color:'Графит',rollWidth:1.4,rollWidthMm:1400},unit:'м.п.',quantity:25,minQuantity:5,lastUpdated:today()},
     {id:uid(),sku:'P-0001',category:'Поролон',subcategory:'',name:'Поролон ST-3340 40 мм',attributes:{grade:'ST-3340',thickness:40},unit:'м²',quantity:18,minQuantity:25,lastUpdated:today()},
     {id:uid(),sku:'F-0001',category:'Фанера',subcategory:'',name:'Фанера ФК 18 мм',attributes:{thickness:18,grade:'ФК сорт 2/3',limited:false},unit:'м²',quantity:42,minQuantity:10,lastUpdated:today()},
     {id:uid(),sku:'K-0001',category:'Древесина',subcategory:'Брус',name:'Брус сосна 50×50',attributes:{crossSection:'50×50 мм',woodType:'Сосна',length:3},unit:'м³',quantity:0.8,minQuantity:0.4,lastUpdated:today()},
@@ -657,6 +676,44 @@ function syncDetailQtyUnit(){
   if(label)label.textContent=`Изменить остаток, ${unitLabel(unit)}`;
 }
 
+let quickOperationMode='add';
+function syncQuickOperationUI(){
+  const addBtn=document.getElementById('quickAddModeBtn');
+  const writeBtn=document.getElementById('quickWriteOffModeBtn');
+  if(addBtn)addBtn.className='btn primary';
+  if(writeBtn)writeBtn.className='btn danger-fill';
+  if(addBtn)addBtn.textContent=t('add');
+  if(writeBtn)writeBtn.textContent=t('writeOff');
+}
+function setQuickOperationMode(mode){quickOperationMode=mode==='writeOff'?'writeOff':'add';syncQuickOperationUI();}
+function quickRunOperation(mode){setQuickOperationMode(mode);return quickSubmitStock();}
+function updateQuickAddInfo(){
+  const box=document.getElementById('quickAddBox');
+  const info=document.getElementById('quickInfo');
+  const unitBox=document.getElementById('quickQtyUnit');
+  const qty=document.getElementById('quickQty');
+  const sku=document.getElementById('quickSku')?.value||'';
+  if(!box||!info)return;
+  box.classList.remove('found','missing');
+  if(unitBox)unitBox.textContent='—';
+  if(!sku.trim()){info.textContent=t('enterSku');return}
+  const mat=findMaterialBySku(sku);
+  if(mat){
+    const unit=mat.unit||'шт';
+    box.classList.add('found');
+    if(unitBox)unitBox.textContent=unitLabel(unit);
+    if(qty)qty.step=stockStep(unit);
+    info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">${t('quantity')}: ${mat.quantity} ${unitLabel(unit)}</span></span><span class="unit-pill">${unitLabel(unit)}</span>`;
+    return;
+  }
+  const unit=quickUnitBySku(sku);
+  box.classList.add('missing');
+  if(unitBox&&unit)unitBox.textContent=unitLabel(unit);
+  info.innerHTML=unit?`${t('notFoundSku')}. ${t('unit')}: <b>${unitLabel(unit)}</b>`:t('materialNotFound');
+}
+function updateWriteOffInfo(){updateQuickAddInfo();}
+function quickSubmitStock(){return quickOperationMode==='writeOff'?quickWriteOffStock():quickAddStock();}
+
 async function quickAddStock(){
   if(!requireAuth())return;
   const sku=normalizeSku(document.getElementById('quickSku')?.value);
@@ -676,10 +733,10 @@ async function quickAddStock(){
   renderAll();
   document.getElementById('quickQty').value='';
   document.getElementById('quickSku').select();
+  updateQuickAddInfo();
   toast(`${t('added')} ${formatQty(addQty,mat.unit)} ${unitLabel(mat.unit)}: ${materialTitle(mat)}`);
 }
-function updateWriteOffInfo(){const box=document.getElementById('quickWriteOffBox');const info=document.getElementById('writeOffInfo');if(!box||!info)return;const sku=writeOffSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent=t('enterSku');return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">${t('quantity')}: ${mat.quantity} ${unitLabel(mat.unit)}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`${t('notFoundSku')}. ${t('unit')}: <b>${unitLabel(unit)}</b>`:t('materialNotFound');}
-async function quickWriteOffStock(){if(!requireAuth())return;const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=Number(document.getElementById('writeOffQty')?.value);if(!sku){toast(t('enterSkuMsg'));return}const mat=findMaterialBySku(sku);if(!mat){toast(t('notFoundSku'));updateWriteOffInfo();return}const writeQty=normalizeQtyForUnit(qty,mat.unit||'шт');if(writeQty===null){toast((mat.unit||'шт')==='шт'?t('enterIntPositive'):t('enterPositive'));return}const oldQty=stockNumForUnit(mat.quantity,mat.unit);if(oldQty<writeQty){if(!confirm(`На складе только ${formatQty(oldQty,mat.unit)} ${unitLabel(mat.unit)}. Списать всё и поставить 0?`))return;mat.quantity=0}else{mat.quantity=stockNumForUnit(oldQty-writeQty,mat.unit)}mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('writeOffQty').value='';document.getElementById('writeOffSku').select();toast(`${t('writtenOff')} ${formatQty(writeQty,mat.unit)} ${unitLabel(mat.unit)}: ${materialTitle(mat)}`)}
+async function quickWriteOffStock(){if(!requireAuth())return;const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=Number(document.getElementById('quickQty')?.value);if(!sku){toast(t('enterSkuMsg'));return}const mat=findMaterialBySku(sku);if(!mat){toast(t('notFoundSku'));updateWriteOffInfo();return}const writeQty=normalizeQtyForUnit(qty,mat.unit||'шт');if(writeQty===null){toast((mat.unit||'шт')==='шт'?t('enterIntPositive'):t('enterPositive'));return}const oldQty=stockNumForUnit(mat.quantity,mat.unit);if(oldQty<writeQty){if(!confirm(`На складе только ${formatQty(oldQty,mat.unit)} ${unitLabel(mat.unit)}. Списать всё и поставить 0?`))return;mat.quantity=0}else{mat.quantity=stockNumForUnit(oldQty-writeQty,mat.unit)}mat.lastUpdated=today();const ok=await updateMaterialInSupabase(mat);if(!ok){mat.quantity=oldQty;return}await loadMaterialsFromSupabase();document.getElementById('quickQty').value='';document.getElementById('quickSku').select();updateQuickAddInfo();toast(`${t('writtenOff')} ${formatQty(writeQty,mat.unit)} ${unitLabel(mat.unit)}: ${materialTitle(mat)}`)}
 
 function openAttentionModal(){
   const rows=attentionMaterials();
@@ -811,7 +868,7 @@ async function finishMaterialSaveAndReturn(newSku='', category=''){
   toast(t('savedMaterial'));
 }
 
-const ADD_CATEGORIES = ['Ткань','Поролон','Древесина','Фанера','МДФ','ДСП','ДВП','OSB','Фурнитура','Крепёж','Наполнители'];
+const ADD_CATEGORIES = ['Ткань','Экокожа','Кожа','Поролон','Древесина','Фанера','МДФ','ДСП','ДВП','OSB','Фурнитура','Крепёж','Наполнители'];
 function openAddCategoryModal(fromOrder=false){
   if(!requireAuth())return;
   if(fromOrder)pushModalState();
@@ -822,7 +879,8 @@ function openAddCategoryModal(fromOrder=false){
 }
 function selectMaterialCategory(cat){
   pushModalState();
-  if(cat==='Ткань'){openFabricModal();return;}
+  if(isFabricCategory(cat)){openFabricModal(null,cat);return;}
+  if(cat==='Древесина'){openWoodModal();return;}
   openMaterialModal(null,cat);
 }
 function safeVal(id){return document.getElementById(id)?.value?.trim() || ''}
@@ -1067,25 +1125,32 @@ function fabricDuplicateBySku(){
   const sku=(document.getElementById('fabricSku')?.value||'').trim();
   if(!sku||typeof normalizeSku!=='function')return null;
   const id=document.querySelector('.material-wizard')?.dataset.materialId||'';
-  return (data.materials||[]).find(m=>String(m.id)!==String(id)&&m.category==='Ткань'&&normalizeSku(m.sku)===normalizeSku(sku))||null;
+  return (data.materials||[]).find(m=>String(m.id)!==String(id)&&isFabricCategory(m.category)&&normalizeSku(m.sku)===normalizeSku(sku))||null;
 }
 function warnFabricDuplicate(){
   const duplicate=fabricDuplicateBySku();
   if(!duplicate)return false;
   const a=duplicate.attributes||{};
   const state=typeof materialStateOf==='function'?materialStateOf(duplicate):null;
+  const isLeather=duplicate.category==='Кожа';
   const lines=[
-    'Такая ткань уже имеется.',
+    `Такой материал уже имеется: ${duplicate.category||'—'}.`,
     '',
     `Артикул: ${duplicate.sku||'—'}`,
     `Название: ${duplicate.name||'—'}`,
-    `Тип: ${duplicate.subcategory||a.materialType||'—'}`,
+    `Категория: ${duplicate.category||'—'}`,
     `Коллекция: ${a.collection||'—'}`,
     `Цвет: ${a.color||'—'}`,
+    ...(isLeather?[`Площадь: ${qtyWithUnit(duplicate.quantity||0,duplicate.unit||'м²')}`]:[
+      `Ширина рулона: ${a.rollWidth?Number(a.rollWidth).toFixed(2)+' м':'—'}`,
+      `Длина рулона: ${a.rollLength?Number(a.rollLength).toFixed(2)+' м':'—'}`,
+      `Площадь 1 рулона: ${a.area?Number(a.area).toFixed(2)+' м²':'—'}`,
+      `Общая площадь: ${a.totalArea?Number(a.totalArea).toFixed(2)+' м²':'—'}`
+    ]),
     `На складе: ${typeof qtyWithUnit==='function'?qtyWithUnit(duplicate.quantity||0,duplicate.unit||''):((duplicate.quantity||0)+' '+(duplicate.unit||''))}`,
     `Состояние: ${state?state[1]:'—'}`,
     '',
-    'Открыть карточку этой ткани?'
+    'Открыть карточку этого материала?'
   ];
   if(confirm(lines.join('\n')))openMaterialDetails(duplicate.id);
   return true;
@@ -1113,14 +1178,14 @@ function materialStateCards(current='card'){
 }
 function materialBaseUnit(cat){
   if(cat==='Ткань')return 'рулон';
+  if(cat==='Кожа')return 'м²';
   if(cat==='Поролон')return 'м²';
   if(['Фанера','МДФ','ДСП','ДВП','OSB'].includes(cat))return 'лист';
   if(cat==='Наполнители')return 'кг';
   return CATEGORIES[cat]?.unit||'шт';
 }
-function materialSubtypeLabel(cat){return cat==='Ткань'?'Подкатегория / тип':'Подкатегория / тип'}
 function materialWizardParamDefs(cat){
-  if(cat==='Ткань')return [
+  if(isFabricCategory(cat))return [
     ['color','Цвет','color'],
     ['composition','Состав / материал','text'],
     ['density','Плотность, г/м²','number']
@@ -1173,7 +1238,12 @@ function selectMaterialCreateState(state){
   if(typeof updateFabricAreaPreview==='function')updateFabricAreaPreview();
 }
 function updateFabricAreaPreview(){
+  const category=document.getElementById('fabricCategory')?.value||'Ткань';
   const state=materialCreateState();
+  if(category==='Кожа'){
+    [document.getElementById('fabricOrderedAreaPreview'),document.getElementById('fabricStockAreaPreview')].filter(Boolean).forEach(box=>{box.textContent='';box.classList.add('hidden')});
+    return;
+  }
   const widthEl=state==='ordered'?document.getElementById('fabricOrderedRollWidth'):document.getElementById('fabricStockRollWidth');
   const lengthEl=state==='ordered'?document.getElementById('fabricOrderedRollLength'):document.getElementById('fabricStockRollLength');
   const width=Number(String(widthEl?.value||0).replace(',','.'))||0;
@@ -1198,24 +1268,148 @@ function normalizeFabricRollQty(id){
 }
 function materialCreateState(){return document.getElementById('materialCreateState')?.value||'card'}
 function restoreDefaultModalBack(){const btn=document.getElementById('modalBackBtn');if(btn)btn.onclick=goBackModal}
-function fabricSubtypeOptions(value=''){
-  return categorySubOptions('Ткань').map(v=>`<option value="${escapeHtml(v)}" ${String(v)===String(value)?'selected':''}>${escapeHtml(v)}</option>`).join('');
+function fabricSubtypeOptions(category='Ткань',value=''){
+  return categorySubOptions(category).map(v=>`<option value="${escapeHtml(v)}" ${String(v)===String(value)?'selected':''}>${escapeHtml(v)}</option>`).join('');
 }
-function openFabricModal(id=null){
+function fabricModalTitle(category,id=null){
+  const names={
+    'Ткань': id?'Редактировать ткань':'Добавить ткань',
+    'Экокожа': id?'Редактировать экокожу':'Добавить экокожу',
+    'Кожа': id?'Редактировать кожу':'Добавить кожу'
+  };
+  return names[category]||(id?t('editMaterialGeneric'):t('addMaterialGeneric'));
+}
+function woodMaterialTypes(){return ['Доска','Брус','Рейка','Мебельный щит']}
+function woodTypeOptions(value=''){
+  return woodMaterialTypes().map(v=>`<option value="${escapeHtml(v)}" ${String(v)===String(value)?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+function openWoodModal(id=null){
   if(!requireAuth())return;
   const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
   const attrs=found?.attributes||{};
-  const sub=found?.subcategory||attrs.materialType||'Ткань';
+  const unit='м³';
+  const currentState=attrs.purchaseStatus==='ordered'?'ordered':(stockNumForUnit(found?.quantity||0,unit)>0||!!attrs.storageLocation?'stock':'card');
+  const type=attrs.materialType||found?.subcategory||'Доска';
+  const body=`<div class="fabric-wizard material-wizard" data-step="1" data-material-id="${id||''}">
+    <div class="wizard-steps"><button class="wizard-step-pill active" type="button" onclick="setMaterialWizardStep(1)">1 ${t('materialBasic')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(2)">2 ${t('fabricWizardParams')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(3)">3 ${t('materialStock')}</button></div>
+    <section class="wizard-card material-wizard-step" data-step="1">
+      <h4>${t('fabricWizardBasic')}</h4>
+      <div class="fabric-form-grid">
+        <div class="field"><label>${t('name')}</label><input id="woodName" class="input" value="${escapeHtml(found?.name||'')}" placeholder="Например: Доска дуб 40x200x3000"></div>
+        <div class="field"><label>${t('sku')}</label><input id="woodSku" class="input" value="${escapeHtml(found?.sku||nextSku('Древесина','',id||''))}"></div>
+        <div class="field"><label>Производитель / Поставщик</label><input id="woodSupplier" class="input" value="${escapeHtml(attrs.supplier||attrs.manufacturer||'')}" placeholder="Производитель или поставщик"></div>
+      </div>
+    </section>
+    <section class="wizard-card material-wizard-step hidden" data-step="2">
+      <h4>${t('fabricWizardParams')}</h4>
+      <div class="fabric-form-grid">
+        <div class="field"><label>Тип материала</label><select id="woodMaterialType" class="select">${woodTypeOptions(type)}</select></div>
+        <div class="field"><label>Порода</label><input id="woodSpecies" class="input" value="${escapeHtml(attrs.woodSpecies||attrs.woodType||'')}" placeholder="Дуб, бук, сосна"></div>
+        <div class="field"><label>Толщина (мм)</label><input id="woodThickness" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.thickness||'')}"></div>
+        <div class="field"><label>Ширина (мм)</label><input id="woodWidth" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.width||'')}"></div>
+        <div class="field"><label>Длина (мм)</label><input id="woodLength" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.length||'')}"></div>
+        <div class="field"><label>Сорт (необязательно)</label><input id="woodGrade" class="input" value="${escapeHtml(attrs.grade||'')}" placeholder="A/B, Экстра, 1 сорт"></div>
+      </div>
+    </section>
+    <section class="wizard-card material-wizard-step hidden" data-step="3">
+      <h4>Состояние материала</h4>
+      ${materialStateCards(currentState)}
+      <div class="fabric-form-grid">
+        <div class="state-fields ${currentState==='ordered'?'':'hidden'}" data-state-fields="ordered">
+          <div class="field"><label>Заказанный объём, ${unitLabel(unit)}</label><input id="woodOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}"></div>
+          <div class="field"><label>Ожидаемая дата поступления</label><input id="woodExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
+          <div class="field full"><label>№ закупки / Поставщик / Комментарий</label><input id="woodPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
+        </div>
+        <div class="stock-only-fields ${currentState==='stock'?'':'hidden'}" data-state-fields="stock">
+          <div class="field"><label>Объём, ${unitLabel(unit)}</label><input id="woodQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}"></div>
+          <div class="field"><label>${t('storageLocation')}</label><input id="woodStorageLocation" class="input" value="${escapeHtml(attrs.storageLocation||'')}" placeholder="Стеллаж / зона"></div>
+          <div class="field"><label>${t('purchasePrice')}</label><input id="woodPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
+          <div class="field"><label>${t('receiptDate')}</label><input id="woodReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>
+        </div>
+      </div>
+    </section>
+  </div>`;
+  openModal(id?'Редактировать древесину':'Добавить древесину',body,materialWizardFooter(`saveWoodMaterial('${id||''}')`));
+  setMaterialWizardStep(1);
+}
+async function saveWoodMaterial(id=''){
+  if(!requireAuth())return;
+  const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
+  const oldAttrs=found?.attributes||{};
+  const unit='м³';
+  const sku=(document.getElementById('woodSku')?.value||'').trim()||nextSku('Древесина','',id||'');
+  const materialType=(document.getElementById('woodMaterialType')?.value||'Доска').trim();
+  const name=(document.getElementById('woodName')?.value||'').trim()||[materialType,document.getElementById('woodSpecies')?.value,document.getElementById('woodThickness')?.value&&`${document.getElementById('woodThickness')?.value} мм`].filter(Boolean).join(' ')||categoryLabel('Древесина');
+  const state=materialCreateState();
+  const qty=state==='stock'?normalizeStockValue(document.getElementById('woodQty')?.value||0,unit,true):0;
+  if(qty===null){toast(t('fieldMinZero'));return;}
+  const ordered=state==='ordered'?normalizeStockValue(document.getElementById('woodOrderedQty')?.value||0,unit,true):0;
+  if(ordered===null){toast(t('fieldMinZero'));return;}
+  const attrs={
+    ...oldAttrs,
+    woodSpecies:(document.getElementById('woodSpecies')?.value||'').trim(),
+    supplier:(document.getElementById('woodSupplier')?.value||'').trim(),
+    manufacturer:(document.getElementById('woodSupplier')?.value||'').trim(),
+    materialType,
+    thickness:(document.getElementById('woodThickness')?.value||'').trim(),
+    width:(document.getElementById('woodWidth')?.value||'').trim(),
+    length:(document.getElementById('woodLength')?.value||'').trim(),
+    grade:(document.getElementById('woodGrade')?.value||'').trim(),
+    storageLocation:state==='stock'?(document.getElementById('woodStorageLocation')?.value||'').trim():'',
+    receiptDate:state==='stock'?(document.getElementById('woodReceiptDate')?.value||''):'',
+    purchasePrice:state==='stock'?(document.getElementById('woodPurchasePrice')?.value||''):'',
+    expectedReceiptDate:state==='ordered'?(document.getElementById('woodExpectedDate')?.value||''):'',
+    purchaseNote:state==='ordered'?(document.getElementById('woodPurchaseNote')?.value||'').trim():'',
+    purchaseStatus:state==='ordered'?'ordered':(state==='stock'&&qty>0?'instock':'noorder'),
+    reservedQty:oldAttrs.reservedQty||0,
+    orderedQty:ordered||0
+  };
+  const obj={id:id||null,sku,name,category:'Древесина',subcategory:materialType,attributes:attrs,unit,quantity:qty,minQuantity:found?.minQuantity||0,lastUpdated:today()};
+  const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
+  if(!ok)return;
+  if(id){closeModal();await loadMaterialsFromSupabase();renderAll();toast(t('savedMaterial'));return;}
+  await finishMaterialSaveAndReturn(obj.sku,obj.category);
+}
+function openFabricModal(id=null,category='Ткань'){
+  if(!requireAuth())return;
+  const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
+  const fabricCategory=found?.category||category||'Ткань';
+  const isLeather=fabricCategory==='Кожа';
+  const attrs=found?.attributes||{};
+  const sub=found?.subcategory||attrs.materialType||fabricCategory;
   const currentState=attrs.purchaseStatus==='ordered'?'ordered':(stockNumForUnit(found?.quantity||0,found?.unit||'м.п.')>0||!!attrs.storageLocation?'stock':'card');
-  const unit=found?.unit||materialBaseUnit('Ткань');
+  const unit=isLeather?'м²':(found?.unit||materialBaseUnit(fabricCategory));
+  const modalTitle=fabricModalTitle(fabricCategory,id);
+  const orderedFields=isLeather?`
+          <div class="field"><label>Площадь, м²</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}"></div>
+          <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
+          <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>`:`
+          <div class="field"><label>Ширина рулона, м</label><input id="fabricOrderedRollWidth" class="input" type="number" min="0" step="0.01" value="${attrs.orderedRollWidth||attrs.rollWidth||''}" oninput="updateFabricAreaPreview()"></div>
+          <div class="field"><label>Длина рулона, м</label><input id="fabricOrderedRollLength" class="input" type="number" min="0" step="0.01" value="${attrs.orderedRollLength||attrs.rollLength||''}" oninput="updateFabricAreaPreview()"></div>
+          <div class="field"><label>Количество, ${unitLabel(unit)}</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}" oninput="normalizeFabricRollQty('fabricOrderedQty')"></div>
+          <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
+          <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
+          <div class="area-preview hidden" id="fabricOrderedAreaPreview"></div>`;
+  const stockFields=isLeather?`
+          <div class="field"><label>Площадь, м²</label><input id="fabricQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}"></div>
+          <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="Стеллаж / зона"></div>
+          <div class="field"><label>${t('purchasePrice')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
+          <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>`:`
+          <div class="field"><label>Ширина рулона, м</label><input id="fabricStockRollWidth" class="input" type="number" min="0" step="0.01" value="${attrs.rollWidth||((Number(attrs.rollWidthMm||0)>0)?Number(attrs.rollWidthMm)/1000:'')}" oninput="updateFabricAreaPreview()"></div>
+          <div class="field"><label>Длина рулона, м</label><input id="fabricStockRollLength" class="input" type="number" min="0" step="0.01" value="${attrs.rollLength||''}" oninput="updateFabricAreaPreview()"></div>
+          <div class="field"><label>Количество, ${unitLabel(unit)}</label><input id="fabricQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}" oninput="normalizeFabricRollQty('fabricQty')"></div>
+          <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="Стеллаж / зона"></div>
+          <div class="field"><label>${t('purchasePrice')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
+          <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>
+          <div class="area-preview hidden" id="fabricStockAreaPreview"></div>`;
   const body=`<div class="fabric-wizard material-wizard" data-step="1" data-material-id="${id||''}">
     <div class="wizard-steps"><button class="wizard-step-pill active" type="button" onclick="setMaterialWizardStep(1)">1 ${t('materialBasic')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(2)">2 ${t('fabricWizardParams')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(3)">3 ${t('materialStock')}</button></div>
     <section class="wizard-card material-wizard-step" data-step="1">
       <h4>${t('fabricWizardBasic')}</h4>
       <div class="fabric-form-grid">
         <div class="field"><label>${t('name')}</label><input id="fabricName" class="input" value="${found?.name||''}" placeholder="Например: Bella 23889"></div>
-        <div class="field"><label>${t('sku')}</label><input id="fabricSku" class="input" value="${found?.sku||nextSku('Ткань','',id||'')}"></div>
-        <div class="field"><label>${materialSubtypeLabel('Ткань')}</label><select id="fabricSubcategory" class="select" onchange="syncFabricWizardUnit()"><option value="">${t('chooseValue')}</option>${fabricSubtypeOptions(sub)}</select></div>
+        <input id="fabricCategory" type="hidden" value="${escapeHtml(fabricCategory)}">
+        <div class="field"><label>${t('sku')}</label><input id="fabricSku" class="input" value="${found?.sku||nextSku(fabricCategory,'',id||'')}"></div>
         <div class="field"><label>${t('collection')}</label><input id="fabricCollection" class="input" value="${escapeHtml(attrs.collection||'')}" placeholder="Например: Cristal Premium"></div>
         <div class="field"><label>${t('manufacturer')}</label><input id="fabricManufacturer" class="input" value="${escapeHtml(attrs.manufacturer||'')}" placeholder="Производитель"></div>
       </div>
@@ -1223,7 +1417,7 @@ function openFabricModal(id=null){
     <section class="wizard-card material-wizard-step hidden" data-step="2">
       <h4>${t('fabricWizardParams')}</h4>
       <div class="fabric-form-grid">
-        ${materialWizardParamsHtml('Ткань',attrs,'fabric')}
+        ${materialWizardParamsHtml(fabricCategory,attrs,'fabric')}
       </div>
     </section>
     <section class="wizard-card material-wizard-step hidden" data-step="3">
@@ -1231,26 +1425,15 @@ function openFabricModal(id=null){
         ${materialStateCards(currentState)}
       <div class="fabric-form-grid">
         <div class="state-fields ${currentState==='ordered'?'':'hidden'}" data-state-fields="ordered">
-          <div class="field"><label>Ширина рулона, м</label><input id="fabricOrderedRollWidth" class="input" type="number" min="0" step="0.01" value="${attrs.orderedRollWidth||attrs.rollWidth||''}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Длина рулона, м</label><input id="fabricOrderedRollLength" class="input" type="number" min="0" step="0.01" value="${attrs.orderedRollLength||attrs.rollLength||''}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Количество, ${unitLabel(unit)}</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}" oninput="normalizeFabricRollQty('fabricOrderedQty')"></div>
-          <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
-          <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
-          <div class="area-preview hidden" id="fabricOrderedAreaPreview"></div>
+          ${orderedFields}
         </div>
         <div class="stock-only-fields ${currentState==='stock'?'':'hidden'}" data-state-fields="stock" id="fabricStockStep">
-          <div class="field"><label>Ширина рулона, м</label><input id="fabricStockRollWidth" class="input" type="number" min="0" step="0.01" value="${attrs.rollWidth||((Number(attrs.rollWidthMm||0)>0)?Number(attrs.rollWidthMm)/1000:'')}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Длина рулона, м</label><input id="fabricStockRollLength" class="input" type="number" min="0" step="0.01" value="${attrs.rollLength||''}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Количество, ${unitLabel(unit)}</label><input id="fabricQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}" oninput="normalizeFabricRollQty('fabricQty')"></div>
-          <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="Стеллаж / зона"></div>
-          <div class="field"><label>${t('purchasePrice')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
-          <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>
-          <div class="area-preview hidden" id="fabricStockAreaPreview"></div>
+          ${stockFields}
         </div>
       </div>
     </section>
   </div>`;
-  openModal(id?t('editMaterialGeneric'):t('addMaterialGeneric'),body,materialWizardFooter(`saveFabricMaterial('${id||''}')`));
+  openModal(modalTitle,body,materialWizardFooter(`saveFabricMaterial('${id||''}')`));
   syncFabricWizardUnit();
   updateFabricAreaPreview();
   setMaterialWizardStep(1);
@@ -1260,10 +1443,9 @@ function toggleFabricStockStep(){
   document.getElementById('fabricStockStep')?.classList.toggle('hidden',!on);
 }
 function syncFabricWizardUnit(){
-  const sub=document.getElementById('fabricSubcategory')?.value||'Ткань';
   const unit=document.getElementById('fabricUnit');
   if(unit&&!unit.dataset.touched){
-    unit.value=['Экокожа','Натуральная кожа'].includes(sub)?'м²':'м.п.';
+    unit.value='рулон';
   }
   if(unit)unit.onchange=()=>unit.dataset.touched='1';
 }
@@ -1271,54 +1453,52 @@ async function saveFabricMaterial(id=''){
   if(!requireAuth())return;
   const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
   const oldAttrs=found?.attributes||{};
-  const sub=document.getElementById('fabricSubcategory')?.value||'Ткань';
-  const unit=found?.unit||materialBaseUnit('Ткань');
-  const sku=(document.getElementById('fabricSku')?.value||'').trim()||nextSku('Ткань','',id||'');
-  const duplicate=(data.materials||[]).find(m=>String(m.id)!==String(id||'')&&m.category==='Ткань'&&normalizeSku(m.sku)===normalizeSku(sku));
-  if(duplicate){
-    if(confirm('Такая ткань уже имеется. Открыть карточку?'))openMaterialDetails(duplicate.id);
-    return;
-  }
+  const category=document.getElementById('fabricCategory')?.value||found?.category||'Ткань';
+  const isLeather=category==='Кожа';
+  const sub=category;
+  const unit=isLeather?'м²':(found?.unit||materialBaseUnit(category));
+  const sku=(document.getElementById('fabricSku')?.value||'').trim()||nextSku(category,'',id||'');
+  if(warnFabricDuplicate())return;
   const name=(document.getElementById('fabricName')?.value||'').trim()||sub;
   const min=normalizeStockValue(found?.minQuantity||0,unit,true);
   if(min===null){toast(t('fieldMinZero'));return;}
   const state=materialCreateState();
   const qty=state==='stock'?normalizeStockValue(document.getElementById('fabricQty')?.value||0,unit,true):0;
   if(qty===null){toast(t('fieldMinZero'));return;}
-  const stockWidthM=Number(String(document.getElementById('fabricStockRollWidth')?.value||0).replace(',','.'))||0;
-  const orderedWidthM=Number(String(document.getElementById('fabricOrderedRollWidth')?.value||0).replace(',','.'))||0;
-  const paramAttrs=readMaterialWizardParams('Ткань','fabric',oldAttrs);
+  const stockWidthM=isLeather?0:(Number(String(document.getElementById('fabricStockRollWidth')?.value||0).replace(',','.'))||0);
+  const orderedWidthM=isLeather?0:(Number(String(document.getElementById('fabricOrderedRollWidth')?.value||0).replace(',','.'))||0);
+  const paramAttrs=readMaterialWizardParams(category,'fabric',oldAttrs);
   const widthM=state==='stock'
     ? stockWidthM
     : (state==='ordered'?orderedWidthM:(Number(paramAttrs.rollWidth||oldAttrs.rollWidth||0)||((Number(oldAttrs.rollWidthMm||0)>0)?Number(oldAttrs.rollWidthMm)/1000:0)));
-  const lengthM=state==='stock'
+  const lengthM=isLeather?0:(state==='stock'
     ? Number(String(document.getElementById('fabricStockRollLength')?.value||0).replace(',','.'))||0
-    : (state==='ordered'?Number(String(document.getElementById('fabricOrderedRollLength')?.value||0).replace(',','.'))||0:Number(oldAttrs.rollLength||0)||0);
+    : (state==='ordered'?Number(String(document.getElementById('fabricOrderedRollLength')?.value||0).replace(',','.'))||0:Number(oldAttrs.rollLength||0)||0));
   const ordered=state==='ordered'?normalizeStockValue(document.getElementById('fabricOrderedQty')?.value||0,unit,true):0;
   if(ordered===null){toast(t('fieldMinZero'));return;}
   const attrs={
     ...oldAttrs,
     ...paramAttrs,
-    materialType:['Экокожа','Натуральная кожа'].includes(sub)?sub:'Ткань',
+    materialType:category,
     collection:(document.getElementById('fabricCollection')?.value||'').trim(),
     manufacturer:(document.getElementById('fabricManufacturer')?.value||'').trim(),
-    rollWidth:widthM?Number(widthM.toFixed(3)):'',
-    rollWidthMm:widthM?Math.round(widthM*1000):'',
-    rollLength:lengthM||'',
-    area:widthM&&lengthM?Number((widthM*lengthM).toFixed(2)):'',
-    totalArea:widthM&&lengthM?Number((widthM*lengthM*(state==='ordered'?ordered:qty||1)).toFixed(2)):'',
+    rollWidth:isLeather?'':(widthM?Number(widthM.toFixed(3)):''),
+    rollWidthMm:isLeather?'':(widthM?Math.round(widthM*1000):''),
+    rollLength:isLeather?'':(lengthM||''),
+    area:isLeather?'':(widthM&&lengthM?Number((widthM*lengthM).toFixed(2)):''),
+    totalArea:isLeather?Number((state==='ordered'?ordered:qty||0).toFixed(3)):(widthM&&lengthM?Number((widthM*lengthM*(state==='ordered'?ordered:qty||1)).toFixed(2)):''),
     storageLocation:state==='stock'?(document.getElementById('fabricStorageLocation')?.value||'').trim():'',
     receiptDate:state==='stock'?(document.getElementById('fabricReceiptDate')?.value||''):'',
     purchasePrice:state==='stock'?(document.getElementById('fabricPurchasePrice')?.value||''):'',
     expectedReceiptDate:state==='ordered'?(document.getElementById('fabricExpectedDate')?.value||''):'',
     purchaseNote:state==='ordered'?(document.getElementById('fabricPurchaseNote')?.value||'').trim():'',
-    orderedRollWidth:state==='ordered'&&orderedWidthM?Number(orderedWidthM.toFixed(3)):'',
-    orderedRollLength:state==='ordered'&&lengthM?lengthM:'',
+    orderedRollWidth:isLeather?'':(state==='ordered'&&orderedWidthM?Number(orderedWidthM.toFixed(3)):''),
+    orderedRollLength:isLeather?'':(state==='ordered'&&lengthM?lengthM:''),
     purchaseStatus:state==='ordered'?'ordered':(state==='stock'&&qty>0?'instock':'noorder'),
     reservedQty:oldAttrs.reservedQty||0,
     orderedQty:ordered||0
   };
-  const obj={id:id||null,sku,name,category:'Ткань',subcategory:sub,attributes:attrs,unit,quantity:qty,minQuantity:min,lastUpdated:today()};
+  const obj={id:id||null,sku,name,category,subcategory:sub,attributes:attrs,unit,quantity:qty,minQuantity:min,lastUpdated:today()};
   const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
   if(!ok)return;
   if(id){closeModal();await loadMaterialsFromSupabase();renderAll();toast(t('savedMaterial'));return;}
@@ -1334,7 +1514,7 @@ function renderModels(){const box=document.getElementById('modelsGrid');if(!data
 function deleteModel(id){if(!confirm('Удалить модель?'))return;data.models=data.models.filter(x=>String(x.id)!==String(id));data.orders=data.orders.filter(o=>String(o.modelId)!==String(id));save();renderAll()}
 
 const ORDER_STATUSES=['Новый','Готов к работе','Не хватает материалов','Материалы заказаны','В работе','Завершён','Отменён'];
-const ORDER_MATERIAL_CATS=['Поролон','Ткань','Древесина','Фурнитура'];
+const ORDER_MATERIAL_CATS=['Поролон','Ткань','Экокожа','Кожа','Древесина','Фурнитура'];
 let expandedOrders = new Set();
 let missingExpandedOrders = new Set();
 function openOrderMaterialPurchase(orderId,materialId,editMode=false){
@@ -1564,6 +1744,9 @@ const UI42 = {
     orderNo:'Pasūtījuma Nr.', manualNo:'Ievadīt numuru manuāli', autoNo:'Automātiskā numerācija izveido Z-0001, Z-0002 un tālāk.', client:'Klients', clientPh:'Vārds vai uzņēmums', productQty:'Izstrādājumu skaits', productHint:'Piemērs: viens pasūtījums = 100 dīvāni.', due:'Pabeigt līdz', dueHint:'Plānotais pasūtījuma nodošanas datums.', createdDate:'Izveides datums', comment:'Komentārs', commentPh:'Tehnologa komentārs, pasūtījuma īpatnības...', technology:'Tehnoloģija', addStep:'＋ Pievienot posmu', materials:'Materiāli', addMaterial:'＋ Pievienot materiālu', addNewStock:'＋ Pievienot jaunu materiālu noliktavā', reserveHint:'Noliktavas atlikums uzreiz nesamazinās. Pieejams = Noliktavā − rezervēts citiem pasūtījumiem. Šī pasūtījuma rezerve pārrēķinās pēc saglabāšanas.', cancel:'Atcelt', save:'Saglabāt', addOrder:'Pievienot pasūtījumu', editOrder:'Labot pasūtījumu', stage:'Posms', minutes:'Minūtes', newStage:'Jauns posms', category:'Kategorija', material:'Materiāls', perOne:'Uz 1 izstrādājumu', perOneHint:'patēriņš uz 1 izstrādājumu', totalNeed:'Kopā vajag', unit:'Mērv.', selectMaterial:'Materiāls nav izvēlēts', purchaseMissing:'Iepirkums trūkumam', missing:'Trūkums', status:'Statuss', needOrder:'Jāpasūta', ordered:'Pasūtīts', notNeeded:'Nav vajadzīgs', quantity:'Daudzums', purchaseNo:'Iepirkuma Nr. / piegādātājs', purchaseNoPh:'piemēram PO-102 vai Supplier', availableMat:'Materiāli pieejami', stock:'Noliktavā', available:'pieejams', need:'vajag', materialOrdered:'Materiāls pasūtīts', notOrdered:'Nav pasūtīts', missingMaterial:'Trūkst materiāla', toOrder:'pasūtīt', orderSaved:'Pasūtījums saglabāts', totalOrders:'Pasūtījumi kopā', readyToWork:'Gatavi darbam', missingMaterials:'Trūkst materiālu', orderedMoving:'Pasūtīts/ceļā', noOrders:'Pasūtījumu vēl nav', noOrdersHint:'Izveidojiet pasūtījumu un rezervējiet materiālus no noliktavas.', allClients:'Visi klienti', open:'Atvērt', edit:'Labot', toWork:'Sākt darbu', complete:'Pabeigt', cancelOrder:'Atcelt', delete:'Dzēst', orderClient:'Klients', time:'Laiks', deadline:'Termiņš', items:'izstrādājumi', created:'izveidots', materialPct:'materiāli', productQtyShort:'Izstrādājumu skaits', totalTime:'Kopējais laiks', deadlineFull:'Nodošanas termiņš', steps:'Tehnoloģija', details:'Sīkāk', close:'Aizvērt', deleteConfirm:'Dzēst pasūtījumu un atbrīvot materiālu rezervi?', orderDeleted:'Pasūtījums dzēsts', dataLoaded:'Dati ielādēti', jsonError:'JSON kļūda', wipeConfirm:'Notīrīt visus datus?', restoreDemo:'Atjaunot demo datus? Pašreizējie dati tiks aizstāti.', demoRestored:'Demo atjaunots', allStatuses:'Visi statusi', allMaterials:'Materiāli: visi', materialsAvailable:'Materiāli pieejami', hasShortage:'Ir trūkums', newOrderBtn:'+ Jauns pasūtījums', searchOrderPh:'Meklēt pēc numura vai klienta...', noComment:'—', deletedMaterial:'Dzēsts materiāls', procurement:'Iepirkums', orderedStatus:'Pasūtīts', needToOrderStatus:'Jāpasūta', totalNeedSmall:'kopā vajag'}
 };
 function u42(k){return (UI42[currentLang]&&UI42[currentLang][k])||UI42.ru[k]||k}
+Object.assign(UI42.ru,{clientPrefix:'Клиент',completeOrderAction:'Завершить заказ',cancelOrderAction:'Отменить заказ',actions:'Действия'});
+Object.assign(UI42.en,{clientPrefix:'Customer',completeOrderAction:'Complete order',cancelOrderAction:'Cancel order',actions:'Actions'});
+Object.assign(UI42.lv,{clientPrefix:'Klients',completeOrderAction:'Pabeigt pasūtījumu',cancelOrderAction:'Atcelt pasūtījumu',actions:'Darbības'});
 function orderStatusText42(st){const ru={
   'Новый':{en:'New',lv:'Jauns'}, 'Готов к работе':{en:'Ready to work',lv:'Gatavs darbam'}, 'Не хватает материалов':{en:'Missing materials',lv:'Trūkst materiālu'}, 'Материалы заказаны':{en:'Materials ordered',lv:'Materiāli pasūtīti'}, 'В работе':{en:'In progress',lv:'Darbā'}, 'Готов':{en:'Completed',lv:'Pabeigts'}, 'Завершён':{en:'Completed',lv:'Pabeigts'}, 'Отменён':{en:'Cancelled',lv:'Atcelts'}, 'В производстве':{en:'In production',lv:'Ražošanā'}, 'Нужно заказать':{en:'Need to order',lv:'Jāpasūta'}};return currentLang==='ru'?st:(ru[st]?.[currentLang]||st)}
 const oldApplyI18n42=applyI18n;
@@ -1848,7 +2031,7 @@ deleteMaterialFromSupabase=async function(id){const m=(data.materials||[]).find(
 const __quickAddStockV565=quickAddStock;
 quickAddStock=async function(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=document.getElementById('quickQty')?.value;await __quickAddStockV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd('stock_in','material',m.id,m.sku,`Поступление на склад: +${qtyWithUnit(Number(qty||0),m.unit)}`);}}
 const __quickWriteOffV565=quickWriteOffStock;
-quickWriteOffStock=async function(){const sku=normalizeSku(document.getElementById('writeOffSku')?.value);const qty=document.getElementById('writeOffQty')?.value;await __quickWriteOffV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd('stock_out','material',m.id,m.sku,`Списание со склада: −${qtyWithUnit(Number(qty||0),m.unit)}`);}}
+quickWriteOffStock=async function(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=document.getElementById('quickQty')?.value;await __quickWriteOffV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd('stock_out','material',m.id,m.sku,`Списание со склада: −${qtyWithUnit(Number(qty||0),m.unit)}`);}}
 
 const __adjustMaterialQtyV565=adjustMaterialQty;
 adjustMaterialQty=async function(id,dir){const m=(data.materials||[]).find(x=>String(x.id)===String(id));const qty=document.getElementById('detailQtyChange')?.value;const movementUnit=document.getElementById('detailQtyUnit')?.value||m?.unit;await __adjustMaterialQtyV565(id,dir);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd(dir>0?'stock_in':'stock_out','material',m.id,m.sku||m.name,`${dir>0?'Поступление':'Списание'} через карточку: ${dir>0?'+':'−'}${qtyWithUnit(Number(qty||0),movementUnit||m.unit)}`);}}
@@ -1884,7 +2067,7 @@ const __renderAllV565=renderAll;
 renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;}
 
 document.addEventListener("click",()=>closeOrderMenus());
-renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickAddStock()}} updateQuickAddInfo();const ws=document.getElementById('writeOffSku'), wq=document.getElementById('writeOffQty'); if(ws){ws.oninput=updateWriteOffInfo;ws.onkeydown=e=>{if(e.key==='Enter')wq?.focus()}} if(wq){wq.onkeydown=e=>{if(e.key==='Enter')quickWriteOffStock()}} updateWriteOffInfo();if(location.protocol==='file:'){try{currentUser={email:'local-preview@furnicore'};setAuthLocked(false);renderAuthBox();renderAll();updateQuickAddInfo();updateWriteOffInfo();}catch(e){console.error(e);}}else{checkSession();}
+renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickSubmitStock()}} syncQuickOperationUI();updateQuickAddInfo();if(location.protocol==='file:'){try{currentUser={email:'local-preview@furnicore'};setAuthLocked(false);renderAuthBox();renderAll();syncQuickOperationUI();updateQuickAddInfo();}catch(e){console.error(e);}}else{checkSession();}
 
 
 /* v5.68: fix order complete/cancel actions */
@@ -2125,7 +2308,7 @@ renderAll=function(){__renderAllV565();const av=document.getElementById('appVers
 @media(max-width:1100px){.history-toolbar{grid-template-columns:1fr 1fr}.history-summary{grid-template-columns:repeat(2,1fr)}.history-row{grid-template-columns:120px 1fr 34px}.history-user{display:none}}
 @media(max-width:720px){.history-toolbar,.history-summary{grid-template-columns:1fr}.history-row{grid-template-columns:1fr 34px}.history-time{grid-column:1/-1}.history-main{grid-column:1}.history-go{grid-column:2;grid-row:2}}
 </style>
-<script src="js/history.js?v=6.0"></script>
+<script src="js/history.js?v=6.1"></script>
 <script>installOrderStatusHandlers();</script>
 
 
