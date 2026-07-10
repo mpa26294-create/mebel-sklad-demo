@@ -2466,6 +2466,15 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .btn:disabled,.btn.primary:disabled{cursor:not-allowed;border-color:#d0d5dd!important;background:#eaecf0!important;color:#98a2b3!important;box-shadow:none!important;opacity:1}
 .technology-material-status.blue{background:#eff6ff;color:#175cd3}.technology-material-status>span{font-weight:700}.technology-order-controls{display:flex;align-items:center;gap:8px;margin-left:auto}.technology-order-controls label{font-size:9px;white-space:nowrap}.technology-order-controls .input{width:110px;height:30px!important;min-height:30px!important;background:#fff}.technology-order-controls .btn{min-height:30px;background:#fff}.ordered-text{color:#175cd3;font-weight:700}@media(max-width:700px){.technology-material-status{align-items:flex-start;flex-direction:column;gap:8px}.technology-order-controls{width:100%;margin-left:0;flex-wrap:wrap}.technology-order-controls .input{flex:1;min-width:90px}}
 .production-material-status.ordered{background:#eff6ff;color:#175cd3}
+.order-tech-head .order-tech-cta{min-height:42px;padding:0 16px;border-radius:11px;font-size:13px;font-weight:750;box-shadow:0 10px 22px rgba(17,19,24,.12)}
+.order-tech-head .order-tech-cta.secondary{background:#fff;color:#111;border-color:#d8dde5;box-shadow:none}
+.order-tech-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.order-tech-empty-action{display:flex;min-height:118px;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:24px 16px}
+.order-tech-empty-action b{color:#1d2939;font-size:14px}
+.order-tech-empty-action span{color:#8490a3;font-size:12px}
+.order-tech-empty-action .actions{justify-content:center}
+.order-tech-empty-action .order-tech-cta{min-height:40px;padding:0 14px;border-radius:10px;font-size:12px;font-weight:750}
+@media(max-width:760px){.order-tech-actions{width:100%;justify-content:stretch}.order-tech-actions .order-tech-cta{width:100%}}
 
 /* Compact professional orders list */
 #orders .orders-toolbar{
