@@ -438,7 +438,8 @@ function attentionMaterials(limit){
 }
 function attentionRowHtml(x){
   const m=x.m;const need=x.need;const low=x.st[0]==='low'&&need<=0;
-  return `<button class="attention-row" type="button" onclick="openMaterialDetails('${m.id}')"><span class="att-dot ${need>0?'need':''}"></span><span class="att-main"><b>${escapeHtml(materialDisplayName(m))}</b><span>${escapeHtml(categoryLabel(m.category))}</span></span><span><span class="att-badge ${low?'low':''}">${need>0?'Нужно заказать':'Заканчивается'}</span></span><span class="att-cell"><small>На складе</small><b>${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit))}</b></span><span class="att-cell"><small>${need>0?'Нужно':'Мин. остаток'}</small><b>${escapeHtml(qtyWithUnit(need>0?need:m.minQuantity,m.unit))}</b></span><span class="att-go">›</span></button>`;
+  const displayUnit=stockDisplayUnit(m);
+  return `<button class="attention-row" type="button" onclick="openMaterialDetails('${m.id}')"><span class="att-dot ${need>0?'need':''}"></span><span class="att-main"><b>${escapeHtml(materialDisplayName(m))}</b><span>${escapeHtml(categoryLabel(m.category))}</span></span><span><span class="att-badge ${low?'low':''}">${need>0?'Нужно заказать':'Заканчивается'}</span></span><span class="att-cell"><small>На складе</small><b>${escapeHtml(qtyWithUnit(stockDisplayQty(m,m.quantity),displayUnit))}</b></span><span class="att-cell"><small>${need>0?'Нужно':'Мин. остаток'}</small><b>${escapeHtml(qtyWithUnit(need>0?need:m.minQuantity,displayUnit))}</b></span><span class="att-go">›</span></button>`;
 }
 function renderAttentionBlock(){
   const all=attentionMaterials();
@@ -517,12 +518,15 @@ function materialMaker(m){const a=m.attributes||{};return a.manufacturer||a.supp
 function stockAttr(m,...keys){const a=m.attributes||{};for(const k of keys){if(a[k]!==undefined&&a[k]!==null&&a[k]!=='')return a[k]}return ''}
 function stockDim(...values){return values.filter(v=>v!==undefined&&v!==null&&v!=='').join(' × ')||'—'}
 function stockMaterialNameCell(m,withMaker=true){const maker=materialMaker(m);return `<b class="stock-material-title">${escapeHtml(materialDisplayName(m))}</b>${withMaker&&maker!=='—'?`<small>${escapeHtml(maker)}</small>`:''}`}
+function stockDisplayUnit(m){return m?.category==='Ткань'&&m?.unit==='рулон'?'пог. м':(m?.unit||'')}
+function stockDisplayQty(m,value){const a=m.attributes||{};if(m?.category==='Ткань'&&m?.unit==='рулон'&&value===m.quantity){const len=Number(a.rollLength||a.orderedRollLength||0);return Number(a.linearBalanceMeters||0)||(len?stockNumForUnit(value,m.unit)*len:stockNumForUnit(value,m.unit))}return stockNumForUnit(value,stockDisplayUnit(m))}
 function stockQtyCell(value,unit,extra=''){return `<td class="stock-num ${extra}">${escapeHtml(qtyWithUnit(value,unit))}</td>`}
 function smartRowByCategory(m,cat){
   const a=m.attributes||{};const st=materialStateOf(m);const need=stockNeededToOrderQty(m);const av=availableQty(m);const ordered=orderedQty(m);
   const statusLabel=st[0]==='ok'?t('stockStatusNormal'):st[0]==='low'?t('stockStatusLow'):st[0]==='needorder'?t('stockStatusNeedOrder'):(['noorder','out'].includes(st[0])?t('stockStatusOut'):st[1]);
   const state=`<span class="stock-status-badge ${st[0]}">${statusLabel}</span>`;
-  const qtyCells=`${stockQtyCell(stockNumForUnit(m.quantity,m.unit),m.unit,av<=0?'stock-danger stock-main-qty':'stock-main-qty')}${stockQtyCell(reservedQty(m),m.unit)}${stockQtyCell(ordered,m.unit)}${stockQtyCell(need,m.unit,need>0?'stock-danger':'')}<td>${state}</td>`;
+  const displayUnit=stockDisplayUnit(m);
+  const qtyCells=`${stockQtyCell(stockDisplayQty(m,m.quantity),displayUnit,av<=0?'stock-danger stock-main-qty':'stock-main-qty')}${stockQtyCell(reservedQty(m),displayUnit)}${stockQtyCell(ordered,displayUnit)}${stockQtyCell(need,displayUnit,need>0?'stock-danger':'')}<td>${state}</td>`;
   const sku=`<td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td>`;
   if(typeof isFabricCategory==='function'&&isFabricCategory(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m,false)}</td><td>${escapeHtml(materialMaker(m))}</td><td>${a.color?`<span class="color-chip only" title="${escapeHtml(a.color)}" style="background:${materialColorStyle(a.color)}"></span> ${escapeHtml(a.color)}`:'—'}</td><td>${escapeHtml(a.rollWidthMm?`${a.rollWidthMm} мм`:a.rollWidth?`${Number(a.rollWidth).toFixed(2)} м`:'—')}</td>${qtyCells}</tr>`;
   if(cat==='Поролон')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m,false)}</td><td>${escapeHtml(stockAttr(m,'grade','mark')||'—')}</td><td>${escapeHtml(stockAttr(m,'density')||'—')}</td><td>${escapeHtml(stockAttr(m,'hardness')||'—')}</td><td>${escapeHtml(stockAttr(m,'thickness')?`${stockAttr(m,'thickness')} мм`:'—')}</td><td>${escapeHtml(stockDim(stockAttr(m,'width'),stockAttr(m,'length')))}</td>${qtyCells}</tr>`;
