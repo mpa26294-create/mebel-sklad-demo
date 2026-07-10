@@ -190,6 +190,7 @@ async function saveMaterialReceipt(id){
 }
 
 function detailField(label,value,full=false){return `<div class="detail-field ${full?'full':''}"><small>${escapeHtml(label)}</small><b>${value?value:'—'}</b></div>`}
+function woodCharacteristicsText(m){const a=m.attributes||{};const rows=[['Порода',a.woodSpecies||a.woodType],['Сечение',[a.thickness&&`${a.thickness} мм`,a.width&&`${a.width} мм`].filter(Boolean).join(' × ')],['Длина',a.length&&`${a.length} м`],['Сорт',a.grade],['Производитель',a.manufacturer||a.supplier]].filter(([,v])=>v);return rows.length?rows.map(([k,v])=>`${k}: ${v}`).join(' · '):'—'}
 function materialDetailBasics(m){
   const a=m.attributes||{};
   const rows=[];
@@ -214,6 +215,9 @@ function materialDetailBasics(m){
     rows.push(detailField('Размер',escapeHtml(materialDimensions(m)||'—')));
     rows.push(detailField('Марка / плотность',escapeHtml(a.grade||'—')));
     rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
+  }else if(m.category==='Древесина'){
+    rows.push(detailField('Тип / размер',escapeHtml(m.subcategory||a.materialType||'—')));
+    rows.push(detailField('Характеристики',escapeHtml(woodCharacteristicsText(m)),true));
   }else{
     rows.push(detailField('Тип / размер',escapeHtml(m.subcategory||a.size||a.thickness||'—')));
     rows.push(detailField('Характеристики',escapeHtml(materialCompactText(m)||'—'),true));
