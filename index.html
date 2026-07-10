@@ -22,7 +22,7 @@
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.5</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.6</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
 
   <main class="main">
@@ -126,7 +126,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v6.5 - Orders Actions';
+const APP_VERSION = 'v6.6 - Material Units';
 </script>
 <script src="js/auth.js?v=6.1"></script>
 <script src="js/materials.js?v=6.2"></script>
@@ -244,16 +244,16 @@ function subscribeMaterials(){
 }
 
 const CATEGORIES = {
-  'Ткань': {icon:'◌', cls:'fabric', unit:'рулон', subs:['Ткань'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
-  'Экокожа': {icon:'◒', cls:'fabric', unit:'рулон', subs:['Экокожа'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
+  'Ткань': {icon:'◌', cls:'fabric', unit:'пог. м', subs:['Ткань'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
+  'Экокожа': {icon:'◒', cls:'fabric', unit:'пог. м', subs:['Экокожа'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
   'Кожа': {icon:'◓', cls:'fabric', unit:'м²', subs:['Кожа'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет']]},
   'Поролон': {icon:'◫', cls:'foam', unit:'м²', subs:[], fields:[['grade','Марка / плотность'],['thickness','Толщина, мм','number']]},
   'Древесина': {icon:'▤', cls:'wood', unit:'м³', subs:['Доска','Брус','Рейка','Мебельный щит'], fieldsBySub:{}},
-  'Фанера': {icon:'▦', cls:'sheet', unit:'шт', subs:['Фанера'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество листов','number']]},
-  'МДФ': {icon:'▦', cls:'sheet', unit:'шт', subs:['МДФ'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
-  'ДСП': {icon:'◫', cls:'sheet', unit:'шт', subs:['ДСП'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
-  'ДВП': {icon:'▦', cls:'sheet', unit:'шт', subs:['ДВП'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
-  'OSB': {icon:'▦', cls:'sheet', unit:'шт', subs:['OSB'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
+  'Фанера': {icon:'▦', cls:'sheet', unit:'лист', subs:['Фанера'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество листов','number']]},
+  'МДФ': {icon:'▦', cls:'sheet', unit:'лист', subs:['МДФ'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
+  'ДСП': {icon:'◫', cls:'sheet', unit:'лист', subs:['ДСП'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
+  'ДВП': {icon:'▦', cls:'sheet', unit:'лист', subs:['ДВП'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
+  'OSB': {icon:'▦', cls:'sheet', unit:'лист', subs:['OSB'], fields:[['thickness','Толщина, мм','number'],['sheetSize','Размер листа'],['count','Количество','number']]},
   'Крепёж': {icon:'⌘', cls:'fix', unit:'шт', subs:['Болты','Гайки','Шурупы / саморезы'], fieldsBySub:{'Болты':[['thread','Резьба / диаметр'],['length','Длина, мм','number'],['strengthClass','Класс прочности']],'Гайки':[['thread','Резьба'],['type','Тип']],'Шурупы / саморезы':[['diameter','Диаметр, мм','number'],['length','Длина, мм','number'],['type','Тип']] }},
   'Фурнитура': {icon:'⬚', cls:'hardware', unit:'шт', subs:['Петли','Направляющие','Ножки','Опоры','Ручки','Газлифты','Колёсики','Механизмы диванов'], fields:[['type','Тип / описание'],['size','Размер'],['color','Цвет']]},
   'Наполнители': {icon:'◍', cls:'filler', unit:'кг', subs:['Синтепон','Холлофайбер','Пух','Другие'], fields:[['type','Тип'],['density','Плотность'],['color','Цвет']]}
