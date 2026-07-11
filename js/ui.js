@@ -46,7 +46,7 @@ function goBackModal(){
 function closeModal(){
   document.getElementById('modalBackdrop').classList.remove('show');
   unlockBodyScrollForModal();
-  document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact');
+  document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact','production-order-modal','modal-expanded');
   modalStack=[];
   const back=document.getElementById('modalBackBtn');
   if(back)back.onclick=goBackModal;
@@ -69,13 +69,22 @@ function openModal(title,body,foot){
   }
   document.getElementById('modalBackdrop').classList.add('show');
   lockPageForModal();
-  document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact');
+  document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact','production-order-modal','modal-expanded');
+  const expandBtn=document.querySelector('.modal-expand-btn');
+  if(expandBtn){expandBtn.title='Увеличить окно';expandBtn.setAttribute('aria-label','Увеличить окно')}
   updateModalBackButton();
 }
 
 function setCleanModalClass(cls){
   const modal=document.querySelector('#modalBackdrop .modal');
   if(!modal)return;
-  modal.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact','order-clean-modal','order-material-clean-modal','add-clean-modal','form-clean-modal');
+  modal.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact','production-order-modal','modal-expanded','order-clean-modal','order-material-clean-modal','add-clean-modal','form-clean-modal');
   if(cls) cls.split(' ').forEach(c=>c&&modal.classList.add(c));
+}
+function toggleModalSize(){
+  const modal=document.querySelector('#modalBackdrop .modal');
+  if(!modal)return;
+  modal.classList.toggle('modal-expanded');
+  const btn=document.querySelector('.modal-expand-btn');
+  if(btn){const label=modal.classList.contains('modal-expanded')?'Уменьшить окно':'Увеличить окно';btn.title=label;btn.setAttribute('aria-label',label)}
 }

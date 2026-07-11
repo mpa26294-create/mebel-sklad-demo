@@ -2475,6 +2475,20 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .order-tech-empty-action span{color:#8490a3;font-size:12px}
 @media(max-width:760px){.order-tech-actions{width:100%;justify-content:stretch}.order-tech-actions .order-tech-cta{width:100%}}
 
+/* v6.18: every modal can expand, production keeps technology edits auditable. */
+.modal-head-actions{display:flex;align-items:center;gap:8px}
+.modal.modal-expanded{width:min(1580px,calc(100vw - 32px))!important;max-height:calc(100vh - 32px)!important}
+.modal.modal-expanded .modal-body{padding:16px!important}
+.production-progress-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.production-op-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.production-material-status{border:0}
+.production-material-status.action{cursor:pointer}
+.production-material-status.action:hover{text-decoration:underline;text-underline-offset:3px}
+@media(max-width:760px){
+  .modal.modal-expanded{width:100%!important;max-height:calc(100dvh - 16px)!important}
+  .production-progress-meta,.production-op-kpis{grid-template-columns:1fr!important}
+}
+
 /* Compact professional orders list */
 #orders .orders-toolbar{
   display:grid!important;
