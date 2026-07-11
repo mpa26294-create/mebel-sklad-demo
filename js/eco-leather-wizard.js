@@ -70,7 +70,6 @@
     const mainGrid=step1?.querySelector('.fabric-form-grid');
     if(!step1||!step3||!mainGrid)return;
 
-    // Keep only the meaningful parameter for a quick add: color.
     const colorField=document.getElementById('fabricColor')?.closest('.field');
     if(colorField)mainGrid.appendChild(colorField);
 
@@ -100,9 +99,7 @@
     const modalBack=document.getElementById('modalBackBtn');
     if(modalBack)modalBack.onclick=()=>closeModal();
 
-    // Clear unnecessary fields from the removed parameter step so save logic does not inherit stale input.
     ['fabricComposition','fabricDensity'].forEach(fieldId=>document.getElementById(fieldId)?.closest('.field')?.remove());
-
     setTodayIfEmpty('fabricReceiptDate');
     setTodayIfEmpty('fabricExpectedDate');
     syncStateUi();
@@ -123,6 +120,17 @@
       if(resolved==='Экокожа')setTimeout(()=>patchEcoLeatherModal(id),0);
       return result;
     };
+    if(typeof window.renderAll==='function'){
+      const originalRenderAll=window.renderAll;
+      window.renderAll=function(){
+        const result=originalRenderAll.apply(this,arguments);
+        setTimeout(applyVersion,0);
+        return result;
+      };
+    }
+    try{
+      new MutationObserver(applyVersion).observe(document.body,{subtree:true,childList:true});
+    }catch(e){}
     return true;
   }
 
