@@ -215,6 +215,13 @@ function materialDetailBasics(m){
   }else if(m.category==='Поролон'){
     rows.push(detailField('Размер',escapeHtml(materialDimensions(m)||'—')));
     rows.push(detailField('Марка / плотность',escapeHtml(a.grade||'—')));
+    rows.push(detailField('Формат',escapeHtml(a.foamKind==='sheet'?'Листы':a.foamKind==='detail'?'Детали':'—')));
+    if(a.foamKind==='sheet'){
+      rows.push(detailField('Количество листов',escapeHtml(a.sheetCount||'—')));
+      rows.push(detailField('Площадь 1 листа',escapeHtml(a.sheetArea?Number(a.sheetArea).toFixed(3)+' м²':'—')));
+      rows.push(detailField('Общая площадь',escapeHtml(a.totalArea?Number(a.totalArea).toFixed(3)+' м²':'—')));
+    }
+    if(a.foamKind==='detail')rows.push(detailField('Количество деталей',escapeHtml(a.detailCount||'—')));
     rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
   }else if(m.category==='Древесина'){
     rows.push(detailField('Тип материала',escapeHtml(m.subcategory||a.materialType||'—')));

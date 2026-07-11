@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>FurniCore</title>
-  <link rel="stylesheet" href="css/style.css?v=6.20" />
+  <link rel="stylesheet" href="css/style.css?v=6.21" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -22,7 +22,7 @@
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.20</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.21</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
 
   <main class="main">
@@ -113,8 +113,8 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/ui.js?v=6.20"></script>
-<script src="js/app.js?v=6.20"></script>
+<script src="js/ui.js?v=6.21"></script>
+<script src="js/app.js?v=6.21"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.9"></script>
 <script src="js/translations.js?v=6.1"></script>
@@ -126,10 +126,10 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v6.20 - Roll Stock Adjustments';
+const APP_VERSION = 'v6.21 - Foam Sheet Detail Materials';
 </script>
 <script src="js/auth.js?v=6.1"></script>
-<script src="js/materials.js?v=6.20"></script>
+<script src="js/materials.js?v=6.21"></script>
 <script src="js/orders.js?v=6.19"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
@@ -965,24 +965,30 @@ function openFoamModal(id=null){
   const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
   const attrs=found?.attributes||{};
   const sku=found?.sku || 'DET.';
+  const foamKind=attrs.foamKind||((found?.unit==='м²')?'sheet':'detail');
+  const foamUnit=foamKind==='sheet'?'м²':'шт';
   const stockBlock=isEdit
     ? `<div class="field">${purchaseStatusLabelBlock(purchaseStatusSelect('foamPurchaseStatus', defaultPurchaseStatus(found)))}</div>
-       <div class="field"><label>${t('minQuantity')}</label><input id="foamMin" type="number" step="${stockStep(found?.unit||'шт')}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(found?.minQuantity||0,found?.unit||'шт'),found?.unit||'шт')}" inputmode="decimal"></div>
-       ${stockTripleInputs('foam',{ordered:attrs.orderedQty||0,reserved:attrs.reservedQty||0,qty:found?.quantity||0},found?.unit||'шт')}
+       <div class="field"><label>${t('minQuantity')}</label><input id="foamMin" type="number" step="${stockStep(found?.unit||foamUnit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(found?.minQuantity||0,found?.unit||foamUnit),found?.unit||foamUnit)}" inputmode="decimal"></div>
+       ${stockTripleInputs('foam',{ordered:attrs.orderedQty||0,reserved:attrs.reservedQty||0,qty:found?.quantity||0},found?.unit||foamUnit)}
        <div class="field"><label>${t('supplier')}</label><input id="foamSupplier" class="input" value="${attrs.supplier||''}" placeholder="${t('supplierPlaceholder')}"></div>
        <div class="field"><label>${t('order')}</label><input id="foamOrder" class="input" value="${attrs.order||''}" placeholder="${t('orderPlaceholder')}"></div>`
     : `<div class="add-material-simple-stock">
-        <div class="field"><label>На складе</label><input id="foamQty" type="number" step="${stockStep(found?.unit||'шт')}" min="0" class="input" value="0" inputmode="decimal"></div>
-        <div class="field"><label>${t('minQuantity')}</label><input id="foamMin" type="number" step="${stockStep(found?.unit||'шт')}" min="0" class="input" value="0" inputmode="decimal"></div>
+        <div class="field"><label>На складе</label><input id="foamQty" type="number" step="${stockStep(foamUnit)}" min="0" class="input" value="0" inputmode="decimal"></div>
+        <div class="field"><label>${t('minQuantity')}</label><input id="foamMin" type="number" step="${stockStep(foamUnit)}" min="0" class="input" value="0" inputmode="decimal"></div>
        </div>`;
   const body=`<div class="step-title"><span>1</span> ${t('foamStep')}</div>
   <div class="form-grid">
     <div class="field"><label>${t('sku')}</label><input id="foamSku" class="input" value="${sku}"><div class="hint">${t('skuPrefixHint')}</div></div>
     <div class="field"><label>${t('gradeDensity')}</label><input id="foamGrade" class="input" value="${attrs.grade||''}" placeholder="${t('gradePlaceholder')}"></div>
-    <div class="field"><label>${t('widthMm')}</label><input id="foamWidth" type="number" step="1" class="input" value="${attrs.width||''}"></div>
-    <div class="field"><label>${t('lengthMm')}</label><input id="foamLength" type="number" step="1" class="input" value="${attrs.length||''}"></div>
-    <div class="field"><label>${t('heightMm')}</label><input id="foamHeight" type="number" step="1" class="input" value="${attrs.height||''}"></div>
-    <div class="field"><label>${t('accountingUnit')}</label><select id="foamUnit" class="select" onchange="syncFoamUnitInputs()"><option value="шт" ${(found?.unit||'шт')==='шт'?'selected':''}>${t('unitPieces')}</option><option value="м²" ${found?.unit==='м²'?'selected':''}>${t('unitM2')}</option></select><div class="hint">${t('unitHelp')}</div></div>
+    <div class="field"><label>Формат поролона</label><select id="foamKind" class="select" onchange="syncFoamKindInputs()"><option value="sheet" ${foamKind==='sheet'?'selected':''}>Листы · учет м²</option><option value="detail" ${foamKind==='detail'?'selected':''}>Детали · учет шт</option></select><div class="hint">Выберите как реально хранится материал.</div></div>
+    <div class="field"><label>${t('widthMm')}</label><input id="foamWidth" type="number" step="1" min="0" class="input" value="${attrs.width||''}" oninput="syncFoamKindInputs()"></div>
+    <div class="field"><label>${t('lengthMm')}</label><input id="foamLength" type="number" step="1" min="0" class="input" value="${attrs.length||''}" oninput="syncFoamKindInputs()"></div>
+    <div class="field"><label>Толщина, мм</label><input id="foamHeight" type="number" step="1" min="0" class="input" value="${attrs.height||attrs.thickness||''}"></div>
+    <div class="field foam-sheet-field"><label>Количество листов</label><input id="foamSheetCount" type="number" step="1" min="0" class="input" value="${attrs.sheetCount||''}" oninput="syncFoamKindInputs()"></div>
+    <div class="field foam-detail-field"><label>Количество деталей</label><input id="foamDetailCount" type="number" step="1" min="0" class="input" value="${attrs.detailCount||''}" oninput="syncFoamKindInputs()"></div>
+    <input id="foamUnit" type="hidden" value="${escapeHtml(found?.unit||foamUnit)}">
+    <div class="area-preview hidden" id="foamCalcPreview"></div>
     ${stockBlock}
     <div class="field full"><label>${t('pdfUpload')}</label><label class="file-drop"><small id="foamPdfName">${attrs.pdfName||t('pdfNotSelected')}</small><span class="btn small" type="button">${t('choosePdf')}</span><input id="foamPdf" type="file" accept="application/pdf" onchange="document.getElementById('foamPdfName').textContent=this.files[0]?.name||t('pdfNotSelected')"></label><div class="hint">${t('pdfStorageHint')}</div>${attrs.pdfUrl?`<button class="btn small" style="margin-top:8px" onclick="openPdfUrl('${attrs.pdfUrl}')">${t('currentPdf')}</button>`:''}</div>
     <div class="field full"><label>${t('tags')}</label><input id="foamTags" class="input" value="${attrs.tags||''}" placeholder="${t('tagsPlaceholder')}"></div>
@@ -991,16 +997,44 @@ function openFoamModal(id=null){
   openModal(id?t('editFoamTitle'):t('addFoamTitle'),body,foot);
   const skuEl=document.getElementById('foamSku');
   if(skuEl){skuEl.oninput=()=>{if(!skuEl.value.startsWith('DET.'))skuEl.value='DET.'+skuEl.value.replace(/^DET\.?/i,'')}}
-  syncFoamUnitInputs();
+  syncFoamKindInputs();
 }
 function syncFoamUnitInputs(){const unit=document.getElementById('foamUnit')?.value||'шт';syncStockInputs('foam',unit);}
+function syncFoamKindInputs(){
+  const kind=document.getElementById('foamKind')?.value||'detail';
+  const unit=kind==='sheet'?'м²':'шт';
+  const unitEl=document.getElementById('foamUnit');
+  if(unitEl)unitEl.value=unit;
+  document.querySelectorAll('.foam-sheet-field').forEach(el=>el.style.display=kind==='sheet'?'block':'none');
+  document.querySelectorAll('.foam-detail-field').forEach(el=>el.style.display=kind==='detail'?'block':'none');
+  syncStockInputs('foam',unit);
+  const width=Number(document.getElementById('foamWidth')?.value||0);
+  const length=Number(document.getElementById('foamLength')?.value||0);
+  const sheetCount=Math.max(0,Math.trunc(Number(document.getElementById('foamSheetCount')?.value||0)));
+  const detailCount=Math.max(0,Math.trunc(Number(document.getElementById('foamDetailCount')?.value||0)));
+  const qty=document.getElementById('foamQty');
+  const preview=document.getElementById('foamCalcPreview');
+  if(kind==='sheet'){
+    const one=width>0&&length>0?(width/1000)*(length/1000):0;
+    const total=Number((one*sheetCount).toFixed(3));
+    if(qty&&sheetCount>0&&one>0)qty.value=total;
+    if(preview&&one>0){preview.textContent=`1 лист: ${one.toFixed(3)} м² · всего: ${total.toFixed(3)} м²`;preview.classList.remove('hidden')}
+    else if(preview){preview.textContent='';preview.classList.add('hidden')}
+  }else{
+    if(qty&&detailCount>0)qty.value=detailCount;
+    if(preview){preview.textContent=detailCount>0?`Деталей: ${detailCount} шт`:'';preview.classList.toggle('hidden',detailCount<=0)}
+  }
+}
 function readFoamQuantity(id,fieldName){const unit=document.getElementById('foamUnit')?.value||'шт';const el=document.getElementById(id);if(!el)return 0;const v=normalizeStockValue(el.value,unit,true);if(v===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return null;}return v;}
 async function saveFoamMaterial(id=''){
   let sku=safeVal('foamSku');
   if(!sku || sku==='DET.'){toast(t('enterSkuMsg'));return;}
   if(!sku.startsWith('DET.')) sku='DET.'+sku;
-  const width=safeVal('foamWidth'), length=safeVal('foamLength'), height=safeVal('foamHeight'), grade=safeVal('foamGrade');
+  const width=safeVal('foamWidth'), length=safeVal('foamLength'), height=safeVal('foamHeight'), grade=safeVal('foamGrade'), foamKind=document.getElementById('foamKind')?.value||'detail';
   const unit=document.getElementById('foamUnit')?.value||'шт';
+  const sheetCount=Math.max(0,Math.trunc(Number(document.getElementById('foamSheetCount')?.value||0)));
+  const detailCount=Math.max(0,Math.trunc(Number(document.getElementById('foamDetailCount')?.value||0)));
+  const sheetArea=(foamKind==='sheet'&&Number(width)>0&&Number(length)>0)?Number(((Number(width)/1000)*(Number(length)/1000)).toFixed(3)):0;
   const foamQty=readFoamQuantity('foamQty',t('qtyWithUnit'));
   const foamMin=readFoamQuantity('foamMin',t('minQuantity'));
   const foamReserved=readFoamQuantity('foamReserved','Зарезервировано');
@@ -1013,7 +1047,11 @@ async function saveFoamMaterial(id=''){
   const pdfData=await uploadFoamPdfToSupabase(sku, oldAttrs);
   if(!pdfData)return;
   const attrs={
-    width, length, height, grade,
+    width, length, height, thickness:height, grade, foamKind,
+    sheetCount:foamKind==='sheet'?sheetCount:'',
+    detailCount:foamKind==='detail'?detailCount:'',
+    sheetArea:foamKind==='sheet'?sheetArea:'',
+    totalArea:foamKind==='sheet'?Number((sheetArea*sheetCount).toFixed(3)):'',
     purchaseStatus:document.getElementById('foamPurchaseStatus')?.value || (foamQty>0?'instock':'noorder'),
     reservedQty:foamReserved,
     orderedQty:foamOrdered,
