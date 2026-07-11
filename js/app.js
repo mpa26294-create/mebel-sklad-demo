@@ -1,7 +1,7 @@
 // FurniCore app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
-const FURNICORE_BUILD_VERSION = "v6.22 - Foam Category Route Fix";
+const FURNICORE_BUILD_VERSION = "v6.23 - Foam Wizard Style";
 
 function applyBuildVersion() {
   const badge = document.getElementById("appVersionBadge");
