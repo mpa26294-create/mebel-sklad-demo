@@ -2687,6 +2687,9 @@ body{background:#f7f8fb!important}
 .production-op-materials button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;min-height:34px;border:1px solid rgba(180,83,9,.22);border-radius:10px;background:#fff;color:#344054;text-align:left;padding:7px 9px;cursor:pointer}
 .production-op-materials button b{font-size:12px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .production-op-materials button span{font-size:11px;color:#b54708;white-space:nowrap}
+.quick-roll-fields{display:grid;gap:8px}
+.quick-roll-fields .field span{display:block;margin-bottom:7px;color:#555c68;font-size:12px;font-weight:500}
+.quick-roll-fields .area-preview{min-height:34px}
 @media(max-width:1100px){#stock .category-filter-row{grid-template-columns:1fr 1fr!important}.refs-grid{grid-template-columns:1fr}}
 @media(max-width:760px){#stock .topbar{gap:14px}#stock .search-top{width:100%}#stock .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps{grid-template-columns:1fr}.refs-add{grid-template-columns:1fr}.stock-erp-table th:nth-child(4),.stock-erp-table td:nth-child(4),.stock-erp-table th:nth-child(5),.stock-erp-table td:nth-child(5),.stock-erp-table th:nth-child(6),.stock-erp-table td:nth-child(6){display:none}.stock-erp-table .stock-material-title{max-width:180px}}
 @media(max-width:560px){#stock .stats{grid-template-columns:1fr}#stock .category-filter-row{grid-template-columns:1fr!important}.stock-primary-tabs,.stock-secondary-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}}

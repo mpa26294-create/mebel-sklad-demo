@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>FurniCore</title>
-  <link rel="stylesheet" href="css/style.css?v=6.19" />
+  <link rel="stylesheet" href="css/style.css?v=6.20" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -22,7 +22,7 @@
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.19</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.20</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
 
   <main class="main">
@@ -113,8 +113,8 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/ui.js?v=6.19"></script>
-<script src="js/app.js?v=6.19"></script>
+<script src="js/ui.js?v=6.20"></script>
+<script src="js/app.js?v=6.20"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.9"></script>
 <script src="js/translations.js?v=6.1"></script>
@@ -126,10 +126,10 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v6.19 - Production Material Warnings';
+const APP_VERSION = 'v6.20 - Roll Stock Adjustments';
 </script>
 <script src="js/auth.js?v=6.1"></script>
-<script src="js/materials.js?v=6.11"></script>
+<script src="js/materials.js?v=6.20"></script>
 <script src="js/orders.js?v=6.19"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
@@ -653,15 +653,17 @@ async function adjustMaterialQty(id,dir){
   if(m.category==='Ткань'&&(m.unit||'')==='рулон'&&movementUnit==='м.п.'){
     const meters=normalizeStockValue(input?.value||0,'м.п.',false);
     if(meters===null){toast(t('enterQtyPositive'));return;}
+    const width=Number(String(document.getElementById('detailRollWidth')?.value||0).replace(',','.'))||0;
+    if(width<=0){toast('Укажите ширину рулона');return;}
     const oldQty=stockNumForUnit(m.quantity,m.unit);
     const oldAttrs={...(m.attributes||{})};
     const rollLength=Number(oldAttrs.rollLength||oldAttrs.orderedRollLength||0);
-    if(!rollLength){toast('Укажите длину рулона, чтобы списывать в м.п.');return;}
-    const currentMeters=Number(oldAttrs.linearBalanceMeters||0)||oldQty*rollLength;
+    const currentMeters=Number(oldAttrs.linearBalanceMeters||0)||((oldQty&&rollLength)?oldQty*rollLength:0);
     const nextMeters=dir>0?currentMeters+meters:currentMeters-meters;
     if(nextMeters<0){toast(t('noNegativeStock'));return;}
-    m.attributes={...oldAttrs,linearBalanceMeters:Number(nextMeters.toFixed(3))};
-    m.quantity=stockNumForUnit(Math.ceil(nextMeters/rollLength),m.unit);
+    const nextArea=Number((nextMeters*width).toFixed(2));
+    m.attributes={...oldAttrs,rollWidth:Number(width.toFixed(3)),rollWidthMm:Math.round(width*1000),rollLength:rollLength||Number(nextMeters.toFixed(3)),linearBalanceMeters:Number(nextMeters.toFixed(3)),area:nextArea,totalArea:nextArea};
+    m.quantity=stockNumForUnit(nextMeters>0?(rollLength?Math.ceil(nextMeters/rollLength):1):0,m.unit);
     m.lastUpdated=today();
     const ok=await updateMaterialInSupabase(m);
     if(!ok){m.quantity=oldQty;m.attributes=oldAttrs;return;}
@@ -695,11 +697,24 @@ function syncDetailQtyUnit(){
   const unit=document.getElementById('detailQtyUnit')?.value||'';
   const input=document.getElementById('detailQtyChange');
   const label=document.getElementById('detailQtyLabel');
+  const rollFields=document.getElementById('detailRollFields');
   if(!input)return;
   input.step=unit==='м.п.'?'0.01':stockStep(unit||'шт');
   input.min=input.step;
   input.value=unit==='м.п.'?'1':stockDefaultValue(unit||'шт');
-  if(label)label.textContent=`Изменить остаток, ${unitLabel(unit)}`;
+  if(label)label.textContent=unit==='м.п.'?'Изменить остаток: длина, м':`Изменить остаток, ${unitLabel(unit)}`;
+  if(rollFields)rollFields.style.display=unit==='м.п.'?'grid':'none';
+  syncDetailRollPreview();
+}
+function syncDetailRollPreview(){
+  const unit=document.getElementById('detailQtyUnit')?.value||'';
+  const box=document.getElementById('detailRollPreview');
+  if(!box)return;
+  if(unit!=='м.п.'){box.classList.add('hidden');box.textContent='';return}
+  const width=Number(String(document.getElementById('detailRollWidth')?.value||0).replace(',','.'))||0;
+  const length=Number(String(document.getElementById('detailQtyChange')?.value||0).replace(',','.'))||0;
+  if(width>0&&length>0){box.textContent=`Площадь изменения: ${(width*length).toFixed(2)} м²`;box.classList.remove('hidden')}
+  else{box.classList.add('hidden');box.textContent=''}
 }
 
 let quickOperationMode='add';
