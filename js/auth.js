@@ -92,9 +92,9 @@ async function checkSession(){
   if(currentUser){setAuthLocked(false);await startAppAfterLogin()}else setAuthLocked(true);
 }
 
-/* v6.28: one-screen Apple foam flow */
+/* v6.29: fixed one-screen Apple foam flow */
 (function(){
-  const VERSION_LABEL='v6.28 - Apple Foam Flow';
+  const VERSION_LABEL='v6.29 - Foam State Fix';
   let foamState='stock';
 
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
@@ -129,13 +129,15 @@ async function checkSession(){
     const min=attrs.minStockQty??found?.minQuantity??0;
     const ordered=attrs.orderedQty??0;
     const date=attrs.arrivalDate||attrs.receiptDate||attrs.expectedReceiptDate||(typeof today==='function'?today():new Date().toISOString().slice(0,10));
-    return `<div class="field full" id="foamStateSection"><h4 style="margin:0 0 12px">Состояние материала</h4>${stateCards()}<input id="foamStatus" type="hidden" value="${foamState}"><input id="foamPurchaseStatus" type="hidden" value="${foamState==='ordered'?'ordered':(foamState==='stock'?'instock':'noorder')}"><div class="form-grid hidden" id="foamOrderedFields"><div class="field"><label id="foamOrderedQtyLabel">Заказано, ${label}</label><input id="foamOrderedQty" type="number" min="0" step="1" class="input" value="${esc(ordered)}"></div><div class="field"><label>Ожидаемая дата поступления</label><input id="foamExpectedDate" type="date" class="input" value="${esc(date)}"></div><div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="foamPurchaseOrderInfo" class="input" value="${esc(attrs.purchaseOrderInfo||attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div></div><div class="form-grid hidden" id="foamStockFields"><div class="field"><label id="foamQtyLabel">На складе, ${label}</label><input id="foamQty" type="number" min="0" step="1" class="input" value="${esc(stock)}"></div><div class="field"><label id="foamMinLabel">Мин. остаток, ${label}</label><input id="foamMin" type="number" min="0" step="1" class="input" value="${esc(min)}"></div><div class="field"><label>Место хранения</label><input id="foamStorageLocation" class="input" value="${esc(attrs.storageLocation||'')}" placeholder="Стеллаж / зона"></div><div class="field"><label id="foamPriceLabel">Цена закупки, ${format==='sheet'?'за лист':'за деталь'}</label><input id="foamPurchasePrice" type="number" min="0" step="0.01" class="input" value="${esc(attrs.purchasePrice||'')}"></div><div class="field"><label>Дата поступления</label><input id="foamArrivalDate" type="date" class="input" value="${esc(date)}"></div></div><input id="foamReserved" type="hidden" value="${esc(attrs.reservedQty||0)}"></div>`;
+    return `<div class="field full" id="foamStateSection"><h4 style="margin:0 0 12px">Состояние материала</h4>${stateCards()}<input id="foamStatus" type="hidden" value="${foamState}"><input id="foamPurchaseStatus" type="hidden" value="${foamState==='ordered'?'ordered':(foamState==='stock'?'instock':'noorder')}"><div class="form-grid" id="foamOrderedFields" style="display:none"><div class="field"><label id="foamOrderedQtyLabel">Заказано, ${label}</label><input id="foamOrderedQty" type="number" min="0" step="1" class="input" value="${esc(ordered)}"></div><div class="field"><label>Ожидаемая дата поступления</label><input id="foamExpectedDate" type="date" class="input" value="${esc(date)}"></div><div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="foamPurchaseOrderInfo" class="input" value="${esc(attrs.purchaseOrderInfo||attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div></div><div class="form-grid" id="foamStockFields" style="display:none"><div class="field"><label id="foamQtyLabel">На складе, ${label}</label><input id="foamQty" type="number" min="0" step="1" class="input" value="${esc(stock)}"></div><div class="field"><label id="foamMinLabel">Мин. остаток, ${label}</label><input id="foamMin" type="number" min="0" step="1" class="input" value="${esc(min)}"></div><div class="field"><label>Место хранения</label><input id="foamStorageLocation" class="input" value="${esc(attrs.storageLocation||'')}" placeholder="Стеллаж / зона"></div><div class="field"><label id="foamPriceLabel">Цена закупки, ${format==='sheet'?'за лист':'за деталь'}</label><input id="foamPurchasePrice" type="number" min="0" step="0.01" class="input" value="${esc(attrs.purchasePrice||'')}"></div><div class="field"><label>Дата поступления</label><input id="foamArrivalDate" type="date" class="input" value="${esc(date)}"></div></div><input id="foamReserved" type="hidden" value="${esc(attrs.reservedQty||0)}"></div>`;
   }
 
   function updateStatusUi(){
     document.querySelectorAll('[data-foam-state]').forEach(card=>card.classList.toggle('active',card.dataset.foamState===foamState));
-    document.getElementById('foamOrderedFields')?.classList.toggle('hidden',foamState!=='ordered');
-    document.getElementById('foamStockFields')?.classList.toggle('hidden',foamState!=='stock');
+    const orderedFields=document.getElementById('foamOrderedFields');
+    const stockFields=document.getElementById('foamStockFields');
+    if(orderedFields)orderedFields.style.setProperty('display',foamState==='ordered'?'grid':'none','important');
+    if(stockFields)stockFields.style.setProperty('display',foamState==='stock'?'grid':'none','important');
     const status=document.getElementById('foamStatus');
     if(status)status.value=foamState;
     const purchase=document.getElementById('foamPurchaseStatus');
@@ -211,7 +213,7 @@ async function checkSession(){
     return value;
   }
 
-  async function saveFoamV628(id=''){
+  async function saveFoamV629(id=''){
     if(!requireAuth())return;
     let sku=(document.getElementById('foamSku')?.value||'').trim();
     if(!sku||sku==='DET.'){toast(t('enterSkuMsg'));return}
@@ -265,7 +267,7 @@ async function checkSession(){
         openFormatChoice();
       };
     }
-    window.saveFoamMaterial=saveFoamV628;
+    window.saveFoamMaterial=saveFoamV629;
   });
   document.addEventListener('DOMContentLoaded',applyVersion);
 })();
