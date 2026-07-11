@@ -98,3 +98,97 @@ async function checkSession(){
   renderAuthBox();
   if(currentUser){ setAuthLocked(false); await startAppAfterLogin(); } else { setAuthLocked(true); }
 }
+
+/* v6.24: foam pieces without dimensions + fabric-style stock state */
+(function(){
+  const VERSION_LABEL='v6.24 - Foam Pieces Stock';
+  let foamCreateState='card';
+
+  function applyVersionLabel(){
+    document.querySelectorAll('.product-footer b,.version-badge').forEach(el=>el.textContent=VERSION_LABEL);
+  }
+
+  function foamStateCard(state,title,description){
+    return `<button class="material-state-card ${foamCreateState===state?'active':''}" type="button" data-foam-state="${state}" onclick="setFoamCreateState('${state}')"><b>${title}</b><span>${description}</span></button>`;
+  }
+
+  function foamStockFieldsHtml(found,attrs,unit){
+    const qty=typeof inputQtyValue==='function'?inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit):(found?.quantity||0);
+    const min=typeof inputQtyValue==='function'?inputQtyValue(stockNumForUnit(found?.minQuantity||0,unit),unit):(found?.minQuantity||0);
+    const ordered=typeof inputQtyValue==='function'?inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit):(attrs.orderedQty||0);
+    return `<input id="foamPurchaseStatus" type="hidden" value="${foamCreateState==='ordered'?'ordered':(foamCreateState==='stock'?'instock':'noorder')}">
+      <div class="material-state-cards">
+        ${foamStateCard('card','Только создать карточку','Материал появится в базе без остатка.')}
+        ${foamStateCard('ordered','Заказано','Материал заказан, но ещё не пришёл.')}
+        ${foamStateCard('stock','На складе','Материал уже физически находится на складе.')}
+      </div>
+      <div class="form-grid state-fields ${foamCreateState==='ordered'?'':'hidden'}" data-foam-fields="ordered">
+        <div class="field"><label>Заказано, ${unitLabel(unit)}</label><input id="foamOrdered" type="number" step="${stockStep(unit)}" min="0" class="input" value="${ordered}" inputmode="decimal"></div>
+        <div class="field"><label>${t('supplier')}</label><input id="foamSupplier" class="input" value="${attrs.supplier||''}" placeholder="${t('supplierPlaceholder')}"></div>
+        <div class="field full"><label>${t('order')}</label><input id="foamOrder" class="input" value="${attrs.order||''}" placeholder="${t('orderPlaceholder')}"></div>
+      </div>
+      <div class="form-grid state-fields ${foamCreateState==='stock'?'':'hidden'}" data-foam-fields="stock">
+        <div class="field"><label>На складе, ${unitLabel(unit)}</label><input id="foamQty" type="number" step="${stockStep(unit)}" min="0" class="input" value="${qty}" inputmode="decimal"></div>
+        <div class="field"><label>${t('minQuantity')}</label><input id="foamMin" type="number" step="${stockStep(unit)}" min="0" class="input" value="${min}" inputmode="decimal"></div>
+      </div>
+      <input id="foamReserved" type="hidden" value="${attrs.reservedQty||0}">`;
+  }
+
+  window.setFoamCreateState=function(state){
+    foamCreateState=['card','ordered','stock'].includes(state)?state:'card';
+    document.querySelectorAll('[data-foam-state]').forEach(card=>card.classList.toggle('active',card.dataset.foamState===foamCreateState));
+    document.querySelectorAll('[data-foam-fields]').forEach(box=>box.classList.toggle('hidden',box.dataset.foamFields!==foamCreateState));
+    const status=document.getElementById('foamPurchaseStatus');
+    if(status)status.value=foamCreateState==='ordered'?'ordered':(foamCreateState==='stock'?'instock':'noorder');
+  };
+
+  function patchFoamWizard(id){
+    const wizard=document.querySelector('.material-wizard');
+    const kind=document.getElementById('foamKind')?.value||'detail';
+    if(!wizard||!document.getElementById('foamSku'))return;
+    const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
+    const attrs=found?.attributes||{};
+    const unit=kind==='sheet'?'м²':'шт';
+    foamCreateState=attrs.purchaseStatus==='ordered'?'ordered':((Number(found?.quantity||0)>0)?'stock':'card');
+
+    const step2=wizard.querySelector('.material-wizard-step[data-step="2"]');
+    if(step2){
+      step2.querySelectorAll('#foamWidth,#foamLength,#foamHeight').forEach(input=>input.closest('.field')?.classList.toggle('hidden',kind==='detail'));
+      const heading=step2.querySelector('h4');
+      if(heading)heading.textContent=kind==='detail'?'Количество деталей':'Параметры листа';
+    }
+
+    const step3=wizard.querySelector('.material-wizard-step[data-step="3"]');
+    const grid=step3?.querySelector('.form-grid');
+    if(grid){
+      const pdfField=grid.querySelector('.field.full')?.outerHTML||'';
+      grid.innerHTML=`<div class="field full">${foamStockFieldsHtml(found,attrs,unit)}</div>${pdfField}`;
+    }
+    syncFoamKindInputs();
+    setFoamCreateState(foamCreateState);
+  }
+
+  window.addEventListener('load',()=>{
+    applyVersionLabel();
+    const originalOpenFoamModal=window.openFoamModal;
+    if(typeof originalOpenFoamModal==='function'){
+      window.openFoamModal=function(id=null){
+        const result=originalOpenFoamModal(id);
+        setTimeout(()=>patchFoamWizard(id),0);
+        return result;
+      };
+    }
+    const originalSyncFoamKindInputs=window.syncFoamKindInputs;
+    if(typeof originalSyncFoamKindInputs==='function'){
+      window.syncFoamKindInputs=function(){
+        const result=originalSyncFoamKindInputs();
+        const kind=document.getElementById('foamKind')?.value||'detail';
+        document.querySelectorAll('#foamWidth,#foamLength,#foamHeight').forEach(input=>input.closest('.field')?.classList.toggle('hidden',kind==='detail'));
+        const heading=document.querySelector('.material-wizard-step[data-step="2"] h4');
+        if(heading)heading.textContent=kind==='detail'?'Количество деталей':'Параметры листа';
+        return result;
+      };
+    }
+  });
+  document.addEventListener('DOMContentLoaded',applyVersionLabel);
+})();
