@@ -453,6 +453,34 @@ async function saveMaterialReceipt(id){
 function detailField(label,value,full=false){return `<div class="detail-field ${full?'full':''}"><small>${escapeHtml(label)}</small><b>${value?value:'—'}</b></div>`}
 function woodMm(value){return value?`${escapeHtml(value)} мм`:'—'}
 function woodSectionText(a){const parts=[a.thickness&&`${a.thickness} мм`,a.width&&`${a.width} мм`].filter(Boolean);return parts.length?parts.join(' × '):'—'}
+function isWoodSheetMaterial(m){
+  const a=m?.attributes||{};
+  const type=String(a.materialType||m?.subcategory||'');
+  return m?.category==='Древесина' && (!!a.sheetArea || ['Мебельный щит','Фанера','MDF','HDF','МДФ','ДСП','ДВП','OSB'].includes(type));
+}
+function woodSheetArea(m){
+  const a=m?.attributes||{};
+  const saved=Number(a.sheetArea||0);
+  if(Number.isFinite(saved)&&saved>0)return saved;
+  const width=Number(a.width||0),length=Number(a.length||0);
+  return width>0&&length>0?Number(((width/1000)*(length/1000)).toFixed(6)):0;
+}
+function materialInfoQty(q,m,fromUnit){
+  const unit=fromUnit||m?.unit||'';
+  const n=Number(q||0);
+  if(!isWoodSheetMaterial(m))return stockNumForUnit(n,unit);
+  const area=woodSheetArea(m);
+  if(unit==='м²')return stockNumForUnit(n,'м²');
+  if(area>0 && (unit==='лист' || (m?.attributes||{}).unitType==='sheet'))return stockNumForUnit(n*area,'м²');
+  const thickness=Number((m?.attributes||{}).thickness||0);
+  if(unit==='м³'&&thickness>0)return stockNumForUnit(n/(thickness/1000),'м²');
+  return stockNumForUnit(area>0?n*area:n,'м²');
+}
+function materialInfoQtyWithUnit(q,m,fromUnit){
+  if(isWoodSheetMaterial(m))return qtyWithUnit(materialInfoQty(q,m,fromUnit),'м²');
+  const unit=fromUnit||m?.unit||'шт';
+  return qtyWithUnit(q,unit);
+}
 function materialDetailBasics(m){
   const a=m.attributes||{};
   const rows=[];
@@ -485,13 +513,21 @@ function materialDetailBasics(m){
     if(a.foamKind==='detail')rows.push(detailField('Количество деталей',escapeHtml(a.detailCount||'—')));
     rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
   }else if(m.category==='Древесина'){
+    const sheet=isWoodSheetMaterial(m);
     rows.push(detailField('Тип материала',escapeHtml(m.subcategory||a.materialType||'—')));
     rows.push(detailField('Порода',escapeHtml(a.woodSpecies||a.woodType||'—')));
     rows.push(detailField('Размер',escapeHtml([a.thickness,a.width,a.length].filter(Boolean).join('×')+(a.thickness||a.width||a.length?' мм':''))));
-    if(a.sheetArea)rows.push(detailField('Площадь 1 листа',escapeHtml(Number(a.sheetArea).toFixed(2)+' м²')));
-    if(a.totalArea)rows.push(detailField('Общая площадь',escapeHtml(Number(a.totalArea).toFixed(2)+' м²')));
+    if(sheet){
+      const area=woodSheetArea(m);
+      const totalArea=Number(a.totalArea||0);
+      rows.push(detailField('Площадь 1 листа',escapeHtml(area?Number(area).toFixed(2)+' м²':'—')));
+      rows.push(detailField('Общая площадь',escapeHtml(totalArea>0?qtyWithUnit(totalArea,'м²'):materialInfoQtyWithUnit(m.quantity||0,m,m.unit))));
+    }else{
+      if(a.sheetArea)rows.push(detailField('Площадь 1 листа',escapeHtml(Number(a.sheetArea).toFixed(2)+' м²')));
+      if(a.totalArea)rows.push(detailField('Общая площадь',escapeHtml(Number(a.totalArea).toFixed(2)+' м²')));
+    }
     rows.push(detailField('Сорт',escapeHtml(a.grade||'—')));
-    rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
+    rows.push(detailField('Единица учёта',escapeHtml(sheet?'м²':(unitLabel(m.unit||'')||'—'))));
   }else{
     rows.push(detailField('Тип / размер',escapeHtml(m.subcategory||a.size||a.thickness||'—')));
     rows.push(detailField('Характеристики',escapeHtml(materialCompactText(m)||'—'),true));
@@ -539,9 +575,14 @@ function openMaterialDetails(id){
   const fabricLinearLine=isFabricRoll&&rollLength?`<div class="kv-line"><span>Остаток, м.п.</span><b>${escapeHtml(formatQty(linearBalance,'м.п.'))} м.п.</b></div>`:'';
   
   // Sheet material detection (wood, plywood, etc.)
-  const isSheetMaterial=m.category==='Древесина' && a.width && a.length && a.thickness;
-  const sheetArea=isSheetMaterial?((Number(a.width)/1000)*(Number(a.length)/1000)).toFixed(3):'0';
+  const isSheetMaterial=isWoodSheetMaterial(m) && a.width && a.length && a.thickness;
+  const sheetArea=isSheetMaterial?woodSheetArea(m).toFixed(3):'0';
   const sheetStock=isSheetMaterial?Math.floor(stock/sheetArea):0;
+  const stockInfoText=materialInfoQtyWithUnit(stock,m,unit);
+  const availableInfoText=materialInfoQtyWithUnit(available,m,unit);
+  const reservedInfoText=materialInfoQtyWithUnit(reserved,m,unit);
+  const orderedInfoText=materialInfoQtyWithUnit(ordered,m,unit);
+  const needInfoText=materialInfoQtyWithUnit(need,m,unit);
   
   const quickUnitControl=isFabricRoll?`<select id="detailQtyUnit" class="select" onchange="syncDetailQtyUnit()"><option value="м.п.">м.п.</option><option value="рулон">рулон</option></select>`:(isSheetMaterial?`<select id="detailQtyUnit" class="select" onchange="syncDetailQtyUnit()"><option value="sheet">листы</option><option value="m2">м²</option></select>`:`<input type="hidden" id="detailQtyUnit" value="${escapeHtml(unit)}">`);
   const quickFabricFields=isFabricRoll?`<div class="quick-roll-fields" id="detailRollFields"><label class="field"><span>Ширина рулона, м</span><input id="detailRollWidth" class="input" type="number" step="0.01" min="0" value="${escapeHtml(a.rollWidth||((Number(a.rollWidthMm||0)>0)?Number(a.rollWidthMm)/1000:''))}" oninput="syncDetailRollPreview()"></label><div class="area-preview hidden" id="detailRollPreview"></div></div>`:(isSheetMaterial?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview">Площадь 1 листа: ${sheetArea} м²</div></div>`:'');
@@ -614,12 +655,12 @@ function openMaterialDetails(id){
       </div>
 
       <div class="material-summary-panel material-summary-clean" data-detail-stock>
-        <div class="summary-card primary"><span class="summary-label">На складе</span><span class="summary-value">${escapeHtml(qtyWithUnit(stock,unit))}</span></div>
-        <div class="summary-card"><span class="summary-label">Доступно</span><span class="summary-value">${escapeHtml(qtyWithUnit(available,unit))}</span></div>
-        <div class="summary-card"><span class="summary-label">Резерв</span><span class="summary-value">${escapeHtml(qtyWithUnit(reserved,unit))}</span></div>
-        <div class="summary-card"><span class="summary-label">Заказано</span><span class="summary-value">${escapeHtml(qtyWithUnit(ordered,unit))}</span></div>
+        <div class="summary-card primary"><span class="summary-label">На складе</span><span class="summary-value">${escapeHtml(stockInfoText)}</span></div>
+        <div class="summary-card"><span class="summary-label">Доступно</span><span class="summary-value">${escapeHtml(availableInfoText)}</span></div>
+        <div class="summary-card"><span class="summary-label">Резерв</span><span class="summary-value">${escapeHtml(reservedInfoText)}</span></div>
+        <div class="summary-card"><span class="summary-label">Заказано</span><span class="summary-value">${escapeHtml(orderedInfoText)}</span></div>
         <div class="summary-status summary-status-${summaryStatusClass}">${summaryStatus}</div>
-        <div class="summary-need ${need>0?'danger':''}">Нужно заказать: ${escapeHtml(qtyWithUnit(need,unit))}</div>
+        <div class="summary-need ${need>0?'danger':''}">Нужно заказать: ${escapeHtml(needInfoText)}</div>
       </div>
 
       <details class="material-detail-section" open>
