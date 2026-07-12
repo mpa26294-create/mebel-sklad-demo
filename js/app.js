@@ -1,7 +1,7 @@
 // FurniCore app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
-const FURNICORE_BUILD_VERSION = "v6.33 - No Flash UI";
+const FURNICORE_BUILD_VERSION = "v6.34 - Apple Leather Flow";
 
 function applyBuildVersion() {
   const badge = document.getElementById("appVersionBadge");
@@ -11,23 +11,21 @@ function applyBuildVersion() {
   });
 }
 
-function loadRollMaterialUxImmediately() {
-  if (document.querySelector('script[data-module="roll-material-v633"]')) return;
+function loadMaterialUxImmediately() {
+  if (document.querySelector('script[data-module="material-flow-v634"]')) return;
   const script = document.createElement('script');
-  script.src = 'js/eco-leather-wizard.js?v=6.33';
-  script.dataset.module = 'roll-material-v633';
+  script.src = 'js/eco-leather-wizard.js?v=6.34';
+  script.dataset.module = 'material-flow-v634';
   script.async = false;
   document.head.appendChild(script);
 }
 
 applyBuildVersion();
-loadRollMaterialUxImmediately();
+loadMaterialUxImmediately();
 
 document.addEventListener('DOMContentLoaded', applyBuildVersion);
 window.addEventListener('load', applyBuildVersion);
 
-// Старые модули могут кратко записать своё значение версии. Возвращаем актуальное
-// значение сразу, без заметного мигания в интерфейсе.
 try {
   new MutationObserver(applyBuildVersion).observe(document.documentElement, {
     childList: true,
