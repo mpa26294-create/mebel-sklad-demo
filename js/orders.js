@@ -763,11 +763,21 @@ function openOrderView(id){
 
 function orderNextResponsibleText(o){if(['Ожидает технолога','Технология в работе'].includes(String(o.status)))return t('technologistRole');if(['В производстве','В работе'].includes(String(o.status)))return t('productionRole');if(['Готов','Готов к работе'].includes(String(o.status)))return t('completionRole');return '—'}
 function orderInfoHistoryHtml(o){const rows=typeof auditFor==='function'?auditFor('order',o.id).slice(0,20):[];return `<section class="order-info-history"><h4>${escapeHtml(t('orderHistoryTitle'))}</h4>${rows.length?rows.map(row=>`<div><span><b>${escapeHtml(row.text||row.action||'—')}</b><small>${escapeHtml(row.user||row.by||'')}</small></span><time>${escapeHtml(typeof auditTime==='function'?auditTime(row.at):productionDateTimeText(row.at))}</time></div>`).join(''):`<p>${escapeHtml(t('orderHistoryEmpty'))}</p>`}</section>`}
+function openOrderTechnologyFromInfo(id){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(id));
+  if(!o){toast('Заказ не найден');return;}
+  orderWorkflowSelection.set(String(id),1);
+  const body=`<div id="orderWorkflowModal">${orderWorkflowStepperHtml(o,'modal')}${orderWorkflowContentHtml(o,true)}</div>`;
+  openModal(o.number||t('orderStageTechnology'),body,`<button class="btn" type="button" onclick="showOrderInfoModal('${o.id}')">${escapeHtml(u42('back')||'Назад')}</button><button class="btn" type="button" onclick="openOrderModal('${o.id}')">${escapeHtml(u42('edit'))}</button>`);
+  setCleanModalClass('order-clean-modal');
+}
+
 function showOrderInfoModal(id){
   const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;
   const status=calcOrderAutoStatus(o),fields=[[t('orderNumberLabel'),o.number||'—'],[t('orderCustomer'),o.client||'—'],[t('orderProduct'),o.product||'—'],[t('orderProductCount'),orderProductQty(o)],[t('orderDueDate'),o.dueDate||'—'],[t('orderCreatedDate'),o.date||'—'],[t('orderPriority'),orderPriorityLabel(o.priority)],[t('orderCurrentStatus'),status]];
   const body=`<div class="order-info-view"><div class="order-info-grid">${fields.map(([label,value])=>`<div><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}<div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div>${orderInfoHistoryHtml(o)}${typeof cancelReviewPending==='function'&&cancelReviewPending(o)&&typeof cancelReviewHtml==='function'?cancelReviewHtml(o):''}</div>`;
-  openModal(o.number||t('orderStageCreation'),body,`<button class="btn" type="button" onclick="openOrderModal('${o.id}')">${escapeHtml(u42('edit'))}</button><button class="btn primary" type="button" onclick="closeModal()">${escapeHtml(u42('close'))}</button>`);setCleanModalClass('order-clean-modal order-info-modal');
+  const technologyLabel=currentLang==='en'?'Technology':currentLang==='lv'?'Tehnoloģija':'Технология';
+  openModal(o.number||t('orderStageCreation'),body,`<button class="btn" type="button" onclick="openOrderModal('${o.id}')">${escapeHtml(u42('edit'))}</button><button class="btn primary" type="button" onclick="openOrderTechnologyFromInfo('${o.id}')">${escapeHtml(technologyLabel)}</button><button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('close'))}</button>`);setCleanModalClass('order-clean-modal order-info-modal');
 }
 
 function openOrderView(id){
