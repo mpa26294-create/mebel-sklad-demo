@@ -980,7 +980,7 @@ async function finishMaterialSaveAndReturn(newSku='', category=''){
   toast(t('savedMaterial'));
 }
 
-const ADD_CATEGORIES = ['Ткань','Экокожа','Кожа','Поролон','Древесина','Фанера','МДФ','ДСП','ДВП','OSB','Фурнитура','Крепёж','Наполнители'];
+const ADD_CATEGORIES = ['Ткань','Экокожа','Кожа','Поролон','Древесина','Фурнитура','Крепёж','Наполнители'];
 function openAddCategoryModal(fromOrder=false){
   if(!requireAuth())return;
   if(fromOrder)pushModalState();
