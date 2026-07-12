@@ -2383,12 +2383,18 @@ syncMaterialReservations=function(){
   const totals={};
   (data.orders||[]).forEach(o=>{
     if(orderIsTerminal(o.status))return;
-    orderMaterials(o).forEach(i=>{if(i.materialId)totals[i.materialId]=(totals[i.materialId]||0)+Number(i.qty||0)});
+    orderMaterials(o).forEach(i=>{
+      const m=(data.materials||[]).find(x=>String(x.id)===String(i.materialId));
+      if(i.materialId)totals[i.materialId]=(totals[i.materialId]||0)+convertMaterialQty(Number(i.qty||0),i.unit||m?.unit||'',m?.unit||i.unit||'',m);
+    });
   });
   const frozen={};
   (data.orders||[]).forEach(o=>{
     if(!orderIsCancelled(o.status)||!cancelReviewPending(o))return;
-    (o.cancelReview.items||[]).forEach(i=>{if(i.materialId)frozen[i.materialId]=(frozen[i.materialId]||0)+Number(i.qty||0)});
+    (o.cancelReview.items||[]).forEach(i=>{
+      const m=(data.materials||[]).find(x=>String(x.id)===String(i.materialId));
+      if(i.materialId)frozen[i.materialId]=(frozen[i.materialId]||0)+convertMaterialQty(Number(i.qty||0),i.unit||m?.unit||'',m?.unit||i.unit||'',m);
+    });
   });
   (data.materials||[]).forEach(m=>{m.attributes=m.attributes||{};m.attributes.frozenQty=stockNumForUnit(frozen[m.id]||0,m.unit);m.attributes.reservedQty=stockNumForUnit((totals[m.id]||0)+(frozen[m.id]||0),m.unit);});
 };
