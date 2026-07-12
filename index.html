@@ -702,7 +702,7 @@ async function adjustMaterialQty(id,dir){
     return;
   }
   
-  if(m.category==='Ткань'&&(m.unit||'')==='рулон'&&movementUnit==='м.п.'){
+  if((m.category==='Ткань'||m.category==='Экокожа')&&(m.unit||'')==='рулон'&&(movementUnit==='м.п.'||movementUnit==='пог. м')){
     const meters=normalizeStockValue(input?.value||0,'м.п.',false);
     if(meters===null){toast(t('enterQtyPositive'));return;}
     const width=Number(String(document.getElementById('detailRollWidth')?.value||0).replace(',','.'))||0;
@@ -766,7 +766,7 @@ function syncDetailQtyUnit(){
     input.step='0.01';
     input.min='0.01';
     input.value='1';
-    if(label)label.textContent='Изменить остаток: длина, м';
+    if(label)label.textContent='Изменить остаток, пог. м';
   }else{
     input.step=stockStep(unit||'шт');
     input.min=input.step;
@@ -1406,12 +1406,12 @@ function updateFabricAreaPreview(){
   const width=Number(String(widthEl?.value||0).replace(',','.'))||0;
   const length=Number(String(lengthEl?.value||0).replace(',','.'))||0;
   const qtyEl=state==='ordered'?document.getElementById('fabricOrderedQty'):document.getElementById('fabricQty');
-  const rolls=Math.max(1,Number(String(qtyEl?.value||1).replace(',','.'))||1);
+  const meters=Math.max(0,Number(String(qtyEl?.value||0).replace(',','.'))||0);
   const boxes=[document.getElementById('fabricOrderedAreaPreview'),document.getElementById('fabricStockAreaPreview')].filter(Boolean);
-  if(width>0&&length>0){
-    const one=width*length;
-    const total=one*rolls;
-    boxes.forEach(box=>{box.textContent=`Площадь 1 рулона: ${one.toFixed(2)} м² · всего: ${total.toFixed(2)} м²`;box.classList.remove('hidden')});
+  if(width>0&&(length>0||meters>0)){
+    const one=length>0?width*length:0;
+    const total=width*meters;
+    boxes.forEach(box=>{box.textContent=`${one>0?`Площадь 1 рулона: ${one.toFixed(2)} м² · `:''}общая площадь: ${total.toFixed(2)} м²`;box.classList.remove('hidden')});
   }else{
     boxes.forEach(box=>{box.textContent='';box.classList.add('hidden')});
   }
@@ -1572,7 +1572,9 @@ function openFabricModal(id=null,category='Ткань'){
   const attrs=found?.attributes||{};
   const sub=found?.subcategory||attrs.materialType||fabricCategory;
   const currentState=attrs.purchaseStatus==='ordered'?'ordered':(stockNumForUnit(found?.quantity||0,found?.unit||'м.п.')>0||!!attrs.storageLocation?'stock':'card');
-  const unit=isLeather?'м²':(found?.unit||materialBaseUnit(fabricCategory));
+  const unit=isLeather?'м²':'пог. м';
+  const stockQtyValue=(!isLeather&&found&&typeof isLinearFabricStock==='function'&&isLinearFabricStock(found))?materialLinearStockQty(found):stockNumForUnit(found?.quantity||0,unit);
+  const orderedQtyValue=(!isLeather&&found&&typeof isLinearFabricStock==='function'&&isLinearFabricStock(found))?convertMaterialQty(attrs.orderedQty||0,found.unit||unit,unit,found):stockNumForUnit(attrs.orderedQty||0,unit);
   const modalTitle=fabricModalTitle(fabricCategory,id);
   const orderedFields=isLeather?`
           <div class="field"><label>Площадь, м²</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}"></div>
@@ -1580,7 +1582,7 @@ function openFabricModal(id=null,category='Ткань'){
           <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>`:`
           <div class="field"><label>Ширина рулона, м</label><input id="fabricOrderedRollWidth" class="input" type="number" min="0" step="0.01" value="${attrs.orderedRollWidth||attrs.rollWidth||''}" oninput="updateFabricAreaPreview()"></div>
           <div class="field"><label>Длина рулона, м</label><input id="fabricOrderedRollLength" class="input" type="number" min="0" step="0.01" value="${attrs.orderedRollLength||attrs.rollLength||''}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Количество, ${unitLabel(unit)}</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}" oninput="normalizeFabricRollQty('fabricOrderedQty')"></div>
+          <div class="field"><label>Заказано, пог. м</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(orderedQtyValue,unit)}" oninput="updateFabricAreaPreview()"></div>
           <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
           <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
           <div class="area-preview hidden" id="fabricOrderedAreaPreview"></div>`;
@@ -1591,7 +1593,7 @@ function openFabricModal(id=null,category='Ткань'){
           <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>`:`
           <div class="field"><label>Ширина рулона, м</label><input id="fabricStockRollWidth" class="input" type="number" min="0" step="0.01" value="${attrs.rollWidth||((Number(attrs.rollWidthMm||0)>0)?Number(attrs.rollWidthMm)/1000:'')}" oninput="updateFabricAreaPreview()"></div>
           <div class="field"><label>Длина рулона, м</label><input id="fabricStockRollLength" class="input" type="number" min="0" step="0.01" value="${attrs.rollLength||''}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Количество, ${unitLabel(unit)}</label><input id="fabricQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}" oninput="normalizeFabricRollQty('fabricQty')"></div>
+          <div class="field"><label>На складе, пог. м</label><input id="fabricQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockQtyValue,unit)}" oninput="updateFabricAreaPreview()"></div>
           <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="Стеллаж / зона"></div>
           <div class="field"><label>${t('purchasePrice')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
           <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>
@@ -1650,7 +1652,7 @@ async function saveFabricMaterial(id=''){
   const category=document.getElementById('fabricCategory')?.value||found?.category||'Ткань';
   const isLeather=category==='Кожа';
   const sub=category;
-  const unit=isLeather?'м²':(found?.unit||materialBaseUnit(category));
+  const unit=isLeather?'м²':'пог. м';
   const sku=(document.getElementById('fabricSku')?.value||'').trim()||nextSku(category,'',id||'');
   if(warnFabricDuplicate())return;
   const name=(document.getElementById('fabricName')?.value||'').trim()||sub;
@@ -1680,7 +1682,7 @@ async function saveFabricMaterial(id=''){
     rollWidthMm:isLeather?'':(widthM?Math.round(widthM*1000):''),
     rollLength:isLeather?'':(lengthM||''),
     area:isLeather?'':(widthM&&lengthM?Number((widthM*lengthM).toFixed(2)):''),
-    totalArea:isLeather?Number((state==='ordered'?ordered:qty||0).toFixed(3)):(widthM&&lengthM?Number((widthM*lengthM*(state==='ordered'?ordered:qty||1)).toFixed(2)):''),
+    totalArea:isLeather?Number((state==='ordered'?ordered:qty||0).toFixed(3)):(widthM?Number((widthM*(state==='ordered'?ordered:qty||0)).toFixed(2)):''),
     storageLocation:state==='stock'?(document.getElementById('fabricStorageLocation')?.value||'').trim():'',
     receiptDate:state==='stock'?(document.getElementById('fabricReceiptDate')?.value||''):'',
     purchasePrice:state==='stock'?(document.getElementById('fabricPurchasePrice')?.value||''):'',
