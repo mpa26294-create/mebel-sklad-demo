@@ -1,7 +1,7 @@
 // FurniCore app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
-const FURNICORE_BUILD_VERSION = "v6.37 - Unified Wood Flow";
+const FURNICORE_BUILD_VERSION = "v6.40 — Unified Wood Group Picker";
 
 function applyBuildVersion() {
   const badge = document.getElementById("appVersionBadge");
@@ -19,10 +19,10 @@ function loadMaterialUxImmediately() {
     script.async = false;
     document.head.appendChild(script);
   }
-  if (!document.querySelector('script[data-module="wood-flow-v637"]')) {
+  if (!document.querySelector('script[data-module="wood-flow-v639"]')) {
     const script = document.createElement('script');
-    script.src = 'js/wood-wizard.js?v=6.37';
-    script.dataset.module = 'wood-flow-v637';
+    script.src = 'js/wood-wizard.js?v=6.40';
+    script.dataset.module = 'wood-flow-v639';
     script.async = false;
     document.head.appendChild(script);
   }
