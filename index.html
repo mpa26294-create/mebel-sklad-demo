@@ -138,6 +138,36 @@ function materialTitle(m){const a=m.attributes||{};if(m.category==='Пороло
 async function startAppAfterLogin(){
   subscribeMaterials();
   await loadMaterialsFromSupabase();
+  openOrderFromUrl();
+}
+
+let deepLinkedOrderOpened = false;
+function openOrderFromUrl(){
+  if(deepLinkedOrderOpened) return;
+  const orderId = new URLSearchParams(window.location.search).get('order');
+  if(!orderId) return;
+
+  const order = (data.orders || []).find(o => String(o.id) === String(orderId));
+  if(!order){
+    toast('Заказ по ссылке не найден');
+    return;
+  }
+
+  deepLinkedOrderOpened = true;
+
+  document.querySelectorAll('#mainNav button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.section === 'orders');
+  });
+  document.querySelectorAll('.section').forEach(section => {
+    section.classList.toggle('active', section.id === 'orders');
+  });
+  closeMobileSidebar();
+  renderOrders();
+
+  setTimeout(() => {
+    if(typeof window.openOrderView === 'function') window.openOrderView(order.id);
+    else if(typeof openOrderView === 'function') openOrderView(order.id);
+  }, 0);
 }
 
 function dbToMaterial(row){
@@ -2318,7 +2348,7 @@ const __renderAllV565=renderAll;
 renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;}
 
 document.addEventListener("click",()=>closeOrderMenus());
-renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickSubmitStock()}} syncQuickOperationUI();updateQuickAddInfo();if(location.protocol==='file:'){try{currentUser={email:'local-preview@furnicore'};setAuthLocked(false);renderAuthBox();renderAll();syncQuickOperationUI();updateQuickAddInfo();}catch(e){console.error(e);}}else{checkSession();}
+renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickSubmitStock()}} syncQuickOperationUI();updateQuickAddInfo();if(location.protocol==='file:'){try{currentUser={email:'local-preview@furnicore'};setAuthLocked(false);renderAuthBox();renderAll();syncQuickOperationUI();updateQuickAddInfo();openOrderFromUrl();}catch(e){console.error(e);}}else{checkSession();}
 
 
 /* v5.68: fix order complete/cancel actions */
