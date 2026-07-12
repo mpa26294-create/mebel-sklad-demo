@@ -1,8 +1,9 @@
-// v6.31 — Apple-style roll flow for Eco Leather only.
+// v6.32 — Apple-style roll flow for Fabric and Eco Leather.
 (function(){
-  const VERSION_LABEL='v6.31 - Apple Roll UX';
+  const VERSION_LABEL='v6.32 - Apple Fabric Flow';
   let installed=false;
-  let ecoState='stock';
+  let rollState='stock';
+  let activeCategory='Экокожа';
 
   const numberValue=id=>{
     const raw=String(document.getElementById(id)?.value??'').replace(',','.');
@@ -10,48 +11,49 @@
     const value=Number(raw);
     return Number.isFinite(value)&&value>=0?value:null;
   };
+  const isRollCategory=category=>category==='Экокожа'||category==='Ткань';
 
   function applyVersion(){
     document.querySelectorAll('.product-footer b,.version-badge').forEach(el=>el.textContent=VERSION_LABEL);
   }
 
   function ensureStyles(){
-    if(document.getElementById('ecoLeatherFlowStyles'))return;
+    if(document.getElementById('rollMaterialFlowStyles'))return;
     const style=document.createElement('style');
-    style.id='ecoLeatherFlowStyles';
+    style.id='rollMaterialFlowStyles';
     style.textContent=`
-      .eco-apple-flow .wizard-steps{display:none!important}
-      .eco-apple-flow .wizard-card{padding:18px!important}
-      .eco-apple-flow .eco-flow-heading{margin:0 0 14px;font-size:16px;font-weight:800}
-      .eco-apple-flow .eco-state-wrap{margin-top:16px;padding-top:16px;border-top:1px solid var(--border,#e5e7eb)}
-      .eco-apple-flow .eco-state-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px}
-      .eco-apple-flow .eco-state-card{min-height:76px;border:1px solid var(--border,#e5e7eb);background:#fff;border-radius:16px;padding:13px 14px;text-align:left;cursor:pointer;transition:.18s ease}
-      .eco-apple-flow .eco-state-card b{display:block;font-size:14px;margin-bottom:4px}
-      .eco-apple-flow .eco-state-card span{display:block;font-size:12px;color:#6b7280;line-height:1.35}
-      .eco-apple-flow .eco-state-card.active{background:#111217;color:#fff;border-color:#111217;box-shadow:0 10px 24px rgba(17,18,23,.14)}
-      .eco-apple-flow .eco-state-card.active span{color:#d1d5db}
-      .eco-apple-flow .eco-state-fields{margin-top:4px}
-      .eco-apple-flow .fabric-color-picker{max-height:112px;overflow:auto}
-      .eco-roll-preview{grid-column:1/-1;padding:12px 14px;border-radius:12px;background:#ecfdf3;color:#287047;font-size:13px;font-weight:700}
-      @media(max-width:760px){.eco-apple-flow .eco-state-cards{grid-template-columns:1fr}.eco-apple-flow .eco-state-card{min-height:64px}}
+      .roll-apple-flow .wizard-steps{display:none!important}
+      .roll-apple-flow .wizard-card{padding:18px!important}
+      .roll-apple-flow .roll-flow-heading{margin:0 0 14px;font-size:16px;font-weight:800}
+      .roll-apple-flow .roll-state-wrap{margin-top:16px;padding-top:16px;border-top:1px solid var(--border,#e5e7eb)}
+      .roll-apple-flow .roll-state-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px}
+      .roll-apple-flow .roll-state-card{min-height:76px;border:1px solid var(--border,#e5e7eb);background:#fff;border-radius:16px;padding:13px 14px;text-align:left;cursor:pointer;transition:.18s ease}
+      .roll-apple-flow .roll-state-card b{display:block;font-size:14px;margin-bottom:4px}
+      .roll-apple-flow .roll-state-card span{display:block;font-size:12px;color:#6b7280;line-height:1.35}
+      .roll-apple-flow .roll-state-card.active{background:#111217;color:#fff;border-color:#111217;box-shadow:0 10px 24px rgba(17,18,23,.14)}
+      .roll-apple-flow .roll-state-card.active span{color:#d1d5db}
+      .roll-apple-flow .roll-state-fields{margin-top:4px}
+      .roll-apple-flow .fabric-color-picker{max-height:112px;overflow:auto}
+      .roll-area-preview{grid-column:1/-1;padding:12px 14px;border-radius:12px;background:#ecfdf3;color:#287047;font-size:13px;font-weight:700}
+      @media(max-width:760px){.roll-apple-flow .roll-state-cards{grid-template-columns:1fr}.roll-apple-flow .roll-state-card{min-height:64px}}
     `;
     document.head.appendChild(style);
   }
 
   function stateCardsHtml(){
-    return `<div class="eco-state-cards">
-      <button class="eco-state-card" type="button" data-eco-state="card" onclick="setEcoLeatherState('card')"><b>Только карточка</b><span>Создать материал без остатка.</span></button>
-      <button class="eco-state-card" type="button" data-eco-state="ordered" onclick="setEcoLeatherState('ordered')"><b>Заказано</b><span>Рулоны заказаны, но ещё не пришли.</span></button>
-      <button class="eco-state-card" type="button" data-eco-state="stock" onclick="setEcoLeatherState('stock')"><b>На складе</b><span>Рулоны уже находятся на складе.</span></button>
+    return `<div class="roll-state-cards">
+      <button class="roll-state-card" type="button" data-roll-state="card" onclick="setRollMaterialState('card')"><b>Только карточка</b><span>Создать материал без остатка.</span></button>
+      <button class="roll-state-card" type="button" data-roll-state="ordered" onclick="setRollMaterialState('ordered')"><b>Заказано</b><span>Рулоны заказаны, но ещё не пришли.</span></button>
+      <button class="roll-state-card" type="button" data-roll-state="stock" onclick="setRollMaterialState('stock')"><b>На складе</b><span>Рулоны уже находятся на складе.</span></button>
     </div>`;
   }
 
   function updateRollPreview(){
-    const prefix=ecoState==='ordered'?'fabricOrdered':'fabricStock';
+    const prefix=rollState==='ordered'?'fabricOrdered':'fabricStock';
     const width=numberValue(prefix+'RollWidth')||0;
     const length=numberValue(prefix+'RollLength')||0;
-    const count=numberValue(ecoState==='ordered'?'ecoOrderedRollCount':'ecoStockRollCount')||0;
-    const box=document.getElementById(ecoState==='ordered'?'ecoOrderedRollPreview':'ecoStockRollPreview');
+    const count=numberValue(rollState==='ordered'?'rollOrderedCount':'rollStockCount')||0;
+    const box=document.getElementById(rollState==='ordered'?'rollOrderedPreview':'rollStockPreview');
     if(!box)return;
     const one=width*length;
     const total=one*count;
@@ -59,21 +61,23 @@
       ? `Площадь 1 рулона: ${one.toFixed(2)} м² · рулонов: ${count} · всего: ${total.toFixed(2)} м²`
       : 'Укажите ширину и длину рулона — площадь рассчитается автоматически.';
   }
+  window.updateRollMaterialPreview=updateRollPreview;
   window.updateEcoRollPreview=updateRollPreview;
 
   function syncStateUi(){
-    document.querySelectorAll('[data-eco-state]').forEach(card=>card.classList.toggle('active',card.dataset.ecoState===ecoState));
+    document.querySelectorAll('[data-roll-state]').forEach(card=>card.classList.toggle('active',card.dataset.rollState===rollState));
     const hidden=document.getElementById('materialCreateState');
-    if(hidden)hidden.value=ecoState;
-    document.querySelectorAll('[data-state-fields="ordered"]').forEach(el=>el.style.setProperty('display',ecoState==='ordered'?'grid':'none','important'));
-    document.querySelectorAll('[data-state-fields="stock"]').forEach(el=>el.style.setProperty('display',ecoState==='stock'?'grid':'none','important'));
+    if(hidden)hidden.value=rollState;
+    document.querySelectorAll('[data-state-fields="ordered"]').forEach(el=>el.style.setProperty('display',rollState==='ordered'?'grid':'none','important'));
+    document.querySelectorAll('[data-state-fields="stock"]').forEach(el=>el.style.setProperty('display',rollState==='stock'?'grid':'none','important'));
     updateRollPreview();
   }
 
-  window.setEcoLeatherState=function(state){
-    ecoState=['card','ordered','stock'].includes(state)?state:'stock';
+  window.setRollMaterialState=function(state){
+    rollState=['card','ordered','stock'].includes(state)?state:'stock';
     syncStateUi();
   };
+  window.setEcoLeatherState=window.setRollMaterialState;
 
   function replaceQuantityWithRollCount(host,state,attrs,found){
     if(!host)return;
@@ -83,10 +87,10 @@
     const savedCount=state==='ordered'
       ? Number(attrs.orderedRollCount||attrs.orderedQty||0)
       : Number(attrs.rollCount||found?.quantity||0);
-    field.innerHTML=`<label>Количество рулонов</label><input id="${state==='ordered'?'ecoOrderedRollCount':'ecoStockRollCount'}" class="input" type="number" min="0" step="1" inputmode="numeric" value="${Number.isFinite(savedCount)?savedCount:0}" oninput="updateEcoRollPreview()">`;
+    field.innerHTML=`<label>Количество рулонов</label><input id="${state==='ordered'?'rollOrderedCount':'rollStockCount'}" class="input" type="number" min="0" step="1" inputmode="numeric" value="${Number.isFinite(savedCount)?savedCount:0}" oninput="updateRollMaterialPreview()">`;
     const preview=document.createElement('div');
-    preview.id=state==='ordered'?'ecoOrderedRollPreview':'ecoStockRollPreview';
-    preview.className='eco-roll-preview';
+    preview.id=state==='ordered'?'rollOrderedPreview':'rollStockPreview';
+    preview.className='roll-area-preview';
     host.appendChild(preview);
     host.querySelectorAll('input[id$="RollWidth"],input[id$="RollLength"]').forEach(input=>input.addEventListener('input',updateRollPreview));
   }
@@ -96,14 +100,14 @@
     if(input&&!input.value)input.value=new Date().toISOString().slice(0,10);
   }
 
-  function patchEcoLeatherModal(id){
-    const category=document.getElementById('fabricCategory')?.value;
-    if(category!=='Экокожа')return;
+  function patchRollMaterialModal(id,category){
+    if(!isRollCategory(category))return;
+    activeCategory=category;
     const wizard=document.querySelector('.material-wizard');
     if(!wizard)return;
     const found=id?(data.materials||[]).find(x=>String(x.id)===String(id)):null;
     const attrs=found?.attributes||{};
-    wizard.classList.add('eco-apple-flow');
+    wizard.classList.add('roll-apple-flow');
 
     const step1=wizard.querySelector('.material-wizard-step[data-step="1"]');
     const step2=wizard.querySelector('.material-wizard-step[data-step="2"]');
@@ -115,8 +119,8 @@
     if(colorField)mainGrid.appendChild(colorField);
 
     const oldState=document.getElementById('materialCreateState')?.value;
-    ecoState=['card','ordered','stock'].includes(oldState)?oldState:'stock';
-    if(!id&&!oldState)ecoState='stock';
+    rollState=['card','ordered','stock'].includes(oldState)?oldState:'stock';
+    if(!id&&!oldState)rollState='stock';
 
     const orderedFields=step3.querySelector('[data-state-fields="ordered"]');
     const stockFields=step3.querySelector('[data-state-fields="stock"]');
@@ -124,9 +128,9 @@
     replaceQuantityWithRollCount(stockFields,'stock',attrs,found);
 
     const stateWrap=document.createElement('div');
-    stateWrap.className='eco-state-wrap';
-    stateWrap.innerHTML=`<h4 class="eco-flow-heading">Состояние материала</h4>${stateCardsHtml()}<input type="hidden" id="materialCreateState" value="${ecoState}"><div class="eco-state-fields" id="ecoStateFields"></div>`;
-    const fieldsHost=stateWrap.querySelector('#ecoStateFields');
+    stateWrap.className='roll-state-wrap';
+    stateWrap.innerHTML=`<h4 class="roll-flow-heading">Состояние материала</h4>${stateCardsHtml()}<input type="hidden" id="materialCreateState" value="${rollState}"><div class="roll-state-fields" id="rollStateFields"></div>`;
+    const fieldsHost=stateWrap.querySelector('#rollStateFields');
     if(orderedFields)fieldsHost.appendChild(orderedFields);
     if(stockFields)fieldsHost.appendChild(stockFields);
     step1.appendChild(stateWrap);
@@ -135,11 +139,11 @@
     step3.remove();
     wizard.querySelector('.wizard-steps')?.remove();
     step1.classList.remove('hidden');
-    step1.querySelector('h4').textContent='Данные экокожи';
+    step1.querySelector('h4').textContent=category==='Ткань'?'Данные ткани':'Данные экокожи';
     wizard.dataset.step='1';
 
     const footer=document.getElementById('modalFoot');
-    if(footer)footer.innerHTML=`<button class="btn primary" type="button" onclick="saveEcoLeatherV631('${id||''}')">${typeof t==='function'?t('save'):'Сохранить'}</button>`;
+    if(footer)footer.innerHTML=`<button class="btn primary" type="button" onclick="saveRollMaterialV632('${id||''}')">${typeof t==='function'?t('save'):'Сохранить'}</button>`;
     const modalBack=document.getElementById('modalBackBtn');
     if(modalBack)modalBack.onclick=()=>{
       if(id){closeModal();return;}
@@ -153,17 +157,18 @@
     syncStateUi();
   }
 
-  window.saveEcoLeatherV631=async function(id=''){
+  window.saveRollMaterialV632=async function(id=''){
     if(!requireAuth())return;
     const found=id?(data.materials||[]).find(x=>String(x.id)===String(id)):null;
     const oldAttrs=found?.attributes||{};
-    const sku=(document.getElementById('fabricSku')?.value||'').trim()||nextSku('Экокожа','',id||'');
+    const category=document.getElementById('fabricCategory')?.value||found?.category||activeCategory||'Ткань';
+    const sku=(document.getElementById('fabricSku')?.value||'').trim()||nextSku(category,'',id||'');
     if(typeof warnFabricDuplicate==='function'&&warnFabricDuplicate())return;
-    const name=(document.getElementById('fabricName')?.value||'').trim()||'Экокожа';
-    const state=document.getElementById('materialCreateState')?.value||ecoState;
+    const name=(document.getElementById('fabricName')?.value||'').trim()||category;
+    const state=document.getElementById('materialCreateState')?.value||rollState;
     const width=state==='ordered'?numberValue('fabricOrderedRollWidth'):(state==='stock'?numberValue('fabricStockRollWidth'):Number(oldAttrs.rollWidth||0));
     const length=state==='ordered'?numberValue('fabricOrderedRollLength'):(state==='stock'?numberValue('fabricStockRollLength'):Number(oldAttrs.rollLength||0));
-    const count=state==='ordered'?numberValue('ecoOrderedRollCount'):(state==='stock'?numberValue('ecoStockRollCount'):0);
+    const count=state==='ordered'?numberValue('rollOrderedCount'):(state==='stock'?numberValue('rollStockCount'):0);
     const price=state==='stock'?numberValue('fabricPurchasePrice'):0;
     if([width,length,count,price].some(v=>v===null)||!Number.isInteger(count)){
       toast('Значения не могут быть отрицательными. Количество рулонов должно быть целым числом.');
@@ -174,7 +179,7 @@
     const color=(document.getElementById('fabricColor')?.value||oldAttrs.color||'').trim();
     const attrs={
       ...oldAttrs,
-      materialType:'Экокожа',
+      materialType:category,
       collection:(document.getElementById('fabricCollection')?.value||'').trim(),
       manufacturer:(document.getElementById('fabricManufacturer')?.value||'').trim(),
       color,
@@ -191,12 +196,13 @@
       status:state,
       reservedQty:Number(oldAttrs.reservedQty||0)
     };
-    const obj={id:id||null,sku,name,category:'Экокожа',subcategory:'Экокожа',attributes:attrs,unit:'рулон',quantity:state==='stock'?count:0,minQuantity:Number(found?.minQuantity||0),lastUpdated:today()};
+    const obj={id:id||null,sku,name,category,subcategory:category,attributes:attrs,unit:'рулон',quantity:state==='stock'?count:0,minQuantity:Number(found?.minQuantity||0),lastUpdated:today()};
     const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
     if(!ok)return;
     if(id){closeModal();await loadMaterialsFromSupabase();renderAll();toast(t('savedMaterial'));return;}
     await finishMaterialSaveAndReturn(obj.sku,obj.category);
   };
+  window.saveEcoLeatherV631=window.saveRollMaterialV632;
 
   function install(){
     if(installed)return true;
@@ -205,11 +211,11 @@
     ensureStyles();
     applyVersion();
     const original=window.openFabricModal;
-    window.__originalFabricModalV631=original;
+    window.__originalFabricModalV632=original;
     window.openFabricModal=function(id=null,category='Ткань'){
       const result=original(id,category);
       const resolved=id?(data.materials||[]).find(x=>String(x.id)===String(id))?.category:category;
-      if(resolved==='Экокожа')setTimeout(()=>patchEcoLeatherModal(id),0);
+      if(isRollCategory(resolved))setTimeout(()=>patchRollMaterialModal(id,resolved),0);
       return result;
     };
     return true;
