@@ -226,8 +226,11 @@ function materialDetailBasics(m){
   }else if(m.category==='Древесина'){
     rows.push(detailField('Тип материала',escapeHtml(m.subcategory||a.materialType||'—')));
     rows.push(detailField('Порода',escapeHtml(a.woodSpecies||a.woodType||'—')));
-    rows.push(detailField('Сечение',escapeHtml(woodSectionText(a))));
-    rows.push(detailField('Длина',woodMm(a.length)));
+    rows.push(detailField('Размер',escapeHtml([a.thickness,a.width,a.length].filter(Boolean).join('×')+(a.thickness||a.width||a.length?' мм':''))));
+    if(a.sheetArea)rows.push(detailField('Площадь 1 листа',escapeHtml(Number(a.sheetArea).toFixed(2)+' м²')));
+    if(a.totalArea)rows.push(detailField('Общая площадь',escapeHtml(Number(a.totalArea).toFixed(2)+' м²')));
+    rows.push(detailField('Общий объём',escapeHtml(a.totalVolume?Number(a.totalVolume).toFixed(4)+' м³':'—')));
+    rows.push(detailField('Количество',escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity||0,m.unit||''),m.unit||''))));
     rows.push(detailField('Сорт',escapeHtml(a.grade||'—')));
     rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
   }else{
@@ -521,7 +524,7 @@ function tableColumnsByCategory(cat){
   const qty=[stockTableText('reserved'),stockTableText('ordered'),t('needToOrder'),t('condition')];
   if(typeof isFabricCategory==='function'&&isFabricCategory(cat))return [t('sku'),t('material'),stockTableText('manufacturer'),stockTableText('color'),stockTableText('rollWidth'),t('inStock'),...qty];
   if(cat==='Поролон')return [t('sku'),t('material'),stockTableText('grade'),stockTableText('density'),stockTableText('hardness'),stockTableText('thickness'),stockTableText('sheetSize'),t('inStock'),...qty];
-  if(cat==='Древесина')return [t('sku'),t('material'),stockTableText('woodSpecies'),stockTableText('section'),stockTableText('length'),stockTableText('sort'),t('inStock'),...qty];
+  if(cat==='Древесина')return [t('sku'),t('material'),stockTableText('type'),stockTableText('size'),'Количество','Расчёт',t('inStock'),...qty];
   if(isSheetMaterialCategory(cat))return [t('sku'),t('material'),stockTableText('type'),stockTableText('thickness'),stockTableText('sheetSize'),stockTableText('decor'),t('inStock'),...qty];
   if(['Фурнитура','Крепёж'].includes(cat))return [t('sku'),t('material'),stockTableText('type'),stockTableText('size'),stockTableText('manufacturer'),t('inStock'),...qty];
   if(cat==='Наполнители')return [t('sku'),t('material'),stockTableText('type'),stockTableText('density'),t('inStock'),...qty];
@@ -548,7 +551,7 @@ function smartRowByCategory(m,cat){
   const sku=`<td><span class="stock-sku">${escapeHtml(m.sku||'—')}</span></td>`;
   if(typeof isFabricCategory==='function'&&isFabricCategory(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m,false)}</td><td>${escapeHtml(materialMaker(m))}</td><td>${a.color?`<span class="color-chip only" title="${escapeHtml(a.color)}" style="background:${materialColorStyle(a.color)}"></span> ${escapeHtml(a.color)}`:'—'}</td><td>${escapeHtml(a.rollWidthMm?`${a.rollWidthMm} мм`:a.rollWidth?`${Number(a.rollWidth).toFixed(2)} м`:'—')}</td>${qtyCells}</tr>`;
   if(cat==='Поролон')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m,false)}</td><td>${escapeHtml(stockAttr(m,'grade','mark')||'—')}</td><td>${escapeHtml(stockAttr(m,'density')||'—')}</td><td>${escapeHtml(stockAttr(m,'hardness')||'—')}</td><td>${escapeHtml(stockAttr(m,'thickness')?`${stockAttr(m,'thickness')} мм`:'—')}</td><td>${escapeHtml(stockDim(stockAttr(m,'width'),stockAttr(m,'length')))}</td>${qtyCells}</tr>`;
-  if(cat==='Древесина')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(stockAttr(m,'woodType','species')||'—')}</td><td>${escapeHtml(stockAttr(m,'crossSection','section')||'—')}</td><td>${escapeHtml(stockAttr(m,'length')?`${stockAttr(m,'length')} м`:'—')}</td><td>${escapeHtml(stockAttr(m,'grade','sort')||'—')}</td>${qtyCells}</tr>`;
+  if(cat==='Древесина'){const spec=[a.thickness,a.width,a.length].filter(Boolean).join('×'),amount=qtyWithUnit(stockNumForUnit(m.quantity||0,m.unit||''),m.unit||''),calc=a.totalArea?`${Number(a.totalArea).toFixed(2)} м² · ${Number(a.totalVolume||0).toFixed(4)} м³`:(a.totalVolume?`${Number(a.totalVolume).toFixed(4)} м³`:'—');return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(a.materialType||m.subcategory||'—')}</td><td>${escapeHtml(spec?spec+' мм':'—')}</td><td>${escapeHtml(amount)}</td><td>${escapeHtml(calc)}</td>${qtyCells}</tr>`;}
   if(isSheetMaterialCategory(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(m.subcategory||stockAttr(m,'type')||categoryLabel(m.category))}</td><td>${escapeHtml(stockAttr(m,'thickness')?`${stockAttr(m,'thickness')} мм`:'—')}</td><td>${escapeHtml(stockDim(stockAttr(m,'width'),stockAttr(m,'length')))}</td><td>${escapeHtml(stockAttr(m,'color','decor')||'—')}</td>${qtyCells}</tr>`;
   if(['Фурнитура','Крепёж'].includes(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(stockAttr(m,'type')||m.subcategory||'—')}</td><td>${escapeHtml(stockAttr(m,'size','diameter','length')||'—')}</td><td>${escapeHtml(materialMaker(m))}</td>${qtyCells}</tr>`;
   if(cat==='Наполнители')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(stockAttr(m,'type')||m.subcategory||'—')}</td><td>${escapeHtml(stockAttr(m,'density')||'—')}</td>${qtyCells}</tr>`;

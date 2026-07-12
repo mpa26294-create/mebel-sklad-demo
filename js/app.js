@@ -1,7 +1,7 @@
 // FurniCore app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
-const FURNICORE_BUILD_VERSION = "v6.35 - Apple Wood Flow";
+const FURNICORE_BUILD_VERSION = "v6.36 - Apple Wood Flow";
 
 function applyBuildVersion() {
   const badge = document.getElementById("appVersionBadge");

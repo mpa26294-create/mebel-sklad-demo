@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>FurniCore</title>
-  <link rel="stylesheet" href="css/style.css?v=6.23" />
+  <link rel="stylesheet" href="css/style.css?v=6.36" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -22,7 +22,7 @@
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.23</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.36</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
 
   <main class="main">
@@ -113,8 +113,8 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/ui.js?v=6.23"></script>
-<script src="js/app.js?v=6.23"></script>
+<script src="js/ui.js?v=6.36"></script>
+<script src="js/app.js?v=6.36"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.9"></script>
 <script src="js/translations.js?v=6.1"></script>
@@ -126,10 +126,10 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v6.23 - Foam Wizard Style';
+const APP_VERSION = 'v6.36 - Apple Wood Flow';
 </script>
 <script src="js/auth.js?v=6.1"></script>
-<script src="js/materials.js?v=6.23"></script>
+<script src="js/materials.js?v=6.36"></script>
 <script src="js/orders.js?v=6.19"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
@@ -1365,23 +1365,45 @@ function fabricModalTitle(category,id=null){
   };
   return names[category]||(id?t('editMaterialGeneric'):t('addMaterialGeneric'));
 }
-function woodMaterialTypes(){return ['Доска','Брус','Рейка','Мебельный щит']}
+function woodMaterialTypes(){return ['Доска','Брус','Рейка','Мебельный щит','Фанера','MDF','HDF','ДСП','OSB','Другое']}
+function woodSheetTypes(){return ['Мебельный щит','Фанера','MDF','HDF','ДСП','OSB']}
+function isWoodSheetType(type){return woodSheetTypes().includes(String(type||''))}
 function woodTypeOptions(value=''){
   return woodMaterialTypes().map(v=>`<option value="${escapeHtml(v)}" ${String(v)===String(value)?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+function woodCalcValues(){
+  const type=document.getElementById('woodMaterialType')?.value||'Доска',sheet=isWoodSheetType(type);
+  const t=Number(document.getElementById('woodThickness')?.value||0),w=Number(document.getElementById('woodWidth')?.value||0),l=Number(document.getElementById('woodLength')?.value||0),q=Math.max(0,Math.trunc(Number(document.getElementById('woodQty')?.value||document.getElementById('woodOrderedQty')?.value||0)));
+  const pieceVolume=t*w*l/1000000000,sheetArea=w*l/1000000,totalVolume=pieceVolume*q,totalArea=sheetArea*q;
+  return {type,sheet,qty:q,pieceVolume,sheetArea,totalVolume,totalArea,unit:sheet?'лист':'шт'};
+}
+function syncWoodFlow(){
+  const c=woodCalcValues(),custom=document.getElementById('woodCustomType'),preview=document.getElementById('woodCalcPreview');
+  if(custom)custom.closest('.field').style.display=c.type==='Другое'?'block':'none';
+  ['woodQty','woodOrderedQty'].forEach(id=>{const el=document.getElementById(id);if(el){el.step='1';el.min='0'}});
+  document.querySelectorAll('[data-wood-unit]').forEach(el=>el.textContent=c.sheet?'листов':'шт.');
+  document.querySelectorAll('[data-wood-size-label]').forEach(el=>el.textContent=c.sheet?'Размеры листа':'Размеры');
+  document.querySelectorAll('[data-wood-count-label]').forEach(el=>el.textContent=c.sheet?'Количество листов':'Количество, шт.');
+  if(preview){
+    preview.classList.remove('hidden');
+    preview.textContent=c.sheet?`Площадь 1 листа: ${c.sheetArea.toFixed(2)} м² · Общая площадь: ${c.totalArea.toFixed(2)} м² · Общий объём: ${c.totalVolume.toFixed(4)} м³`:`Объём 1 шт: ${c.pieceVolume.toFixed(4)} м³ · Общий объём: ${c.totalVolume.toFixed(4)} м³`;
+  }
 }
 function openWoodModal(id=null){
   if(!requireAuth())return;
   const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
   const attrs=found?.attributes||{};
-  const unit='м³';
-  const currentState=attrs.purchaseStatus==='ordered'?'ordered':(stockNumForUnit(found?.quantity||0,unit)>0||!!attrs.storageLocation?'stock':'card');
   const type=attrs.materialType||found?.subcategory||'Доска';
+  const unit=isWoodSheetType(type)?'лист':'шт';
+  const currentState=attrs.purchaseStatus==='ordered'?'ordered':(stockNumForUnit(found?.quantity||0,unit)>0||!!attrs.storageLocation?'stock':'card');
   const body=`<div class="fabric-wizard material-wizard" data-step="1" data-material-id="${id||''}">
     <div class="wizard-steps"><button class="wizard-step-pill active" type="button" onclick="setMaterialWizardStep(1)">1 ${t('materialBasic')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(2)">2 ${t('fabricWizardParams')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(3)">3 ${t('materialStock')}</button></div>
     <section class="wizard-card material-wizard-step" data-step="1">
       <h4>${t('fabricWizardBasic')}</h4>
       <div class="fabric-form-grid">
-        <div class="field"><label>${t('name')}</label><input id="woodName" class="input" value="${escapeHtml(found?.name||'')}" placeholder="Например: Доска дуб 40x200x3000"></div>
+        <div class="field"><label>${t('name')}</label><input id="woodName" class="input" value="${escapeHtml(found?.name||'')}" placeholder="Например: Брус сосна"></div>
+        <div class="field"><label>Тип материала</label><select id="woodMaterialType" class="select" onchange="syncWoodFlow()">${woodTypeOptions(type)}</select></div>
+        <div class="field" style="display:${type==='Другое'?'block':'none'}"><label>Укажите тип</label><input id="woodCustomType" class="input" value="${escapeHtml(attrs.customMaterialType||'')}" placeholder="Тип материала"></div>
         <div class="field"><label>${t('sku')}</label><input id="woodSku" class="input" value="${escapeHtml(found?.sku||nextSku('Древесина','',id||''))}"></div>
         <div class="field"><label>Производитель / Поставщик</label><input id="woodSupplier" class="input" value="${escapeHtml(attrs.supplier||attrs.manufacturer||'')}" placeholder="Производитель или поставщик"></div>
       </div>
@@ -1389,12 +1411,13 @@ function openWoodModal(id=null){
     <section class="wizard-card material-wizard-step hidden" data-step="2">
       <h4>${t('fabricWizardParams')}</h4>
       <div class="fabric-form-grid">
-        <div class="field"><label>Тип материала</label><select id="woodMaterialType" class="select">${woodTypeOptions(type)}</select></div>
         <div class="field"><label>Порода</label><input id="woodSpecies" class="input" value="${escapeHtml(attrs.woodSpecies||attrs.woodType||'')}" placeholder="Дуб, бук, сосна"></div>
-        <div class="field"><label>Толщина (мм)</label><input id="woodThickness" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.thickness||'')}"></div>
-        <div class="field"><label>Ширина (мм)</label><input id="woodWidth" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.width||'')}"></div>
-        <div class="field"><label>Длина (мм)</label><input id="woodLength" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.length||'')}"></div>
+        <div class="field full"><b data-wood-size-label>${isWoodSheetType(type)?'Размеры листа':'Размеры'}</b></div>
+        <div class="field"><label>Толщина (мм)</label><input id="woodThickness" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.thickness||'')}" oninput="syncWoodFlow()"></div>
+        <div class="field"><label>Ширина (мм)</label><input id="woodWidth" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.width||'')}" oninput="syncWoodFlow()"></div>
+        <div class="field"><label>Длина (мм)</label><input id="woodLength" class="input" type="number" min="0" step="1" value="${escapeHtml(attrs.length||'')}" oninput="syncWoodFlow()"></div>
         <div class="field"><label>Сорт (необязательно)</label><input id="woodGrade" class="input" value="${escapeHtml(attrs.grade||'')}" placeholder="A/B, Экстра, 1 сорт"></div>
+        <div class="area-preview full" id="woodCalcPreview"></div>
       </div>
     </section>
     <section class="wizard-card material-wizard-step hidden" data-step="3">
@@ -1402,12 +1425,13 @@ function openWoodModal(id=null){
       ${materialStateCards(currentState)}
       <div class="fabric-form-grid">
         <div class="state-fields ${currentState==='ordered'?'':'hidden'}" data-state-fields="ordered">
-          <div class="field"><label>Заказанный объём, ${unitLabel(unit)}</label><input id="woodOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}"></div>
+          <div class="field"><label><span data-wood-count-label>${isWoodSheetType(type)?'Количество листов':'Количество, шт.'}</span></label><input id="woodOrderedQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}" oninput="syncWoodFlow()"></div>
           <div class="field"><label>Ожидаемая дата поступления</label><input id="woodExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
           <div class="field full"><label>№ закупки / Поставщик / Комментарий</label><input id="woodPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
         </div>
         <div class="stock-only-fields ${currentState==='stock'?'':'hidden'}" data-state-fields="stock">
-          <div class="field"><label>Объём, ${unitLabel(unit)}</label><input id="woodQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}"></div>
+          <div class="field"><label><span data-wood-count-label>${isWoodSheetType(type)?'Количество листов':'Количество, шт.'}</span></label><input id="woodQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}" oninput="syncWoodFlow()"></div>
+          <div class="field"><label>Минимальный остаток, <span data-wood-unit>${isWoodSheetType(type)?'листов':'шт.'}</span></label><input id="woodMinQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(found?.minQuantity||0,unit),unit)}"></div>
           <div class="field"><label>${t('storageLocation')}</label><input id="woodStorageLocation" class="input" value="${escapeHtml(attrs.storageLocation||'')}" placeholder="Стеллаж / зона"></div>
           <div class="field"><label>${t('purchasePrice')}</label><input id="woodPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
           <div class="field"><label>${t('receiptDate')}</label><input id="woodReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>
@@ -1417,26 +1441,35 @@ function openWoodModal(id=null){
   </div>`;
   openModal(id?'Редактировать древесину':'Добавить древесину',body,materialWizardFooter(`saveWoodMaterial('${id||''}')`));
   setMaterialWizardStep(1);
+  syncWoodFlow();
 }
 async function saveWoodMaterial(id=''){
   if(!requireAuth())return;
   const found=id?data.materials.find(x=>String(x.id)===String(id)):null;
   const oldAttrs=found?.attributes||{};
-  const unit='м³';
+  const calc=woodCalcValues();
+  const unit=calc.unit;
   const sku=(document.getElementById('woodSku')?.value||'').trim()||nextSku('Древесина','',id||'');
-  const materialType=(document.getElementById('woodMaterialType')?.value||'Доска').trim();
+  const selectedType=(document.getElementById('woodMaterialType')?.value||'Доска').trim();
+  const customType=(document.getElementById('woodCustomType')?.value||'').trim();
+  const materialType=selectedType==='Другое'?(customType||'Другое'):selectedType;
   const name=(document.getElementById('woodName')?.value||'').trim()||[materialType,document.getElementById('woodSpecies')?.value,document.getElementById('woodThickness')?.value&&`${document.getElementById('woodThickness')?.value} мм`].filter(Boolean).join(' ')||categoryLabel('Древесина');
   const state=materialCreateState();
   const qty=state==='stock'?normalizeStockValue(document.getElementById('woodQty')?.value||0,unit,true):0;
   if(qty===null){toast(t('fieldMinZero'));return;}
   const ordered=state==='ordered'?normalizeStockValue(document.getElementById('woodOrderedQty')?.value||0,unit,true):0;
   if(ordered===null){toast(t('fieldMinZero'));return;}
+  const minQty=state==='stock'?normalizeStockValue(document.getElementById('woodMinQty')?.value||0,unit,true):stockNumForUnit(found?.minQuantity||0,unit);
+  if(minQty===null){toast(t('fieldMinZero'));return;}
+  const count=state==='ordered'?ordered:qty;
+  const pieceVolume=calc.pieceVolume,totalVolume=pieceVolume*count,sheetArea=calc.sheetArea,totalArea=sheetArea*count;
   const attrs={
     ...oldAttrs,
     woodSpecies:(document.getElementById('woodSpecies')?.value||'').trim(),
     supplier:(document.getElementById('woodSupplier')?.value||'').trim(),
     manufacturer:(document.getElementById('woodSupplier')?.value||'').trim(),
     materialType,
+    customMaterialType:customType,
     thickness:(document.getElementById('woodThickness')?.value||'').trim(),
     width:(document.getElementById('woodWidth')?.value||'').trim(),
     length:(document.getElementById('woodLength')?.value||'').trim(),
@@ -1448,9 +1481,13 @@ async function saveWoodMaterial(id=''){
     purchaseNote:state==='ordered'?(document.getElementById('woodPurchaseNote')?.value||'').trim():'',
     purchaseStatus:state==='ordered'?'ordered':(state==='stock'&&qty>0?'instock':'noorder'),
     reservedQty:oldAttrs.reservedQty||0,
-    orderedQty:ordered||0
+    orderedQty:ordered||0,
+    pieceVolume:Number(pieceVolume.toFixed(4)),
+    totalVolume:Number(totalVolume.toFixed(4)),
+    sheetArea:calc.sheet?Number(sheetArea.toFixed(2)):0,
+    totalArea:calc.sheet?Number(totalArea.toFixed(2)):0
   };
-  const obj={id:id||null,sku,name,category:'Древесина',subcategory:materialType,attributes:attrs,unit,quantity:qty,minQuantity:found?.minQuantity||0,lastUpdated:today()};
+  const obj={id:id||null,sku,name,category:'Древесина',subcategory:materialType,attributes:attrs,unit,quantity:qty,minQuantity:minQty||0,lastUpdated:today()};
   const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
   if(!ok)return;
   if(id){closeModal();await loadMaterialsFromSupabase();renderAll();toast(t('savedMaterial'));return;}
