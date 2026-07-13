@@ -200,27 +200,100 @@ function materialToDb(m){
 }
 
 const ORDER_SYNC_ARTICLE='__FURNICORE_ORDERS__';
-let orderSyncRowId='',orderSyncTimer=null,orderSyncLoading=false;
+let orderSyncRowId='',orderSyncTimer=null,orderSyncLoading=false,orderSyncDirty=false,orderSyncInFlight=false,orderSyncRetryTimer=null,orderSyncRetryCount=0,orderSyncLocalUpdatedAt='',orderSyncLastPersistedAt='',orderSyncLastRemoteUpdatedAt='',orderSyncToastAt=0;
 function isOrderSyncRow(row){return String(row?.article||'')===ORDER_SYNC_ARTICLE}
 function orderSyncOrdersFromRow(row){return cleanStoredOrders(Array.isArray(row?.attributes?.orders)?row.attributes.orders:[])}
-function scheduleOrdersSync(){if(orderSyncLoading||!isLoggedIn())return;clearTimeout(orderSyncTimer);orderSyncTimer=setTimeout(()=>persistOrdersToSupabase(),350)}
-async function persistOrdersToSupabase(){
-  if(!isLoggedIn())return;
-  const payload={article:ORDER_SYNC_ARTICLE,name:'FurniCore Orders Sync',category:'__system__',subcategory:'orders',quantity:0,unit:'',min_quantity:0,attributes:{orders:cleanStoredOrders(data.orders||[]),updatedAt:new Date().toISOString()}};
+function orderSyncUpdatedAt(row){return String(row?.attributes?.updatedAt||'')}
+function orderSyncTime(v){const t=Date.parse(v||'');return Number.isFinite(t)?t:0}
+function hasPendingOrderSync(){return !!orderSyncTimer||orderSyncDirty||orderSyncInFlight}
+function renderOrdersFromSync(){
+  try{ syncMaterialReservations(); }catch(e){}
+  if(typeof renderOrders==='function')renderOrders();
+}
+function showOrderSyncToast(text,force=false){
+  const now=Date.now();
+  if(force||now-orderSyncToastAt>1500){orderSyncToastAt=now;toast(text);}
+}
+function scheduleOrdersSync(){
+  if(orderSyncLoading||!isLoggedIn())return;
+  orderSyncDirty=true;
+  orderSyncLocalUpdatedAt=new Date().toISOString();
+  clearTimeout(orderSyncTimer);
+  orderSyncTimer=setTimeout(()=>persistOrdersToSupabase(),350);
+}
+function retryOrdersSync(){
+  if(orderSyncRetryTimer||!orderSyncDirty||!isLoggedIn())return;
+  const delay=Math.min(10000,1000*Math.pow(2,orderSyncRetryCount));
+  orderSyncRetryTimer=setTimeout(()=>{orderSyncRetryTimer=null;persistOrdersToSupabase({retry:true});},delay);
+}
+async function persistOrdersToSupabase(options={}){
+  if(!isLoggedIn())return false;
+  clearTimeout(orderSyncTimer);
+  orderSyncTimer=null;
+  const updatedAt=orderSyncLocalUpdatedAt||new Date().toISOString();
+  const payload={article:ORDER_SYNC_ARTICLE,name:'FurniCore Orders Sync',category:'__system__',subcategory:'orders',quantity:0,unit:'',min_quantity:0,attributes:{orders:cleanStoredOrders(data.orders||[]),updatedAt}};
+  orderSyncInFlight=true;
   try{
     if(!orderSyncRowId){
-      const {data:rows}=await supabaseClient.from('materials').select('id,article,attributes').eq('article',ORDER_SYNC_ARTICLE).limit(1);
+      const {data:rows,error}=await supabaseClient.from('materials').select('id,article,attributes').eq('article',ORDER_SYNC_ARTICLE).limit(1);
+      if(error)throw error;
       orderSyncRowId=rows?.[0]?.id||'';
     }
-    if(orderSyncRowId)await supabaseClient.from('materials').update(payload).eq('id',orderSyncRowId);
-    else{const {data:rows}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);orderSyncRowId=rows?.[0]?.id||'';}
-  }catch(e){console.warn('Orders sync skipped',e)}
+    if(orderSyncRowId){
+      const {error}=await supabaseClient.from('materials').update(payload).eq('id',orderSyncRowId);
+      if(error)throw error;
+    }else{
+      const {data:rows,error}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);
+      if(error)throw error;
+      orderSyncRowId=rows?.[0]?.id||'';
+    }
+    orderSyncDirty=false;
+    orderSyncInFlight=false;
+    orderSyncRetryCount=0;
+    orderSyncLastPersistedAt=updatedAt;
+    orderSyncLastRemoteUpdatedAt=updatedAt;
+    if(!options.silent)showOrderSyncToast('Заказы синхронизированы');
+    return true;
+  }catch(e){
+    orderSyncInFlight=false;
+    orderSyncDirty=true;
+    orderSyncRetryCount+=1;
+    console.warn('Orders sync failed',e);
+    showOrderSyncToast('Ошибка синхронизации заказов. Повторяем...',true);
+    if(options.retry!==false)retryOrdersSync();
+    return false;
+  }
 }
 const __saveLocalOnly=save;
 save=function(){__saveLocalOnly();scheduleOrdersSync()}
 
-async function loadMaterialsFromSupabase(){
+async function applyOrderSyncRow(orderRow,{render=true}={}){
+  if(!orderRow)return false;
+  orderSyncRowId=orderRow.id||orderSyncRowId;
+  const remoteUpdatedAt=orderSyncUpdatedAt(orderRow);
+  const localUpdatedAt=orderSyncLocalUpdatedAt||orderSyncLastPersistedAt||'';
+  if(orderSyncDirty||orderSyncTimer){
+    if(orderSyncTime(remoteUpdatedAt)<=orderSyncTime(localUpdatedAt)||orderSyncDirty){
+      await persistOrdersToSupabase({silent:true});
+      return false;
+    }
+  }
+  if(remoteUpdatedAt&&orderSyncTime(remoteUpdatedAt)<orderSyncTime(orderSyncLastRemoteUpdatedAt))return false;
+  orderSyncLoading=true;
+  data.orders=orderSyncOrdersFromRow(orderRow);
+  orderSyncLastRemoteUpdatedAt=remoteUpdatedAt||orderSyncLastRemoteUpdatedAt;
+  if(typeof __saveLocalOnly==='function')__saveLocalOnly();
+  orderSyncLoading=false;
+  if(render)renderOrdersFromSync();
+  return true;
+}
+
+async function loadMaterialsFromSupabase(options={}){
   if(!isLoggedIn()){ showLoginRequired(); return; }
+  if(options.orderRowOnly){
+    await applyOrderSyncRow(options.orderRowOnly,{render:true});
+    return;
+  }
   const { data: rows, error } = await supabaseClient
     .from('materials')
     .select('*')
@@ -234,10 +307,8 @@ async function loadMaterialsFromSupabase(){
 
   const orderRow=(rows||[]).find(isOrderSyncRow);
   orderSyncRowId=orderRow?.id||orderSyncRowId;
-  orderSyncLoading=true;
-  if(orderRow){data.orders=orderSyncOrdersFromRow(orderRow);save();}
+  if(orderRow&&!options.skipOrders)await applyOrderSyncRow(orderRow,{render:false});
   data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)).map(dbToMaterial);
-  orderSyncLoading=false;
   if(!orderRow&&cleanStoredOrders(data.orders||[]).length)scheduleOrdersSync();
   try{ syncMaterialReservations(); }catch(e){}
   renderAll();
@@ -293,8 +364,18 @@ function subscribeMaterials(){
   if(!isLoggedIn() || materialsSubscription) return;
   materialsSubscription = supabaseClient
     .channel('materials-sync')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'materials' }, () => {
-      loadMaterialsFromSupabase();
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'materials' }, async (payload) => {
+      const row=payload?.new||payload?.old||null;
+      if(isOrderSyncRow(row)){
+        if(payload.eventType==='DELETE'){
+          orderSyncRowId='';
+          if(cleanStoredOrders(data.orders||[]).length)scheduleOrdersSync();
+          return;
+        }
+        await loadMaterialsFromSupabase({orderRowOnly:payload.new});
+        return;
+      }
+      await loadMaterialsFromSupabase({skipOrders:true});
     })
     .subscribe();
 }
