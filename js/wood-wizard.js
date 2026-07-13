@@ -1,6 +1,6 @@
 // v6.40 — Unified Wood Group Picker: choose lumber or sheet materials before opening the form.
 (function(){
-  const VERSION_LABEL='v6.45 — Auto Material Consumption';
+  const VERSION_LABEL='v6.46 — Changelog and Foam Editor Fix';
   const LUMBER_TYPES=['Доска','Брус','Рейка','Мебельный щит'];
   const SHEET_TYPES=['Фанера','MDF','HDF','ДСП','ДВП','OSB'];
   const ALL_TYPES=[...LUMBER_TYPES,...SHEET_TYPES,'Другое'];

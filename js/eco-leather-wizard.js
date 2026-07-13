@@ -1,6 +1,6 @@
 // v6.34 — Apple flows for Fabric, Eco Leather and Leather.
 (function(){
-  const VERSION_LABEL='v6.45 — Auto Material Consumption';
+  const VERSION_LABEL='v6.46 — Changelog and Foam Editor Fix';
   let installed=false;
   let materialState='stock';
 

@@ -777,13 +777,19 @@ function openMaterialDetails(id){
     </aside>
   </div>`;
   const hasPdf=a.pdfPath||a.pdfUrl;
-  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">Удалить материал</button></div><div class="right">${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button>`:''}<button class="btn primary" onclick="openMaterialModal('${m.id}')">Редактировать</button></div></div>`;
+  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">Удалить материал</button></div><div class="right">${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button>`:''}<button class="btn primary" onclick="openMaterialEditor('${m.id}')">Редактировать</button></div></div>`;
   openModal(t('infoMaterial'),body,foot);
   const modal=document.querySelector('#modalBackdrop .modal');
   if(modal) modal.classList.add('detail-modal');
   syncDetailQtyUnit();
 }
 function openMaterialDetailsFromModal(id){pushModalState();openMaterialDetails(id)}
+function openMaterialEditor(id){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+  if(!m){toast(t('notFoundMaterial'));return;}
+  if(m.category==='Поролон'&&typeof openFoamModal==='function'){openFoamModal(id);return;}
+  openMaterialModal(id,m.category||'Ткань');
+}
 function statusOf(m){const av=availableQty(m);if(av<=0)return ['out',t('noStock')];if(Number(m.minQuantity||0)>0 && av<=Number(m.minQuantity||0))return ['low',t('lowStock')];return ['ok',t('inStock')]}
 
 function purchaseStatusOf(m){
@@ -1163,6 +1169,8 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
   if(!requireAuth())return;
   const foundMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null;
   if(id && !foundMaterial){toast('Материал не найден'); return;}
+  if(foundMaterial?.category==='Поролон'&&typeof openFoamModal==='function'){openFoamModal(id);return;}
+  if(!id&&presetCategory==='Поролон'&&typeof openFoamModal==='function'){openFoamModal();return;}
   if(foundMaterial && typeof isFabricCategory==='function'&&isFabricCategory(foundMaterial.category)){openFabricModal(id,foundMaterial.category);return;}
   if(foundMaterial?.category==='Древесина'&&typeof openWoodModal==='function'){openWoodModal(id);return;}
   if(!id&&presetCategory==='Древесина'&&typeof openWoodModal==='function'){openWoodModal();return;}
