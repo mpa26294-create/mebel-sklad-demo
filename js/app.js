@@ -1,7 +1,7 @@
 // FurniCore app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
-const FURNICORE_BUILD_VERSION = "v6.42 — Secure Telegram Export";
+const FURNICORE_BUILD_VERSION = "v6.43 — Mobile Modal Header Fix";
 
 function applyBuildVersion() {
   const badge = document.getElementById("appVersionBadge");
