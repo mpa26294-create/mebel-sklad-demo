@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>FurniCore</title>
-  <link rel="stylesheet" href="css/style.css?v=6.43" />
+  <link rel="stylesheet" href="css/style.css?v=6.44" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -22,15 +22,15 @@
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.43 — Mobile Modal Header Fix</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.44 — Chrome Autofill Fix</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
 
   <main class="main">
     <section id="stock" class="section active">
-      <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><div class="search-top"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="topSearchInput" placeholder="Поиск по названию, артикулу, атрибутам..."/></div><button class="btn primary" onclick="openAddCategoryModal()">＋ Добавить материал</button></div></div>
+      <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><div class="search-top"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="topSearchInput" name="furnicore_stock_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по названию, артикулу, атрибутам..."/></div><button class="btn primary" onclick="openAddCategoryModal()">＋ Добавить материал</button></div></div>
       <div class="stats" id="stats"></div>
       <div class="quick-add" id="quickAddBox">
-        <div class="field"><label>Артикул материала</label><input class="input" id="quickSku" placeholder="Артикул, например A-0001" autocomplete="off"></div>
+        <div class="field"><label>Артикул материала</label><input class="input no-autofill" id="quickSku" name="furnicore_quick_sku" placeholder="Артикул, например A-0001" autocomplete="new-password" aria-autocomplete="none" autocapitalize="characters" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other"></div>
         <div class="field"><label>Количество</label><input class="input" id="quickQty" type="number" step="0.01" placeholder="Число"></div>
         <div class="quick-stock-actions">
           <button class="btn danger-fill" id="quickWriteOffModeBtn" type="button" onclick="quickRunOperation('writeOff')">Списать</button>
@@ -39,7 +39,7 @@
         <div class="field full"><label>Найденный материал</label><div class="quick-info" id="quickInfo">Введите артикул — единица измерения определится автоматически</div></div>
       </div>
       <div class="panel">
-        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="searchInput" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
+        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="searchInput" name="furnicore_material_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
         <div class="pro-filter-panel" id="proFilterPanel">
           <div class="quick-filter-row" id="quickFilterRow">
             <button class="filter-chip active" type="button" data-filter="all" onclick="setQuickFilter('all')">Все</button>
@@ -53,8 +53,8 @@
           <div class="filter-grid">
             <div class="field"><label>Статус</label><select class="select" id="stockStateFilter" onchange="stockPage=1;renderAll()"><option value="">Любой</option><option value="ok">В наличии</option><option value="low">Заканчивается</option><option value="out">Нет в наличии</option><option value="needorder">Нужно заказать</option><option value="ordered">Заказано</option></select></div>
             <div class="field"><label>Ед. изм.</label><select class="select" id="unitFilter" onchange="stockPage=1;renderAll()"><option value="">Любая</option><option value="шт">шт</option><option value="м²">м²</option><option value="м³">м³</option></select></div>
-            <div class="field"><label>Поставщик</label><input class="input" id="supplierFilter" placeholder="Название" oninput="stockPage=1;renderAll()"></div>
-            <div class="field"><label>Заказ / закупка</label><input class="input" id="orderFilter" placeholder="Номер" oninput="stockPage=1;renderAll()"></div>
+            <div class="field"><label>Поставщик</label><input class="input no-autofill" id="supplierFilter" name="furnicore_supplier_filter" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Название" oninput="stockPage=1;renderAll()"></div>
+            <div class="field"><label>Заказ / закупка</label><input class="input no-autofill" id="orderFilter" name="furnicore_purchase_filter" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Номер" oninput="stockPage=1;renderAll()"></div>
           </div>
           <div class="filter-note">Быстрые фильтры сверху работают как готовые профили. Поля ниже нужны только для точного поиска по статусу, единице, поставщику или номеру закупки.</div>
         </div>
@@ -67,7 +67,7 @@
       <div class="stats" id="orderStats"></div>
       <div class="panel">
         <div class="toolbar orders-toolbar">
-          <div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="orderSearchInput" placeholder="Поиск по номеру или заказчику..." oninput="renderOrders()"/></div>
+          <div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="orderSearchInput" name="furnicore_order_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по номеру или заказчику..." oninput="renderOrders()"/></div>
           <select class="select" id="orderStatusFilter" onchange="renderOrders()"><option value="">Все статусы</option><option>Новый</option><option>Готов к работе</option><option>Не хватает материалов</option><option>Материалы заказаны</option><option>В работе</option><option>Готов</option><option>Отменён</option></select>
           <select class="select" id="orderClientFilter" onchange="renderOrders()"><option value="">Все заказчики</option></select>
           <input class="input" type="date" id="orderDateFilter" onchange="renderOrders()"/>
@@ -126,7 +126,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v6.43 — Mobile Modal Header Fix';
+const APP_VERSION = 'v6.44 — Chrome Autofill Fix';
 </script>
 <script src="js/auth.js?v=6.1"></script>
 <script src="js/materials.js?v=6.36"></script>
@@ -2476,7 +2476,7 @@ calcOrderOverallPercent=function(o){
 /* v5.64: open production with clear button, not by status */
   renderOrderStats();
   renderOrderClientFilter();
-function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings()}
+function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings();if(typeof protectSearchInputsFromAutofill==='function')protectSearchInputsFromAutofill()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
 
 
