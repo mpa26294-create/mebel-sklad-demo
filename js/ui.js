@@ -38,6 +38,51 @@ function renderNav(){
   };
 }
 
+function hardenSearchAutofill(){
+  const ids=['topSearchInput','searchInput','categorySearchInput','orderSearchInput','supplierFilter','orderFilter','quickSku'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.classList.add('no-autofill');
+    el.setAttribute('autocomplete','new-password');
+    el.setAttribute('aria-autocomplete','none');
+    el.setAttribute('autocorrect','off');
+    el.setAttribute('spellcheck','false');
+    el.setAttribute('data-lpignore','true');
+    el.setAttribute('data-form-type','other');
+    if(!el.getAttribute('name'))el.setAttribute('name','furnicore_'+id);
+  });
+}
+
+function clearChromeEmailAutofill(){
+  const email=String(window.currentUser?.email||'').trim().toLowerCase();
+  if(!email)return;
+  ['topSearchInput','searchInput','categorySearchInput','orderSearchInput'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&String(el.value||'').trim().toLowerCase()===email){
+      el.value='';
+      if(id==='topSearchInput'||id==='categorySearchInput'){
+        const main=document.getElementById('searchInput');
+        if(main&&String(main.value||'').trim().toLowerCase()===email)main.value='';
+      }
+    }
+  });
+}
+
+function protectSearchInputsFromAutofill(){
+  hardenSearchAutofill();
+  clearChromeEmailAutofill();
+  clearTimeout(window.__searchAutofillGuardTimer);
+  clearTimeout(window.__searchAutofillGuardLateTimer);
+  window.__searchAutofillGuardTimer=setTimeout(clearChromeEmailAutofill,250);
+  window.__searchAutofillGuardLateTimer=setTimeout(clearChromeEmailAutofill,1000);
+}
+
+document.addEventListener('DOMContentLoaded',()=>setTimeout(protectSearchInputsFromAutofill,0));
+document.addEventListener('focusin',e=>{
+  if(e.target&&e.target.matches&&e.target.matches('.no-autofill'))setTimeout(clearChromeEmailAutofill,0);
+});
+
 function goBackModal(){
   const previous=modalStack.pop();
   if(previous)restoreModalState(previous);
