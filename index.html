@@ -294,6 +294,10 @@ async function loadMaterialsFromSupabase(options={}){
     await applyOrderSyncRow(options.orderRowOnly,{render:true});
     return;
   }
+  if(options.auditRowOnly){
+    if(typeof applyAuditSyncRow==='function')await applyAuditSyncRow(options.auditRowOnly,{render:true});
+    return;
+  }
   const { data: rows, error } = await supabaseClient
     .from('materials')
     .select('*')
@@ -306,9 +310,11 @@ async function loadMaterialsFromSupabase(options={}){
   }
 
   const orderRow=(rows||[]).find(isOrderSyncRow);
+  const auditRow=(rows||[]).find(row=>typeof isAuditSyncRow==='function'&&isAuditSyncRow(row));
   orderSyncRowId=orderRow?.id||orderSyncRowId;
   if(orderRow&&!options.skipOrders)await applyOrderSyncRow(orderRow,{render:false});
-  data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)).map(dbToMaterial);
+  if(auditRow&&typeof applyAuditSyncRow==='function')await applyAuditSyncRow(auditRow,{render:false});
+  data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)&&!(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row))).map(dbToMaterial);
   if(!orderRow&&cleanStoredOrders(data.orders||[]).length)scheduleOrdersSync();
   try{ syncMaterialReservations(); }catch(e){}
   renderAll();
@@ -373,6 +379,14 @@ function subscribeMaterials(){
           return;
         }
         await loadMaterialsFromSupabase({orderRowOnly:payload.new});
+        return;
+      }
+      if(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row)){
+        if(payload.eventType==='DELETE'){
+          if(typeof scheduleAuditSync==='function')scheduleAuditSync();
+          return;
+        }
+        await loadMaterialsFromSupabase({auditRowOnly:payload.new});
         return;
       }
       await loadMaterialsFromSupabase({skipOrders:true});
