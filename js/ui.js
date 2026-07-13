@@ -25,7 +25,14 @@ function setVersion() {
 
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
 
+function placeChangelogNavLast(){
+  const nav=document.getElementById('mainNav');
+  const changelog=nav?.querySelector('[data-section="changelog"]');
+  if(nav&&changelog&&changelog!==nav.lastElementChild)nav.appendChild(changelog);
+}
+
 function renderNav(){
+  placeChangelogNavLast();
   document.getElementById('mainNav').onclick=e=>{
     const b=e.target.closest('button');
     if(!b || b.classList.contains('disabled')) return;

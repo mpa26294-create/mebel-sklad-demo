@@ -94,7 +94,7 @@ async function checkSession(){
 
 /* v6.29: fixed one-screen Apple foam flow */
 (function(){
-  const VERSION_LABEL='v6.46 — Changelog and Foam Editor Fix';
+  const VERSION_LABEL='v6.48 — Changelog Placement Footer Pin';
   let foamState='stock';
 
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));

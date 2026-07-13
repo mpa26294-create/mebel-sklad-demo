@@ -1,7 +1,7 @@
 // FurniCore app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
-const FURNICORE_BUILD_VERSION = "v6.46 — Changelog and Foam Editor Fix";
+const FURNICORE_BUILD_VERSION = "v6.48 — Changelog Placement Footer Pin";
 
 function applyBuildVersion() {
   const badge = document.getElementById("appVersionBadge");

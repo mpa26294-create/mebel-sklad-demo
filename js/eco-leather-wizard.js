@@ -1,6 +1,6 @@
 // v6.34 — Apple flows for Fabric, Eco Leather and Leather.
 (function(){
-  const VERSION_LABEL='v6.46 — Changelog and Foam Editor Fix';
+  const VERSION_LABEL='v6.48 — Changelog Placement Footer Pin';
   let installed=false;
   let materialState='stock';
 
