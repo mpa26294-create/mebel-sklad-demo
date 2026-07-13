@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>FurniCore</title>
-  <link rel="stylesheet" href="css/style.css?v=6.36" />
+  <link rel="stylesheet" href="css/style.css?v=6.43" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -22,7 +22,7 @@
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.42 — Secure Telegram Export</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.43 — Mobile Modal Header Fix</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
 
   <main class="main">
@@ -126,7 +126,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v6.42 — Secure Telegram Export';
+const APP_VERSION = 'v6.43 — Mobile Modal Header Fix';
 </script>
 <script src="js/auth.js?v=6.1"></script>
 <script src="js/materials.js?v=6.36"></script>
@@ -2930,7 +2930,7 @@ body:not(.auth-locked) .auth-screen{
   .order-row-action-buttons{justify-content:flex-start!important;gap:6px!important}.order-row-action-buttons .btn{padding:0 9px!important}
   .modal-backdrop.show{padding:10px!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
   #modalBackdrop .modal,.modal{width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;max-height:92dvh!important;border-radius:20px!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
-  .modal-head{height:auto!important;min-height:58px!important;padding:12px 14px!important;flex:0 0 auto!important}.modal-head h3{font-size:18px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .modal-head{height:auto!important;min-height:58px!important;padding:calc(env(safe-area-inset-top,0px) + 64px) 14px 12px!important;flex:0 0 auto!important}.modal-head h3{font-size:18px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
   .modal-body{padding:14px!important;flex:1 1 auto!important;overflow-y:auto!important;overflow-x:hidden!important;min-height:0!important;-webkit-overflow-scrolling:touch!important}
   .modal-foot{padding:12px 14px!important;flex:0 0 auto!important;display:grid!important;grid-template-columns:1fr!important;gap:8px!important}.modal-foot .btn{width:100%!important;min-height:42px!important}
   .form-grid,.cards-grid,.order-view-grid,.clean-modal-grid,.production-shell,.order-material-clean-shell,.material-detail-shell{grid-template-columns:1fr!important}
