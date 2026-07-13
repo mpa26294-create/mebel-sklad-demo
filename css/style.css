@@ -2159,7 +2159,7 @@
 .btn.ghost{background:#fff;color:#30343b;border-color:#e1e5eb}
 .modal.detail-modal .modal-foot{padding:0!important;border-top:0!important;display:block!important}
 @media(max-width:920px){.modal.detail-modal{width:100%!important;max-height:92vh!important}.material-detail-shell{grid-template-columns:1fr}.material-detail-main{border-right:0;border-bottom:1px solid var(--line)}.material-detail-side{background:#fff}.detail-field-grid{grid-template-columns:1fr}.material-detail-foot{flex-direction:column;align-items:stretch}.material-detail-foot .left,.material-detail-foot .right{display:grid;grid-template-columns:1fr}.quick-move-row,.quick-move-actions{grid-template-columns:1fr}
-  
+
   /* Mobile responsive for new components */
   .material-summary-panel{grid-template-columns:repeat(2,1fr);gap:8px;padding:12px}
   .summary-status{grid-column:1/-1}
@@ -3309,6 +3309,7 @@ body{background:#f7f8fb!important}
 .production-op-materials.idle{border-color:#e5e9f0;background:#f8fafc;color:#667085}
 .production-op-materials.warn{border-color:#ffd8a8;background:#fff7ed;color:#b54708}
 .production-op-materials strong{display:block;font-size:12px;font-weight:760}
+.production-op-materials em,.production-op-materials small{display:block;margin-top:6px;color:#667085;font-style:normal;font-size:12px}
 .production-op-materials div{display:grid;gap:6px;margin-top:8px}
 .production-op-materials button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;min-height:34px;border:1px solid rgba(180,83,9,.22);border-radius:10px;background:#fff;color:#344054;text-align:left;padding:7px 9px;cursor:pointer}
 .production-op-materials button b{font-size:12px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3324,6 +3325,7 @@ body{background:#f7f8fb!important}
 .quick-roll-fields{display:grid;gap:8px}
 .quick-roll-fields .field span{display:block;margin-bottom:7px;color:#555c68;font-size:12px;font-weight:500}
 .quick-roll-fields .area-preview{min-height:34px}
+.consumption-confirm{display:flex;flex-direction:column;gap:12px}.consumption-confirm h4{margin:0;font-size:18px;font-weight:750;color:#111827}.consumption-confirm p{margin:0;color:#667085}.consumption-confirm ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}.consumption-confirm li,.consumption-shortage{border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;background:#fff;display:flex;justify-content:space-between;gap:12px;align-items:center}.consumption-confirm li b{white-space:nowrap;color:#111827}.consumption-confirm.danger h4{color:#dc2626}.consumption-shortage{display:grid;grid-template-columns:1fr;align-items:stretch}.consumption-shortage div{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #eef0f4;padding-top:8px}.production-material-table th,.production-material-table td{white-space:nowrap}
 @media(max-width:1100px){#stock .category-filter-row{grid-template-columns:1fr 1fr!important}.refs-grid{grid-template-columns:1fr}}
 @media(max-width:760px){#stock .topbar{gap:14px}#stock .search-top{width:100%}#stock .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps{grid-template-columns:1fr}.refs-add{grid-template-columns:1fr}.stock-erp-table th:nth-child(4),.stock-erp-table td:nth-child(4),.stock-erp-table th:nth-child(5),.stock-erp-table td:nth-child(5),.stock-erp-table th:nth-child(6),.stock-erp-table td:nth-child(6){display:none}.stock-erp-table .stock-material-title{max-width:180px}}
 @media(max-width:560px){#stock .stats{grid-template-columns:1fr}#stock .category-filter-row{grid-template-columns:1fr!important}.stock-primary-tabs,.stock-secondary-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}}
@@ -3331,5 +3333,5 @@ body{background:#f7f8fb!important}
 /* v6.41 security: Telegram PIN, safe import/export */
 .telegram-lock-card{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px;border:1px solid #e6eaf0;border-radius:14px;background:#fbfcfe}.telegram-lock-card h3,.notification-settings-panel h3{margin:0 0 6px;display:flex;align-items:center;gap:10px;font-size:18px;color:#101828}.notification-settings-panel .muted{margin:0 0 16px;color:#667085}.secure-settings-grid{margin-top:14px}.secret-field small{display:block;margin-top:7px;color:#98a2b3;font-size:12px;font-weight:700;letter-spacing:.08em}.secret-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}.secret-input-row .btn{white-space:nowrap}.secure-settings-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:18px}.secure-dirty-note{margin-right:auto;color:#b54708;font-size:13px;font-weight:650}.pin-modal p,.secure-export-modal p{margin:0 0 14px;color:#475467;line-height:1.45}.pin-modal .auth-error{min-height:18px;margin-top:8px;color:#d92d20;font-size:13px;font-weight:650}.secure-export-modal{display:grid;gap:10px}.secure-export-modal label{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #e6eaf0;border-radius:12px;background:#fff;color:#101828;font-weight:650}.secure-export-modal input[type="checkbox"]{width:18px;height:18px;accent-color:#111827}.secure-export-note{margin-top:4px;padding:12px 14px;border-radius:12px;background:#f6f8fb;color:#667085;font-size:13px;line-height:1.45}@media(max-width:760px){.telegram-lock-card,.secure-settings-actions{align-items:stretch;flex-direction:column}.secret-input-row{grid-template-columns:1fr}.secure-dirty-note{margin-right:0}}
 
-/* v6.44: keep mobile menu available while modal header starts below it */
+/* v6.45: keep mobile menu available while modal header starts below it */
 @media(max-width:920px){body.modal-open .mobile-menu-btn{display:flex!important;pointer-events:auto!important}body.modal-open .modal-head{padding-top:calc(env(safe-area-inset-top,0px) + 64px)!important}}
