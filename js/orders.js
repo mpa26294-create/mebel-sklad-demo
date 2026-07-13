@@ -723,8 +723,96 @@ function refreshOrderMaterialRows(){
 function orderNotificationUrl(orderId){const url=new URL(window.location.href);url.searchParams.set('order',orderId);url.hash='';return url.toString()}
 function orderPriorityLabel(value){return t({low:'priorityLow',normal:'priorityNormal',high:'priorityHigh',urgent:'priorityUrgent'}[value]||'priorityNormal')}
 function orderNotificationText(o){return `${t('notificationOrderHeading')}\n${t('orderNumberLabel')}: ${o.number}\n${t('orderCustomer')}: ${o.client||'—'}\n${t('orderProduct')}: ${o.product||'—'}\n${t('orderProductCount')}: ${orderProductQty(o)}\n${t('orderDueDate')}: ${o.dueDate||'—'}\n${t('orderPriority')}: ${orderPriorityLabel(o.priority)}\n${t('orderComment')}: ${o.comment||'—'}\n${t('notificationOrderLink')}: ${orderNotificationUrl(o.id)}`}
-function renderNotificationSettings(){const settings=data.settings?.notifications||{},token=document.getElementById('telegramBotToken'),chat=document.getElementById('telegramChatId');if(token)token.value=settings.telegramBotToken||'';if(chat)chat.value=settings.telegramChatId||'';const text={notificationSettingsTitle:'notificationSettingsTitle',notificationSettingsHint:'notificationSettingsHint',telegramTokenLabel:'telegramTokenLabel',telegramChatIdLabel:'telegramChatIdLabel',saveNotificationSettingsBtn:'save'};Object.entries(text).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key)})}
-function saveNotificationSettings(){if(!data.settings||typeof data.settings!=='object')data.settings={};data.settings.notifications={...(data.settings.notifications||{}),telegramBotToken:document.getElementById('telegramBotToken')?.value.trim()||'',telegramChatId:document.getElementById('telegramChatId')?.value.trim()||''};save();toast(t('notificationSettingsSaved'))}
+const TELEGRAM_SETTINGS_PIN='198826';
+let telegramSettingsUnlocked=false;
+let telegramSettingsSnapshot=null;
+function telegramSettings(){return data.settings?.notifications||{}}
+function telegramMasked(value){return value?'************':''}
+function telegramPinModal(title='PIN-код',message='Введите PIN для доступа к настройкам Telegram.'){
+  return new Promise(resolve=>{
+    const body=`<div class="pin-modal"><p>${escapeHtml(message)}</p><input class="input" id="telegramPinInput" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="PIN"><div class="auth-error" id="telegramPinError"></div></div>`;
+    const foot=`<button class="btn" type="button" onclick="window.__telegramPinResolve(false);closeModal()">Отмена</button><button class="btn primary" type="button" onclick="checkTelegramPinModal()">Открыть</button>`;
+    window.__telegramPinResolve=resolve;
+    openModal(title,body,foot);
+    setTimeout(()=>document.getElementById('telegramPinInput')?.focus(),0);
+  });
+}
+window.checkTelegramPinModal=function(){
+  const input=document.getElementById('telegramPinInput');
+  const err=document.getElementById('telegramPinError');
+  if(String(input?.value||'')===TELEGRAM_SETTINGS_PIN){
+    const resolve=window.__telegramPinResolve;
+    window.__telegramPinResolve=null;
+    closeModal();
+    if(typeof resolve==='function')resolve(true);
+    return;
+  }
+  if(err)err.textContent='Неверный PIN';
+  input?.select();
+};
+async function requireTelegramPin(reason){
+  const ok=await telegramPinModal('Telegram PIN',reason||'Введите PIN для доступа к настройкам Telegram.');
+  if(!ok)toast('Доступ к Telegram не открыт');
+  return !!ok;
+}
+function lockTelegramSettings(){
+  telegramSettingsUnlocked=false;
+  telegramSettingsSnapshot=null;
+  renderNotificationSettings();
+}
+async function unlockTelegramSettings(){
+  if(!await requireTelegramPin('Введите PIN, чтобы открыть настройки Telegram.'))return;
+  telegramSettingsUnlocked=true;
+  renderNotificationSettings();
+}
+function secureFieldHtml(id,label,value){
+  const has=!!String(value||'');
+  return `<div class="field secret-field"><label>${escapeHtml(label)}</label><div class="secret-input-row"><input class="input" id="${id}" type="password" autocomplete="off" value="${escapeHtml(String(value||''))}" placeholder="${has?'************':'—'}" oninput="markTelegramSettingsDirty()"><button class="btn small" type="button" onclick="showTelegramSecret('${id}')">👁 Показать</button><button class="btn small" type="button" onclick="copyTelegramSecret('${id}')">Копировать</button></div><small>${has?telegramMasked(value):'Значение не задано'}</small></div>`;
+}
+function renderNotificationSettings(){
+  const panel=document.querySelector('.notification-settings-panel');
+  if(!panel)return;
+  if(!telegramSettingsUnlocked){
+    panel.innerHTML=`<div class="telegram-lock-card"><div><h3 id="notificationSettingsTitle">Интеграции → Telegram</h3><p class="muted" id="notificationSettingsHint">Настройки скрыты. Для просмотра и изменения нужен PIN.</p></div><button class="btn primary" type="button" onclick="unlockTelegramSettings()">Ввести PIN</button></div>`;
+    return;
+  }
+  const settings=telegramSettings();
+  telegramSettingsSnapshot={telegramBotToken:String(settings.telegramBotToken||''),telegramChatId:String(settings.telegramChatId||'')};
+  panel.innerHTML=`<h3 id="notificationSettingsTitle">Интеграции → Telegram</h3><p class="muted" id="notificationSettingsHint">Секретные данные замаскированы. Для показа значения PIN запрашивается повторно.</p><div class="form-grid secure-settings-grid">${secureFieldHtml('telegramBotToken','Telegram Bot Token',settings.telegramBotToken)}${secureFieldHtml('telegramChatId','Telegram Chat ID',settings.telegramChatId)}</div><div class="secure-settings-actions"><span id="telegramSettingsDirty" class="secure-dirty-note"></span><button class="btn" type="button" onclick="lockTelegramSettings()">Закрыть доступ</button><button class="btn primary" id="saveNotificationSettingsBtn" type="button" onclick="saveNotificationSettings()">Сохранить</button></div>`;
+}
+function markTelegramSettingsDirty(){const note=document.getElementById('telegramSettingsDirty');if(note)note.textContent='Есть несохранённые изменения';}
+async function showTelegramSecret(id){
+  if(!telegramSettingsUnlocked)return unlockTelegramSettings();
+  if(!await requireTelegramPin('Введите PIN, чтобы показать значение.'))return;
+  const input=document.getElementById(id);
+  if(input)input.type=input.type==='password'?'text':'password';
+}
+async function copyTelegramSecret(id){
+  if(!telegramSettingsUnlocked)return unlockTelegramSettings();
+  const input=document.getElementById(id);
+  if(!input)return;
+  try{await navigator.clipboard.writeText(input.value||'');toast('Скопировано')}catch(e){input.select();document.execCommand('copy');toast('Скопировано')}
+}
+function telegramSettingsDiff(prev,next){
+  const out=[];
+  if(String(prev?.telegramBotToken||'')!==String(next?.telegramBotToken||''))out.push(['telegramBotToken','Администратор изменил Telegram Bot Token.']);
+  if(String(prev?.telegramChatId||'')!==String(next?.telegramChatId||''))out.push(['telegramChatId','Администратор изменил Telegram Chat ID.']);
+  return out;
+}
+function saveNotificationSettings(){
+  if(!telegramSettingsUnlocked){toast('Сначала введите PIN');return;}
+  if(!data.settings||typeof data.settings!=='object')data.settings={};
+  const prev=telegramSettingsSnapshot||telegramSettings();
+  const next={telegramBotToken:document.getElementById('telegramBotToken')?.value.trim()||'',telegramChatId:document.getElementById('telegramChatId')?.value.trim()||''};
+  const diffs=telegramSettingsDiff(prev,next);
+  if(diffs.length&&!confirm('Сохранить изменения Telegram-настроек?'))return;
+  data.settings.notifications={...(data.settings.notifications||{}),...next};
+  diffs.forEach(([field,text])=>{if(typeof auditAdd==='function')auditAdd('telegram_settings_changed','settings','telegram','Telegram',text,{field,secret:true})});
+  save();
+  telegramSettingsSnapshot={...next};
+  renderNotificationSettings();
+  toast(t('notificationSettingsSaved'));
+}
 async function sendOrderNotification(o,method){
   const text=orderNotificationText(o),subject=`${t('notificationOrderHeading')} ${o.number}`;
   if(method==='internal')return true;

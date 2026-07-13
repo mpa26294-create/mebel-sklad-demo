@@ -1,6 +1,6 @@
 // v6.34 — Apple flows for Fabric, Eco Leather and Leather.
 (function(){
-  const VERSION_LABEL='v6.34 - Apple Leather Flow';
+  const VERSION_LABEL='v6.42 — Secure Telegram Export';
   let installed=false;
   let materialState='stock';
 

@@ -33,6 +33,7 @@ function renderNav(){
     b.classList.add('active');
     document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
     document.getElementById(b.dataset.section).classList.add('active');
+    if(b.dataset.section==='settings'&&typeof lockTelegramSettings==='function')lockTelegramSettings();
     closeMobileSidebar();
   };
 }
