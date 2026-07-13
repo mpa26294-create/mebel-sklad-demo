@@ -22,7 +22,7 @@
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.41 — Order Link Technology Actions</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.42 — Secure Telegram Export</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
 
   <main class="main">
@@ -126,7 +126,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v6.41 — Order Link Technology Actions';
+const APP_VERSION = 'v6.42 — Secure Telegram Export';
 </script>
 <script src="js/auth.js?v=6.1"></script>
 <script src="js/materials.js?v=6.36"></script>
@@ -2105,8 +2105,96 @@ function saveOrderMaterialPurchase(orderId,materialId,opts={}){
 }
 async function persistReservationMaterials(){syncMaterialReservations();for(const m of data.materials){await updateMaterialInSupabase(m)}}
 async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm('Удалить заказ и освободить резерв материалов?'))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast('Заказ удалён')}
-function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mebel-sklad-data.json';a.click()}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();renderAll();toast('Данные загружены')}catch(err){alert('Ошибка JSON')}};r.readAsText(f)}
+function secretExportKey(key){return /(token|chatid|chat_id|pin|password|passwd|secret|apikey|api_key|accesskey|privatekey|auth)/i.test(String(key||''))}
+function cloneForExport(value,allowSecrets=false){
+  if(Array.isArray(value))return value.map(x=>cloneForExport(x,allowSecrets));
+  if(value&&typeof value==='object'){
+    const out={};
+    Object.entries(value).forEach(([key,val])=>{if(!allowSecrets&&secretExportKey(key))return;out[key]=cloneForExport(val,allowSecrets)});
+    return out;
+  }
+  return value;
+}
+function currentExportSelection(){
+  return {
+    materials:!!document.getElementById('exportMaterials')?.checked,
+    orders:!!document.getElementById('exportOrders')?.checked,
+    technologies:!!document.getElementById('exportTechnologies')?.checked,
+    history:!!document.getElementById('exportHistory')?.checked,
+    settings:!!document.getElementById('exportSettings')?.checked
+  };
+}
+function buildExportPayload(selection){
+  const payload={schema:'furnicore-export-v2',exportedAt:new Date().toISOString(),sections:selection};
+  if(selection.materials)payload.materials=cloneForExport(data.materials||[],false);
+  if(selection.orders){
+    const orders=cloneForExport(cleanStoredOrders(data.orders||[]),false);
+    payload.orders=selection.technologies?orders:orders.map(o=>{const clean={...o};delete clean.steps;delete clean.materials;return clean});
+  }
+  if(selection.technologies)payload.technologies=cloneForExport({models:data.models||[],orderTechnologies:cleanStoredOrders(data.orders||[]).map(o=>({orderId:o.id,number:o.number,steps:o.steps||[],materials:o.materials||[]}))},false);
+  if(selection.history)payload.history=typeof auditLoad==='function'?cloneForExport(auditLoad(),false):[];
+  if(selection.settings)payload.settings=cloneForExport(data.settings||{},true);
+  return selection.settings?payload:cloneForExport(payload,false);
+}
+function downloadExportPayload(payload){
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='furnicore-export.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),0);
+}
+function exportData(){
+  const body=`<div class="secure-export-modal"><p>Выберите, какие данные включить в JSON. Системные настройки по умолчанию выключены.</p><label><input id="exportMaterials" type="checkbox" checked> Материалы</label><label><input id="exportOrders" type="checkbox" checked> Заказы</label><label><input id="exportTechnologies" type="checkbox" checked> Технологии</label><label><input id="exportHistory" type="checkbox" checked> Историю</label><label><input id="exportSettings" type="checkbox"> Настройки системы</label><div class="secure-export-note">Без настроек системы Telegram Token, Chat ID, PIN, пароли и API Keys не попадут в файл.</div></div>`;
+  openModal('Экспортировать',body,`<button class="btn" type="button" onclick="closeModal()">Отмена</button><button class="btn primary" type="button" onclick="runSecureExport()">Экспорт</button>`);
+}
+async function runSecureExport(){
+  const selection=currentExportSelection();
+  if(selection.settings&&typeof requireTelegramPin==='function'&&!await requireTelegramPin('Введите PIN, чтобы экспортировать системные настройки.'))return;
+  const payload=buildExportPayload(selection);
+  downloadExportPayload(payload);
+  closeModal();
+  toast('Экспорт готов');
+}
+function importContainsSystemSettings(payload){return !!(payload&&typeof payload==='object'&&(payload.settings||payload.data?.settings))}
+function askImportSystemSettings(){
+  return new Promise(resolve=>{
+    const body=`<div class="secure-export-modal"><p><b>Обнаружены настройки системы.</b></p><p>Импортировать их?</p><div class="secure-export-note">Если выбрать «Нет», будут импортированы только материалы, заказы, технологии и история.</div></div>`;
+    window.__importSettingsResolve=resolve;
+    openModal('Импорт JSON',body,`<button class="btn primary" type="button" onclick="window.__importSettingsResolve(false);window.__importSettingsResolve=null;closeModal()">Нет</button><button class="btn" type="button" onclick="window.__importSettingsResolve(true);window.__importSettingsResolve=null;closeModal()">Да</button>`);
+  });
+}
+async function applyImportedData(payload,importSettings=false){
+  const src=payload?.data&&typeof payload.data==='object'?payload.data:payload;
+  const next={...(data||{})};
+  if(Array.isArray(src.materials))next.materials=cloneForExport(src.materials,false);
+  if(Array.isArray(src.orders))next.orders=cleanStoredOrders(cloneForExport(src.orders,false));
+  if(Array.isArray(src.models))next.models=cloneForExport(src.models,false);
+  if(Array.isArray(src.technologies))next.models=cloneForExport(src.technologies,false);
+  if(src.technologies&&typeof src.technologies==='object'&&!Array.isArray(src.technologies)){
+    if(Array.isArray(src.technologies.models))next.models=cloneForExport(src.technologies.models,false);
+    if(Array.isArray(src.technologies.orderTechnologies)&&Array.isArray(next.orders)){
+      const techById=new Map(src.technologies.orderTechnologies.map(x=>[String(x.orderId),x]));
+      next.orders=next.orders.map(o=>{const tech=techById.get(String(o.id));return tech?{...o,steps:cloneForExport(tech.steps||[],false),materials:cloneForExport(tech.materials||[],false)}:o});
+    }
+  }
+  if(Array.isArray(src.notifications))next.notifications=cloneForExport(src.notifications,false);
+  if(importSettings&&src.settings)next.settings=cloneForExport(src.settings,true);
+  else next.settings=data.settings||{};
+  data=next;
+  if(Array.isArray(src.history)&&typeof auditSave==='function')auditSave(cloneForExport(src.history,false));
+  save();
+  renderAll();
+  toast('Данные загружены');
+}
+function importData(e){
+  const f=e.target.files[0];
+  if(!f)return;
+  const input=e.target;
+  const r=new FileReader();
+  r.onload=async()=>{try{const payload=JSON.parse(r.result);const importSettings=importContainsSystemSettings(payload)?await askImportSystemSettings():false;await applyImportedData(payload,importSettings)}catch(err){console.error(err);alert('Ошибка JSON')}finally{if(input)input.value=''}};
+  r.readAsText(f);
+}
 function wipeData(){if(!confirm('Очистить все данные?'))return;data={materials:[],models:[],orders:[]};save();renderAll()}
 
 
@@ -2135,7 +2223,7 @@ applyI18n=function(){
   renderOrderClientFilter();
 };
 async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm(u42('deleteConfirm')))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast(u42('orderDeleted'))}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();renderAll();toast(u42('dataLoaded'))}catch(err){alert(u42('jsonError'))}};r.readAsText(f)}
+const importDataSecureV641=importData;
 function wipeData(){if(!confirm(u42('wipeConfirm')))return;data={materials:[],models:[],orders:[]};save();renderAll()}
 
 
