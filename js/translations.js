@@ -105,7 +105,21 @@ function applyI18n(){
   document.documentElement.lang=currentLang==='lv'?'lv':currentLang==='en'?'en':'ru'; document.title=t('appTitle');
   const qs=(s)=>document.querySelector(s);
   if(qs('.brand h1')) qs('.brand h1').textContent=t('appTitle'); if(qs('.brand p')) qs('.brand p').textContent=t('appSubtitle'); if(qs('.nav-title')) qs('.nav-title').textContent=t('section');
-  const nav=document.querySelectorAll('#mainNav button'); const navKeys=['stock','orders','models','refs','settings'];let navIndex=0;nav.forEach(b=>{const span=b.querySelector('.ico');const key=b.dataset.section==='history'?'history':navKeys[navIndex++];if(key)b.innerHTML=(span?span.outerHTML:'')+' '+t(key)});
+  const nav=document.querySelectorAll('#mainNav button');
+  const navLabels={
+    stock:t('stock'),
+    orders:t('orders'),
+    refs:t('refs'),
+    changelog:'История версий',
+    history:t('history'),
+    settings:t('settings')
+  };
+  nav.forEach(b=>{
+    const span=b.querySelector('.ico');
+    const key=b.dataset.section;
+    if(key&&navLabels[key]) b.innerHTML=(span?span.outerHTML:'')+' '+navLabels[key];
+  });
+  if(typeof placeChangelogNavLast==='function')placeChangelogNavLast();
   const pairs=[['#stock .title h2','stockTitle'],['#stock .title p','stockDesc'],['#orders .title h2','orderTitle'],['#orders .title p','orderDesc'],['#models .title h2','modelTitle'],['#models .title p','modelDesc'],['#settings .title h2','settings'],['#settings .title p','settingsDesc']]; pairs.forEach(([sel,key])=>{const el=qs(sel); if(el) el.textContent=t(key);});
   const b1=qs('#stock .topbar .btn.primary'); if(b1) b1.textContent=t('addMaterial'); const b2=qs('#orders .btn.primary'); if(b2) b2.textContent=t('newOrder'); const b3=qs('#models .btn.primary'); if(b3) b3.textContent=t('newModel');
   const labelMap=[['#quickAddBox .field:nth-child(1) label','skuMaterial'],['#quickAddBox .field:nth-child(2) label','qtyWithUnit'],['#quickAddBox .field.full label','foundMaterial']]; labelMap.forEach(([sel,key])=>{const el=qs(sel); if(el) el.textContent=t(key);});

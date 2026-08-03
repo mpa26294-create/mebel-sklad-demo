@@ -1,17 +1,128 @@
 const AUDIT_STORE_KEY='furnicore_audit_v1';
+const AUDIT_SYNC_ARTICLE='__FURNICORE_AUDIT__';
+let auditSyncRowId='',auditSyncTimer=null,auditSyncLoading=false,auditSyncDirty=false,auditSyncInFlight=false,auditSyncRetryTimer=null,auditSyncRetryCount=0,auditSyncLocalUpdatedAt='',auditSyncLastRemoteUpdatedAt='';
 function auditNow(){return new Date().toISOString()}
 function actorName(){return (currentUser&&currentUser.email)||localStorage.getItem('furnicore_actor_name')||t('unknownUser')}
 function actorShort(email){const v=String(email||actorName());return v.includes('@')?v.split('@')[0]:v}
-function auditLoad(){try{return JSON.parse(localStorage.getItem(AUDIT_STORE_KEY)||'[]')}catch(e){return []}}
-function auditSave(list){try{localStorage.setItem(AUDIT_STORE_KEY,JSON.stringify((list||[]).slice(0,600)))}catch(e){console.warn(e)}}
+function isAuditSyncRow(row){return String(row?.article||'')===AUDIT_SYNC_ARTICLE}
+function auditSyncUpdatedAt(row){return String(row?.attributes?.updatedAt||'')}
+function auditSyncTime(v){const t=Date.parse(v||'');return Number.isFinite(t)?t:0}
+function normalizeAuditList(rows){
+  const map=new Map();
+  (Array.isArray(rows)?rows:[]).forEach(row=>{
+    if(!row||typeof row!=='object')return;
+    const id=String(row.id||'');
+    if(!id)return;
+    map.set(id,Object.assign({},row,{id}));
+  });
+  return Array.from(map.values()).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,600);
+}
+function auditMergeLists(a,b){return normalizeAuditList([...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])])}
+function auditLoad(){try{return normalizeAuditList(JSON.parse(localStorage.getItem(AUDIT_STORE_KEY)||'[]'))}catch(e){return []}}
+function auditSave(list,options={}){
+  const rows=normalizeAuditList(list);
+  try{localStorage.setItem(AUDIT_STORE_KEY,JSON.stringify(rows))}catch(e){console.warn(e)}
+  if(options.sync!==false&&!auditSyncLoading)scheduleAuditSync();
+  return rows;
+}
+function auditRowsFromSyncRow(row){return normalizeAuditList(Array.isArray(row?.attributes?.events)?row.attributes.events:[])}
+function scheduleAuditSync(){
+  if(auditSyncLoading||typeof isLoggedIn!=='function'||!isLoggedIn()||(typeof isLocalMode==='function'&&isLocalMode()))return;
+  auditSyncDirty=true;
+  auditSyncLocalUpdatedAt=new Date().toISOString();
+  clearTimeout(auditSyncTimer);
+  auditSyncTimer=setTimeout(()=>persistAuditToSupabase(),500);
+}
+function retryAuditSync(){
+  if(auditSyncRetryTimer||!auditSyncDirty||typeof isLoggedIn!=='function'||!isLoggedIn())return;
+  const delay=Math.min(12000,1000*Math.pow(2,auditSyncRetryCount));
+  auditSyncRetryTimer=setTimeout(()=>{auditSyncRetryTimer=null;persistAuditToSupabase({retry:true});},delay);
+}
+async function persistAuditToSupabase(options={}){
+  if(typeof isLoggedIn!=='function'||!isLoggedIn()||typeof supabaseClient==='undefined'||(typeof isLocalMode==='function'&&isLocalMode()))return false;
+  clearTimeout(auditSyncTimer);
+  auditSyncTimer=null;
+  const events=auditLoad();
+  const updatedAt=auditSyncLocalUpdatedAt||new Date().toISOString();
+  const payload={article:AUDIT_SYNC_ARTICLE,name:'FurniCore Audit Sync',category:'__system__',subcategory:'audit',quantity:0,unit:'',min_quantity:0,attributes:{events,updatedAt}};
+  auditSyncInFlight=true;
+  try{
+    if(!auditSyncRowId){
+      const {data:rows,error}=await supabaseClient.from('materials').select('id,article,attributes').eq('article',AUDIT_SYNC_ARTICLE).limit(1);
+      if(error)throw error;
+      auditSyncRowId=rows?.[0]?.id||'';
+    }
+    if(auditSyncRowId){
+      const {error}=await supabaseClient.from('materials').update(payload).eq('id',auditSyncRowId);
+      if(error)throw error;
+    }else{
+      const {data:rows,error}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);
+      if(error)throw error;
+      auditSyncRowId=rows?.[0]?.id||'';
+    }
+    auditSyncDirty=false;
+    auditSyncInFlight=false;
+    auditSyncRetryCount=0;
+    auditSyncLastRemoteUpdatedAt=updatedAt;
+    return true;
+  }catch(e){
+    auditSyncInFlight=false;
+    auditSyncDirty=true;
+    auditSyncRetryCount+=1;
+    console.warn('Audit sync failed',e);
+    if(typeof toast==='function'&&!options.silent)toast('Ошибка синхронизации истории. Повторяем...');
+    if(options.retry!==false)retryAuditSync();
+    return false;
+  }
+}
+async function applyAuditSyncRow(auditRow,{render=true}={}){
+  if(!auditRow)return false;
+  auditSyncRowId=auditRow.id||auditSyncRowId;
+  const remoteUpdatedAt=auditSyncUpdatedAt(auditRow);
+  if(remoteUpdatedAt&&auditSyncTime(remoteUpdatedAt)<auditSyncTime(auditSyncLastRemoteUpdatedAt))return false;
+  const remote=auditRowsFromSyncRow(auditRow);
+  const local=auditLoad();
+  const merged=auditMergeLists(remote,local);
+  const remoteIds=new Set(remote.map(x=>String(x.id)));
+  const hasLocalOnly=merged.some(x=>!remoteIds.has(String(x.id)));
+  auditSyncLoading=true;
+  auditSave(merged,{sync:false});
+  auditSyncLoading=false;
+  auditSyncLastRemoteUpdatedAt=remoteUpdatedAt||auditSyncLastRemoteUpdatedAt;
+  if(hasLocalOnly){
+    auditSyncDirty=true;
+    auditSyncLocalUpdatedAt=new Date().toISOString();
+    persistAuditToSupabase({silent:true});
+  }
+  if(render&&typeof renderSiteHistory==='function')renderSiteHistory();
+  return true;
+}
+async function loadAuditFromSupabase(){
+  if(typeof isLoggedIn!=='function'||!isLoggedIn()||typeof supabaseClient==='undefined')return false;
+  try{
+    const {data:rows,error}=await supabaseClient.from('materials').select('id,article,attributes').eq('article',AUDIT_SYNC_ARTICLE).limit(1);
+    if(error)throw error;
+    const row=rows?.[0]||null;
+    if(row)return applyAuditSyncRow(row,{render:true});
+    if(auditLoad().length)scheduleAuditSync();
+    return true;
+  }catch(e){
+    console.warn('Audit load failed',e);
+    return false;
+  }
+}
 function auditAdd(type,entity,entityId,entityTitle,text,meta={}){
   const row={id:uid(),at:auditNow(),by:actorName(),type,entity,entityId:String(entityId||''),entityTitle:String(entityTitle||''),text:String(text||''),meta};
   const list=auditLoad();list.unshift(row);auditSave(list);return row;
 }
+window.isAuditSyncRow=isAuditSyncRow;
+window.applyAuditSyncRow=applyAuditSyncRow;
+window.loadAuditFromSupabase=loadAuditFromSupabase;
+window.scheduleAuditSync=scheduleAuditSync;
 function auditFor(entity,entityId){return auditLoad().filter(x=>x.entity===entity&&String(x.entityId)===String(entityId)).slice(0,60)}
 function auditTime(iso){const d=new Date(iso||Date.now());return Number.isNaN(d.getTime())?'—':d.toLocaleString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
 function auditUserHtml(user){const u=escapeHtml(user||'—');return `<span class="profile-chip"><span class="profile-avatar">${escapeHtml(String(user||'?').slice(0,1).toUpperCase())}</span>${u}</span>`}
-function auditListHtml(entity,entityId){const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`}
+function auditListHtml(entity,entityId){const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';return `<div class="audit-list">${rows.map(r=>{const orderBtn=entity==='material'&&r.meta?.orderId?`<button class="btn small" type="button" onclick="event.stopPropagation();openOrderView('${safeEsc(r.meta.orderId)}')">Открыть заказ</button>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${orderBtn}</div></div>`}).join('')}</div>`}
 function metaVal(obj,key,fallback='—'){return obj&&obj[key]?obj[key]:fallback}
 function ensureMeta(obj){if(!obj.meta||typeof obj.meta!=='object')obj.meta={};return obj.meta}
 function hasOrderTechnology(steps){return (steps||[]).some(s=>Number(s&&s.minutes||0)>0)}
@@ -88,7 +199,7 @@ function upgradeHistoryShell(){const section=document.getElementById('history');
 renderHistoryStats=function(){const rows=allRows(),todayKey=auditDateOnly(new Date().toISOString()),yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);const todayRows=rows.filter(r=>auditDateOnly(r.at)===todayKey).length,yesterdayRows=rows.filter(r=>auditDateOnly(r.at)===auditDateOnly(yesterday.toISOString())).length,weekRows=rows.filter(r=>Date.now()-new Date(r.at||0).getTime()<7*86400000).length,mat=rows.filter(r=>r.entity==='material').length,ord=rows.filter(r=>r.entity==='order').length,users=new Set(rows.map(r=>r.by).filter(Boolean)).size,box=document.getElementById('historyStats');if(!box)return;const cards=[['pulse',t('totalEvents'),rows.length,`${weekRows} ${t('historyWeek')}`],['calendar',t('today'),todayRows,`${todayRows-yesterdayRows>=0?'+':''}${todayRows-yesterdayRows} ${t('historyYesterdayCompare')}`],['box',t('warehouseOrders'),`${mat} / ${ord}`,t('historyUpdated')],['user',t('users'),users,t('historyActive')]];box.innerHTML=cards.map(([icon,label,value,note])=>`<div class="history-stat"><span class="history-stat-icon ${icon}">${icon==='calendar'?'▣':icon==='box'?'◇':icon==='user'?'♙':'⌁'}</span><div><small>${label}</small><b>${value}</b><em>${note}</em></div></div>`).join('')};
 renderSiteHistory=function(){const box=document.getElementById('historyTable');if(!box)return;upgradeHistoryShell();renderHistoryStats();fillHistoryFilters();const rows=filteredHistory();if(!rows.length){box.innerHTML=`<div class="history-empty"><b>${t('historyEmpty')}</b>${t('historyEmptyDesc')}</div>`;return}const groups=['today','yesterday','week','earlier'];box.innerHTML=`<div class="history-timeline">${groups.map(key=>{const items=rows.filter(r=>historyGroupKey(r.at)===key);return items.length?`<section class="history-group"><h3>${historyGroupTitle(key)}<span>${items.length}</span></h3>${items.slice(0,300).map(historyTimelineCard).join('')}</section>`:''}).join('')}</div>`};
 window.renderSiteHistory=renderSiteHistory;
-function initHistory(){injectHistoryUI();localizeHistoryUI();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;renderSiteHistory()}
+function initHistory(){injectHistoryUI();localizeHistoryUI();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;renderSiteHistory();loadAuditFromSupabase()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initHistory);else initHistory();
 
 /* v5.70: detailed audit history for every changed field */
@@ -436,7 +547,7 @@ function ensureMaterialAuditMetaV573(m, options = {}){
     changed = true;
   }
 
-  if(options.persist && changed && typeof materialToDb === 'function' && supabaseClient && m.id){
+  if(options.persist && changed && typeof materialToDb === 'function' && supabaseClient && m.id && !(typeof isLocalMode==='function'&&isLocalMode())){
     // Silent one-time migration for old materials.
     try{
       supabaseClient.from('materials').update(materialToDb(m)).eq('id', m.id).then(()=>{}).catch(()=>{});
@@ -456,8 +567,8 @@ if(typeof dbToMaterial === 'function'){
 
 if(typeof loadMaterialsFromSupabase === 'function'){
   const __loadMaterialsFromSupabaseV573 = loadMaterialsFromSupabase;
-  loadMaterialsFromSupabase = async function(){
-    await __loadMaterialsFromSupabaseV573();
+  loadMaterialsFromSupabase = async function(options){
+    await __loadMaterialsFromSupabaseV573(options);
     if(Array.isArray(data && data.materials)){
       data.materials.forEach(m => ensureMaterialAuditMetaV573(m));
     }

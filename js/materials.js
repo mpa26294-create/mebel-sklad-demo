@@ -14,17 +14,70 @@ function materialOrderedOrders(matId){
     .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(matId) && orderItemPurchaseStatus(i)==='ordered' && Number(orderItemPurchaseQty(i,0)||0)>0).map(i=>({order:o,item:i})));
 }
 function orderedByOrdersQty(m){
-  return Math.max(0,stockNumForUnit(materialOrderedOrders(m.id).reduce((s,r)=>s+Number(orderItemPurchaseQty(r.item,0)||0),0),m.unit));
+  return Math.max(0,stockNumForUnit(materialOrderedOrders(m.id).reduce((s,r)=>s+convertMaterialQty(Number(orderItemPurchaseQty(r.item,0)||0),r.item.unit||m.unit,m.unit,m),0),m.unit));
 }
 function materialReservationOrders(matId){
   return (data.orders||[])
     .filter(o=>!['Готов','Отменён'].includes(o.status))
     .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(matId)).map(i=>({order:o,item:i})));
 }
+function materialOrderReservedQty(item,m){
+  if(typeof orderItemRemainingReserveQty==='function')return orderItemRemainingReserveQty(item,m);
+  return Number(item?.qty||0);
+}
+function isLinearFabricStock(m){
+  return (m?.category==='Ткань'||m?.category==='Экокожа') && m?.unit==='рулон';
+}
+function isLinearFabricMaterial(m){
+  return (m?.category==='Ткань'||m?.category==='Экокожа') && (isLinearFabricStock(m)||isLinearUnit(m?.unit));
+}
+function materialDisplayUnit(m){
+  return isLinearFabricStock(m)?'пог. м':(m?.unit||'шт');
+}
+function materialLinearStockQty(m){
+  const a=m?.attributes||{};
+  const saved=Number(String(a.linearBalanceMeters||0).replace(',','.'));
+  if(Number.isFinite(saved)&&saved>0)return stockNumForUnit(saved,'пог. м');
+  return convertMaterialQty(Number(m?.quantity||0),m?.unit||'','пог. м',m);
+}
+function materialDisplayQty(q,m,fromUnit){
+  if(!isLinearFabricStock(m))return stockNumForUnit(q,fromUnit||m?.unit||'шт');
+  const unit=fromUnit||m?.unit||'';
+  if(unit===m?.unit && Number(q||0)===Number(m?.quantity||0))return materialLinearStockQty(m);
+  return stockNumForUnit(convertMaterialQty(Number(q||0),unit,'пог. м',m),'пог. м');
+}
+function materialDisplayQtyWithUnit(q,m,fromUnit){
+  const unit=materialDisplayUnit(m);
+  return qtyWithUnit(materialDisplayQty(q,m,fromUnit),unit);
+}
+function materialDisplayStats(m){
+  if(!isLinearFabricStock(m)){
+    const unit=m.unit||'шт';
+    const stock=stockNumForUnit(m.quantity,unit);
+    const reserved=reservedQty(m);
+    const ordered=orderedQty(m);
+    return {unit,stock,reserved,ordered,available:availableQty(m),need:stockNeededToOrderQty(m)};
+  }
+  const unit='пог. м';
+  const stock=materialLinearStockQty(m);
+  const reserved=stockNumForUnit(materialReservationOrders(m.id).reduce((s,r)=>s+convertMaterialQty(materialOrderReservedQty(r.item,m),r.item.unit||unit,unit,m),0),unit);
+  const manual=convertMaterialQty(orderedManualQty(m),m.unit||unit,unit,m);
+  const orderedFromOrders=materialOrderedOrders(m.id).reduce((s,r)=>s+convertMaterialQty(Number(orderItemPurchaseQty(r.item,0)||0),r.item.unit||unit,unit,m),0);
+  const ordered=stockNumForUnit(manual+orderedFromOrders,unit);
+  return {unit,stock,reserved,ordered,available:Math.max(0,stockNumForUnit(stock-reserved,unit)),need:Math.max(0,stockNumForUnit(reserved-stock-ordered,unit))};
+}
+function materialAreaHint(m,meters){
+  const a=m?.attributes||{};
+  const width=Number(a.rollWidth||0)||((Number(a.rollWidthMm||0)>0)?Number(a.rollWidthMm)/1000:0);
+  const length=Number(meters||0);
+  if(!isLinearFabricMaterial(m)||!(width>0&&length>0))return '';
+  return `${Number((width*length).toFixed(2))} м²`;
+}
 function reservationOrdersHtml(m){
   const rows=materialReservationOrders(m.id);
   if(!rows.length)return '<div class="reserve-orders muted">Резерва по заказам нет</div>';
-  return `<div class="reserve-orders">${rows.map(r=>`<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${r.order.id}')"><span><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''}<br><small>Резерв: ${escapeHtml(qtyWithUnit(r.item.qty,m.unit))}</small></span><span class="go">›</span></button>`).join('')}</div>`;
+  const unit=materialDisplayUnit(m);
+  return `<div class="reserve-orders">${rows.map(r=>{const qty=convertMaterialQty(materialOrderReservedQty(r.item,m),r.item.unit||unit,unit,m);return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${r.order.id}')"><span><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''}<br><small>Резерв: ${escapeHtml(qtyWithUnit(qty,unit))}</small></span><span class="go">›</span></button>`}).join('')}</div>`;
 }
 
 function detailItem(label,value,full=false){return `<div class="detail-card ${full?'full':''}"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${value?escapeHtml(value):'—'}</div></div>`}
@@ -50,28 +103,312 @@ function orderedOrdersHtml(m){
 
   const allocations=manualPurchaseOrderAllocations(m);
   const allocatedTotal=stockNumForUnit(allocations.reduce((s,x)=>s+Number(x.qty||0),0),m.unit||'шт');
+  const unit=materialDisplayUnit(m);
   let manualHtml='';
   if(manual>0 && allocations.length){
     manualHtml=allocations.map(a=>{
       const order=(data.orders||[]).find(o=>String(o.id)===String(a.orderId));
       const title=order?`${escapeHtml(order.number||'—')}${order.client?' · '+escapeHtml(order.client):''}`:'Выбранный заказ';
-      return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${a.orderId}')"><span><b>${title}</b><br><small>Заказано поставщику: ${escapeHtml(qtyWithUnit(a.qty,m.unit))}</small></span><span class="go">›</span></button>`;
+      return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${a.orderId}')"><span><b>${title}</b><br><small>Заказано поставщику: ${escapeHtml(qtyWithUnit(convertMaterialQty(a.qty,m.unit||unit,unit,m),unit))}</small></span><span class="go">›</span></button>`;
     }).join('');
     const rest=stockNumForUnit(manual-allocatedTotal,m.unit||'шт');
     if(rest>0){
-      manualHtml+=`<div class="reserve-order-link" style="cursor:default"><span><b>Ручная закупка</b><br><small>Без привязки: ${escapeHtml(qtyWithUnit(rest,m.unit))}</small></span></div>`;
+      manualHtml+=`<div class="reserve-order-link" style="cursor:default"><span><b>Ручная закупка</b><br><small>Без привязки: ${escapeHtml(qtyWithUnit(convertMaterialQty(rest,m.unit||unit,unit,m),unit))}</small></span></div>`;
     }
   }else if(manual>0){
-    manualHtml=`<div class="reserve-order-link" style="cursor:default"><span><b>Ручная закупка</b><br><small>Заказано: ${escapeHtml(qtyWithUnit(manual,m.unit))}</small></span></div>`;
+    manualHtml=`<div class="reserve-order-link" style="cursor:default"><span><b>Ручная закупка</b><br><small>Заказано: ${escapeHtml(qtyWithUnit(convertMaterialQty(manual,m.unit||unit,unit,m),unit))}</small></span></div>`;
   }
 
-  const rowsHtml=rows.map(r=>`<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${r.order.id}')"><span><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''}<br><small>Заказано: ${escapeHtml(qtyWithUnit(orderItemPurchaseQty(r.item,0),m.unit))}${r.item.purchaseNo?' · '+escapeHtml(r.item.purchaseNo):''}</small></span><span class="go">›</span></button>`).join('');
+  const rowsHtml=rows.map(r=>{const qty=convertMaterialQty(Number(orderItemPurchaseQty(r.item,0)||0),r.item.unit||unit,unit,m);return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${r.order.id}')"><span><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''}<br><small>Заказано: ${escapeHtml(qtyWithUnit(qty,unit))}${r.item.purchaseNo?' · '+escapeHtml(r.item.purchaseNo):''}</small></span><span class="go">›</span></button>`}).join('');
   return `<div class="reserve-orders">${manualHtml}${rowsHtml}</div>`;
 }
 function reservationOrdersShort(m){
   const rows=materialReservationOrders(m.id);
   if(!rows.length)return '';
   return `резерв ${qtyWithUnit(reservedQty(m),m.unit)}`;
+}
+
+// New function for order usage cards
+function materialOrderUsageCards(m){
+  const rows=materialReservationOrders(m.id);
+  if(!rows.length)return '<div class="order-usage-empty">Материал не используется в активных заказах</div>';
+
+  const unit=materialDisplayUnit(m);
+  return rows.map(r=>{
+    const order=r.order;
+    const item=r.item;
+    const needed=convertMaterialQty(Number(item.qty||0),item.unit||unit,unit,m);
+    const reserved=convertMaterialQty(materialOrderReservedQty(item,m),item.unit||unit,unit,m);
+    const ordered=convertMaterialQty(Number(orderItemPurchaseQty(item,0)||0),item.unit||unit,unit,m);
+    const shortage=Math.max(0,needed-reserved-ordered);
+
+    return `<div class="order-usage-card">
+      <div class="order-usage-header">
+        <div class="order-usage-number">${escapeHtml(order.number||'—')}</div>
+        <div class="order-usage-client">${escapeHtml(order.client||'—')}</div>
+      </div>
+      <div class="order-usage-stats">
+        <div class="order-usage-stat">
+          <span class="order-usage-label">Нужно</span>
+          <span class="order-usage-value">${escapeHtml(qtyWithUnit(needed,unit))}</span>
+        </div>
+        <div class="order-usage-stat">
+          <span class="order-usage-label">Зарезервировано</span>
+          <span class="order-usage-value">${escapeHtml(qtyWithUnit(reserved,unit))}</span>
+        </div>
+        <div class="order-usage-stat">
+          <span class="order-usage-label">Заказано</span>
+          <span class="order-usage-value">${escapeHtml(qtyWithUnit(ordered,unit))}</span>
+        </div>
+        <div class="order-usage-stat ${shortage>0?'danger':''}">
+          <span class="order-usage-label">Не хватает</span>
+          <span class="order-usage-value">${escapeHtml(qtyWithUnit(shortage,unit))}</span>
+        </div>
+      </div>
+      <div class="order-usage-footer">
+        <span class="order-usage-status">${escapeHtml(order.status||'—')}</span>
+        <button class="btn small primary" onclick="goToOrderFromMaterial(event,'${order.id}')">Открыть заказ</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// New function for supplier delivery cards
+function materialSupplierDeliveries(m){
+  const a=m.attributes||{};
+  const manual=(a.manualPurchaseOrders||[]);
+  const rows=materialOrderedOrders(m.id);
+
+  if(!rows.length && manual.length===0)return '<div class="supplier-deliveries-empty">Нет активных поставок</div>';
+
+  const unit=m.unit||'шт';
+  const deliveries=[];
+
+  // Add manual purchase orders
+  manual.forEach(po=>{
+    const order=(data.orders||[]).find(o=>String(o.id)===String(po.orderId));
+    deliveries.push({
+      type:'manual',
+      orderId:po.orderId,
+      orderNumber:order?.number||'—',
+      orderClient:order?.client||'—',
+      qty:Number(po.qty||0),
+      supplier:a.supplier||'—',
+      orderDate:a.purchaseDate||'—',
+      expectedDate:a.expectedReceiptDate||'—',
+      status:'ordered'
+    });
+  });
+
+  // Add order-based purchases
+  rows.forEach(r=>{
+    const order=r.order;
+    const item=r.item;
+    deliveries.push({
+      type:'order',
+      orderId:order.id,
+      orderNumber:order.number||'—',
+      orderClient:order.client||'—',
+      qty:convertMaterialQty(Number(orderItemPurchaseQty(item,0)||0),item.unit||unit,unit,m),
+      supplier:item.purchaseSupplier||'—',
+      orderDate:item.purchaseDate||'—',
+      expectedDate:item.expectedDate||'—',
+      status:'ordered'
+    });
+  });
+
+  if(deliveries.length===0)return '<div class="supplier-deliveries-empty">Нет активных поставок</div>';
+
+  return deliveries.map(d=>`
+    <div class="supplier-delivery-card">
+      <div class="delivery-header">
+        <div class="delivery-order">${escapeHtml(d.orderNumber)}</div>
+        <div class="delivery-qty">${escapeHtml(qtyWithUnit(d.qty,unit))}</div>
+      </div>
+      <div class="delivery-info">
+        <div class="delivery-info-row">
+          <span class="delivery-label">Для заказа</span>
+          <span class="delivery-value">${escapeHtml(d.orderClient)}</span>
+        </div>
+        <div class="delivery-info-row">
+          <span class="delivery-label">Поставщик</span>
+          <span class="delivery-value">${escapeHtml(d.supplier)}</span>
+        </div>
+        <div class="delivery-info-row">
+          <span class="delivery-label">Дата заказа</span>
+          <span class="delivery-value">${escapeHtml(d.orderDate)}</span>
+        </div>
+        <div class="delivery-info-row">
+          <span class="delivery-label">Ожидается</span>
+          <span class="delivery-value">${escapeHtml(d.expectedDate)}</span>
+        </div>
+      </div>
+      <div class="delivery-actions">
+        <button class="btn small primary" onclick="acceptMaterialDelivery('${m.id}','${d.orderId}',${d.qty})">Принять</button>
+        <button class="btn small ghost" onclick="editMaterialDelivery('${m.id}','${d.orderId}')">Изменить</button>
+        <button class="btn small danger" onclick="cancelMaterialDelivery('${m.id}','${d.orderId}')">Отменить</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Placeholder functions for delivery actions
+function acceptMaterialDelivery(materialId,orderId,qty){
+  toast('Функция принятия поставки будет реализована');
+}
+
+function editMaterialDelivery(materialId,orderId){
+  toast('Функция редактирования поставки будет реализована');
+}
+
+function cancelMaterialDelivery(materialId,orderId){
+  toast('Функция отмены поставки будет реализована');
+}
+
+function openNewMaterialOrder(materialId){
+  toast('Функция заказа материала будет реализована');
+}
+
+// Quick actions mode switching
+function switchQuickActionMode(mode){
+  // Update tabs
+  document.querySelectorAll('.quick-tab').forEach(tab=>{
+    tab.classList.toggle('active',tab.dataset.mode===mode);
+  });
+
+  // Update panels
+  document.querySelectorAll('.quick-action-panel').forEach(panel=>{
+    panel.classList.add('hidden');
+    panel.classList.remove('active');
+  });
+
+  const activePanel=document.getElementById('quickAction'+mode.charAt(0).toUpperCase()+mode.slice(1));
+  if(activePanel){
+    activePanel.classList.remove('hidden');
+    activePanel.classList.add('active');
+  }
+}
+
+function materialDetailGo(target){
+  const modal=document.querySelector('#modalBackdrop .modal.detail-modal');
+  if(!modal)return;
+  if(target==='writeoff'){
+    switchQuickActionMode('out');
+    const card=modal.querySelector('[data-detail-action-card]');
+    card?.scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(()=>document.getElementById('detailQtyChange')?.focus(),180);
+    return;
+  }
+  if(target==='stock'){
+    const panel=modal.querySelector('[data-detail-stock]');
+    panel?.scrollIntoView({behavior:'smooth',block:'center'});
+    panel?.classList.add('pulse-focus');
+    setTimeout(()=>panel?.classList.remove('pulse-focus'),900);
+    return;
+  }
+  if(target==='orders'){
+    const section=modal.querySelector('[data-detail-section="orders"]');
+    if(section){
+      section.open=true;
+      section.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }
+}
+
+// Quick material action execution
+function quickMaterialAction(materialId,mode){
+  const m=data.materials.find(x=>String(x.id)===String(materialId));
+  if(!m){toast(t('notFoundMaterial'));return;}
+
+  const unit=m.unit||'шт';
+  let qty;
+
+  if(mode==='in'){
+    qty=normalizeStockValue(document.getElementById('detailQtyChange')?.value||0,unit,false);
+    if(qty===null){toast('Введите корректное количество');return;}
+    adjustMaterialQty(materialId,1);
+  }else if(mode==='out'){
+    qty=normalizeStockValue(document.getElementById('detailQtyChange')?.value||0,unit,false);
+    if(qty===null){toast('Введите корректное количество');return;}
+    adjustMaterialQty(materialId,-1);
+  }else if(mode==='adjust'){
+    const displayUnit=materialDisplayUnit(m);
+    const newQty=normalizeStockValue(document.getElementById('quickAdjustNew')?.value||0,displayUnit,false);
+    if(newQty===null){toast('Введите корректное количество');return;}
+
+    if(isLinearFabricStock(m)){
+      const oldQty=stockNumForUnit(m.quantity,unit);
+      const oldAttrs={...(m.attributes||{})};
+      const rollLength=Number(oldAttrs.rollLength||oldAttrs.orderedRollLength||0);
+      m.attributes={...oldAttrs,linearBalanceMeters:stockNumForUnit(newQty,'пог. м')};
+      m.quantity=stockNumForUnit(newQty>0?(rollLength?Math.ceil(newQty/rollLength):1):0,unit);
+      m.lastUpdated=today();
+      updateMaterialInSupabase(m).then(ok=>{
+        if(ok){
+          loadMaterialsFromSupabase();
+          renderAll();
+          openMaterialDetails(materialId);
+          toast('Остаток скорректирован');
+        }else{
+          m.quantity=oldQty;
+          m.attributes=oldAttrs;
+        }
+      });
+      return;
+    }
+
+    const oldQty=stockNumForUnit(m.quantity,unit);
+    const delta=newQty-oldQty;
+
+    if(delta>0){
+      // Increase stock
+      applyMaterialReceipt(m,delta);
+    }else if(delta<0){
+      // Decrease stock
+      m.quantity=stockNumForUnit(newQty,unit);
+      m.lastUpdated=today();
+      updateMaterialInSupabase(m).then(ok=>{
+        if(ok){
+          loadMaterialsFromSupabase();
+          renderAll();
+          openMaterialDetails(materialId);
+          toast('Остаток скорректирован');
+        }
+      });
+    }
+  }
+}
+
+// Material history filtering
+function filterMaterialHistory(filterType){
+  // Update filter buttons
+  document.querySelectorAll('.history-filter-btn').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.filter===filterType);
+  });
+
+  // Filter history items (placeholder - will be implemented with actual history data)
+  const historyList=document.getElementById('materialHistoryList');
+  if(historyList){
+    // Placeholder filtering logic
+    const items=historyList.querySelectorAll('.history-item');
+    items.forEach(item=>{
+      const itemType=item.dataset.type;
+      if(filterType==='all' || itemType===filterType){
+        item.style.display='flex';
+      }else{
+        item.style.display='none';
+      }
+    });
+  }
+}
+
+// Load material history (placeholder)
+function loadMaterialHistory(materialId){
+  const historyList=document.getElementById('materialHistoryList');
+  if(!historyList) return;
+
+  // Placeholder - will be implemented with actual audit/history data
+  historyList.innerHTML='<div class="history-empty">История пуста</div>';
 }
 
 function stockInfoBlock(m){const u=m.unit||'';return `<div class="stock-info-grid"><div class="stock-info-card"><div class="stock-info-label">На складе</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,u),u))}</div></div><div class="stock-info-card"><div class="stock-info-label">Зарезервировано</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(reservedQty(m),u))}</div>${reservationOrdersHtml(m)}</div><div class="stock-info-card"><div class="stock-info-label">Заказано</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(orderedQty(m),u))}</div>${orderedOrdersHtml(m)}</div><div class="stock-info-card"><div class="stock-info-label">Доступно</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(availableQty(m),u))}</div></div></div>`}
@@ -146,20 +483,22 @@ function openMaterialReceipt(id){
   const m=(data.materials||[]).find(x=>String(x.id)===String(id));
   if(!m)return;
   const a=m.attributes||{};
-  const unit=m.unit||'шт';
-  const isFabric=m.category==='Ткань';
+  const unit=isLinearFabricStock(m)?'пог. м':(m.unit||'шт');
+  const isFabric=m.category==='Ткань'||m.category==='Экокожа';
   const fabricFields=isFabric?`
     <div class="field"><label>${t('fabricRollWidthMm')}</label><input id="receiptRollWidth" class="input" type="number" min="0" step="1" value="${a.rollWidthMm||((Number(a.rollWidth||0)>0)?Math.round(Number(a.rollWidth)*1000):'')}" oninput="receiptAreaPreview()"></div>
     <div class="field"><label>Длина, м</label><input id="receiptRollLength" class="input" type="number" min="0" step="0.01" value="${a.rollLength||''}" oninput="receiptAreaPreview()"></div>
     <div class="area-preview hidden" id="receiptAreaPreview"></div>`:'';
-  const body=`<div class="wizard-card"><h4>Поступление</h4><div class="wizard-soft-note">Заполните фактические данные после прихода материала. Информация о заказе сохранится в истории материала.</div><div class="form-grid">${fabricFields}<div class="field"><label>Фактический остаток</label><input id="receiptQty" class="input" type="number" min="0" step="${stockStep(unit)}" value="${inputQtyValue(orderedManualQty(m)||0,unit)}"></div><div class="field"><label>${t('storageLocation')}</label><input id="receiptStorageLocation" class="input" value="${a.storageLocation||''}" placeholder="Стеллаж / зона"></div><div class="field"><label>${t('purchasePrice')}</label><input id="receiptPurchasePrice" class="input" type="number" min="0" step="0.01" value="${a.purchasePrice||''}"></div><div class="field"><label>${t('receiptDate')}</label><input id="receiptDate" class="input" type="date" value="${a.receiptDate||today()}"></div></div></div>`;
+  const receiptValue=isLinearFabricStock(m)?convertMaterialQty(orderedManualQty(m)||0,m.unit||unit,unit,m):(orderedManualQty(m)||0);
+  const body=`<div class="wizard-card"><h4>Поступление</h4><div class="wizard-soft-note">Заполните фактические данные после прихода материала. Информация о заказе сохранится в истории материала.</div><div class="form-grid">${fabricFields}<div class="field"><label>Фактический остаток, ${escapeHtml(unitLabel(unit))}</label><input id="receiptQty" class="input" type="number" min="0" step="${stockStep(unit)}" value="${inputQtyValue(receiptValue,unit)}"></div><div class="field"><label>${t('storageLocation')}</label><input id="receiptStorageLocation" class="input" value="${a.storageLocation||''}" placeholder="Стеллаж / зона"></div><div class="field"><label>${t('purchasePrice')}</label><input id="receiptPurchasePrice" class="input" type="number" min="0" step="0.01" value="${a.purchasePrice||''}"></div><div class="field"><label>${t('receiptDate')}</label><input id="receiptDate" class="input" type="date" value="${a.receiptDate||today()}"></div></div></div>`;
   openModal('Поступление материала',body,`<button class="btn" onclick="openMaterialDetails('${m.id}')">${t('back')}</button><button class="btn primary" onclick="saveMaterialReceipt('${m.id}')">${t('save')}</button>`);
   receiptAreaPreview();
 }
 async function saveMaterialReceipt(id){
   const m=(data.materials||[]).find(x=>String(x.id)===String(id));
   if(!m)return;
-  const unit=m.unit||'шт';
+  const legacyLinear=isLinearFabricStock(m);
+  const unit=legacyLinear?'пог. м':(m.unit||'шт');
   const qty=normalizeStockValue(document.getElementById('receiptQty')?.value||0,unit,true);
   if(qty===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return}
   const a={...(m.attributes||{})};
@@ -179,6 +518,7 @@ async function saveMaterialReceipt(id){
   a.orderedQty=0;
   a.receiptFromOrder=oldOrder;
   m.attributes=a;
+  if(legacyLinear)m.unit='пог. м';
   m.quantity=qty;
   m.lastUpdated=today();
   const ok=await updateMaterialInSupabase(m);
@@ -192,6 +532,36 @@ async function saveMaterialReceipt(id){
 function detailField(label,value,full=false){return `<div class="detail-field ${full?'full':''}"><small>${escapeHtml(label)}</small><b>${value?value:'—'}</b></div>`}
 function woodMm(value){return value?`${escapeHtml(value)} мм`:'—'}
 function woodSectionText(a){const parts=[a.thickness&&`${a.thickness} мм`,a.width&&`${a.width} мм`].filter(Boolean);return parts.length?parts.join(' × '):'—'}
+function isWoodSheetMaterial(m){
+  const a=m?.attributes||{};
+  const type=String(a.materialType||m?.subcategory||'');
+  return m?.category==='Древесина' && (!!a.sheetArea || ['Мебельный щит','Фанера','MDF','HDF','МДФ','ДСП','ДВП','OSB'].includes(type));
+}
+function woodSheetArea(m){
+  const a=m?.attributes||{};
+  const saved=Number(a.sheetArea||0);
+  if(Number.isFinite(saved)&&saved>0)return saved;
+  const width=Number(a.width||0),length=Number(a.length||0);
+  return width>0&&length>0?Number(((width/1000)*(length/1000)).toFixed(6)):0;
+}
+function materialInfoQty(q,m,fromUnit){
+  const unit=fromUnit||m?.unit||'';
+  const n=Number(q||0);
+  if(isLinearFabricStock(m))return materialDisplayQty(n,m,unit);
+  if(!isWoodSheetMaterial(m))return stockNumForUnit(n,unit);
+  const area=woodSheetArea(m);
+  if(unit==='м²')return stockNumForUnit(n,'м²');
+  if(area>0 && (unit==='лист' || (m?.attributes||{}).unitType==='sheet'))return stockNumForUnit(n*area,'м²');
+  const thickness=Number((m?.attributes||{}).thickness||0);
+  if(unit==='м³'&&thickness>0)return stockNumForUnit(n/(thickness/1000),'м²');
+  return stockNumForUnit(area>0?n*area:n,'м²');
+}
+function materialInfoQtyWithUnit(q,m,fromUnit){
+  if(isLinearFabricStock(m))return materialDisplayQtyWithUnit(q,m,fromUnit);
+  if(isWoodSheetMaterial(m))return qtyWithUnit(materialInfoQty(q,m,fromUnit),'м²');
+  const unit=fromUnit||m?.unit||'шт';
+  return qtyWithUnit(q,unit);
+}
 function materialDetailBasics(m){
   const a=m.attributes||{};
   const rows=[];
@@ -207,11 +577,15 @@ function materialDetailBasics(m){
       rows.push(detailField('Площадь',escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity||0,m.unit||'м²'),m.unit||'м²'))));
     }else{
       rows.push(detailField('Ширина рулона',escapeHtml(a.rollWidth?Number(a.rollWidth).toFixed(2)+' м':'—')));
-      rows.push(detailField('Длина рулона',escapeHtml(a.rollLength?Number(a.rollLength).toFixed(2)+' м':'—')));
-      rows.push(detailField('Площадь 1 рулона',escapeHtml(a.area?Number(a.area).toFixed(2)+' м²':'—')));
-      rows.push(detailField('Общая площадь',escapeHtml(a.totalArea?Number(a.totalArea).toFixed(2)+' м²':'—')));
+      rows.push(detailField('Длина',escapeHtml(materialDisplayQtyWithUnit(m.quantity||0,m,m.unit))));
+      const areaParts=[
+        a.rollLength?`длина рулона ${Number(a.rollLength).toFixed(2)} м`:null,
+        a.area?`площадь 1 рулона ${Number(a.area).toFixed(2)} м²`:null,
+        materialAreaHint(m,materialLinearStockQty(m))?`общая площадь ${materialAreaHint(m,materialLinearStockQty(m))}`:(a.totalArea?`общая площадь ${Number(a.totalArea).toFixed(2)} м²`:null)
+      ].filter(Boolean).join(' · ');
+      if(areaParts)rows.push(detailField('Справочно',`<span class="muted-detail">${escapeHtml(areaParts)}</span>`,true));
     }
-    rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
+    rows.push(detailField('Единица учёта',escapeHtml(isLinearFabricStock(m)?'пог. м':(unitLabel(m.unit||'')||'—'))));
   }else if(m.category==='Поролон'){
     rows.push(detailField('Размер',escapeHtml(materialDimensions(m)||'—')));
     rows.push(detailField('Марка / плотность',escapeHtml(a.grade||'—')));
@@ -224,15 +598,21 @@ function materialDetailBasics(m){
     if(a.foamKind==='detail')rows.push(detailField('Количество деталей',escapeHtml(a.detailCount||'—')));
     rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
   }else if(m.category==='Древесина'){
+    const sheet=isWoodSheetMaterial(m);
     rows.push(detailField('Тип материала',escapeHtml(m.subcategory||a.materialType||'—')));
     rows.push(detailField('Порода',escapeHtml(a.woodSpecies||a.woodType||'—')));
     rows.push(detailField('Размер',escapeHtml([a.thickness,a.width,a.length].filter(Boolean).join('×')+(a.thickness||a.width||a.length?' мм':''))));
-    if(a.sheetArea)rows.push(detailField('Площадь 1 листа',escapeHtml(Number(a.sheetArea).toFixed(2)+' м²')));
-    if(a.totalArea)rows.push(detailField('Общая площадь',escapeHtml(Number(a.totalArea).toFixed(2)+' м²')));
-    rows.push(detailField('Общий объём',escapeHtml(a.totalVolume?Number(a.totalVolume).toFixed(4)+' м³':'—')));
-    rows.push(detailField('Количество',escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity||0,m.unit||''),m.unit||''))));
+    if(sheet){
+      const area=woodSheetArea(m);
+      const totalArea=Number(a.totalArea||0);
+      rows.push(detailField('Площадь 1 листа',escapeHtml(area?Number(area).toFixed(2)+' м²':'—')));
+      rows.push(detailField('Общая площадь',escapeHtml(totalArea>0?qtyWithUnit(totalArea,'м²'):materialInfoQtyWithUnit(m.quantity||0,m,m.unit))));
+    }else{
+      if(a.sheetArea)rows.push(detailField('Площадь 1 листа',escapeHtml(Number(a.sheetArea).toFixed(2)+' м²')));
+      if(a.totalArea)rows.push(detailField('Общая площадь',escapeHtml(Number(a.totalArea).toFixed(2)+' м²')));
+    }
     rows.push(detailField('Сорт',escapeHtml(a.grade||'—')));
-    rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
+    rows.push(detailField('Единица учёта',escapeHtml(sheet?'м²':(unitLabel(m.unit||'')||'—'))));
   }else{
     rows.push(detailField('Тип / размер',escapeHtml(m.subcategory||a.size||a.thickness||'—')));
     rows.push(detailField('Характеристики',escapeHtml(materialCompactText(m)||'—'),true));
@@ -267,28 +647,149 @@ function openMaterialDetails(id){
   const a=m.attributes||{};
   const st=materialStateOf(m);
   const unit=m.unit||'шт';
-  const stock=stockNumForUnit(m.quantity,unit);
-  const available=availableQty(m);
-  const ordered=orderedQty(m);
-  const reserved=reservedQty(m);
-  const need=stockNeededToOrderQty(m);
+  const displayStats=materialDisplayStats(m);
+  const displayUnit=displayStats.unit;
+  const stock=displayStats.stock;
+  const available=displayStats.available;
+  const ordered=displayStats.ordered;
+  const reserved=displayStats.reserved;
+  const need=displayStats.need;
   const subtitleSub=m.subcategory&&m.subcategory!==m.category?` · ${escapeHtml(m.subcategory)}`:'';
-  const isFabricRoll=m.category==='Ткань'&&unit==='рулон';
+  const isFabricRoll=isLinearFabricMaterial(m);
   const rollLength=Number(a.rollLength||a.orderedRollLength||0);
-  const linearBalance=Number(a.linearBalanceMeters||0)||((isFabricRoll&&rollLength)?stock*rollLength:0);
+  const linearBalance=isFabricRoll?stock:(Number(a.linearBalanceMeters||0)||((isFabricRoll&&rollLength)?stock*rollLength:0));
   const area=(m.category==='Кожа')?'':((isFabricRoll && a.rollWidth)?Number(linearBalance*Number(a.rollWidth||0)).toFixed(2):(typeof isFabricCategory==='function'&&isFabricCategory(m.category)&&a.rollWidth?Number(stock*Number(a.rollWidth||0)).toFixed(2):''));
-  const fabricLinearLine=isFabricRoll&&rollLength?`<div class="kv-line"><span>Остаток, м.п.</span><b>${escapeHtml(formatQty(linearBalance,'м.п.'))} м.п.</b></div>`:'';
-  const quickUnitControl=isFabricRoll?`<select id="detailQtyUnit" class="select" onchange="syncDetailQtyUnit()"><option value="м.п.">м.п.</option><option value="рулон">рулон</option></select>`:`<input type="hidden" id="detailQtyUnit" value="${escapeHtml(unit)}">`;
-  const quickFabricFields=isFabricRoll?`<div class="quick-roll-fields" id="detailRollFields"><label class="field"><span>Ширина рулона, м</span><input id="detailRollWidth" class="input" type="number" step="0.01" min="0" value="${escapeHtml(a.rollWidth||((Number(a.rollWidthMm||0)>0)?Number(a.rollWidthMm)/1000:''))}" oninput="syncDetailRollPreview()"></label><div class="area-preview hidden" id="detailRollPreview"></div></div>`:'';
-  const body=`<div class="material-detail-shell"><div class="material-detail-main"><div class="material-hero"><div><h4>${escapeHtml(materialTitle(m)||materialDisplayName(m)||'Материал')}</h4><p>${escapeHtml(categoryLabel(m.category))}${subtitleSub}</p></div><span class="status ${st[0]}">${st[1]}</span></div><div class="detail-block"><div class="detail-block-head"><span class="detail-block-icon">i</span>Основная информация</div><div class="detail-field-grid">${materialDetailBasics(m)}</div></div><div class="detail-block"><div class="detail-block-head"><span class="detail-block-icon">＋</span>Дополнительная информация</div><div class="detail-field-grid">${materialDetailExtra(m)}</div></div><div class="detail-block"><div class="detail-block-head"><span class="detail-block-icon">PDF</span>Документы</div>${materialDetailDocuments(m)}</div></div><div class="material-detail-side"><div class="material-side-card"><h5>Остатки и движение</h5><div class="kv-line"><span>На складе</span><b>${escapeHtml(qtyWithUnit(stock,unit))}</b></div>${fabricLinearLine}<div class="kv-line"><span>Доступно</span><b>${escapeHtml(qtyWithUnit(available,unit))}</b></div>${area?`<div class="kv-line"><span>Площадь по остатку</span><b>${escapeHtml(area)} м²</b></div>`:''}<div class="kv-line"><span>Мин. остаток</span><b>${escapeHtml(qtyWithUnit(m.minQuantity||0,unit))}</b></div><div class="kv-line"><span>Зарезервировано</span><b>${escapeHtml(qtyWithUnit(reserved,unit))}</b></div>${reservedForOrdersPanel(m)}<div class="kv-line"><span>Заказано</span><b>${escapeHtml(qtyWithUnit(ordered,unit))}</b></div><div class="kv-line ${need>0?'danger':''}"><span>Нужно заказать</span><b>${escapeHtml(qtyWithUnit(need,unit))}</b></div></div><div class="material-side-card"><h5>Быстрые действия</h5><div class="quick-move"><label class="field"><span id="detailQtyLabel" style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">Изменить остаток, ${isFabricRoll?'длина, м':escapeHtml(unitLabel(unit))}</span><div class="quick-move-row">${quickUnitControl}<input id="detailQtyChange" class="input" type="number" step="${isFabricRoll?'0.01':stockStep(unit)}" min="${isFabricRoll?'0.01':stockStep(unit)}" value="${isFabricRoll?'1':stockDefaultValue(unit)}" inputmode="decimal" oninput="syncDetailRollPreview()"></div></label>${quickFabricFields}<div class="quick-move-actions"><button class="btn danger-fill" onclick="adjustMaterialQty('${m.id}',-1)">− Списать</button><button class="btn primary" onclick="adjustMaterialQty('${m.id}',1)">+ Добавить</button></div></div></div><div class="material-side-card"><h5>Заказ поставщику</h5><div class="quick-move"><div>${purchaseOrderPickerHtml(m)}</div><div class="quick-move-row"><input id="detailOrderedQty" class="input" type="number" step="${stockStep(unit)}" min="0" value="${inputQtyValue(need>0?need:orderedManualQty(m),unit)}" inputmode="decimal"><button class="btn primary" onclick="setMaterialOrderedQty('${m.id}')">Заказано</button></div></div></div></div></div>`;
+
+  // Sheet material detection (wood, plywood, etc.)
+  const isSheetMaterial=isWoodSheetMaterial(m) && a.width && a.length && a.thickness;
+  const sheetArea=isSheetMaterial?woodSheetArea(m).toFixed(3):'0';
+  const sheetStock=isSheetMaterial?Math.floor(stock/sheetArea):0;
+  const stockInfoText=qtyWithUnit(stock,displayUnit);
+  const availableInfoText=qtyWithUnit(available,displayUnit);
+  const reservedInfoText=qtyWithUnit(reserved,displayUnit);
+  const orderedInfoText=qtyWithUnit(ordered,displayUnit);
+  const needInfoText=qtyWithUnit(need,displayUnit);
+  const summaryAreaSub=(value)=>isFabricRoll&&materialAreaHint(m,value)?`<small class="summary-subtle">${escapeHtml(materialAreaHint(m,value))}</small>`:'';
+
+  const quickUnitControl=isFabricRoll?`<input type="hidden" id="detailQtyUnit" value="м.п.">`:(isSheetMaterial?`<select id="detailQtyUnit" class="select" onchange="syncDetailQtyUnit()"><option value="sheet">листы</option><option value="m2">м²</option></select>`:`<input type="hidden" id="detailQtyUnit" value="${escapeHtml(unit)}">`);
+  const quickFabricFields=isFabricRoll?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview subtle" id="detailRollPreview"></div><input id="detailRollWidth" type="hidden" value="${escapeHtml(a.rollWidth||((Number(a.rollWidthMm||0)>0)?Number(a.rollWidthMm)/1000:''))}"></div>`:(isSheetMaterial?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview">Площадь 1 листа: ${sheetArea} м²</div></div>`:'');
+
+  // New summary panel
+  const summaryStatus = available > 0 ? 'Достаточно на складе' : (ordered > 0 ? 'Заказано' : 'Нет на складе');
+  const summaryStatusClass = available > 0 ? 'success' : (ordered > 0 ? 'ordered' : 'danger');
+
+  // Quick actions with three modes
+  const quickActionsHtml=`
+    <div class="quick-actions-tabs">
+      <button class="quick-tab active" data-mode="in" onclick="switchQuickActionMode('in')">Приход</button>
+      <button class="quick-tab" data-mode="out" onclick="switchQuickActionMode('out')">Списание</button>
+      <button class="quick-tab" data-mode="adjust" onclick="switchQuickActionMode('adjust')">Корректировка</button>
+    </div>
+    <div class="quick-shared-qty">
+      <label class="field"><span id="detailQtyLabel">Изменить остаток, ${escapeHtml(unitLabel(displayUnit)||displayUnit)}</span><input id="detailQtyChange" class="input" type="number" step="${stockStep(displayUnit)}" min="${stockStep(displayUnit)}" value="${stockDefaultValue(displayUnit)}" inputmode="decimal" oninput="syncDetailRollPreview()"></label>
+      ${quickUnitControl}
+    </div>
+    ${quickFabricFields}
+    <div class="quick-actions-content">
+      <div class="quick-action-panel active" id="quickActionIn">
+        <button class="btn primary full-width" onclick="adjustMaterialQty('${m.id}',1)">+ Принять на склад</button>
+      </div>
+      <div class="quick-action-panel hidden" id="quickActionOut">
+        <button class="btn danger-fill full-width" onclick="adjustMaterialQty('${m.id}',-1)">− Списать со склада</button>
+      </div>
+      <div class="quick-action-panel hidden" id="quickActionAdjust">
+        <label class="field"><span>Текущий остаток</span><input id="quickAdjustCurrent" class="input" type="number" step="${stockStep(displayUnit)}" min="0" value="${inputQtyValue(stock,displayUnit)}" inputmode="decimal" readonly></label>
+        <label class="field"><span>Новый остаток</span><input id="quickAdjustNew" class="input" type="number" step="${stockStep(displayUnit)}" min="0" value="${inputQtyValue(stock,displayUnit)}" inputmode="decimal"></label>
+        <button class="btn primary full-width" onclick="quickMaterialAction('${m.id}','adjust')">✓ Установить остаток</button>
+      </div>
+    </div>
+  `;
+
+  // Material history block
+  const historyHtml=`
+    <div class="material-history-block">
+      <div class="material-history-header">
+        <div class="material-history-title">История материала</div>
+        <div class="material-history-filters">
+          <button class="history-filter-btn active" data-filter="all" onclick="filterMaterialHistory('all')">Все</button>
+          <button class="history-filter-btn" data-filter="in" onclick="filterMaterialHistory('in')">Приход</button>
+          <button class="history-filter-btn" data-filter="out" onclick="filterMaterialHistory('out')">Списание</button>
+          <button class="history-filter-btn" data-filter="reserve" onclick="filterMaterialHistory('reserve')">Резерв</button>
+          <button class="history-filter-btn" data-filter="purchase" onclick="filterMaterialHistory('purchase')">Закупка</button>
+          <button class="history-filter-btn" data-filter="adjust" onclick="filterMaterialHistory('adjust')">Корректировка</button>
+        </div>
+      </div>
+      <div class="material-history-list" id="materialHistoryList">
+        <div class="history-empty">История пуста</div>
+      </div>
+    </div>
+  `;
+
+  const body=`<div class="material-detail-shell material-detail-shell-clean">
+    <div class="material-detail-main">
+      <div class="material-hero material-hero-clean">
+        <div>
+          <h4>${escapeHtml(materialTitle(m)||materialDisplayName(m)||'Материал')}</h4>
+          <p>${escapeHtml(m.sku||'Без артикула')} · ${escapeHtml(categoryLabel(m.category))}${subtitleSub}</p>
+        </div>
+        <span class="status ${st[0]}">${st[1]}</span>
+      </div>
+
+      <div class="material-workflow-actions">
+        <button type="button" class="material-workflow-btn danger" onclick="materialDetailGo('writeoff')"><span>−</span><b>Списать</b><small>быстрое списание</small></button>
+        <button type="button" class="material-workflow-btn" onclick="materialDetailGo('stock')"><span>✓</span><b>Наличие</b><small>остаток и резерв</small></button>
+        <button type="button" class="material-workflow-btn" onclick="materialDetailGo('orders')"><span>↗</span><b>В заказах</b><small>где применяется</small></button>
+      </div>
+
+      <div class="material-summary-panel material-summary-clean" data-detail-stock>
+        <div class="summary-card primary"><span class="summary-label">На складе</span><span class="summary-value">${escapeHtml(stockInfoText)}</span>${summaryAreaSub(stock)}</div>
+        <div class="summary-card"><span class="summary-label">Доступно</span><span class="summary-value">${escapeHtml(availableInfoText)}</span>${summaryAreaSub(available)}</div>
+        <div class="summary-card"><span class="summary-label">Резерв</span><span class="summary-value">${escapeHtml(reservedInfoText)}</span>${summaryAreaSub(reserved)}</div>
+        <div class="summary-card"><span class="summary-label">Заказано</span><span class="summary-value">${escapeHtml(orderedInfoText)}</span>${summaryAreaSub(ordered)}</div>
+        <div class="summary-status summary-status-${summaryStatusClass}">${summaryStatus}</div>
+        <div class="summary-need ${need>0?'danger':''}">Нужно заказать: ${escapeHtml(needInfoText)}</div>
+      </div>
+
+      <details class="material-detail-section" open>
+        <summary><span>Основное</span><b>Артикул, категория, параметры</b></summary>
+        <div class="detail-field-grid compact">${materialDetailBasics(m)}</div>
+      </details>
+      <details class="material-detail-section">
+        <summary><span>Дополнительно</span><b>Поставщик, хранение, цена, теги</b></summary>
+        <div class="detail-field-grid compact">${materialDetailExtra(m)}</div>
+      </details>
+      <details class="material-detail-section" data-detail-section="orders">
+        <summary><span>Заказы</span><b>Где используется материал</b></summary>
+        <div class="order-usage-list compact">${materialOrderUsageCards(m)}</div>
+      </details>
+      <details class="material-detail-section">
+        <summary><span>Документы</span><b>PDF и файлы</b></summary>
+        ${materialDetailDocuments(m)}
+      </details>
+      <details class="material-detail-section">
+        <summary><span>История</span><b>Движения и изменения</b></summary>
+        ${historyHtml}
+      </details>
+    </div>
+    <aside class="material-detail-side">
+      <div class="material-side-card action-card" data-detail-action-card><h5>Быстрые действия</h5>${quickActionsHtml}</div>
+      <div class="material-side-card"><h5>Поставки</h5><div class="supplier-deliveries-list">${materialSupplierDeliveries(m)}</div><button class="btn primary full-width" style="width:100%;margin-top:10px" onclick="openNewMaterialOrder('${m.id}')">+ Заказать материал</button></div>
+    </aside>
+  </div>`;
   const hasPdf=a.pdfPath||a.pdfUrl;
-  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">Удалить материал</button></div><div class="right">${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button>`:''}<button class="btn primary" onclick="openMaterialModal('${m.id}')">Редактировать</button></div></div>`;
+  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">Удалить материал</button></div><div class="right">${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button>`:''}<button class="btn primary" onclick="openMaterialEditor('${m.id}')">Редактировать</button></div></div>`;
   openModal(t('infoMaterial'),body,foot);
   const modal=document.querySelector('#modalBackdrop .modal');
   if(modal) modal.classList.add('detail-modal');
   syncDetailQtyUnit();
 }
 function openMaterialDetailsFromModal(id){pushModalState();openMaterialDetails(id)}
+function openMaterialEditor(id){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+  if(!m){toast(t('notFoundMaterial'));return;}
+  if(m.category==='Поролон'&&typeof openFoamModal==='function'){openFoamModal(id);return;}
+  openMaterialModal(id,m.category||'Ткань');
+}
 function statusOf(m){const av=availableQty(m);if(av<=0)return ['out',t('noStock')];if(Number(m.minQuantity||0)>0 && av<=Number(m.minQuantity||0))return ['low',t('lowStock')];return ['ok',t('inStock')]}
 
 function purchaseStatusOf(m){
@@ -297,6 +798,17 @@ function purchaseStatusOf(m){
   return ['instock','noorder','needorder','ordered'].includes(v)?v:(Number(m.quantity||0)>0?'instock':'noorder');
 }
 function materialStateOf(m){
+  if(isLinearFabricStock(m)){
+    const s=materialDisplayStats(m);
+    const min=convertMaterialQty(Number(m.minQuantity||0),m.unit||s.unit,s.unit,m);
+    const purchase=purchaseStatusOf(m);
+    if(s.need>0) return ['needorder', `Нужно заказать ${qtyWithUnit(s.need,s.unit)}`];
+    if(s.ordered>0 || purchase==='ordered') return ['ordered', purchaseStatusLabel('ordered')];
+    if(s.stock<=0) return ['out', t('noStock')];
+    if(s.available<=0) return ['reserved', 'Зарезервировано'];
+    if(min>0 && s.available<=min) return ['low', t('lowStock')];
+    return ['ok', t('inStock')];
+  }
   const unit=m.unit||'шт';
   const stock=stockNumForUnit(m.quantity,unit);
   const reserved=reservedQty(m);
@@ -346,7 +858,7 @@ function showPurchaseStatusInfo(){
 
 function normalizeSku(v){return String(v||'').trim().toUpperCase().replace(/\s+/g,'')}
 function findMaterialBySku(sku){const n=normalizeSku(sku);return data.materials.find(m=>normalizeSku(m.sku)===n)}
-function quickUnitBySku(sku){const n=normalizeSku(sku);const prefix=n.split('-')[0];const map={A:'м.п.',E:'рулон',P:'м²',K:'м³',F:'м²',SP:'м²',B:'шт',G:'шт',S:'шт',SK:'шт',D:'шт',L:'м²',R:'шт',KA:'шт',M:'шт',KR:'шт',FT:'шт',DET:'шт'};return map[prefix]||''}
+function quickUnitBySku(sku){const n=normalizeSku(sku);const prefix=n.split('-')[0];const map={A:'пог. м',E:'пог. м',P:'м²',K:'м³',F:'м²',SP:'м²',B:'шт',G:'шт',S:'шт',SK:'шт',D:'шт',L:'м²',R:'шт',KA:'шт',M:'шт',KR:'шт',FT:'шт',DET:'шт'};return map[prefix]||''}
 function updateQuickAddInfo(){const box=document.getElementById('quickAddBox');const info=document.getElementById('quickInfo');if(!box||!info)return;const sku=quickSku.value;box.classList.remove('found','missing');if(!sku.trim()){info.textContent=t('enterSku');return}const mat=findMaterialBySku(sku);if(mat){box.classList.add('found');info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">${t('quantity')}: ${mat.quantity} ${unitLabel(mat.unit)}</span></span><span class="unit-pill">${mat.unit}</span>`;return}const unit=quickUnitBySku(sku);box.classList.add('missing');info.innerHTML=unit?`${t('notFoundSku')}. ${t('unit')}: <b>${unitLabel(unit)}</b>`:t('materialNotFound');}
 
 function toggleAdvancedFilters(){
@@ -447,7 +959,7 @@ function stockFiltersForCategory(cat){
   }else{
     extra=`<select class="select" id="stockStateFilterLocal" onchange="stockPage=1;renderStock()"><option value="">${t('allStates')}</option><option value="needorder" ${document.getElementById('stockStateFilterLocal')?.value==='needorder'?'selected':''}>${t('needToOrder')}</option><option value="low" ${document.getElementById('stockStateFilterLocal')?.value==='low'?'selected':''}>${t('lowStock')}</option><option value="ok" ${document.getElementById('stockStateFilterLocal')?.value==='ok'?'selected':''}>${t('normal')}</option></select><span></span>`;
   }
-  return `<div class="category-filter-row"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="categorySearchInput" placeholder="${t(activeStockGroup==='fabrics'?'searchFabric':'searchMaterials')}" value="${searchValue}" oninput="document.getElementById('searchInput').value=this.value;stockPage=1;renderStock()"></div>${extra}<button class="btn" onclick="toggleAdvancedFilters()">${t('filters')}</button><button class="btn" onclick="clearFilters()">${t('reset')}</button></div>`;
+  return `<div class="category-filter-row"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="categorySearchInput" name="furnicore_category_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="${t(activeStockGroup==='fabrics'?'searchFabric':'searchMaterials')}" value="${searchValue}" oninput="document.getElementById('searchInput').value=this.value;stockPage=1;renderStock()"></div>${extra}<button class="btn" onclick="toggleAdvancedFilters()">${t('filters')}</button><button class="btn" onclick="clearFilters()">${t('reset')}</button></div>`;
 }
 function setFabricStockTypeFilter(type){fabricStockTypeFilter=type;activeStockSub=type||'all';stockPage=1;renderStock()}
 function attentionMaterials(limit){
@@ -539,8 +1051,8 @@ function materialMaker(m){const a=m.attributes||{};return a.manufacturer||a.supp
 function stockAttr(m,...keys){const a=m.attributes||{};for(const k of keys){if(a[k]!==undefined&&a[k]!==null&&a[k]!=='')return a[k]}return ''}
 function stockDim(...values){return values.filter(v=>v!==undefined&&v!==null&&v!=='').join(' × ')||'—'}
 function stockMaterialNameCell(m,withMaker=true){const maker=materialMaker(m);return `<b class="stock-material-title">${escapeHtml(materialDisplayName(m))}</b>${withMaker&&maker!=='—'?`<small>${escapeHtml(maker)}</small>`:''}`}
-function stockDisplayUnit(m){return m?.category==='Ткань'&&m?.unit==='рулон'?'пог. м':(m?.unit||'')}
-function stockDisplayQty(m,value){const a=m.attributes||{};if(m?.category==='Ткань'&&m?.unit==='рулон'&&value===m.quantity){const len=Number(a.rollLength||a.orderedRollLength||0);return Number(a.linearBalanceMeters||0)||(len?stockNumForUnit(value,m.unit)*len:stockNumForUnit(value,m.unit))}return stockNumForUnit(value,stockDisplayUnit(m))}
+function stockDisplayUnit(m){return isLinearFabricStock(m)?'пог. м':(m?.unit||'')}
+function stockDisplayQty(m,value){const a=m.attributes||{};if(isLinearFabricStock(m)&&value===m.quantity){const len=Number(a.rollLength||a.orderedRollLength||0);return Number(a.linearBalanceMeters||0)||(len?stockNumForUnit(value,m.unit)*len:stockNumForUnit(value,m.unit))}return stockNumForUnit(value,stockDisplayUnit(m))}
 function stockQtyCell(value,unit,extra=''){return `<td class="stock-num ${extra}">${escapeHtml(qtyWithUnit(value,unit))}</td>`}
 function smartRowByCategory(m,cat){
   const a=m.attributes||{};const st=materialStateOf(m);const need=stockNeededToOrderQty(m);const av=availableQty(m);const ordered=orderedQty(m);
@@ -578,7 +1090,7 @@ function setStockPage(page){stockPage=page;renderStock()}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPage=1;renderStock()}
 function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';const subcategoryFilter=document.getElementById('subcategoryFilter');if(subcategoryFilter)subcategoryFilter.value='';['stockStateFilter','unitFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['supplierFilter','orderFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});activeQuickFilter='all';fabricStockTypeFilter='';activeStockGroup='all';activeStockSub='all';refreshQuickFilterChips();stockPage=1;updateSubFilter();renderAll()}
 
-function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'hintFabric','Экокожа':'hintEcoLeather','Кожа':'hintLeather','Древесина':'hintWood','Фанера':'hintPlywood','ДСП':'hintChipboard','Крепёж':'hintFasteners','Фурнитура':'hintHardware'};return t(map[cat]||'')}
+function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'hintFabric','Экокожа':'hintEcoLeather','Кожа':'hintLeather','Древесина':'hintWood','Фанера':'hintPlywood','МДФ':'hintPlywood','ДСП':'hintChipboard','ДВП':'hintChipboard','OSB':'hintChipboard','Крепёж':'hintFasteners','Фурнитура':'hintHardware','Наполнители':'hintFiller'};return t(map[cat]||'')}
 
 function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">Нет</option><option value="true" ${attrs[key]?'selected':''}>Да</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
 function categorySubOptions(cat){
@@ -657,6 +1169,8 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
   if(!requireAuth())return;
   const foundMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null;
   if(id && !foundMaterial){toast('Материал не найден'); return;}
+  if(foundMaterial?.category==='Поролон'&&typeof openFoamModal==='function'){openFoamModal(id);return;}
+  if(!id&&presetCategory==='Поролон'&&typeof openFoamModal==='function'){openFoamModal();return;}
   if(foundMaterial && typeof isFabricCategory==='function'&&isFabricCategory(foundMaterial.category)){openFabricModal(id,foundMaterial.category);return;}
   if(foundMaterial?.category==='Древесина'&&typeof openWoodModal==='function'){openWoodModal(id);return;}
   if(!id&&presetCategory==='Древесина'&&typeof openWoodModal==='function'){openWoodModal();return;}
@@ -683,21 +1197,24 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
     </section>
     <section class="wizard-card material-wizard-step hidden" data-step="2">
       <h4>${t('fabricWizardParams')}</h4>
-      <div class="form-grid">${materialWizardParamsHtml(m.category||preset,a,'m')}</div>
+      <div class="form-grid">${materialWizardParamsHtml(m.category||preset,a,'m')}${typeof isSheetMaterialCategory==='function'&&isSheetMaterialCategory(m.category||preset)?'<div class="area-preview hidden" id="mParamAreaPreview"></div>':''}</div>
     </section>
     <section class="wizard-card material-wizard-step hidden" data-step="3">
       <h4>Состояние материала</h4>
       ${materialStateCards(currentState)}
+      <div class="fabric-form-grid">
       <div class="state-fields ${currentState==='ordered'?'':'hidden'}" data-state-fields="ordered">
-        <div class="field"><label>Количество, ${unitLabel(m.unit||baseUnit)}</label><input id="mOrderedQty" class="input" type="number" min="0" step="${stockStep(m.unit||baseUnit)}" value="${inputQtyValue(stockNumForUnit(a.orderedQty||0,m.unit||baseUnit),m.unit||baseUnit)}"></div>
+        <div class="field"><label>Заказано, ${unitLabel(m.unit||baseUnit)}</label><input id="mOrderedQty" class="input" type="number" min="0" step="${stockStep(m.unit||baseUnit)}" value="${inputQtyValue(stockNumForUnit(a.orderedQty||0,m.unit||baseUnit),m.unit||baseUnit)}" oninput="syncGenericMaterialPreview()"></div>
         <div class="field"><label>Ожидаемая дата поступления</label><input id="mExpectedDate" class="input" type="date" value="${a.expectedReceiptDate||''}"></div>
         <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="mPurchaseNote" class="input" value="${escapeHtml(a.purchaseNote||a.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
       </div>
       <div class="stock-only-fields ${currentState==='stock'?'':'hidden'}" data-state-fields="stock" id="mStockStep">
-        <div class="field"><label>Количество, ${unitLabel(m.unit||baseUnit)}</label><input id="mQty" type="number" step="${stockStep(m.unit||baseUnit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(m.quantity||0,m.unit||baseUnit),m.unit||baseUnit)}" inputmode="decimal"></div>
+        <div class="field"><label>На складе, ${unitLabel(m.unit||baseUnit)}</label><input id="mQty" type="number" step="${stockStep(m.unit||baseUnit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(m.quantity||0,m.unit||baseUnit),m.unit||baseUnit)}" inputmode="decimal" oninput="syncGenericMaterialPreview()"></div>
+        <div class="field"><label>${t('minQuantity')}</label><input id="mMinQty" type="number" step="${stockStep(m.unit||baseUnit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(m.minQuantity||0,m.unit||baseUnit),m.unit||baseUnit)}" inputmode="decimal"></div>
         <div class="field"><label>${t('storageLocation')}</label><input id="mStorageLocation" class="input" value="${a.storageLocation||''}" placeholder="Стеллаж / зона"></div>
         <div class="field"><label>${t('purchasePrice')}</label><input id="mPurchasePrice" class="input" type="number" min="0" step="0.01" value="${a.purchasePrice||''}"></div>
         <div class="field"><label>${t('receiptDate')}</label><input id="mReceiptDate" class="input" type="date" value="${a.receiptDate||''}"></div>
+      </div>
       </div>
     </section>
   </div>`;
@@ -709,6 +1226,7 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
   subEl.onchange=()=>{refreshSku()};
   redraw();
   setMaterialWizardStep(1);
+  if(typeof syncGenericMaterialPreview==='function')syncGenericMaterialPreview();
 }
 function toggleMaterialStockStep(){document.getElementById('mStockStep')?.classList.toggle('hidden',!document.getElementById('mHasStock')?.checked)}
 async function saveMaterial(id){
@@ -721,7 +1239,7 @@ async function saveMaterial(id){
   const unit=(id?(data.materials||[]).find(x=>String(x.id)===String(id))?.unit:'')||materialBaseUnit(cat);
   const state=materialCreateState();
   const q=state==='stock'?normalizeStockValue(document.getElementById('mQty')?.value||0,unit,true):0;
-  const mn=normalizeStockValue((id?(data.materials||[]).find(x=>String(x.id)===String(id))?.minQuantity:0)||0,unit,true);
+  const mn=state==='stock'?normalizeStockValue(document.getElementById('mMinQty')?.value||0,unit,true):normalizeStockValue((id?(data.materials||[]).find(x=>String(x.id)===String(id))?.minQuantity:0)||0,unit,true);
   if(q===null||mn===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}
   const ordered=state==='ordered'?normalizeStockValue(document.getElementById('mOrderedQty')?.value||0,unit,true):0;
   if(ordered===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return;}
@@ -733,6 +1251,18 @@ async function saveMaterial(id){
   attrs.purchaseStatus=state==='ordered'?'ordered':(state==='stock'&&q>0?'instock':'noorder');
   attrs.reservedQty=0;
   attrs.orderedQty=ordered||0;
+  if(typeof isSheetMaterialCategory==='function'&&isSheetMaterialCategory(cat)){
+    const width=Number(String(attrs.width||0).replace(',','.'))||0;
+    const length=Number(String(attrs.length||0).replace(',','.'))||0;
+    const thickness=Number(String(attrs.thickness||0).replace(',','.'))||0;
+    const sheetArea=width>0&&length>0?Number(((width/1000)*(length/1000)).toFixed(3)):0;
+    const sheetVolume=sheetArea>0&&thickness>0?Number((sheetArea*(thickness/1000)).toFixed(4)):0;
+    const count=state==='ordered'?ordered:q;
+    attrs.sheetArea=sheetArea||'';
+    attrs.totalArea=sheetArea&&count?Number((sheetArea*count).toFixed(3)):'';
+    attrs.sheetVolume=sheetVolume||'';
+    attrs.totalVolume=sheetVolume&&count?Number((sheetVolume*count).toFixed(4)):'';
+  }
   const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||mSub.value||categoryLabel(cat),category:cat,subcategory:mSub.value,attributes:attrs,unit,quantity:q,minQuantity:mn,lastUpdated:today()};
   const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
   if(!ok)return;

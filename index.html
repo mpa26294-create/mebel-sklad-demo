@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>FurniCore</title>
-  <link rel="stylesheet" href="css/style.css?v=6.36" />
+  <link rel="stylesheet" href="css/style.css?v=6.54" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -21,16 +21,17 @@
     <button class="disabled" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 16l8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg></span> Модели мебели</button>
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
+    <button data-section="changelog" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16"/><path d="M4 12h10"/><path d="M4 19h16"/><path d="M17 9l3 3-3 3"/></svg></span> История версий</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.40 — Unified Wood Group Picker</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.54 — Local Preview Actions Fix</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
 
   <main class="main">
     <section id="stock" class="section active">
-      <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><div class="search-top"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="topSearchInput" placeholder="Поиск по названию, артикулу, атрибутам..."/></div><button class="btn primary" onclick="openAddCategoryModal()">＋ Добавить материал</button></div></div>
+      <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><div class="search-top"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="topSearchInput" name="furnicore_stock_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по названию, артикулу, атрибутам..."/></div><button class="btn primary" onclick="openAddCategoryModal()">＋ Добавить материал</button></div></div>
       <div class="stats" id="stats"></div>
       <div class="quick-add" id="quickAddBox">
-        <div class="field"><label>Артикул материала</label><input class="input" id="quickSku" placeholder="Артикул, например A-0001" autocomplete="off"></div>
+        <div class="field"><label>Артикул материала</label><input class="input no-autofill" id="quickSku" name="furnicore_quick_sku" placeholder="Артикул, например A-0001" autocomplete="new-password" aria-autocomplete="none" autocapitalize="characters" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other"></div>
         <div class="field"><label>Количество</label><input class="input" id="quickQty" type="number" step="0.01" placeholder="Число"></div>
         <div class="quick-stock-actions">
           <button class="btn danger-fill" id="quickWriteOffModeBtn" type="button" onclick="quickRunOperation('writeOff')">Списать</button>
@@ -39,7 +40,7 @@
         <div class="field full"><label>Найденный материал</label><div class="quick-info" id="quickInfo">Введите артикул — единица измерения определится автоматически</div></div>
       </div>
       <div class="panel">
-        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="searchInput" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
+        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="searchInput" name="furnicore_material_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
         <div class="pro-filter-panel" id="proFilterPanel">
           <div class="quick-filter-row" id="quickFilterRow">
             <button class="filter-chip active" type="button" data-filter="all" onclick="setQuickFilter('all')">Все</button>
@@ -53,8 +54,8 @@
           <div class="filter-grid">
             <div class="field"><label>Статус</label><select class="select" id="stockStateFilter" onchange="stockPage=1;renderAll()"><option value="">Любой</option><option value="ok">В наличии</option><option value="low">Заканчивается</option><option value="out">Нет в наличии</option><option value="needorder">Нужно заказать</option><option value="ordered">Заказано</option></select></div>
             <div class="field"><label>Ед. изм.</label><select class="select" id="unitFilter" onchange="stockPage=1;renderAll()"><option value="">Любая</option><option value="шт">шт</option><option value="м²">м²</option><option value="м³">м³</option></select></div>
-            <div class="field"><label>Поставщик</label><input class="input" id="supplierFilter" placeholder="Название" oninput="stockPage=1;renderAll()"></div>
-            <div class="field"><label>Заказ / закупка</label><input class="input" id="orderFilter" placeholder="Номер" oninput="stockPage=1;renderAll()"></div>
+            <div class="field"><label>Поставщик</label><input class="input no-autofill" id="supplierFilter" name="furnicore_supplier_filter" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Название" oninput="stockPage=1;renderAll()"></div>
+            <div class="field"><label>Заказ / закупка</label><input class="input no-autofill" id="orderFilter" name="furnicore_purchase_filter" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Номер" oninput="stockPage=1;renderAll()"></div>
           </div>
           <div class="filter-note">Быстрые фильтры сверху работают как готовые профили. Поля ниже нужны только для точного поиска по статусу, единице, поставщику или номеру закупки.</div>
         </div>
@@ -67,7 +68,7 @@
       <div class="stats" id="orderStats"></div>
       <div class="panel">
         <div class="toolbar orders-toolbar">
-          <div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="orderSearchInput" placeholder="Поиск по номеру или заказчику..." oninput="renderOrders()"/></div>
+          <div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="orderSearchInput" name="furnicore_order_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по номеру или заказчику..." oninput="renderOrders()"/></div>
           <select class="select" id="orderStatusFilter" onchange="renderOrders()"><option value="">Все статусы</option><option>Новый</option><option>Готов к работе</option><option>Не хватает материалов</option><option>Материалы заказаны</option><option>В работе</option><option>Готов</option><option>Отменён</option></select>
           <select class="select" id="orderClientFilter" onchange="renderOrders()"><option value="">Все заказчики</option></select>
           <input class="input" type="date" id="orderDateFilter" onchange="renderOrders()"/>
@@ -88,18 +89,24 @@
       <div id="stockRefsPanel"></div>
     </section>
 
+    <section id="changelog" class="section">
+      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes FurniCore</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">FurniCore v6.54</span></div></div>
+      <div class="changelog-summary" id="changelogSummary"></div>
+      <div class="changelog-list" id="changelogList"></div>
+    </section>
+
     <section id="settings" class="section">
       <div class="topbar"><div class="title"><h2>Настройки</h2><p>Простое обслуживание данных</p></div></div>
       <div class="panel notification-settings-panel">
-        <h3 id="notificationSettingsTitle">Уведомления</h3>
+        <h3 id="notificationSettingsTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Уведомления</h3>
         <p class="muted" id="notificationSettingsHint">Параметры Telegram Bot для уведомлений технологу.</p>
         <div class="form-grid"><div class="field"><label id="telegramTokenLabel">Telegram bot token</label><input class="input" id="telegramBotToken" type="password" autocomplete="off" placeholder="123456:ABC..."></div><div class="field"><label id="telegramChatIdLabel">Telegram chat_id</label><input class="input" id="telegramChatId" autocomplete="off" placeholder="-100..."></div></div>
-        <button class="btn primary" id="saveNotificationSettingsBtn" type="button" onclick="saveNotificationSettings()">Сохранить</button>
+        <button class="btn primary" id="saveNotificationSettingsBtn" type="button" onclick="saveNotificationSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Сохранить</button>
       </div>
-      <div class="panel" style="padding:18px;max-width:720px">
-        <h3 style="margin-top:0">Экспорт / импорт</h3>
-        <p class="muted">Можно сохранить данные в JSON и потом загрузить обратно.</p>
-        <div class="actions"><button class="btn" onclick="exportData()">Скачать JSON</button><label class="btn">Загрузить JSON<input type="file" accept="application/json" style="display:none" onchange="importData(event)"></label><button class="btn danger" onclick="wipeData()">Очистить всё</button></div>
+      <div class="panel" style="padding:24px;max-width:720px">
+        <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Экспорт / импорт</h3>
+        <p class="muted" style="margin:0 0 20px;font-size:13px;line-height:1.45;color:#6b7280">Можно сохранить данные в JSON и потом загрузить обратно.</p>
+        <div class="actions"><button class="btn" onclick="exportData()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Скачать JSON</button><label class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Загрузить JSON<input type="file" accept="application/json" style="display:none" onchange="importData(event)"></label><button class="btn danger" onclick="wipeData()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Очистить всё</button></div>
       </div>
     </section>
   </main>
@@ -113,8 +120,9 @@
 <div class="toast" id="toast"></div>
 
 
+<script src="js/changelog.js?v=6.54"></script>
 <script src="js/ui.js?v=6.36"></script>
-<script src="js/app.js?v=6.40"></script>
+<script src="js/app.js?v=6.45"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.9"></script>
 <script src="js/translations.js?v=6.1"></script>
@@ -126,11 +134,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = 'v6.40 — Unified Wood Group Picker';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.55 — Orders Dead Code Cleanup';
 </script>
 <script src="js/auth.js?v=6.1"></script>
 <script src="js/materials.js?v=6.36"></script>
-<script src="js/orders.js?v=6.19"></script>
+<script src="js/orders.js?v=6.21"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -138,6 +146,36 @@ function materialTitle(m){const a=m.attributes||{};if(m.category==='Пороло
 async function startAppAfterLogin(){
   subscribeMaterials();
   await loadMaterialsFromSupabase();
+  openOrderFromUrl();
+}
+
+let deepLinkedOrderOpened = false;
+function openOrderFromUrl(){
+  if(deepLinkedOrderOpened) return;
+  const orderId = new URLSearchParams(window.location.search).get('order');
+  if(!orderId) return;
+
+  const order = (data.orders || []).find(o => String(o.id) === String(orderId));
+  if(!order){
+    toast('Заказ по ссылке не найден');
+    return;
+  }
+
+  deepLinkedOrderOpened = true;
+
+  document.querySelectorAll('#mainNav button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.section === 'orders');
+  });
+  document.querySelectorAll('.section').forEach(section => {
+    section.classList.toggle('active', section.id === 'orders');
+  });
+  closeMobileSidebar();
+  renderOrders();
+
+  setTimeout(() => {
+    if(typeof window.openOrderView === 'function') window.openOrderView(order.id);
+    else if(typeof openOrderView === 'function') openOrderView(order.id);
+  }, 0);
 }
 
 function dbToMaterial(row){
@@ -170,27 +208,155 @@ function materialToDb(m){
 }
 
 const ORDER_SYNC_ARTICLE='__FURNICORE_ORDERS__';
-let orderSyncRowId='',orderSyncTimer=null,orderSyncLoading=false;
+let orderSyncRowId='',orderSyncTimer=null,orderSyncLoading=false,orderSyncDirty=false,orderSyncInFlight=false,orderSyncRetryTimer=null,orderSyncRetryCount=0,orderSyncLocalUpdatedAt='',orderSyncLastPersistedAt='',orderSyncLastRemoteUpdatedAt='',orderSyncToastAt=0,orderSyncKnownRemoteIds=new Set();
 function isOrderSyncRow(row){return String(row?.article||'')===ORDER_SYNC_ARTICLE}
 function orderSyncOrdersFromRow(row){return cleanStoredOrders(Array.isArray(row?.attributes?.orders)?row.attributes.orders:[])}
-function scheduleOrdersSync(){if(orderSyncLoading||!isLoggedIn())return;clearTimeout(orderSyncTimer);orderSyncTimer=setTimeout(()=>persistOrdersToSupabase(),350)}
-async function persistOrdersToSupabase(){
-  if(!isLoggedIn())return;
-  const payload={article:ORDER_SYNC_ARTICLE,name:'FurniCore Orders Sync',category:'__system__',subcategory:'orders',quantity:0,unit:'',min_quantity:0,attributes:{orders:cleanStoredOrders(data.orders||[]),updatedAt:new Date().toISOString()}};
+function orderSyncUpdatedAt(row){return String(row?.attributes?.updatedAt||'')}
+function orderSyncTime(v){const t=Date.parse(v||'');return Number.isFinite(t)?t:0}
+function hasPendingOrderSync(){return !!orderSyncTimer||orderSyncDirty||orderSyncInFlight}
+function isLocalMode(){return typeof isLocalFileMode==='function'?isLocalFileMode():location.protocol==='file:'}
+function canWriteSupabase(){return isLoggedIn()&&!isLocalMode()}
+function showLocalModeWarning(){
+  if(!isLocalMode()||document.getElementById('localModeWarning'))return;
+  const banner=document.createElement('div');
+  banner.id='localModeWarning';
+  banner.className='local-mode-warning';
+  banner.textContent='Локальный режим: файл открыт напрямую, отправка данных в Supabase отключена.';
+  document.body.appendChild(banner);
+}
+function updateKnownRemoteOrderIds(orders){
+  orderSyncKnownRemoteIds=new Set((orders||[]).map(o=>String(o?.id||'')).filter(Boolean));
+}
+function mergeOrdersForSync(localOrders,remoteOrders){
+  const local=cleanStoredOrders(localOrders||[]);
+  const remote=cleanStoredOrders(remoteOrders||[]);
+  const localIds=new Set(local.map(o=>String(o?.id||'')).filter(Boolean));
+  const merged=[];
+  remote.forEach(order=>{
+    const id=String(order?.id||'');
+    if(id&&localIds.has(id))return;
+    if(id&&orderSyncKnownRemoteIds.has(id))return;
+    merged.push(order);
+  });
+  local.forEach(order=>merged.push(order));
+  return merged;
+}
+function renderOrdersFromSync(){
+  try{ syncMaterialReservations(); }catch(e){}
+  if(typeof renderOrders==='function')renderOrders();
+}
+function showOrderSyncToast(text,force=false){
+  const now=Date.now();
+  if(force||now-orderSyncToastAt>1500){orderSyncToastAt=now;toast(text);}
+}
+function scheduleOrdersSync(){
+  if(orderSyncLoading||!canWriteSupabase())return;
+  orderSyncDirty=true;
+  orderSyncLocalUpdatedAt=new Date().toISOString();
+  clearTimeout(orderSyncTimer);
+  orderSyncTimer=setTimeout(()=>persistOrdersToSupabase(),350);
+}
+function retryOrdersSync(){
+  if(orderSyncRetryTimer||!orderSyncDirty||!canWriteSupabase())return;
+  const delay=Math.min(10000,1000*Math.pow(2,orderSyncRetryCount));
+  orderSyncRetryTimer=setTimeout(()=>{orderSyncRetryTimer=null;persistOrdersToSupabase({retry:true});},delay);
+}
+async function persistOrdersToSupabase(options={}){
+  if(!canWriteSupabase()){
+    if(isLocalMode())showOrderSyncToast('Локальный режим: отправка заказов в Supabase отключена',true);
+    return false;
+  }
+  clearTimeout(orderSyncTimer);
+  orderSyncTimer=null;
+  const updatedAt=orderSyncLocalUpdatedAt||new Date().toISOString();
+  orderSyncInFlight=true;
   try{
-    if(!orderSyncRowId){
-      const {data:rows}=await supabaseClient.from('materials').select('id,article,attributes').eq('article',ORDER_SYNC_ARTICLE).limit(1);
+    const {data:rows,error:selectError}=await supabaseClient.from('materials').select('id,article,attributes').eq('article',ORDER_SYNC_ARTICLE).limit(1);
+    if(selectError)throw selectError;
+    const remoteRow=rows?.[0]||null;
+    orderSyncRowId=remoteRow?.id||orderSyncRowId;
+    const remoteOrders=remoteRow?orderSyncOrdersFromRow(remoteRow):[];
+    const mergedOrders=mergeOrdersForSync(data.orders||[],remoteOrders);
+    const payload={article:ORDER_SYNC_ARTICLE,name:'FurniCore Orders Sync',category:'__system__',subcategory:'orders',quantity:0,unit:'',min_quantity:0,attributes:{orders:mergedOrders,updatedAt}};
+    if(orderSyncRowId){
+      const {error}=await supabaseClient.from('materials').update(payload).eq('id',orderSyncRowId);
+      if(error)throw error;
+    }else{
+      const {data:rows,error}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);
+      if(error)throw error;
       orderSyncRowId=rows?.[0]?.id||'';
     }
-    if(orderSyncRowId)await supabaseClient.from('materials').update(payload).eq('id',orderSyncRowId);
-    else{const {data:rows}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);orderSyncRowId=rows?.[0]?.id||'';}
-  }catch(e){console.warn('Orders sync skipped',e)}
+    orderSyncDirty=false;
+    orderSyncInFlight=false;
+    orderSyncRetryCount=0;
+    orderSyncLastPersistedAt=updatedAt;
+    orderSyncLastRemoteUpdatedAt=updatedAt;
+    data.orders=mergedOrders;
+    updateKnownRemoteOrderIds(mergedOrders);
+    orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
+    if(typeof __saveLocalOnly==='function')__saveLocalOnly();
+    if(!options.silent)showOrderSyncToast('Заказы синхронизированы');
+    return true;
+  }catch(e){
+    orderSyncInFlight=false;
+    orderSyncDirty=true;
+    orderSyncRetryCount+=1;
+    console.warn('Orders sync failed',e);
+    showOrderSyncToast('Ошибка синхронизации заказов. Повторяем...',true);
+    if(options.retry!==false)retryOrdersSync();
+    return false;
+  }
 }
 const __saveLocalOnly=save;
-save=function(){__saveLocalOnly();scheduleOrdersSync()}
+let orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
+save=function(){
+  __saveLocalOnly();
+  const nextOrderSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
+  if(nextOrderSnapshot!==orderSyncLocalSnapshot){
+    orderSyncLocalSnapshot=nextOrderSnapshot;
+    scheduleOrdersSync();
+  }
+}
 
-async function loadMaterialsFromSupabase(){
+async function applyOrderSyncRow(orderRow,{render=true}={}){
+  if(!orderRow)return false;
+  orderSyncRowId=orderRow.id||orderSyncRowId;
+  const remoteUpdatedAt=orderSyncUpdatedAt(orderRow);
+  const localUpdatedAt=orderSyncLocalUpdatedAt||orderSyncLastPersistedAt||'';
+  if(orderSyncDirty||orderSyncTimer){
+    if(orderSyncTime(remoteUpdatedAt)<=orderSyncTime(localUpdatedAt)||orderSyncDirty){
+      await persistOrdersToSupabase({silent:true});
+      return false;
+    }
+  }
+  if(remoteUpdatedAt&&orderSyncTime(remoteUpdatedAt)<orderSyncTime(orderSyncLastRemoteUpdatedAt))return false;
+  orderSyncLoading=true;
+  data.orders=orderSyncOrdersFromRow(orderRow);
+  updateKnownRemoteOrderIds(data.orders);
+  orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
+  orderSyncLastRemoteUpdatedAt=remoteUpdatedAt||orderSyncLastRemoteUpdatedAt;
+  if(typeof __saveLocalOnly==='function')__saveLocalOnly();
+  orderSyncLoading=false;
+  if(render)renderOrdersFromSync();
+  return true;
+}
+
+async function loadMaterialsFromSupabase(options={}){
   if(!isLoggedIn()){ showLoginRequired(); return; }
+  if(isLocalMode()&&!options.localReadOnly&&!options.orderRowOnly&&!options.auditRowOnly){
+    renderAll();
+    updateQuickAddInfo();
+    updateWriteOffInfo();
+    return;
+  }
+  if(options.orderRowOnly){
+    await applyOrderSyncRow(options.orderRowOnly,{render:true});
+    return;
+  }
+  if(options.auditRowOnly){
+    if(typeof applyAuditSyncRow==='function')await applyAuditSyncRow(options.auditRowOnly,{render:true});
+    return;
+  }
   const { data: rows, error } = await supabaseClient
     .from('materials')
     .select('*')
@@ -203,12 +369,11 @@ async function loadMaterialsFromSupabase(){
   }
 
   const orderRow=(rows||[]).find(isOrderSyncRow);
+  const auditRow=(rows||[]).find(row=>typeof isAuditSyncRow==='function'&&isAuditSyncRow(row));
   orderSyncRowId=orderRow?.id||orderSyncRowId;
-  orderSyncLoading=true;
-  if(orderRow){data.orders=orderSyncOrdersFromRow(orderRow);save();}
-  data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)).map(dbToMaterial);
-  orderSyncLoading=false;
-  if(!orderRow&&cleanStoredOrders(data.orders||[]).length)scheduleOrdersSync();
+  if(orderRow&&!options.skipOrders)await applyOrderSyncRow(orderRow,{render:false});
+  if(auditRow&&typeof applyAuditSyncRow==='function')await applyAuditSyncRow(auditRow,{render:false});
+  data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)&&!(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row))).map(dbToMaterial);
   try{ syncMaterialReservations(); }catch(e){}
   renderAll();
   updateQuickAddInfo();
@@ -216,6 +381,14 @@ async function loadMaterialsFromSupabase(){
 }
 
 async function insertMaterialToSupabase(m){
+  if(isLocalMode()){
+    m.id=m.id||uid();
+    const idx=(data.materials||[]).findIndex(x=>String(x.id)===String(m.id)||String(x.sku||'')===String(m.sku||''));
+    if(idx>=0)data.materials[idx]=m;
+    else data.materials.push(m);
+    save();
+    return true;
+  }
   if(!requireAuth()) return false;
   const { error } = await supabaseClient
     .from('materials')
@@ -230,6 +403,13 @@ async function insertMaterialToSupabase(m){
 }
 
 async function updateMaterialInSupabase(m){
+  if(isLocalMode()){
+    const idx=(data.materials||[]).findIndex(x=>String(x.id)===String(m.id)||String(x.sku||'')===String(m.sku||''));
+    if(idx>=0)data.materials[idx]=m;
+    else data.materials.push({...m,id:m.id||uid()});
+    save();
+    return true;
+  }
   if(!requireAuth()) return false;
   const { error } = await supabaseClient
     .from('materials')
@@ -245,6 +425,11 @@ async function updateMaterialInSupabase(m){
 }
 
 async function deleteMaterialFromSupabase(id){
+  if(isLocalMode()){
+    data.materials=(data.materials||[]).filter(m=>String(m.id)!==String(id));
+    save();
+    return true;
+  }
   if(!requireAuth()) return false;
   const { error } = await supabaseClient
     .from('materials')
@@ -263,15 +448,32 @@ function subscribeMaterials(){
   if(!isLoggedIn() || materialsSubscription) return;
   materialsSubscription = supabaseClient
     .channel('materials-sync')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'materials' }, () => {
-      loadMaterialsFromSupabase();
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'materials' }, async (payload) => {
+      const row=payload?.new||payload?.old||null;
+      if(isOrderSyncRow(row)){
+        if(payload.eventType==='DELETE'){
+          orderSyncRowId='';
+          return;
+        }
+        await loadMaterialsFromSupabase({orderRowOnly:payload.new});
+        return;
+      }
+      if(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row)){
+        if(payload.eventType==='DELETE'){
+          if(typeof scheduleAuditSync==='function')scheduleAuditSync();
+          return;
+        }
+        await loadMaterialsFromSupabase({auditRowOnly:payload.new});
+        return;
+      }
+      await loadMaterialsFromSupabase({skipOrders:true});
     })
     .subscribe();
 }
 
 const CATEGORIES = {
-  'Ткань': {icon:'◌', cls:'fabric', unit:'пог. м', subs:['Ткань'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
-  'Экокожа': {icon:'◒', cls:'fabric', unit:'пог. м', subs:['Экокожа'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number']]},
+  'Ткань': {icon:'◌', cls:'fabric', unit:'пог. м', subs:['Ткань'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number'],['rollLength','Длина рулона, м','number']]},
+  'Экокожа': {icon:'◒', cls:'fabric', unit:'пог. м', subs:['Экокожа'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет'],['rollWidth','Ширина рулона, м','number'],['rollLength','Длина рулона, м','number']]},
   'Кожа': {icon:'◓', cls:'fabric', unit:'м²', subs:['Кожа'], fields:[['materialType','Тип материала'],['manufacturer','Производитель'],['collection','Коллекция / артикул'],['color','Цвет']]},
   'Поролон': {icon:'◫', cls:'foam', unit:'м²', subs:[], fields:[['grade','Марка / плотность'],['thickness','Толщина, мм','number']]},
   'Древесина': {icon:'▤', cls:'wood', unit:'м³', subs:['Доска','Брус','Рейка','Мебельный щит'], fieldsBySub:{}},
@@ -411,7 +613,7 @@ function demoData(){
   ];
   const models=[{id:uid(),name:'Диван Милан',note:'Базовая модель',items:[]}];
   models[0].items=[{materialId:materials[0].id,qty:8,unit:'м²'},{materialId:materials[1].id,qty:3.5,unit:'м²'},{materialId:materials[4].id,qty:1,unit:'шт'},{materialId:materials[5].id,qty:60,unit:'шт'}];
-  const orders=[{id:uid(),number:'ORD-1001',client:'Демо клиент',modelId:models[0].id,qty:2,status:'Новый'}];
+  const orders=[];
   return {materials,models,orders};
 }
 function attrText(m){return materialCompactText(m) || '—'}
@@ -650,7 +852,59 @@ async function adjustMaterialQty(id,dir){
   const movementUnit=document.getElementById('detailQtyUnit')?.value||'';
   const m=data.materials.find(x=>String(x.id)===String(id));
   if(!m){toast(t('notFoundMaterial'));return;}
-  if(m.category==='Ткань'&&(m.unit||'')==='рулон'&&movementUnit==='м.п.'){
+
+  // Handle sheet materials (wood, plywood, etc.)
+  if(m.category==='Древесина' && movementUnit && (movementUnit==='sheet' || movementUnit==='m2')){
+    const a=m.attributes||{};
+    const width=Number(a.width)||0;
+    const length=Number(a.length)||0;
+    const thickness=Number(a.thickness)||0;
+
+    if(!(width>0 && length>0 && thickness>0)){
+      toast('Не указаны размеры листа');
+      return;
+    }
+
+    const sheetArea=(width/1000)*(length/1000);
+    const oldQty=stockNumForUnit(m.quantity,m.unit);
+    const oldAttrs={...(m.attributes||{})};
+
+    let delta;
+    if(movementUnit==='sheet'){
+      delta=normalizeStockValue(input?.value||0,'шт',false);
+      if(delta===null){toast('Количество листов должно быть целым числом');return;}
+      delta=delta*sheetArea; // Convert sheets to m²
+    }else{
+      delta=normalizeStockValue(input?.value||0,'м²',false);
+      if(delta===null){toast('Введите корректное значение площади');return;}
+    }
+
+    const nextQty=dir>0?oldQty+delta:oldQty-delta;
+    if(nextQty<0){toast(t('noNegativeStock'));return;}
+
+    m.quantity=stockNumForUnit(nextQty,m.unit);
+    m.lastUpdated=today();
+
+    // Update calculated fields
+    const totalArea=Number((nextQty).toFixed(3));
+
+    m.attributes={
+      ...oldAttrs,
+      sheetArea:Number(sheetArea.toFixed(3)),
+      totalArea:totalArea
+    };
+
+    const ok=await updateMaterialInSupabase(m);
+    if(!ok){m.quantity=oldQty;m.attributes=oldAttrs;return;}
+    await loadMaterialsFromSupabase();
+    refreshOrdersAfterStockChange();
+    renderAll();
+    openMaterialDetails(id);
+    toast(dir>0?t('stockAdded'):t('stockWrittenOff'));
+    return;
+  }
+
+  if((m.category==='Ткань'||m.category==='Экокожа')&&(m.unit||'')==='рулон'&&(movementUnit==='м.п.'||movementUnit==='пог. м')){
     const meters=normalizeStockValue(input?.value||0,'м.п.',false);
     if(meters===null){toast(t('enterQtyPositive'));return;}
     const width=Number(String(document.getElementById('detailRollWidth')?.value||0).replace(',','.'))||0;
@@ -699,11 +953,30 @@ function syncDetailQtyUnit(){
   const label=document.getElementById('detailQtyLabel');
   const rollFields=document.getElementById('detailRollFields');
   if(!input)return;
-  input.step=unit==='м.п.'?'0.01':stockStep(unit||'шт');
-  input.min=input.step;
-  input.value=unit==='м.п.'?'1':stockDefaultValue(unit||'шт');
-  if(label)label.textContent=unit==='м.п.'?'Изменить остаток: длина, м':`Изменить остаток, ${unitLabel(unit)}`;
-  if(rollFields)rollFields.style.display=unit==='м.п.'?'grid':'none';
+
+  if(unit==='sheet'){
+    input.step='1';
+    input.min='1';
+    input.value='1';
+    if(label)label.textContent='Изменить остаток, листы';
+  }else if(unit==='m2'){
+    input.step='0.01';
+    input.min='0.01';
+    input.value='0.01';
+    if(label)label.textContent='Изменить остаток, м²';
+  }else if(unit==='м.п.'){
+    input.step='0.01';
+    input.min='0.01';
+    input.value='1';
+    if(label)label.textContent='Изменить остаток, пог. м';
+  }else{
+    input.step=stockStep(unit||'шт');
+    input.min=input.step;
+    input.value=stockDefaultValue(unit||'шт');
+    if(label)label.textContent=`Изменить остаток, ${unitLabel(unit)}`;
+  }
+
+  if(rollFields)rollFields.style.display=(unit==='м.п.' || unit==='sheet' || unit==='m2')?'grid':'none';
   syncDetailRollPreview();
 }
 function syncDetailRollPreview(){
@@ -909,7 +1182,7 @@ async function finishMaterialSaveAndReturn(newSku='', category=''){
   toast(t('savedMaterial'));
 }
 
-const ADD_CATEGORIES = ['Ткань','Экокожа','Кожа','Поролон','Древесина'];
+const ADD_CATEGORIES = ['Ткань','Экокожа','Кожа','Поролон','Древесина','Фурнитура','Крепёж','Наполнители'];
 function openAddCategoryModal(fromOrder=false){
   if(!requireAuth())return;
   if(fromOrder)pushModalState();
@@ -1189,7 +1462,11 @@ function setMaterialWizardStep(step){
   if(!shell)return;
   const current=Number(shell.dataset.step||1);
   const next=Math.max(1,Math.min(3,Number(step)||1));
-  if(next>current&&!materialWizardCanGoNext(current))return;
+  if(next>current){
+    for(let s=current;s<next;s++){
+      if(!materialWizardCanGoNext(s))return;
+    }
+  }
   shell.dataset.step=String(next);
   shell.querySelectorAll('.wizard-step-pill').forEach((el,i)=>{
     const step=i+1;
@@ -1243,6 +1520,35 @@ function warnFabricDuplicate(){
 }
 function materialWizardCanGoNext(step){
   if(step===1&&document.getElementById('fabricSku')&&warnFabricDuplicate())return false;
+  if(step===2){
+    const requiredNumber=(id)=>Number(String(document.getElementById(id)?.value||0).replace(',','.'))>0;
+    const fabricCategory=document.getElementById('fabricCategory')?.value||'';
+    if((fabricCategory==='Ткань'||fabricCategory==='Экокожа')&&document.getElementById('fabricParam_rollWidth')){
+      if(!requiredNumber('fabricParam_rollWidth')||!requiredNumber('fabricParam_rollLength')){
+        toast('Укажите ширину и длину рулона.');
+        return false;
+      }
+    }
+    if(document.getElementById('woodThickness')){
+      if(!requiredNumber('woodThickness')||!requiredNumber('woodWidth')||!requiredNumber('woodLength')){
+        toast('Укажите толщину, ширину и длину материала.');
+        return false;
+      }
+    }
+    if(document.getElementById('foamWidth')){
+      if(!requiredNumber('foamWidth')||!requiredNumber('foamLength')||!requiredNumber('foamHeight')){
+        toast('Укажите ширину, длину и толщину поролона.');
+        return false;
+      }
+    }
+    const genericCategory=document.getElementById('mCat')?.value||'';
+    if(isSheetMaterialCategory(genericCategory)&&document.getElementById('mParam_width')){
+      if(!requiredNumber('mParam_width')||!requiredNumber('mParam_length')||!requiredNumber('mParam_thickness')){
+        toast('Укажите толщину, ширину и длину листа.');
+        return false;
+      }
+    }
+  }
   return true;
 }
 function materialWizardBack(){
@@ -1266,22 +1572,36 @@ function materialBaseUnit(cat){
   if(cat==='Ткань')return 'пог. м';
   if(cat==='Кожа')return 'м²';
   if(cat==='Поролон')return 'м²';
-  if(['Фанера','МДФ','ДСП','ДВП','OSB'].includes(cat))return 'лист';
+  if(isSheetMaterialCategory(cat))return 'лист';
   if(cat==='Наполнители')return 'кг';
   return CATEGORIES[cat]?.unit||'шт';
 }
+function isSheetMaterialCategory(cat){return ['Фанера','МДФ','ДСП','ДВП','OSB'].includes(String(cat||''))}
 function materialWizardParamDefs(cat){
-  if(isFabricCategory(cat))return [
+  if(cat==='Ткань'||cat==='Экокожа')return [
     ['color','Цвет','color'],
+    ['rollWidth','Ширина рулона, м','number'],
+    ['rollLength','Длина рулона, м','number'],
     ['composition','Состав / материал','text'],
     ['density','Плотность, г/м²','number']
   ];
+  if(cat==='Кожа')return [
+    ['color','Цвет','color'],
+    ['thickness','Толщина, мм','number'],
+    ['finish','Фактура / обработка','text']
+  ];
   if(cat==='Поролон')return [['density','Плотность, кг/м³','number'],['hardness','Жёсткость','text'],['thickness','Толщина, мм','number']];
-  if(['Фанера','МДФ','ДСП','ДВП','OSB'].includes(cat))return [['thickness','Толщина листа, мм','number'],['sheetSize','Формат листа','text'],['grade','Сорт / класс эмиссии','text'],['lamination','Ламинация','select:Да|Нет']];
+  if(isSheetMaterialCategory(cat))return [
+    ['thickness','Толщина листа, мм','number'],
+    ['width','Ширина листа, мм','number'],
+    ['length','Длина листа, мм','number'],
+    ['grade','Сорт / класс эмиссии','text'],
+    ['lamination','Ламинация','select:Да|Нет']
+  ];
   if(cat==='Древесина')return [['woodSpecies','Порода','text'],['moisture','Влажность, %','number'],['grade','Сорт','text']];
-  if(cat==='Фурнитура')return [['mechanismType','Тип механизма','text'],['color','Цвет','text'],['material','Материал','text']];
-  if(cat==='Крепёж')return [['type','Тип','text'],['size','Размер','text'],['material','Материал','text']];
-  if(cat==='Наполнители')return [['type','Тип','text'],['density','Плотность','text']];
+  if(cat==='Фурнитура')return [['type','Тип / описание','text'],['size','Размер / модель','text'],['width','Ширина, мм','number'],['height','Высота, мм','number'],['length','Длина, мм','number'],['color','Цвет','text'],['material','Материал','text']];
+  if(cat==='Крепёж')return [['type','Тип','text'],['diameter','Диаметр, мм','number'],['length','Длина, мм','number'],['thread','Резьба','text'],['material','Материал','text']];
+  if(cat==='Наполнители')return [['type','Тип','text'],['density','Плотность','text'],['packageWeight','Вес упаковки, кг','number'],['color','Цвет','text']];
   return [['color','Цвет','text']];
 }
 function materialWizardParamsHtml(cat,attrs={},prefix='m'){
@@ -1294,7 +1614,8 @@ function materialWizardParamsHtml(cat,attrs={},prefix='m'){
     const inputType=type==='number'?'number':'text';
     const step=type==='number'?' step="0.01" min="0"':'';
     const value=key==='rollWidth'&&attrs.rollWidth?attrs.rollWidth:(attrs[key]||'');
-    return `<div class="field"><label>${escapeHtml(label)}</label><input id="${prefix}Param_${key}" class="input" type="${inputType}"${step} value="${escapeHtml(value)}"></div>`;
+    const preview=(prefix==='fabric'&&(key==='rollWidth'||key==='rollLength'))?' oninput="updateFabricAreaPreview()"':(prefix==='m'&&['width','length','thickness'].includes(key)?' oninput="syncGenericMaterialPreview()"':'');
+    return `<div class="field"><label>${escapeHtml(label)}</label><input id="${prefix}Param_${key}" class="input" type="${inputType}"${step}${preview} value="${escapeHtml(value)}"></div>`;
   }).join('');
 }
 function readMaterialWizardParams(cat,prefix='m',oldAttrs={}){
@@ -1313,6 +1634,12 @@ function readMaterialWizardParams(cat,prefix='m',oldAttrs={}){
     attrs.rollWidth=oldAttrs.rollWidth||'';
     attrs.rollWidthMm=oldAttrs.rollWidthMm||'';
   }
+  if(attrs.rollLength){
+    const length=Number(String(attrs.rollLength).replace(',','.'))||0;
+    attrs.rollLength=length?Number(length.toFixed(3)):'';
+  }else if(oldAttrs.rollLength){
+    attrs.rollLength=oldAttrs.rollLength||'';
+  }
   return attrs;
 }
 function selectMaterialCreateState(state){
@@ -1322,6 +1649,21 @@ function selectMaterialCreateState(state){
   document.querySelectorAll('.material-state-card').forEach(card=>card.classList.toggle('active',card.dataset.state===value));
   document.querySelectorAll('[data-state-fields]').forEach(box=>box.classList.toggle('hidden',box.dataset.stateFields!==value));
   if(typeof updateFabricAreaPreview==='function')updateFabricAreaPreview();
+  if(typeof syncGenericMaterialPreview==='function')syncGenericMaterialPreview();
+}
+function syncGenericMaterialPreview(){
+  const cat=document.getElementById('mCat')?.value||'';
+  const box=document.getElementById('mParamAreaPreview');
+  if(!box)return;
+  if(!isSheetMaterialCategory(cat)){box.textContent='';box.classList.add('hidden');return;}
+  const width=Number(String(document.getElementById('mParam_width')?.value||0).replace(',','.'))||0;
+  const length=Number(String(document.getElementById('mParam_length')?.value||0).replace(',','.'))||0;
+  const qtyEl=materialCreateState()==='ordered'?document.getElementById('mOrderedQty'):document.getElementById('mQty');
+  const qty=Math.max(0,Number(String(qtyEl?.value||0).replace(',','.'))||0);
+  const one=width>0&&length>0?(width/1000)*(length/1000):0;
+  const parts=[one>0?`Площадь 1 листа: ${one.toFixed(3)} м²`:null,one>0&&qty>0?`общая площадь: ${(one*qty).toFixed(3)} м²`:null].filter(Boolean);
+  box.textContent=parts.join(' · ');
+  box.classList.toggle('hidden',!parts.length);
 }
 function updateFabricAreaPreview(){
   const category=document.getElementById('fabricCategory')?.value||'Ткань';
@@ -1332,15 +1674,18 @@ function updateFabricAreaPreview(){
   }
   const widthEl=state==='ordered'?document.getElementById('fabricOrderedRollWidth'):document.getElementById('fabricStockRollWidth');
   const lengthEl=state==='ordered'?document.getElementById('fabricOrderedRollLength'):document.getElementById('fabricStockRollLength');
-  const width=Number(String(widthEl?.value||0).replace(',','.'))||0;
-  const length=Number(String(lengthEl?.value||0).replace(',','.'))||0;
+  const sharedWidth=document.getElementById('fabricParam_rollWidth');
+  const sharedLength=document.getElementById('fabricParam_rollLength');
+  const width=Number(String(sharedWidth?.value||widthEl?.value||0).replace(',','.'))||0;
+  const length=Number(String(sharedLength?.value||lengthEl?.value||0).replace(',','.'))||0;
   const qtyEl=state==='ordered'?document.getElementById('fabricOrderedQty'):document.getElementById('fabricQty');
-  const rolls=Math.max(1,Number(String(qtyEl?.value||1).replace(',','.'))||1);
-  const boxes=[document.getElementById('fabricOrderedAreaPreview'),document.getElementById('fabricStockAreaPreview')].filter(Boolean);
-  if(width>0&&length>0){
-    const one=width*length;
-    const total=one*rolls;
-    boxes.forEach(box=>{box.textContent=`Площадь 1 рулона: ${one.toFixed(2)} м² · всего: ${total.toFixed(2)} м²`;box.classList.remove('hidden')});
+  const meters=Math.max(0,Number(String(qtyEl?.value||0).replace(',','.'))||0);
+  const boxes=[document.getElementById('fabricParamAreaPreview'),document.getElementById('fabricOrderedAreaPreview'),document.getElementById('fabricStockAreaPreview')].filter(Boolean);
+  if(width>0&&(length>0||meters>0)){
+    const one=length>0?width*length:0;
+    const total=width*meters;
+    const text=[one>0?`Площадь 1 рулона: ${one.toFixed(2)} м²`:null,meters>0?`общая площадь: ${total.toFixed(2)} м²`:null].filter(Boolean).join(' · ');
+    boxes.forEach(box=>{box.textContent=text;box.classList.toggle('hidden',!text)});
   }else{
     boxes.forEach(box=>{box.textContent='';box.classList.add('hidden')});
   }
@@ -1501,15 +1846,15 @@ function openFabricModal(id=null,category='Ткань'){
   const attrs=found?.attributes||{};
   const sub=found?.subcategory||attrs.materialType||fabricCategory;
   const currentState=attrs.purchaseStatus==='ordered'?'ordered':(stockNumForUnit(found?.quantity||0,found?.unit||'м.п.')>0||!!attrs.storageLocation?'stock':'card');
-  const unit=isLeather?'м²':(found?.unit||materialBaseUnit(fabricCategory));
+  const unit=isLeather?'м²':'пог. м';
+  const stockQtyValue=(!isLeather&&found&&typeof isLinearFabricStock==='function'&&isLinearFabricStock(found))?materialLinearStockQty(found):stockNumForUnit(found?.quantity||0,unit);
+  const orderedQtyValue=(!isLeather&&found&&typeof isLinearFabricStock==='function'&&isLinearFabricStock(found))?convertMaterialQty(attrs.orderedQty||0,found.unit||unit,unit,found):stockNumForUnit(attrs.orderedQty||0,unit);
   const modalTitle=fabricModalTitle(fabricCategory,id);
   const orderedFields=isLeather?`
           <div class="field"><label>Площадь, м²</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}"></div>
           <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
           <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>`:`
-          <div class="field"><label>Ширина рулона, м</label><input id="fabricOrderedRollWidth" class="input" type="number" min="0" step="0.01" value="${attrs.orderedRollWidth||attrs.rollWidth||''}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Длина рулона, м</label><input id="fabricOrderedRollLength" class="input" type="number" min="0" step="0.01" value="${attrs.orderedRollLength||attrs.rollLength||''}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Количество, ${unitLabel(unit)}</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}" oninput="normalizeFabricRollQty('fabricOrderedQty')"></div>
+          <div class="field"><label>Заказано, пог. м</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(orderedQtyValue,unit)}" oninput="updateFabricAreaPreview()"></div>
           <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
           <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
           <div class="area-preview hidden" id="fabricOrderedAreaPreview"></div>`;
@@ -1518,34 +1863,25 @@ function openFabricModal(id=null,category='Ткань'){
           <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="Стеллаж / зона"></div>
           <div class="field"><label>${t('purchasePrice')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
           <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>`:`
-          <div class="field"><label>Ширина рулона, м</label><input id="fabricStockRollWidth" class="input" type="number" min="0" step="0.01" value="${attrs.rollWidth||((Number(attrs.rollWidthMm||0)>0)?Number(attrs.rollWidthMm)/1000:'')}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Длина рулона, м</label><input id="fabricStockRollLength" class="input" type="number" min="0" step="0.01" value="${attrs.rollLength||''}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Количество, ${unitLabel(unit)}</label><input id="fabricQty" class="input" type="number" min="0" step="1" inputmode="numeric" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}" oninput="normalizeFabricRollQty('fabricQty')"></div>
+          <div class="field"><label>На складе, пог. м</label><input id="fabricQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockQtyValue,unit)}" oninput="updateFabricAreaPreview()"></div>
           <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="Стеллаж / зона"></div>
           <div class="field"><label>${t('purchasePrice')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
           <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>
           <div class="area-preview hidden" id="fabricStockAreaPreview"></div>`;
-  const body=`<div class="fabric-wizard material-wizard" data-step="1" data-material-id="${id||''}">
-    <div class="wizard-steps"><button class="wizard-step-pill active" type="button" onclick="setMaterialWizardStep(1)">1 ${t('materialBasic')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(2)">2 ${t('fabricWizardParams')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(3)">3 ${t('materialStock')}</button></div>
-    <section class="wizard-card material-wizard-step" data-step="1">
-      <h4>${t('fabricWizardBasic')}</h4>
+  const body=`<div class="fabric-wizard material-wizard fabric-single-card" data-step="1" data-material-id="${id||''}">
+    <section class="wizard-card">
+      <h4>${isLeather?'Данные кожи':'Данные рулона'}</h4>
       <div class="fabric-form-grid">
         <div class="field"><label>${t('name')}</label><input id="fabricName" class="input" value="${found?.name||''}" placeholder="Например: Bella 23889"></div>
         <input id="fabricCategory" type="hidden" value="${escapeHtml(fabricCategory)}">
         <div class="field"><label>${t('sku')}</label><input id="fabricSku" class="input" value="${found?.sku||nextSku(fabricCategory,'',id||'')}"></div>
         <div class="field"><label>${t('collection')}</label><input id="fabricCollection" class="input" value="${escapeHtml(attrs.collection||'')}" placeholder="Например: Cristal Premium"></div>
         <div class="field"><label>${t('manufacturer')}</label><input id="fabricManufacturer" class="input" value="${escapeHtml(attrs.manufacturer||'')}" placeholder="Производитель"></div>
-      </div>
-    </section>
-    <section class="wizard-card material-wizard-step hidden" data-step="2">
-      <h4>${t('fabricWizardParams')}</h4>
-      <div class="fabric-form-grid">
         ${materialWizardParamsHtml(fabricCategory,attrs,'fabric')}
+        ${isLeather?'':`<div class="area-preview hidden" id="fabricParamAreaPreview"></div>`}
       </div>
-    </section>
-    <section class="wizard-card material-wizard-step hidden" data-step="3">
       <h4>Состояние материала</h4>
-        ${materialStateCards(currentState)}
+      ${materialStateCards(currentState)}
       <div class="fabric-form-grid">
         <div class="state-fields ${currentState==='ordered'?'':'hidden'}" data-state-fields="ordered">
           ${orderedFields}
@@ -1556,10 +1892,9 @@ function openFabricModal(id=null,category='Ткань'){
       </div>
     </section>
   </div>`;
-  openModal(modalTitle,body,materialWizardFooter(`saveFabricMaterial('${id||''}')`));
+  openModal(modalTitle,body,`<button class="btn primary" type="button" onclick="saveFabricMaterial('${id||''}')">${t('save')}</button>`);
   syncFabricWizardUnit();
   updateFabricAreaPreview();
-  setMaterialWizardStep(1);
 }
 function toggleFabricStockStep(){
   const on=!!document.getElementById('fabricHasStock')?.checked;
@@ -1579,7 +1914,7 @@ async function saveFabricMaterial(id=''){
   const category=document.getElementById('fabricCategory')?.value||found?.category||'Ткань';
   const isLeather=category==='Кожа';
   const sub=category;
-  const unit=isLeather?'м²':(found?.unit||materialBaseUnit(category));
+  const unit=isLeather?'м²':'пог. м';
   const sku=(document.getElementById('fabricSku')?.value||'').trim()||nextSku(category,'',id||'');
   if(warnFabricDuplicate())return;
   const name=(document.getElementById('fabricName')?.value||'').trim()||sub;
@@ -1588,15 +1923,10 @@ async function saveFabricMaterial(id=''){
   const state=materialCreateState();
   const qty=state==='stock'?normalizeStockValue(document.getElementById('fabricQty')?.value||0,unit,true):0;
   if(qty===null){toast(t('fieldMinZero'));return;}
-  const stockWidthM=isLeather?0:(Number(String(document.getElementById('fabricStockRollWidth')?.value||0).replace(',','.'))||0);
-  const orderedWidthM=isLeather?0:(Number(String(document.getElementById('fabricOrderedRollWidth')?.value||0).replace(',','.'))||0);
   const paramAttrs=readMaterialWizardParams(category,'fabric',oldAttrs);
-  const widthM=state==='stock'
-    ? stockWidthM
-    : (state==='ordered'?orderedWidthM:(Number(paramAttrs.rollWidth||oldAttrs.rollWidth||0)||((Number(oldAttrs.rollWidthMm||0)>0)?Number(oldAttrs.rollWidthMm)/1000:0)));
-  const lengthM=isLeather?0:(state==='stock'
-    ? Number(String(document.getElementById('fabricStockRollLength')?.value||0).replace(',','.'))||0
-    : (state==='ordered'?Number(String(document.getElementById('fabricOrderedRollLength')?.value||0).replace(',','.'))||0:Number(oldAttrs.rollLength||0)||0));
+  const widthM=isLeather?0:(Number(paramAttrs.rollWidth||oldAttrs.rollWidth||0)||((Number(oldAttrs.rollWidthMm||0)>0)?Number(oldAttrs.rollWidthMm)/1000:0));
+  const lengthM=isLeather?0:(Number(paramAttrs.rollLength||oldAttrs.rollLength||oldAttrs.orderedRollLength||0)||0);
+  if(!isLeather&&(!(widthM>0)||!(lengthM>0))){toast('Укажите ширину и длину рулона.');return;}
   const ordered=state==='ordered'?normalizeStockValue(document.getElementById('fabricOrderedQty')?.value||0,unit,true):0;
   if(ordered===null){toast(t('fieldMinZero'));return;}
   const attrs={
@@ -1609,13 +1939,13 @@ async function saveFabricMaterial(id=''){
     rollWidthMm:isLeather?'':(widthM?Math.round(widthM*1000):''),
     rollLength:isLeather?'':(lengthM||''),
     area:isLeather?'':(widthM&&lengthM?Number((widthM*lengthM).toFixed(2)):''),
-    totalArea:isLeather?Number((state==='ordered'?ordered:qty||0).toFixed(3)):(widthM&&lengthM?Number((widthM*lengthM*(state==='ordered'?ordered:qty||1)).toFixed(2)):''),
+    totalArea:isLeather?Number((state==='ordered'?ordered:qty||0).toFixed(3)):(widthM?Number((widthM*(state==='ordered'?ordered:qty||0)).toFixed(2)):''),
     storageLocation:state==='stock'?(document.getElementById('fabricStorageLocation')?.value||'').trim():'',
     receiptDate:state==='stock'?(document.getElementById('fabricReceiptDate')?.value||''):'',
     purchasePrice:state==='stock'?(document.getElementById('fabricPurchasePrice')?.value||''):'',
     expectedReceiptDate:state==='ordered'?(document.getElementById('fabricExpectedDate')?.value||''):'',
     purchaseNote:state==='ordered'?(document.getElementById('fabricPurchaseNote')?.value||'').trim():'',
-    orderedRollWidth:isLeather?'':(state==='ordered'&&orderedWidthM?Number(orderedWidthM.toFixed(3)):''),
+    orderedRollWidth:isLeather?'':(state==='ordered'&&widthM?Number(widthM.toFixed(3)):''),
     orderedRollLength:isLeather?'':(state==='ordered'&&lengthM?lengthM:''),
     purchaseStatus:state==='ordered'?'ordered':(state==='stock'&&qty>0?'instock':'noorder'),
     reservedQty:oldAttrs.reservedQty||0,
@@ -1852,8 +2182,96 @@ function saveOrderMaterialPurchase(orderId,materialId,opts={}){
 }
 async function persistReservationMaterials(){syncMaterialReservations();for(const m of data.materials){await updateMaterialInSupabase(m)}}
 async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm('Удалить заказ и освободить резерв материалов?'))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast('Заказ удалён')}
-function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mebel-sklad-data.json';a.click()}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();renderAll();toast('Данные загружены')}catch(err){alert('Ошибка JSON')}};r.readAsText(f)}
+function secretExportKey(key){return /(token|chatid|chat_id|pin|password|passwd|secret|apikey|api_key|accesskey|privatekey|auth)/i.test(String(key||''))}
+function cloneForExport(value,allowSecrets=false){
+  if(Array.isArray(value))return value.map(x=>cloneForExport(x,allowSecrets));
+  if(value&&typeof value==='object'){
+    const out={};
+    Object.entries(value).forEach(([key,val])=>{if(!allowSecrets&&secretExportKey(key))return;out[key]=cloneForExport(val,allowSecrets)});
+    return out;
+  }
+  return value;
+}
+function currentExportSelection(){
+  return {
+    materials:!!document.getElementById('exportMaterials')?.checked,
+    orders:!!document.getElementById('exportOrders')?.checked,
+    technologies:!!document.getElementById('exportTechnologies')?.checked,
+    history:!!document.getElementById('exportHistory')?.checked,
+    settings:!!document.getElementById('exportSettings')?.checked
+  };
+}
+function buildExportPayload(selection){
+  const payload={schema:'furnicore-export-v2',exportedAt:new Date().toISOString(),sections:selection};
+  if(selection.materials)payload.materials=cloneForExport(data.materials||[],false);
+  if(selection.orders){
+    const orders=cloneForExport(cleanStoredOrders(data.orders||[]),false);
+    payload.orders=selection.technologies?orders:orders.map(o=>{const clean={...o};delete clean.steps;delete clean.materials;return clean});
+  }
+  if(selection.technologies)payload.technologies=cloneForExport({models:data.models||[],orderTechnologies:cleanStoredOrders(data.orders||[]).map(o=>({orderId:o.id,number:o.number,steps:o.steps||[],materials:o.materials||[]}))},false);
+  if(selection.history)payload.history=typeof auditLoad==='function'?cloneForExport(auditLoad(),false):[];
+  if(selection.settings)payload.settings=cloneForExport(data.settings||{},true);
+  return selection.settings?payload:cloneForExport(payload,false);
+}
+function downloadExportPayload(payload){
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='furnicore-export.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),0);
+}
+function exportData(){
+  const body=`<div class="secure-export-modal"><p>Выберите, какие данные включить в JSON. Системные настройки по умолчанию выключены.</p><label><input id="exportMaterials" type="checkbox" checked> Материалы</label><label><input id="exportOrders" type="checkbox" checked> Заказы</label><label><input id="exportTechnologies" type="checkbox" checked> Технологии</label><label><input id="exportHistory" type="checkbox" checked> Историю</label><label><input id="exportSettings" type="checkbox"> Настройки системы</label><div class="secure-export-note">Без настроек системы Telegram Token, Chat ID, PIN, пароли и API Keys не попадут в файл.</div></div>`;
+  openModal('Экспортировать',body,`<button class="btn" type="button" onclick="closeModal()">Отмена</button><button class="btn primary" type="button" onclick="runSecureExport()">Экспорт</button>`);
+}
+async function runSecureExport(){
+  const selection=currentExportSelection();
+  if(selection.settings&&typeof requireTelegramPin==='function'&&!await requireTelegramPin('Введите PIN, чтобы экспортировать системные настройки.'))return;
+  const payload=buildExportPayload(selection);
+  downloadExportPayload(payload);
+  closeModal();
+  toast('Экспорт готов');
+}
+function importContainsSystemSettings(payload){return !!(payload&&typeof payload==='object'&&(payload.settings||payload.data?.settings))}
+function askImportSystemSettings(){
+  return new Promise(resolve=>{
+    const body=`<div class="secure-export-modal"><p><b>Обнаружены настройки системы.</b></p><p>Импортировать их?</p><div class="secure-export-note">Если выбрать «Нет», будут импортированы только материалы, заказы, технологии и история.</div></div>`;
+    window.__importSettingsResolve=resolve;
+    openModal('Импорт JSON',body,`<button class="btn primary" type="button" onclick="window.__importSettingsResolve(false);window.__importSettingsResolve=null;closeModal()">Нет</button><button class="btn" type="button" onclick="window.__importSettingsResolve(true);window.__importSettingsResolve=null;closeModal()">Да</button>`);
+  });
+}
+async function applyImportedData(payload,importSettings=false){
+  const src=payload?.data&&typeof payload.data==='object'?payload.data:payload;
+  const next={...(data||{})};
+  if(Array.isArray(src.materials))next.materials=cloneForExport(src.materials,false);
+  if(Array.isArray(src.orders))next.orders=cleanStoredOrders(cloneForExport(src.orders,false));
+  if(Array.isArray(src.models))next.models=cloneForExport(src.models,false);
+  if(Array.isArray(src.technologies))next.models=cloneForExport(src.technologies,false);
+  if(src.technologies&&typeof src.technologies==='object'&&!Array.isArray(src.technologies)){
+    if(Array.isArray(src.technologies.models))next.models=cloneForExport(src.technologies.models,false);
+    if(Array.isArray(src.technologies.orderTechnologies)&&Array.isArray(next.orders)){
+      const techById=new Map(src.technologies.orderTechnologies.map(x=>[String(x.orderId),x]));
+      next.orders=next.orders.map(o=>{const tech=techById.get(String(o.id));return tech?{...o,steps:cloneForExport(tech.steps||[],false),materials:cloneForExport(tech.materials||[],false)}:o});
+    }
+  }
+  if(Array.isArray(src.notifications))next.notifications=cloneForExport(src.notifications,false);
+  if(importSettings&&src.settings)next.settings=cloneForExport(src.settings,true);
+  else next.settings=data.settings||{};
+  data=next;
+  if(Array.isArray(src.history)&&typeof auditSave==='function')auditSave(cloneForExport(src.history,false));
+  save();
+  renderAll();
+  toast('Данные загружены');
+}
+function importData(e){
+  const f=e.target.files[0];
+  if(!f)return;
+  const input=e.target;
+  const r=new FileReader();
+  r.onload=async()=>{try{const payload=JSON.parse(r.result);const importSettings=importContainsSystemSettings(payload)?await askImportSystemSettings():false;await applyImportedData(payload,importSettings)}catch(err){console.error(err);alert('Ошибка JSON')}finally{if(input)input.value=''}};
+  r.readAsText(f);
+}
 function wipeData(){if(!confirm('Очистить все данные?'))return;data={materials:[],models:[],orders:[]};save();renderAll()}
 
 
@@ -1882,7 +2300,7 @@ applyI18n=function(){
   renderOrderClientFilter();
 };
 async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm(u42('deleteConfirm')))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast(u42('orderDeleted'))}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();renderAll();toast(u42('dataLoaded'))}catch(err){alert(u42('jsonError'))}};r.readAsText(f)}
+const importDataSecureV641=importData;
 function wipeData(){if(!confirm(u42('wipeConfirm')))return;data={materials:[],models:[],orders:[]};save();renderAll()}
 
 
@@ -2135,7 +2553,7 @@ calcOrderOverallPercent=function(o){
 /* v5.64: open production with clear button, not by status */
   renderOrderStats();
   renderOrderClientFilter();
-function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings()}
+function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings();if(typeof protectSearchInputsFromAutofill==='function')protectSearchInputsFromAutofill()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
 
 
@@ -2190,7 +2608,7 @@ const __renderAllV565=renderAll;
 renderAll=function(){__renderAllV565();const av=document.getElementById('appVersionBadge');if(av)av.textContent=APP_VERSION;}
 
 document.addEventListener("click",()=>closeOrderMenus());
-renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickSubmitStock()}} syncQuickOperationUI();updateQuickAddInfo();if(location.protocol==='file:'){try{currentUser={email:'local-preview@furnicore'};setAuthLocked(false);renderAuthBox();renderAll();syncQuickOperationUI();updateQuickAddInfo();}catch(e){console.error(e);}}else{checkSession();}
+renderNav();renderFilters();updateSubFilter();const qs=document.getElementById('quickSku'), qq=document.getElementById('quickQty'); if(qs){qs.oninput=updateQuickAddInfo;qs.onkeydown=e=>{if(e.key==='Enter')qq?.focus()}} if(qq){qq.onkeydown=e=>{if(e.key==='Enter')quickSubmitStock()}} syncQuickOperationUI();updateQuickAddInfo();if(location.protocol==='file:'){try{document.body.classList.add('local-file-mode');showLocalModeWarning();currentUser={email:'local-preview@furnicore'};setAuthLocked(false);renderAuthBox();renderAll();syncQuickOperationUI();updateQuickAddInfo();openOrderFromUrl();}catch(e){console.error(e);}}else{checkSession();}
 
 
 /* v5.68: fix order complete/cancel actions */
@@ -2312,12 +2730,18 @@ syncMaterialReservations=function(){
   const totals={};
   (data.orders||[]).forEach(o=>{
     if(orderIsTerminal(o.status))return;
-    orderMaterials(o).forEach(i=>{if(i.materialId)totals[i.materialId]=(totals[i.materialId]||0)+Number(i.qty||0)});
+    orderMaterials(o).forEach(i=>{
+      const m=(data.materials||[]).find(x=>String(x.id)===String(i.materialId));
+      if(i.materialId)totals[i.materialId]=(totals[i.materialId]||0)+convertMaterialQty(Number(i.qty||0),i.unit||m?.unit||'',m?.unit||i.unit||'',m);
+    });
   });
   const frozen={};
   (data.orders||[]).forEach(o=>{
     if(!orderIsCancelled(o.status)||!cancelReviewPending(o))return;
-    (o.cancelReview.items||[]).forEach(i=>{if(i.materialId)frozen[i.materialId]=(frozen[i.materialId]||0)+Number(i.qty||0)});
+    (o.cancelReview.items||[]).forEach(i=>{
+      const m=(data.materials||[]).find(x=>String(x.id)===String(i.materialId));
+      if(i.materialId)frozen[i.materialId]=(frozen[i.materialId]||0)+convertMaterialQty(Number(i.qty||0),i.unit||m?.unit||'',m?.unit||i.unit||'',m);
+    });
   });
   (data.materials||[]).forEach(m=>{m.attributes=m.attributes||{};m.attributes.frozenQty=stockNumForUnit(frozen[m.id]||0,m.unit);m.attributes.reservedQty=stockNumForUnit((totals[m.id]||0)+(frozen[m.id]||0),m.unit);});
 };
@@ -2473,7 +2897,7 @@ body:not(.auth-locked) .auth-screen{
 (function(){
   const VERSION=APP_VERSION;
 
-  
+
 
   function syncAuthScreen(){
     const locked=document.body.classList.contains('auth-locked');
@@ -2583,7 +3007,7 @@ body:not(.auth-locked) .auth-screen{
   .order-row-action-buttons{justify-content:flex-start!important;gap:6px!important}.order-row-action-buttons .btn{padding:0 9px!important}
   .modal-backdrop.show{padding:10px!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
   #modalBackdrop .modal,.modal{width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;max-height:92dvh!important;border-radius:20px!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
-  .modal-head{height:auto!important;min-height:58px!important;padding:12px 14px!important;flex:0 0 auto!important}.modal-head h3{font-size:18px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .modal-head{height:auto!important;min-height:58px!important;padding:calc(env(safe-area-inset-top,0px) + 64px) 14px 12px!important;flex:0 0 auto!important}.modal-head h3{font-size:18px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
   .modal-body{padding:14px!important;flex:1 1 auto!important;overflow-y:auto!important;overflow-x:hidden!important;min-height:0!important;-webkit-overflow-scrolling:touch!important}
   .modal-foot{padding:12px 14px!important;flex:0 0 auto!important;display:grid!important;grid-template-columns:1fr!important;gap:8px!important}.modal-foot .btn{width:100%!important;min-height:42px!important}
   .form-grid,.cards-grid,.order-view-grid,.clean-modal-grid,.production-shell,.order-material-clean-shell,.material-detail-shell{grid-template-columns:1fr!important}
@@ -2600,14 +3024,27 @@ body:not(.auth-locked) .auth-screen{
 (function(){
   const VERSION=APP_VERSION;
   const isLocal=location.protocol==='file:';
+  let localReadStarted=false;
+  function loadLocalReadOnlyData(){
+    if(localReadStarted||!isLocal||typeof loadMaterialsFromSupabase!=='function')return;
+    localReadStarted=true;
+    loadMaterialsFromSupabase({localReadOnly:true}).catch(e=>{
+      localReadStarted=false;
+      console.warn('Local read-only Supabase load failed',e);
+      if(typeof toast==='function')toast('Локальный режим: не удалось прочитать Supabase');
+    });
+  }
   function unlockLocal(){
     if(!isLocal) return;
-    try{ window.currentUser=window.currentUser||{email:'local-preview@furnicore'}; }catch(e){}
+    try{ currentUser=currentUser||{email:'local-preview@furnicore'}; }catch(e){}
+    document.body.classList.add('local-file-mode');
     document.body.classList.remove('auth-locked');
     document.documentElement.classList.remove('auth-page-locked');
     const screen=document.getElementById('authScreen'); if(screen){screen.style.display='none';screen.style.pointerEvents='none';}
+    const backdrop=document.getElementById('modalBackdrop'); if(backdrop&&!backdrop.classList.contains('show')){backdrop.classList.remove('show');backdrop.style.display='';backdrop.style.pointerEvents='';backdrop.style.visibility='';}
     try{ if(typeof renderAuthBox==='function') renderAuthBox(); }catch(e){}
     try{ if(typeof renderAll==='function') renderAll(); }catch(e){}
+    loadLocalReadOnlyData();
     setVersion();
   }
   if(isLocal){
