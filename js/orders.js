@@ -390,9 +390,10 @@ function orderMaterialEnoughQty(o,item,state){
   if(per<=0)return total;
   return Math.max(0,Math.min(total,Math.floor(Number(state.av.available||0)/per)));
 }
-function productionMaterialCoverage(o,itemsOverride=null){
+function productionMaterialCoverage(o,itemsOverride=null,alreadyDone=0){
   const items=(itemsOverride||orderMaterials(o)).filter(item=>Number(item.qty||0)>0);
-  const total=orderProductQty(o);
+  const fullTotal=orderProductQty(o);
+  const total=Math.max(0,fullTotal-Math.max(0,Math.trunc(Number(alreadyDone||0))));
   if(!items.length)return {ok:true,enough:total,missing:[]};
   const rows=items.map(item=>({item,state:orderMaterialLineState(item,o.id)}));
   const enough=Math.min(total,...rows.map(row=>orderMaterialEnoughQty(o,row.item,row.state)));
@@ -407,7 +408,8 @@ function orderProductionMaterialWarningHtml(o){
 function productionOperationMaterialStatusHtml(o,op){
   const assigned=operationMaterials(o,op);
   if(!assigned.length)return `<div class="production-op-materials idle"><strong>Материалы для этого цеха не указаны</strong></div>`;
-  const coverage=productionMaterialCoverage(o,assigned),total=orderProductQty(o);
+  const alreadyDone=productionCompletedQty(o,op);
+  const coverage=productionMaterialCoverage(o,assigned,alreadyDone),total=Math.max(0,orderProductQty(o)-alreadyDone);
   const consumption=operationConsumptionStats(o,op);
   const label=currentLang==='ru'?'Материалы':currentLang==='en'?'Materials':'Materiāli';
   const enoughLabel=currentLang==='ru'?'хватит на':currentLang==='en'?'enough for':'pietiek';
