@@ -140,10 +140,18 @@ function materialOrderUsageCards(m){
   return rows.map(r=>{
     const order=r.order;
     const item=r.item;
-    const needed=convertMaterialQty(Number(item.qty||0),item.unit||unit,unit,m);
-    const reserved=convertMaterialQty(materialOrderReservedQty(item,m),item.unit||unit,unit,m);
-    const ordered=convertMaterialQty(Number(orderItemPurchaseQty(item,0)||0),item.unit||unit,unit,m);
-    const shortage=Math.max(0,needed-reserved-ordered);
+    // "Нужно" здесь — это то, что реально ОСТАЛОСЬ списать по заказу (уже произведённое не в счёт),
+    // поэтому "Зарезервировано"/"Не хватает" считаются от той же базы и не расходятся между собой.
+    const av=typeof orderItemAvailability==='function'?orderItemAvailability(item,order.id):null;
+    const avUnit=av?.unit||item.unit||unit;
+    const neededRaw=typeof orderItemRemainingReserveQty==='function'?orderItemRemainingReserveQty(item,m):Number(item.qty||0);
+    const orderedRaw=Number(orderItemPurchaseQty(item,0)||0);
+    const shortageRaw=Math.max(0,Number(av?.missing||0)-orderedRaw);
+    const reservedRaw=Math.max(0,neededRaw-shortageRaw);
+    const needed=convertMaterialQty(neededRaw,avUnit,unit,m);
+    const reserved=convertMaterialQty(reservedRaw,avUnit,unit,m);
+    const ordered=convertMaterialQty(orderedRaw,item.unit||unit,unit,m);
+    const shortage=convertMaterialQty(shortageRaw,avUnit,unit,m);
 
     return `<div class="order-usage-card">
       <div class="order-usage-header">
