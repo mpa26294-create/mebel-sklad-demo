@@ -415,10 +415,17 @@ function productionOperationMaterialStatusHtml(o,op){
   const enoughLabel=currentLang==='ru'?'хватит на':currentLang==='en'?'enough for':'pietiek';
   const allLabel=currentLang==='ru'?'хватает на весь заказ':currentLang==='en'?'enough for full order':'pietiek visam pasūtījumam';
   const missingLabel=currentLang==='ru'?'не хватает':currentLang==='en'?'missing':'trūkst';
-  const needLabel=currentLang==='ru'?'нужно всего':currentLang==='en'?'total needed':'nepieciešams kopā';
+  const needLabel=currentLang==='ru'?'нужно':currentLang==='en'?'need':'nepieciešams';
+  const availableLabel=currentLang==='ru'?'в наличии':currentLang==='en'?'in stock':'noliktavā';
+  const rowOkLabel=currentLang==='ru'?'✓ хватает':currentLang==='en'?'✓ enough':'✓ pietiek';
   const title=coverage.ok?`${label}: ${allLabel}`:`${label}: ${enoughLabel} ${coverage.enough} / ${total}`;
   const sourceRows=coverage.ok?assigned.map(item=>({item,state:orderMaterialLineState(item,o.id)})):coverage.missing;
-  const list=sourceRows.slice(0,4).map(({item,state})=>{const m=state.av.mat,unit=state.av.unit||item.unit||'',can=orderMaterialEnoughQty(o,item,state);return `<button type="button" onclick="openProductionMaterialDetails('${item.materialId}')"><b>${escapeHtml(m?materialTitle(m):t('deletedMaterial'))}</b><span>${coverage.ok?escapeHtml(qtyWithUnit(item.qty,unit)):`${escapeHtml(enoughLabel)} ${can}/${total} · ${escapeHtml(needLabel)} ${escapeHtml(qtyWithUnit(item.qty,unit))} · ${missingLabel} ${escapeHtml(qtyWithUnit(state.av.missing,unit))}`}</span></button>`}).join('');
+  const list=sourceRows.slice(0,4).map(({item,state})=>{
+    const m=state.av.mat,unit=state.av.unit||item.unit||'',missingQty=Number(state.av.missing||0),rowOk=missingQty<=0;
+    const statusText=rowOk?rowOkLabel:`⚠ ${missingLabel} ${escapeHtml(qtyWithUnit(missingQty,unit))}`;
+    const detailText=`${needLabel} ${escapeHtml(qtyWithUnit(item.qty,unit))} · ${availableLabel} ${escapeHtml(qtyWithUnit(state.av.available,unit))}`;
+    return `<button type="button" class="${rowOk?'material-row-ok':'material-row-warn'}" onclick="openProductionMaterialDetails('${item.materialId}')"><b>${escapeHtml(m?materialTitle(m):t('deletedMaterial'))}</b><span>${statusText} · ${detailText}</span></button>`;
+  }).join('');
   const last=consumption.last?`<small>Последнее списание: ${escapeHtml(consumption.last.qty)} изделий · ${escapeHtml(productionDateTimeText(consumption.last.at))}</small>`:'<small>Последнее списание: —</small>';
   return `<div class="production-op-materials ${coverage.ok?'ok':'warn'}"><strong>${coverage.ok?'✓':'⚠'} ${escapeHtml(title)}</strong><em>Списано материалов: ${escapeHtml(consumption.sets)} / ${escapeHtml(total)} комплектов</em>${last}${list?`<div>${list}</div>`:''}</div>`;
 }
