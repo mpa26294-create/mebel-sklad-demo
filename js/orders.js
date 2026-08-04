@@ -31,7 +31,7 @@ function materialReservedOutsideOrder(matId,excludeOrderId='',targetUnit=''){
     .filter(o=>String(o.id)!==String(excludeOrderId)&&!orderIsTerminal(o.status))
     .flatMap(orderMaterials)
     .filter(i=>String(i.materialId)===String(matId))
-    .reduce((s,i)=>s+convertMaterialQty(Number(i.qty||0),i.unit||m?.unit||targetUnit,targetUnit||i.unit||m?.unit||'',m),0);
+    .reduce((s,i)=>{const remaining=typeof orderItemRemainingReserveQty==='function'?orderItemRemainingReserveQty(i,m):Number(i.qty||0);return s+convertMaterialQty(Number(remaining||0),i.unit||m?.unit||targetUnit,targetUnit||i.unit||m?.unit||'',m)},0);
 }
 function orderItemAvailability(item,excludeOrderId=''){
   const m=data.materials.find(x=>String(x.id)===String(item.materialId));

@@ -3,7 +3,10 @@ function stockNumForUnit(v,unit){const n=stockNum(v);return typeof discreteStock
 function stockStep(unit){return typeof discreteStockUnit==='function'&&discreteStockUnit(unit)?'1':'0.01'}
 function stockDefaultValue(unit){return stockStep(unit)}
 function normalizeStockValue(value,unit,allowZero=true){const raw=String(value??'0').replace(',','.');const n=Number(raw);if(!Number.isFinite(n) || (allowZero?n<0:n<=0))return null;if(typeof discreteStockUnit==='function'&&discreteStockUnit(unit)){if(!Number.isInteger(n))return null;return n;}return Number(n.toFixed(3));}
-function reservedQty(m){return Math.max(0,stockNumForUnit((m.attributes||{}).reservedQty,m.unit))}
+function reservedQty(m){
+  if(m && typeof materialReservedOutsideOrder==='function')return Math.max(0,stockNumForUnit(materialReservedOutsideOrder(m.id,'',m.unit||''),m.unit));
+  return Math.max(0,stockNumForUnit((m.attributes||{}).reservedQty,m.unit));
+}
 function orderedManualQty(m){return Math.max(0,stockNumForUnit((m.attributes||{}).orderedQty,m.unit))}
 function orderedQty(m){return Math.max(0,stockNumForUnit(orderedManualQty(m)+orderedByOrdersQty(m),m.unit))}
 function availableQty(m){const u=m.unit;return Math.max(0,stockNumForUnit(stockNumForUnit(m.quantity,u)-reservedQty(m),u))}
@@ -675,8 +678,8 @@ function openMaterialDetails(id){
   const quickFabricFields=isFabricRoll?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview subtle" id="detailRollPreview"></div><input id="detailRollWidth" type="hidden" value="${escapeHtml(a.rollWidth||((Number(a.rollWidthMm||0)>0)?Number(a.rollWidthMm)/1000:''))}"></div>`:(isSheetMaterial?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview">Площадь 1 листа: ${sheetArea} м²</div></div>`:'');
 
   // New summary panel
-  const summaryStatus = available > 0 ? 'Достаточно на складе' : (ordered > 0 ? 'Заказано' : 'Нет на складе');
-  const summaryStatusClass = available > 0 ? 'success' : (ordered > 0 ? 'ordered' : 'danger');
+  const summaryStatus = available > 0 ? 'Достаточно на складе' : (ordered > 0 ? 'Заказано' : (stock > 0 ? 'Зарезервировано под заказы' : 'Нет на складе'));
+  const summaryStatusClass = available > 0 ? 'success' : (ordered > 0 ? 'ordered' : (stock > 0 ? 'reserved' : 'danger'));
 
   // Quick actions with three modes
   const quickActionsHtml=`

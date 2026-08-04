@@ -2060,6 +2060,7 @@
 .summary-status-success{background:#dcfce7;color:#166534}
 .summary-status-ordered{background:#dbeafe;color:#1e40af}
 .summary-status-danger{background:#fee2e2;color:#991b1b}
+.summary-status-reserved{background:#f5f3ff;color:#6d45b9}
 .summary-need{grid-column:1/-1;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:600;text-align:center;background:#f8fafc;color:#6f7480;margin-top:4px}
 .summary-need.danger{background:#fee2e2;color:#991b1b}
 
