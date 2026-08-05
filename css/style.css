@@ -3058,6 +3058,26 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-queue-item .production-operation-card{border-radius:0 0 14px 14px}
 @media(max-width:760px){.workshops-grid{grid-template-columns:1fr}}
 
+/* Компактный список операций внутри заказа — детали и управление вынесены в раздел "Цеха". */
+.production-compact-hint{padding:9px 12px;border:1px dashed #d8dde5;border-radius:10px;background:#fafbfc;color:#8490a3;font-size:11px}
+.production-operations-compact{gap:8px}
+.production-op-compact{display:grid;grid-template-columns:32px minmax(0,1.4fr) auto minmax(0,.9fr) auto auto auto;gap:12px;align-items:center;width:100%;min-height:52px;padding:10px 14px;border:1px solid #e5e9f0;border-radius:12px;background:#fff;text-align:left;cursor:pointer}
+.production-op-compact:hover{border-color:#c5ccd6}
+.production-op-compact.running{border-color:#bfdbfe;background:#f7fbff}
+.production-op-compact.paused{border-color:#fed7aa;background:#fffaf5}
+.production-op-compact.done{border-color:#bfe8cc;background:#f7fcf9}
+.production-op-compact-icon{font-size:17px;text-align:center}
+.production-op-compact-name{display:flex;flex-direction:column;gap:2px;min-width:0}
+.production-op-compact-name b{color:#101828;font-size:13px;font-weight:700}
+.production-op-compact-name small{color:#8490a3;font-size:10px}
+.production-op-compact-progress{width:70px;height:7px;border-radius:999px;background:#eef1f5;overflow:hidden}
+.production-op-compact-progress i{display:block;height:100%}
+.production-op-compact-progress b{display:block;height:100%;border-radius:999px;background:#17181b}
+.production-op-compact-qty{color:#344054;font-size:12px;font-weight:650;white-space:nowrap}
+.production-op-compact-warn{color:#b54708;font-size:14px}
+.production-op-compact-go{color:#667085;font-size:11px;font-weight:650;white-space:nowrap}
+@media(max-width:760px){.production-op-compact{grid-template-columns:28px minmax(0,1fr) auto;grid-template-areas:"icon name status" "icon progress go";row-gap:6px}.production-op-compact-icon{grid-area:icon}.production-op-compact-name{grid-area:name}.production-status-pill{grid-area:status}.production-op-compact-progress{grid-area:progress}.production-op-compact-qty{display:none}.production-op-compact-warn{display:none}.production-op-compact-go{grid-area:go}}
+
 /* v6.18: every modal can expand, production keeps technology edits auditable. */
 .modal-head-actions{display:flex;align-items:center;gap:8px}
 .modal.modal-expanded{width:min(1580px,calc(100vw - 32px))!important;max-height:calc(100vh - 32px)!important}

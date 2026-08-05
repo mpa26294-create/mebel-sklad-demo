@@ -512,10 +512,27 @@ function productionKpiHtml(o){
   const cards=[['📦',t('orderProductCount'),qty],['🧱',t('materialsCount'),matCount],['⏱',t('plannedTime'),`${plan} ${t('minutesShort')}`],['⏱',t('actualTime'),`${actual} ${t('minutesShort')}`],['📈',t('readiness'),`${pct}%`],['⚠',t('missingMaterialsCount'),missing]];
   return `<div class="production-kpi-grid">${cards.map(([icon,label,value])=>`<div class="production-kpi"><span>${icon}</span><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}</div>`;
 }
+function openWorkshopFromOrder(stepName){
+  if(typeof closeModal==='function')closeModal();
+  if(typeof switchSection==='function')switchSection('workshops');
+  setTimeout(()=>openWorkshopDetail(stepName),0);
+}
+function productionOperationCompactRowHtml(o,op){
+  const pct=productionOpPercent(o,op),status=productionStatusClass(op.status),completed=productionCompletedQty(o,op),total=orderProductQty(o),coverage=productionMaterialCoverage(o,operationMaterials(o,op),completed);
+  return `<button type="button" class="production-op-compact ${status}" onclick="openWorkshopFromOrder('${jsStrArg(op.stepName)}')">
+    <span class="production-op-compact-icon">${workshopIcon(op.stepName)}</span>
+    <span class="production-op-compact-name"><b>${escapeHtml(op.stepName)}</b><small>${escapeHtml(t('queue'))}: ${escapeHtml(productionQueueState(o.id,op.stepIndex).label)}</small></span>
+    <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
+    <span class="production-op-compact-progress"><i><b style="width:${pct}%"></b></i></span>
+    <span class="production-op-compact-qty">${completed} / ${total}</span>
+    ${!coverage.ok?`<span class="production-op-compact-warn" title="Не хватает материалов">⚠</span>`:''}
+    <span class="production-op-compact-go">${escapeHtml(t('openWorkshop'))} →</span>
+  </button>`;
+}
 function orderProductionWorkflowHtml(o){
   ensureWorkflowProduction(o);
   const pct=calcWorkflowProductionPercent(o),done=productionDoneCount(o),ops=productionOps(o),current=productionCurrentOp(o),warnings=productionWarnings(o),left=ops.length-done;
-  return `<div class="production-workflow-screen">${productionKpiHtml(o)}${warnings.length?`<div class="production-warnings">${warnings.map(w=>`<span>⚠ ${escapeHtml(w)}</span>`).join('')}</div>`:''}<section class="production-workflow-card production-main-progress"><div><h4>${escapeHtml(t('productionProgress'))}</h4><b>${pct}%</b></div><div class="production-big-bar"><span style="width:${pct}%"></span></div><div class="production-progress-meta"><span>${escapeHtml(t('prodDone'))}: <b>${done}</b></span><span>${escapeHtml(t('prodLeft'))}: <b>${left}</b></span></div></section><div class="production-layout"><div class="production-operations-list">${ops.map(op=>productionOperationCardHtml(o,op)).join('')||`<div class="production-empty">${escapeHtml(t('noProductionOperations'))}</div>`}${ops.length&&done===ops.length?`<button class="btn primary transfer-completion-btn" type="button" onclick="transferOrderToCompletion('${o.id}')">${escapeHtml(t('transferToCompletion'))} →</button>`:''}</div><aside class="production-aside">${productionTimelineHtml(o)}${productionSummaryHtml(o)}${productionMaterialsControlHtml(o)}</aside></div></div>`;
+  return `<div class="production-workflow-screen">${productionKpiHtml(o)}${warnings.length?`<div class="production-warnings">${warnings.map(w=>`<span>⚠ ${escapeHtml(w)}</span>`).join('')}</div>`:''}<section class="production-workflow-card production-main-progress"><div><h4>${escapeHtml(t('productionProgress'))}</h4><b>${pct}%</b></div><div class="production-big-bar"><span style="width:${pct}%"></span></div><div class="production-progress-meta"><span>${escapeHtml(t('prodDone'))}: <b>${done}</b></span><span>${escapeHtml(t('prodLeft'))}: <b>${left}</b></span></div></section><div class="production-layout"><div class="production-operations-list production-operations-compact"><div class="production-compact-hint">Управление операциями (старт/пауза/завершение, материалы) — в разделе «Цеха». Здесь только сводка по заказу.</div>${ops.map(op=>productionOperationCompactRowHtml(o,op)).join('')||`<div class="production-empty">${escapeHtml(t('noProductionOperations'))}</div>`}${ops.length&&done===ops.length?`<button class="btn primary transfer-completion-btn" type="button" onclick="transferOrderToCompletion('${o.id}')">${escapeHtml(t('transferToCompletion'))} →</button>`:''}</div><aside class="production-aside">${productionTimelineHtml(o)}${productionSummaryHtml(o)}${productionMaterialsControlHtml(o)}</aside></div></div>`;
 }
 async function persistProductionWorkflow(o,message,type='production_update',meta={}){
   o.updatedAt=productionNow();o.updatedBy=productionActorName();
