@@ -144,10 +144,14 @@ function materialOrderUsageCards(m){
     // поэтому "Зарезервировано"/"Не хватает" считаются от той же базы и не расходятся между собой.
     const av=typeof orderItemAvailability==='function'?orderItemAvailability(item,order.id):null;
     const avUnit=av?.unit||item.unit||unit;
-    const neededRaw=typeof orderItemRemainingReserveQty==='function'?orderItemRemainingReserveQty(item,m):Number(item.qty||0);
+    const totalRaw=Number(item.qty||0);
+    const takenRaw=typeof orderItemConsumedQty==='function'?orderItemConsumedQty(item):0;
+    const neededRaw=typeof orderItemRemainingReserveQty==='function'?orderItemRemainingReserveQty(item,m):Math.max(0,totalRaw-takenRaw);
     const orderedRaw=Number(orderItemPurchaseQty(item,0)||0);
     const shortageRaw=Math.max(0,Number(av?.missing||0)-orderedRaw);
     const reservedRaw=Math.max(0,neededRaw-shortageRaw);
+    const total=convertMaterialQty(totalRaw,item.unit||unit,unit,m);
+    const taken=convertMaterialQty(takenRaw,item.unit||unit,unit,m);
     const needed=convertMaterialQty(neededRaw,avUnit,unit,m);
     const reserved=convertMaterialQty(reservedRaw,avUnit,unit,m);
     const ordered=convertMaterialQty(orderedRaw,item.unit||unit,unit,m);
@@ -158,9 +162,17 @@ function materialOrderUsageCards(m){
         <div class="order-usage-number">${escapeHtml(order.number||'—')}</div>
         <div class="order-usage-client">${escapeHtml(order.client||'—')}</div>
       </div>
-      <div class="order-usage-stats">
+      <div class="order-usage-stats order-usage-stats-6">
         <div class="order-usage-stat">
-          <span class="order-usage-label">Нужно</span>
+          <span class="order-usage-label">Всего нужно</span>
+          <span class="order-usage-value">${escapeHtml(qtyWithUnit(total,unit))}</span>
+        </div>
+        <div class="order-usage-stat">
+          <span class="order-usage-label">Уже взято</span>
+          <span class="order-usage-value">${escapeHtml(qtyWithUnit(taken,unit))}</span>
+        </div>
+        <div class="order-usage-stat">
+          <span class="order-usage-label">Осталось нужно</span>
           <span class="order-usage-value">${escapeHtml(qtyWithUnit(needed,unit))}</span>
         </div>
         <div class="order-usage-stat">
