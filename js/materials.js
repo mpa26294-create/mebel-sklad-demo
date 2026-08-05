@@ -747,7 +747,7 @@ function openMaterialDetails(id){
       <div class="material-hero material-hero-clean">
         <div>
           <h4>${escapeHtml(materialTitle(m)||materialDisplayName(m)||'Материал')}</h4>
-          <p>${escapeHtml(m.sku||'Без артикула')} · ${escapeHtml(categoryLabel(m.category))}${subtitleSub}</p>
+          <p>${m.category==='Поролон'&&m.sku?'':escapeHtml(m.sku||'Без артикула')+' · '}${escapeHtml(categoryLabel(m.category))}${subtitleSub}</p>
         </div>
         <span class="status ${st[0]}">${st[1]}</span>
       </div>
