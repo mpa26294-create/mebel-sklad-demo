@@ -39,6 +39,7 @@ function switchSection(sectionId){
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===sectionId));
   if(sectionId==='settings'&&typeof lockTelegramSettings==='function')lockTelegramSettings();
   if(sectionId==='orders'&&typeof renderOrders==='function')renderOrders();
+  if(sectionId==='workshops'&&typeof renderWorkshops==='function')renderWorkshops();
   if(sectionId==='history'&&typeof renderSiteHistory==='function')renderSiteHistory();
   if(sectionId==='changelog'&&typeof renderChangelog==='function')renderChangelog();
   closeMobileSidebar();

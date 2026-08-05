@@ -351,6 +351,74 @@ function workshopAnalytics(stepName){
   if(plan>0&&actual>plan*1.35)warnings.push(`${stepName} ${t('prodWarnPlanExceeded')}`);
   return {queue,active,overdue,plan,actual,load,warnings};
 }
+
+// ===== Раздел "Цеха": та же производственная информация, что и в заказе, но сгруппированная
+// по цеху, а не по заказу — рабочему цеха не нужно открывать заказы по одному, чтобы увидеть
+// свою очередь. Переиспользует productionOperationCardHtml/workshopAnalytics без дублирования логики.
+let selectedWorkshopName='';
+function allWorkshopNames(){
+  const names=[];
+  DEFAULT_ORDER_STEPS.forEach(s=>{if(s.name&&!names.includes(s.name))names.push(s.name)});
+  (data.orders||[]).forEach(o=>orderSteps(o).forEach(s=>{if(s.name&&!names.includes(s.name))names.push(s.name)}));
+  return names;
+}
+function jsStrArg(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+function workshopOverviewCardHtml(name){
+  const stat=workshopAnalytics(name);
+  return `<button type="button" class="workshop-card ${stat.overdue>0?'warn':''}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
+    <div class="workshop-card-icon">${workshopIcon(name)}</div>
+    <div class="workshop-card-body">
+      <h4>${escapeHtml(name)}</h4>
+      <div class="workshop-card-stats">
+        <div><b>${stat.queue.length}</b><span>${escapeHtml(t('queue'))}</span></div>
+        <div><b>${stat.active}</b><span>${escapeHtml(t('prodInProgress'))}</span></div>
+        <div class="${stat.overdue>0?'danger-text':''}"><b>${stat.overdue}</b><span>${escapeHtml(t('overdue'))}</span></div>
+      </div>
+      ${stat.load>=80?`<span class="workshop-card-warning">⚠ ${escapeHtml(t('prodWarnOverloaded'))}</span>`:''}
+    </div>
+  </button>`;
+}
+function workshopsOverviewHtml(){
+  const names=allWorkshopNames();
+  if(!names.length)return `<div class="workshop-empty">Цехов пока нет — добавьте этапы (столярка, швейный цех и т.д.) в технологию заказов.</div>`;
+  return `<div class="workshops-grid">${names.map(workshopOverviewCardHtml).join('')}</div>`;
+}
+function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
+function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
+function workshopQueueItemHtml(row){
+  const op=productionOp(row.order,row.index);
+  if(!op)return '';
+  return `<div class="workshop-queue-item">
+    <button type="button" class="workshop-queue-order-link" onclick="goToOrderFromMaterial(event,'${row.order.id}')">
+      <span><b>${escapeHtml(row.order.number||'—')}</b>${row.order.client?` · ${escapeHtml(row.order.client)}`:''}</span>
+      <span class="workshop-queue-due order-deadline ${escapeHtml(orderDeadlineClass(row.order))}">${escapeHtml(formatDeadline(row.order))}</span>
+    </button>
+    ${productionOperationCardHtml(row.order,op)}
+  </div>`;
+}
+function workshopDetailHtml(name){
+  const stat=workshopAnalytics(name);
+  const cards=stat.queue.map(workshopQueueItemHtml).join('');
+  return `<div class="workshop-detail-head">
+      <button type="button" class="btn small" onclick="closeWorkshopDetail()">← ${escapeHtml(t('back'))}</button>
+      <h3>${workshopIcon(name)} ${escapeHtml(name)}</h3>
+    </div>
+    <div class="production-kpi-grid">
+      <div class="production-kpi"><span>📋</span><small>${escapeHtml(t('queue'))}</small><b>${stat.queue.length}</b></div>
+      <div class="production-kpi"><span>▶</span><small>${escapeHtml(t('prodInProgress'))}</small><b>${stat.active}</b></div>
+      <div class="production-kpi"><span>⏱</span><small>${escapeHtml(t('plannedTime'))}</small><b>${stat.plan} ${escapeHtml(t('minutesShort'))}</b></div>
+      <div class="production-kpi"><span>⏱</span><small>${escapeHtml(t('actualTime'))}</small><b>${stat.actual} ${escapeHtml(t('minutesShort'))}</b></div>
+      <div class="production-kpi"><span>⚠</span><small>${escapeHtml(t('overdue'))}</small><b class="${stat.overdue?'danger-text':''}">${stat.overdue}</b></div>
+      <div class="production-kpi"><span>📈</span><small>${escapeHtml(t('prodLoad'))}</small><b>${stat.load}%</b></div>
+    </div>
+    ${stat.warnings.length?`<div class="production-warnings">${stat.warnings.map(w=>`<span>⚠ ${escapeHtml(w)}</span>`).join('')}</div>`:''}
+    <div class="workshop-queue-list">${cards||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`}</div>`;
+}
+function renderWorkshops(){
+  const el=document.getElementById('workshopsContent');
+  if(!el)return;
+  el.innerHTML=selectedWorkshopName?workshopDetailHtml(selectedWorkshopName):workshopsOverviewHtml();
+}
 function productionWarnings(o){
   const names=[...new Set(orderSteps(o).filter(s=>Number(s.minutes||0)>0).map(s=>s.name).filter(Boolean))],list=[];
   names.forEach(name=>list.push(...workshopAnalytics(name).warnings));
@@ -534,6 +602,9 @@ function orderWorkflowContentHtml(o,includeOperational=false){const stage=orderW
 function refreshOrderWorkflow(id){
   const o=(data.orders||[]).find(x=>String(x.id)===String(id)),root=document.getElementById('orderWorkflowModal');if(!o)return;
   if(root)root.innerHTML=orderWorkflowStepperHtml(o,'modal')+orderWorkflowContentHtml(o,true);else renderOrders();
+  // Если открыт раздел "Цеха" — обновляем и его, т.к. карточки операций там управляются теми же действиями.
+  const workshopsSection=document.getElementById('workshops');
+  if(workshopsSection&&workshopsSection.classList.contains('active')&&typeof renderWorkshops==='function')renderWorkshops();
 }
 function technologyAuditOnce(o){if(!o||!hasOrderTechnology(o.steps))return;const rows=typeof auditFor==='function'?auditFor('order',o.id):[];if(!rows.some(r=>r.type==='technology_filled'))auditAdd('technology_filled','order',o.id,o.number,t('historyTechnologyFilled'))}
 async function persistTechnologyOrder(o){save();try{syncMaterialReservations();await persistReservationMaterials()}catch(e){console.error('Technology reservation sync failed',e)}refreshOrderWorkflow(o.id)}
