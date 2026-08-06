@@ -3035,28 +3035,47 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 @media(max-width:760px){.order-tech-actions{width:100%;justify-content:stretch}.order-tech-actions .order-tech-cta{width:100%}}
 
 /* Раздел "Цеха": очередь операций по цехам, по всем заказам сразу. */
-.workshops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-.workshop-card{display:flex;align-items:flex-start;gap:12px;padding:16px;border:1px solid #e5e9f0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s}
-.workshop-card:hover{border-color:#c5ccd6;box-shadow:0 2px 10px rgba(16,24,40,.06)}
-.workshop-card.warn{border-color:#fed7aa;background:#fffaf5}
-.workshop-card-icon{flex:none;width:40px;height:40px;display:grid;place-items:center;border-radius:10px;background:#f2f4f7;font-size:19px}
-.workshop-card-body{min-width:0;flex:1}
-.workshop-card-body h4{margin:0 0 10px;color:#101828;font-size:14px;font-weight:750}
-.workshop-card-stats{display:flex;gap:16px}
-.workshop-card-stats>div{display:flex;flex-direction:column;gap:2px}
-.workshop-card-stats b{color:#101828;font-size:16px;font-weight:750}
-.workshop-card-stats span{color:#8490a3;font-size:9px;text-transform:uppercase;letter-spacing:.04em}
-.workshop-card-warning{display:inline-flex;margin-top:10px;color:#b54708;font-size:10px;font-weight:700}
+.workshops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.workshop-card{display:flex;flex-direction:column;gap:10px;padding:14px;border:0;border-radius:12px;background:#f6f7f9;text-align:left;cursor:pointer;transition:background .15s}
+.workshop-card:hover{background:#eef0f3}
+.workshop-card.warn{background:#fff7ed}
+.workshop-card.warn .workshop-card-note{color:#b54708}
+.workshop-card.warn .workshop-card-bar i{background:#f47a00}
+.workshop-card-top{display:flex;align-items:center;gap:8px}
+.workshop-card-icon{font-size:18px}
+.workshop-card-top h4{margin:0;color:#101828;font-size:13px;font-weight:650}
+.workshop-card-stats{display:flex;gap:18px}
+.workshop-card-stats>div{display:flex;flex-direction:column;gap:1px}
+.workshop-card-stats b{color:#101828;font-size:19px;font-weight:600}
+.workshop-card-stats span{color:#8490a3;font-size:10px}
+.workshop-card-bar{height:4px;border-radius:99px;background:#e5e9f0;overflow:hidden}
+.workshop-card-bar i{display:block;height:100%;border-radius:99px;background:#8490a3}
+.workshop-card-note{min-height:13px;color:#8490a3;font-size:11px;font-weight:600}
 .workshop-empty{padding:36px 16px;text-align:center;color:#8490a3;font-size:12px;border:1px dashed #e5e9f0;border-radius:14px}
 .workshop-detail-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .workshop-detail-head h3{margin:0;color:#101828;font-size:16px}
-.workshop-queue-list{display:flex;flex-direction:column;gap:16px;margin-top:16px}
-.workshop-queue-item{display:flex;flex-direction:column;gap:0}
-.workshop-queue-order-link{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid #e5e9f0;border-bottom:0;border-radius:12px 12px 0 0;background:#fafbfc;color:#101828;text-align:left;cursor:pointer;font-size:12px}
-.workshop-queue-order-link:hover{background:#f2f4f7}
-.workshop-queue-order-link b{font-size:13px}
-.workshop-queue-item .production-operation-card{border-radius:0 0 14px 14px}
-@media(max-width:760px){.workshops-grid{grid-template-columns:1fr}}
+.workshop-queue-list{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.workshop-queue-item{display:flex;flex-direction:column;border:0.5px solid #e5e9f0;border-radius:12px;overflow:hidden}
+.workshop-queue-row{display:grid;grid-template-columns:8px minmax(0,1fr) 70px auto 16px;gap:12px;align-items:center;width:100%;min-height:52px;padding:10px 14px;border:0;background:#fff;text-align:left;cursor:pointer}
+.workshop-queue-row:hover{background:#fafbfc}
+.workshop-row-dot{width:8px;height:8px;border-radius:50%;background:#c5ccd6}
+.workshop-row-dot.running{background:#1677e8}
+.workshop-row-dot.paused{background:#f47a00}
+.workshop-row-dot.done{background:#249943}
+.workshop-row-info{min-width:0;display:flex;flex-direction:column;gap:2px}
+.workshop-row-info b{color:#101828;font-size:13px;font-weight:650}
+.workshop-row-info em{color:#8490a3;font-style:normal;font-size:12px}
+.workshop-row-info small{display:block;color:#8490a3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workshop-row-danger{color:#c73535;font-weight:650}
+.workshop-row-today{color:#8a650e;font-weight:650}
+.workshop-row-progress{width:70px;height:4px;border-radius:99px;background:#eef1f5;overflow:hidden}
+.workshop-row-progress i{display:block;height:100%}
+.workshop-row-progress b{display:block;height:100%;border-radius:99px;background:#17181b}
+.workshop-row-chevron{color:#98a2b3;font-size:16px;text-align:center}
+.workshop-queue-expanded{border-top:0.5px solid #e5e9f0;background:#fafbfc;padding:12px}
+.workshop-queue-order-link{display:inline-flex;margin-bottom:10px;padding:0;border:0;background:none;color:#175cd3;font-size:12px;font-weight:650;cursor:pointer}
+.workshop-queue-expanded .production-operation-card{border-radius:12px}
+@media(max-width:760px){.workshops-grid{grid-template-columns:repeat(2,1fr)}.workshop-queue-row{grid-template-columns:8px minmax(0,1fr) 16px;grid-template-areas:"dot info chevron" ". progress ."}.workshop-row-progress{grid-area:progress;width:100%}.production-status-pill{display:none}}
 
 /* Компактный список операций внутри заказа — детали и управление вынесены в раздел "Цеха". */
 .production-compact-hint{padding:9px 12px;border:1px dashed #d8dde5;border-radius:10px;background:#fafbfc;color:#8490a3;font-size:11px}

@@ -364,18 +364,18 @@ function allWorkshopNames(){
 }
 function jsStrArg(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
 function workshopOverviewCardHtml(name){
-  const stat=workshopAnalytics(name);
-  return `<button type="button" class="workshop-card ${stat.overdue>0?'warn':''}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
-    <div class="workshop-card-icon">${workshopIcon(name)}</div>
-    <div class="workshop-card-body">
+  const stat=workshopAnalytics(name),warn=stat.overdue>0||stat.load>=80;
+  return `<button type="button" class="workshop-card ${warn?'warn':''}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
+    <div class="workshop-card-top">
+      <span class="workshop-card-icon">${workshopIcon(name)}</span>
       <h4>${escapeHtml(name)}</h4>
-      <div class="workshop-card-stats">
-        <div><b>${stat.queue.length}</b><span>${escapeHtml(t('queue'))}</span></div>
-        <div><b>${stat.active}</b><span>${escapeHtml(t('prodInProgress'))}</span></div>
-        <div class="${stat.overdue>0?'danger-text':''}"><b>${stat.overdue}</b><span>${escapeHtml(t('overdue'))}</span></div>
-      </div>
-      ${stat.load>=80?`<span class="workshop-card-warning">⚠ ${escapeHtml(t('prodWarnOverloaded'))}</span>`:''}
     </div>
+    <div class="workshop-card-stats">
+      <div><b>${stat.queue.length}</b><span>${escapeHtml(t('queue'))}</span></div>
+      <div><b>${stat.active}</b><span>${escapeHtml(t('prodInProgress'))}</span></div>
+    </div>
+    <div class="workshop-card-bar"><i style="width:${stat.load}%"></i></div>
+    <div class="workshop-card-note">${stat.overdue>0?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:stat.load>=80?`⚠ ${escapeHtml(t('prodWarnOverloaded'))}`:'&nbsp;'}</div>
   </button>`;
 }
 function workshopsOverviewHtml(){
@@ -385,15 +385,36 @@ function workshopsOverviewHtml(){
 }
 function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
+const expandedWorkshopOps=new Set();
+function toggleWorkshopQueueItem(orderId,stepIndex){
+  const key=`${orderId}_${stepIndex}`;
+  if(expandedWorkshopOps.has(key))expandedWorkshopOps.delete(key);else expandedWorkshopOps.add(key);
+  renderWorkshops();
+}
 function workshopQueueItemHtml(row){
-  const op=productionOp(row.order,row.index);
+  const o=row.order,op=productionOp(o,row.index);
   if(!op)return '';
+  const key=`${o.id}_${op.stepIndex}`,expanded=expandedWorkshopOps.has(key);
+  const pct=productionOpPercent(o,op),status=productionStatusClass(op.status);
+  const coverage=productionMaterialCoverage(o,operationMaterials(o,op),productionCompletedQty(o,op));
+  const dClass=orderDeadlineClass(o);
+  const dueNote=dClass==='overdue'?`<span class="workshop-row-danger">· ${escapeHtml(t('overdue')).toLowerCase()}</span>`:dClass==='today'?`<span class="workshop-row-today">· сегодня</span>`:'';
+  const matNote=!coverage.ok?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('missingMaterialsCount')).toLowerCase()}</span>`:'';
   return `<div class="workshop-queue-item">
-    <button type="button" class="workshop-queue-order-link" onclick="goToOrderFromMaterial(event,'${row.order.id}')">
-      <span><b>${escapeHtml(row.order.number||'—')}</b>${row.order.client?` · ${escapeHtml(row.order.client)}`:''}</span>
-      <span class="workshop-queue-due order-deadline ${escapeHtml(orderDeadlineClass(row.order))}">${escapeHtml(formatDeadline(row.order))}</span>
+    <button type="button" class="workshop-queue-row ${status}" onclick="toggleWorkshopQueueItem('${o.id}',${op.stepIndex})">
+      <span class="workshop-row-dot ${status}"></span>
+      <span class="workshop-row-info">
+        <b>${escapeHtml(o.number||'—')}</b>${o.client?`<em> · ${escapeHtml(o.client)}</em>`:''}
+        <small>${escapeHtml(formatDeadline(o))} ${dueNote} ${matNote}</small>
+      </span>
+      <span class="workshop-row-progress"><i><b style="width:${pct}%"></b></i></span>
+      <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
+      <span class="workshop-row-chevron">${expanded?'⌄':'›'}</span>
     </button>
-    ${productionOperationCardHtml(row.order,op)}
+    ${expanded?`<div class="workshop-queue-expanded">
+      <button type="button" class="workshop-queue-order-link" onclick="goToOrderFromMaterial(event,'${o.id}')">${escapeHtml(t('openOrderCard'))} ↗</button>
+      ${productionOperationCardHtml(o,op)}
+    </div>`:''}
   </div>`;
 }
 function workshopDetailHtml(name){
