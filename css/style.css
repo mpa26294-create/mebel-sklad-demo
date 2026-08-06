@@ -3035,22 +3035,29 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 @media(max-width:760px){.order-tech-actions{width:100%;justify-content:stretch}.order-tech-actions .order-tech-cta{width:100%}}
 
 /* Раздел "Цеха": очередь операций по цехам, по всем заказам сразу. */
-.workshops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
-.workshop-card{display:flex;flex-direction:column;gap:10px;padding:14px;border:0;border-radius:12px;background:#f6f7f9;text-align:left;cursor:pointer;transition:background .15s}
-.workshop-card:hover{background:#eef0f3}
-.workshop-card.warn{background:#fff7ed}
-.workshop-card.warn .workshop-card-note{color:#b54708}
-.workshop-card.warn .workshop-card-bar i{background:#f47a00}
-.workshop-card-top{display:flex;align-items:center;gap:8px}
-.workshop-card-icon{font-size:18px}
-.workshop-card-top h4{margin:0;color:#101828;font-size:13px;font-weight:650}
-.workshop-card-stats{display:flex;gap:18px}
-.workshop-card-stats>div{display:flex;flex-direction:column;gap:1px}
-.workshop-card-stats b{color:#101828;font-size:19px;font-weight:600}
-.workshop-card-stats span{color:#8490a3;font-size:10px}
-.workshop-card-bar{height:4px;border-radius:99px;background:#e5e9f0;overflow:hidden}
-.workshop-card-bar i{display:block;height:100%;border-radius:99px;background:#8490a3}
-.workshop-card-note{min-height:13px;color:#8490a3;font-size:11px;font-weight:600}
+.workshops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.workshop-card{position:relative;display:flex;flex-direction:column;gap:16px;padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow);text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+.workshop-card:hover{border-color:#d7dbe2;box-shadow:0 20px 44px rgba(20,24,32,.08);transform:translateY(-1px)}
+.workshop-card.warn{border-color:#f2dfaa}
+.workshop-card.danger{border-color:#f2c9c9}
+.workshop-card-top{display:flex;align-items:center;gap:10px}
+.workshop-card-icon{width:34px;height:34px;flex-shrink:0;border-radius:10px;background:var(--soft);display:grid;place-items:center;font-size:15px}
+.workshop-card-top h4{margin:0;color:var(--text);font-size:13.5px;font-weight:500;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workshop-card-dot{margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--line);flex-shrink:0}
+.workshop-card.busy .workshop-card-dot{background:#8490a3}
+.workshop-card.warn .workshop-card-dot{background:#e0982e}
+.workshop-card.danger .workshop-card-dot{background:var(--redText)}
+.workshop-card-stats{display:flex;border-top:1px solid var(--soft);padding-top:14px}
+.workshop-card-stats>div{flex:1;display:flex;flex-direction:column;gap:3px}
+.workshop-card-stats>div+div{border-left:1px solid var(--soft);padding-left:14px;margin-left:14px}
+.workshop-card-stats b{color:var(--text);font-size:20px;font-weight:500;letter-spacing:-.02em}
+.workshop-card-stats span{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+.workshop-card-bar{height:3px;border-radius:99px;background:var(--soft);overflow:hidden}
+.workshop-card-bar i{display:block;height:100%;border-radius:99px;background:#c3c8d1;transition:width .2s}
+.workshop-card.warn .workshop-card-bar i{background:#e0982e}
+.workshop-card.danger .workshop-card-bar i{background:var(--redText)}
+.workshop-card-note{align-self:flex-start;display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:600;background:var(--yellow);color:var(--yellowText)}
+.workshop-card.danger .workshop-card-note{background:var(--red);color:var(--redText)}
 .workshop-empty{padding:36px 16px;text-align:center;color:#8490a3;font-size:12px;border:1px dashed #e5e9f0;border-radius:14px}
 .workshop-detail-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .workshop-detail-head h3{margin:0;color:#101828;font-size:16px}

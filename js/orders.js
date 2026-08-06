@@ -346,7 +346,7 @@ function workshopAnalytics(stepName){
   const actual=queue.reduce((s,row)=>s+productionActualMinutes(productionOp(row.order,row.index)),0);
   const load=Math.max(0,Math.min(100,Math.round((active/(queue.length||1))*100 + Math.min(40,plan/240))));
   const warnings=[];
-  if(load>=80)warnings.push(`${t('prodWarnOverloaded')} ${stepName}`);
+  if(load>=80&&queue.length>=2)warnings.push(`${t('prodWarnOverloaded')} ${stepName}`);
   if(overdue>0)warnings.push(`${stepName} ${t('prodWarnDelayed')} +${orderTimeText(Math.max(60,actual-plan))}`);
   if(plan>0&&actual>plan*1.35)warnings.push(`${stepName} ${t('prodWarnPlanExceeded')}`);
   return {queue,active,overdue,plan,actual,load,warnings};
@@ -364,18 +364,24 @@ function allWorkshopNames(){
 }
 function jsStrArg(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
 function workshopOverviewCardHtml(name){
-  const stat=workshopAnalytics(name),warn=stat.overdue>0||stat.load>=80;
-  return `<button type="button" class="workshop-card ${warn?'warn':''}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
+  const stat=workshopAnalytics(name);
+  const overdue=stat.overdue>0;
+  const overloaded=!overdue&&stat.queue.length>=2&&stat.load>=80;
+  const busy=!overdue&&!overloaded&&stat.active>0;
+  const cls=overdue?'danger':overloaded?'warn':busy?'busy':'idle';
+  const note=overdue?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:overloaded?`⚠ ${escapeHtml(t('prodWarnOverloaded'))}`:'';
+  return `<button type="button" class="workshop-card ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
     <div class="workshop-card-top">
       <span class="workshop-card-icon">${workshopIcon(name)}</span>
       <h4>${escapeHtml(name)}</h4>
+      <span class="workshop-card-dot"></span>
     </div>
     <div class="workshop-card-stats">
       <div><b>${stat.queue.length}</b><span>${escapeHtml(t('queue'))}</span></div>
       <div><b>${stat.active}</b><span>${escapeHtml(t('prodInProgress'))}</span></div>
     </div>
     <div class="workshop-card-bar"><i style="width:${stat.load}%"></i></div>
-    <div class="workshop-card-note">${stat.overdue>0?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:stat.load>=80?`⚠ ${escapeHtml(t('prodWarnOverloaded'))}`:'&nbsp;'}</div>
+    ${note?`<span class="workshop-card-note">${note}</span>`:''}
   </button>`;
 }
 function workshopsOverviewHtml(){
