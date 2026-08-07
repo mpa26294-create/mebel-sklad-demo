@@ -1,4 +1,4 @@
-// FurniCore app entry file.
+// MOLM app entry file.
 // Основной код пока остаётся в index.html; сюда постепенно переносим модули.
 
 const FURNICORE_BUILD_VERSION = "v6.54 — Local Preview Actions Fix";

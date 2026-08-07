@@ -44,7 +44,7 @@ async function persistAuditToSupabase(options={}){
   auditSyncTimer=null;
   const events=auditLoad();
   const updatedAt=auditSyncLocalUpdatedAt||new Date().toISOString();
-  const payload={article:AUDIT_SYNC_ARTICLE,name:'FurniCore Audit Sync',category:'__system__',subcategory:'audit',quantity:0,unit:'',min_quantity:0,attributes:{events,updatedAt}};
+  const payload={article:AUDIT_SYNC_ARTICLE,name:'MOLM Audit Sync',category:'__system__',subcategory:'audit',quantity:0,unit:'',min_quantity:0,attributes:{events,updatedAt}};
   auditSyncInFlight=true;
   try{
     if(!auditSyncRowId){

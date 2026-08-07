@@ -1,4 +1,4 @@
-// FurniCore UI helpers
+// MOLM UI helpers
 function toggleMobileSidebar() {
   document.body.classList.toggle("sidebar-open");
 }

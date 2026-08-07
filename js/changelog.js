@@ -1,6 +1,25 @@
-// FurniCore changelog data and renderer.
+// MOLM changelog data and renderer.
 (function(){
   const releases = [
+    {
+      version: 'v6.74',
+      title: 'Переименование бренда: FurniCore → MOLM',
+      date: '07.08.2026',
+      description: 'Название приложения "FurniCore" заменено на "MOLM" во всех местах, которые видит пользователь: заголовок вкладки браузера, название приложения в боковой панели (все 3 языка), заголовок и бейдж версии в разделе "История версий", подпись способа оповещения технолога ("Внутри MOLM"). Внутренние технические ключи (article-идентификаторы синхронизации заказов/аудита в Supabase, ключи localStorage, служебные имена полей форм) не менялись, чтобы не потерять уже сохранённые данные.',
+      fixed: [
+        'appTitle (js/translations.js, ru/en/lv): FurniCore → MOLM.',
+        'notificationMethod_internal (ru/en/lv): "Внутри FurniCore" → "Внутри MOLM".',
+        'Заголовок вкладки браузера, заголовок и бейдж версии в "Истории версий" (index.html, js/changelog.js).',
+        'Отображаемое имя системных строк синхронизации в карточке материала ("FurniCore Orders/Audit Sync" → "MOLM Orders/Audit Sync") — сами article-ключи для поиска в Supabase не менялись.'
+      ],
+      testing: [
+        'node --check по всем изменённым файлам; проверено, что старые записи истории версий (описывающие прошлые релизы) оставлены как есть — это исторический журнал, а не текущий брендинг.'
+      ],
+      notes: [
+        'Правка только на тестовой ветке dev, main не затронут.',
+        'В коде остались нейтральные внутренние идентификаторы с "furnicore" (ключи localStorage, имена полей форм для защиты от автозаполнения, имя файла экспорта JSON/CSV) — они не видны пользователю; можно переименовать отдельно, если нужно на 100%.'
+      ]
+    },
     {
       version: 'v6.73',
       title: 'Цеха: убран дублирующийся заголовок в карточке цеха',
@@ -680,7 +699,7 @@
     if(!list) return;
     const latest = releases[0];
     const badge = document.getElementById('changelogCurrentVersion');
-    if(badge) badge.textContent = latest ? `FurniCore ${releaseLabel(latest)}` : 'FurniCore';
+    if(badge) badge.textContent = latest ? `MOLM ${releaseLabel(latest)}` : 'MOLM';
     const summary = document.getElementById('changelogSummary');
     if(summary){
       summary.innerHTML = `<div class="changelog-stat"><small>Последняя версия</small><b>${esc(latest?.version || '—')}</b><span>${esc(latest?.title || '')}</span></div><div class="changelog-stat"><small>Дата выпуска</small><b>${esc(latest?.date || '—')}</b><span>актуальный релиз</span></div><div class="changelog-stat"><small>Всего записей</small><b>${releases.length}</b><span>новые версии сверху</span></div>`;
