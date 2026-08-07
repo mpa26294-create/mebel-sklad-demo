@@ -38,6 +38,7 @@ function switchSection(sectionId){
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===sectionId));
   if(sectionId==='settings'&&typeof lockTelegramSettings==='function')lockTelegramSettings();
+  if(sectionId==='settings'&&typeof loadProfileSettingsForm==='function')loadProfileSettingsForm();
   if(sectionId==='orders'&&typeof renderOrders==='function')renderOrders();
   if(sectionId==='workshops'&&typeof renderWorkshops==='function')renderWorkshops();
   if(sectionId==='history'&&typeof renderSiteHistory==='function')renderSiteHistory();

@@ -8,6 +8,7 @@ function renderAuthBox(){
     const email=currentUser.email||'user';
     if(sideBox)sideBox.innerHTML=`<div class="user"><div class="avatar">${email.slice(0,1).toUpperCase()}</div><div><b>${email}</b><span>${t('accessOk')}</span></div></div><button class="btn small" style="margin-top:10px;width:100%" onclick="logoutUser()">${t('logout')}</button>${sideLangButtons()}`;
     if(panel)panel.innerHTML='';
+    if(typeof renderTopbarProfile==='function')renderTopbarProfile();
     return;
   }
   if(sideBox)sideBox.innerHTML=`<div class="auth-title">${t('login')}</div><div class="auth-line">${t('loginHint')}</div>${sideLangButtons()}`;
@@ -91,6 +92,105 @@ async function checkSession(){
   renderAuthBox();
   if(currentUser){setAuthLocked(false);await startAppAfterLogin()}else setAuthLocked(true);
 }
+
+/* v6.83: top-right profile widget (name/role + notification bell) */
+function profileDisplayName(){
+  const saved=(localStorage.getItem('furnicore_profile_name')||'').trim();
+  if(saved)return saved;
+  return currentUser?.email||t('unknownUser');
+}
+function profileDisplayRole(){
+  return (localStorage.getItem('furnicore_profile_role')||'').trim();
+}
+function profileAvatarInitial(){
+  const name=profileDisplayName();
+  return (name||'?').trim().slice(0,1).toUpperCase();
+}
+function loadProfileSettingsForm(){
+  const nameInput=document.getElementById('profileNameInput');
+  const roleInput=document.getElementById('profileRoleInput');
+  if(nameInput)nameInput.value=localStorage.getItem('furnicore_profile_name')||'';
+  if(roleInput)roleInput.value=localStorage.getItem('furnicore_profile_role')||'';
+}
+function saveProfileSettings(){
+  const name=(document.getElementById('profileNameInput')?.value||'').trim();
+  const role=(document.getElementById('profileRoleInput')?.value||'').trim();
+  if(name)localStorage.setItem('furnicore_profile_name',name);else localStorage.removeItem('furnicore_profile_name');
+  if(role)localStorage.setItem('furnicore_profile_role',role);else localStorage.removeItem('furnicore_profile_role');
+  if(typeof renderTopbarProfile==='function')renderTopbarProfile();
+  toast(t('profileSaved'));
+}
+function unreadNotificationCount(){
+  return (data.notifications||[]).filter(n=>!n.read).length;
+}
+function renderTopbarProfile(){
+  const widget=document.getElementById('topbarProfile');
+  if(!widget)return;
+  const badge=document.getElementById('tpBellBadge');
+  const count=unreadNotificationCount();
+  if(badge){
+    if(count>0){badge.textContent=count>99?'99+':String(count);badge.style.display='';}
+    else{badge.textContent='';badge.style.display='none';}
+  }
+  const avatar=document.getElementById('tpAvatar');if(avatar)avatar.textContent=profileAvatarInitial();
+  const nameEl=document.getElementById('tpUserName');if(nameEl)nameEl.textContent=profileDisplayName();
+  const roleEl=document.getElementById('tpUserRole');if(roleEl)roleEl.textContent=profileDisplayRole()||t('roleNotSet');
+  if(document.getElementById('tpNotifPanel')?.classList.contains('show'))renderNotificationsPanelList();
+  if(document.getElementById('tpProfileMenu')?.classList.contains('show'))renderProfileMenu();
+}
+function closeNotificationsPanel(){document.getElementById('tpNotifPanel')?.classList.remove('show')}
+function closeProfileMenu(){document.getElementById('tpProfileMenu')?.classList.remove('show')}
+function toggleNotificationsPanel(e){
+  if(e)e.stopPropagation();
+  const panel=document.getElementById('tpNotifPanel');
+  if(!panel)return;
+  closeProfileMenu();
+  const open=panel.classList.contains('show');
+  panel.classList.toggle('show',!open);
+  if(!open)renderNotificationsPanelList();
+}
+function toggleProfileMenu(e){
+  if(e)e.stopPropagation();
+  const menu=document.getElementById('tpProfileMenu');
+  if(!menu)return;
+  closeNotificationsPanel();
+  const open=menu.classList.contains('show');
+  menu.classList.toggle('show',!open);
+  if(!open)renderProfileMenu();
+}
+function renderProfileMenu(){
+  const menu=document.getElementById('tpProfileMenu');
+  if(!menu)return;
+  menu.innerHTML=`<button type="button" onclick="closeProfileMenu();if(typeof switchSection==='function')switchSection('settings')">${escapeHtml(t('settings'))}</button><button type="button" onclick="closeProfileMenu();logoutUser()">${escapeHtml(t('logout'))}</button>`;
+}
+function renderNotificationsPanelList(){
+  const panel=document.getElementById('tpNotifPanel');
+  if(!panel)return;
+  const list=(data.notifications||[]).slice(0,30);
+  const unread=list.filter(n=>!n.read).length;
+  const head=`<div class="tp-notif-head"><b>${escapeHtml(t('notificationsTitle'))}</b>${unread>0?`<button type="button" onclick="markAllNotificationsRead()">${escapeHtml(t('markAllRead'))}</button>`:''}</div>`;
+  const body=list.length?list.map(n=>`<button type="button" class="tp-notif-item ${n.read?'':'unread'}" onclick="openNotification('${n.id}')"><span class="tp-notif-dot"></span><span class="tp-notif-body"><b>${escapeHtml(n.title||'')}</b><small>${escapeHtml(n.message||'')}</small><em>${escapeHtml(typeof productionDateTimeText==='function'?productionDateTimeText(n.createdAt):(n.createdAt||''))}</em></span></button>`).join(''):`<div class="tp-notif-empty">${escapeHtml(t('noNotifications'))}</div>`;
+  panel.innerHTML=head+`<div class="tp-notif-list">${body}</div>`;
+}
+function markAllNotificationsRead(){
+  (data.notifications||[]).forEach(n=>n.read=true);
+  save();
+  renderNotificationsPanelList();
+  renderTopbarProfile();
+}
+function openNotification(id){
+  const n=(data.notifications||[]).find(x=>String(x.id)===String(id));
+  if(!n)return;
+  n.read=true;
+  save();
+  renderTopbarProfile();
+  closeNotificationsPanel();
+  if(n.orderId&&typeof goToOrderFromMaterial==='function')goToOrderFromMaterial(null,n.orderId);
+}
+if(typeof document!=='undefined')document.addEventListener('click',(e)=>{
+  const widget=document.getElementById('topbarProfile');
+  if(widget&&!widget.contains(e.target)){closeNotificationsPanel();closeProfileMenu();}
+});
 
 /* v6.29: fixed one-screen Apple foam flow */
 (function(){

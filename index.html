@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=6.82" />
+  <link rel="stylesheet" href="css/style.css?v=6.83" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -24,8 +24,26 @@
     <button data-section="settings" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.5 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.2-.5H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .5-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.5.7.9.9.37.18.78.28 1.2.28h.5a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.82z"/></svg></span> Настройки</button>
     <button data-section="changelog" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16"/><path d="M4 12h10"/><path d="M4 19h16"/><path d="M17 9l3 3-3 3"/></svg></span> История версий</button>
   </div>
-  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.82 — RU/EN/LV: цеха и настройки языка</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
+  <div class="sidebar-footer"><div id="authBox" class="auth-card"><div class="auth-line">Проверка входа...</div></div><div class="product-footer"><b>v6.83 — профиль и уведомления сверху справа</b><span>Developed by</span><strong>Māris Pabērzs</strong><em>© 2026</em></div></div>
 </aside>
+
+  <div class="topbar-profile" id="topbarProfile">
+    <div class="tp-bell-wrap">
+      <button type="button" class="tp-bell" id="tpBellBtn" onclick="toggleNotificationsPanel(event)" aria-label="Уведомления" title="Уведомления">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="tp-bell-badge" id="tpBellBadge" style="display:none"></span>
+      </button>
+      <div class="tp-notif-panel" id="tpNotifPanel"></div>
+    </div>
+    <div class="tp-user-wrap">
+      <button type="button" class="tp-user" id="tpUserBtn" onclick="toggleProfileMenu(event)">
+        <span class="tp-avatar" id="tpAvatar">?</span>
+        <span class="tp-user-info"><b id="tpUserName">—</b><small id="tpUserRole">—</small></span>
+        <svg class="tp-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="tp-profile-menu" id="tpProfileMenu"></div>
+    </div>
+  </div>
 
   <main class="main">
     <section id="stock" class="section active">
@@ -96,13 +114,22 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.82</span></div></div>
+      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.83</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
 
     <section id="settings" class="section">
       <div class="topbar"><div class="title"><h2>Настройки</h2><p>Простое обслуживание данных</p></div></div>
+      <div class="panel" style="padding:24px;max-width:720px">
+        <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> <span id="profileSettingsTitle">Профиль</span></h3>
+        <p class="muted" id="profileSettingsHint" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Имя и роль показываются в правом верхнем углу приложения.</p>
+        <div class="form-grid">
+          <div class="field"><label id="profileNameLabel">Отображаемое имя</label><input class="input" id="profileNameInput" placeholder="Например, Мартин"></div>
+          <div class="field"><label id="profileRoleLabel">Роль</label><input class="input" id="profileRoleInput" placeholder="Например, Администратор"></div>
+        </div>
+        <button class="btn primary" id="saveProfileSettingsBtn" type="button" onclick="saveProfileSettings()" style="margin-top:16px">Сохранить</button>
+      </div>
       <div class="panel" style="padding:24px;max-width:720px">
         <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span id="settingsLangTitle">Язык интерфейса</span></h3>
         <p class="muted" id="settingsLangHint" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Меняет язык всего приложения. Выбор сохраняется в этом браузере.</p>
@@ -131,12 +158,12 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=6.82"></script>
-<script src="js/ui.js?v=6.38"></script>
+<script src="js/changelog.js?v=6.83"></script>
+<script src="js/ui.js?v=6.39"></script>
 <script src="js/app.js?v=6.46"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.9"></script>
-<script src="js/translations.js?v=6.3"></script>
+<script src="js/translations.js?v=6.4"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -145,9 +172,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.82 — RU/EN/LV: цеха и настройки языка';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.83 — профиль и уведомления сверху справа';
 </script>
-<script src="js/auth.js?v=6.1"></script>
+<script src="js/auth.js?v=6.2"></script>
 <script src="js/materials.js?v=6.41"></script>
 <script src="js/orders.js?v=6.39"></script>
 <script>

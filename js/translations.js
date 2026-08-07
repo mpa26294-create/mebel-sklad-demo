@@ -119,7 +119,9 @@ Object.assign(I18N.ru,{
   infoDiffText:'Факт минус План. Положительное число (красным) — операция отстаёт от норматива. Ноль или отрицательное (зелёным) — укладывается в норматив или идёт быстрее.',
   infoMaterialsText:'Показывает, хватит ли на складе материалов, привязанных к этому цеху, чтобы закрыть всю оставшуюся часть партии. «Списано материалов» — сколько комплектов уже списано под уже подтверждённые изделия, из скольких потребуется всего на заказ.',
   infoSessionsText:'История подтверждений выполнения по этой операции: сколько изделий сдано за один раз, когда начата и завершена смена, кто выполнил.',
-  missingMaterialsWarningTitle:'Не хватает материалов',manageOpsInWorkshopsHint:'Управление операциями (старт/пауза/завершение, материалы) — в разделе «Цеха». Здесь только сводка по заказу.'
+  missingMaterialsWarningTitle:'Не хватает материалов',manageOpsInWorkshopsHint:'Управление операциями (старт/пауза/завершение, материалы) — в разделе «Цеха». Здесь только сводка по заказу.',
+  profileSettingsTitle:'Профиль',profileSettingsHint:'Имя и роль показываются в правом верхнем углу приложения.',profileNameLabel:'Отображаемое имя',profileRoleLabel:'Роль',profileNamePlaceholder:'Например, Мартин',profileRolePlaceholder:'Например, Администратор',profileSaved:'Профиль сохранён',roleNotSet:'Роль не указана',
+  notificationsTitle:'Уведомления',markAllRead:'Прочитать все',noNotifications:'Уведомлений пока нет'
 });
 Object.assign(I18N.en,{
   workshopRiskWarningPrefix:'risk of missing the deadline —',orderWordOne:'order',orderWordMany:'orders',workshopRiskShort:'at risk of delay',
@@ -150,7 +152,9 @@ Object.assign(I18N.en,{
   infoDiffText:'Actual minus Plan. A positive number (red) means the operation is behind schedule. Zero or negative (green) means it is on schedule or ahead.',
   infoMaterialsText:'Shows whether there is enough material in stock, assigned to this workshop, to finish the remaining part of the batch. "Materials written off" — how many sets have already been written off for already confirmed items, out of how many are needed for the whole order.',
   infoSessionsText:'The history of completion confirmations for this operation: how many items were submitted at once, when the shift started and ended, who did it.',
-  missingMaterialsWarningTitle:'Missing materials',manageOpsInWorkshopsHint:'Managing operations (start/pause/complete, materials) is in the "Workshops" section. This is just an order summary.'
+  missingMaterialsWarningTitle:'Missing materials',manageOpsInWorkshopsHint:'Managing operations (start/pause/complete, materials) is in the "Workshops" section. This is just an order summary.',
+  profileSettingsTitle:'Profile',profileSettingsHint:'Your name and role are shown in the top-right corner of the app.',profileNameLabel:'Display name',profileRoleLabel:'Role',profileNamePlaceholder:'E.g. Martin',profileRolePlaceholder:'E.g. Administrator',profileSaved:'Profile saved',roleNotSet:'Role not set',
+  notificationsTitle:'Notifications',markAllRead:'Mark all read',noNotifications:'No notifications yet'
 });
 Object.assign(I18N.lv,{
   workshopRiskWarningPrefix:'risks nepaspēt termiņā —',orderWordOne:'pasūtījums',orderWordMany:'pasūtījumi',workshopRiskShort:'kavēšanās risks',
@@ -181,7 +185,9 @@ Object.assign(I18N.lv,{
   infoDiffText:'Fakts mīnus Plāns. Pozitīvs skaitlis (sarkans) — operācija atpaliek no normatīva. Nulle vai negatīvs (zaļš) — atbilst normatīvam vai ir ātrāka.',
   infoMaterialsText:'Rāda, vai noliktavā pietiek šim ceham piesaistīto materiālu, lai pabeigtu atlikušo partijas daļu. "Norakstīti materiāli" — cik komplektu jau ir norakstīti par jau apstiprinātajiem izstrādājumiem, no cik nepieciešams visam pasūtījumam.',
   infoSessionsText:'Šīs operācijas izpildes apstiprinājumu vēsture: cik izstrādājumu nodots vienā reizē, kad maiņa sākta un beigta, kas to izpildīja.',
-  missingMaterialsWarningTitle:'Nepietiek materiālu',manageOpsInWorkshopsHint:'Operāciju pārvaldība (sākt/pauzēt/pabeigt, materiāli) ir sadaļā "Cehi". Šeit ir tikai pasūtījuma kopsavilkums.'
+  missingMaterialsWarningTitle:'Nepietiek materiālu',manageOpsInWorkshopsHint:'Operāciju pārvaldība (sākt/pauzēt/pabeigt, materiāli) ir sadaļā "Cehi". Šeit ir tikai pasūtījuma kopsavilkums.',
+  profileSettingsTitle:'Profils',profileSettingsHint:'Vārds un loma tiek rādīti lietotnes augšējā labajā stūrī.',profileNameLabel:'Attēlotais vārds',profileRoleLabel:'Loma',profileNamePlaceholder:'Piemēram, Mārtiņš',profileRolePlaceholder:'Piemēram, Administrators',profileSaved:'Profils saglabāts',roleNotSet:'Loma nav norādīta',
+  notificationsTitle:'Paziņojumi',markAllRead:'Atzīmēt visus kā lasītus',noNotifications:'Paziņojumu vēl nav'
 });
 let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
@@ -223,6 +229,9 @@ function applyI18n(){
   if(typeof syncQuickOperationUI==='function')syncQuickOperationUI(); const toolBtns=document.querySelectorAll('.toolbar .btn'); if(toolBtns[0]) toolBtns[0].textContent=t('filters'); if(toolBtns[1]) toolBtns[1].textContent=t('reset');
   const si=document.getElementById('exportImportTitle'); if(si) si.lastChild.textContent=' '+t('exportImport'); const sp=document.getElementById('exportImportHint'); if(sp) sp.textContent=t('jsonHint'); const sb=document.querySelectorAll('#settings .actions .btn'); if(sb[0]) sb[0].textContent=t('downloadJson'); if(sb[1]) sb[1].childNodes[0].textContent=t('uploadJson'); if(sb[2]) sb[2].textContent=t('wipe');
   const langTitle=document.getElementById('settingsLangTitle'); if(langTitle) langTitle.textContent=t('languageLabel'); const langHint=document.getElementById('settingsLangHint'); if(langHint) langHint.textContent=t('languageHint'); const langSwitchBox=document.getElementById('settingsLangSwitch'); if(langSwitchBox&&typeof sideLangButtons==='function') langSwitchBox.innerHTML=sideLangButtons();
+  const profTitle=document.getElementById('profileSettingsTitle'); if(profTitle) profTitle.textContent=t('profileSettingsTitle'); const profHint=document.getElementById('profileSettingsHint'); if(profHint) profHint.textContent=t('profileSettingsHint'); const profNameLabel=document.getElementById('profileNameLabel'); if(profNameLabel) profNameLabel.textContent=t('profileNameLabel'); const profRoleLabel=document.getElementById('profileRoleLabel'); if(profRoleLabel) profRoleLabel.textContent=t('profileRoleLabel'); const profNameInput=document.getElementById('profileNameInput'); if(profNameInput) profNameInput.placeholder=t('profileNamePlaceholder'); const profRoleInput=document.getElementById('profileRoleInput'); if(profRoleInput) profRoleInput.placeholder=t('profileRolePlaceholder'); const saveProfBtn=document.getElementById('saveProfileSettingsBtn'); if(saveProfBtn) saveProfBtn.textContent=t('save');
+  const bellBtn=document.getElementById('tpBellBtn'); if(bellBtn){bellBtn.setAttribute('aria-label',t('notificationsTitle'));bellBtn.setAttribute('title',t('notificationsTitle'));}
+  if(typeof renderTopbarProfile==='function')renderTopbarProfile();
   renderFilters(); updateSubFilter();
   const ph={topSearchInput:'searchTop',searchInput:'searchFull',quickSku:'skuIn',quickQty:'number',loginEmail:'email',loginPassword:'password'}; Object.entries(ph).forEach(([id,key])=>{ const el=document.getElementById(id); if(el) el.placeholder=t(key); });
   const qInfo=document.getElementById('quickInfo'); if(qInfo && !document.getElementById('quickSku')?.value) qInfo.textContent=t('enterSku');
