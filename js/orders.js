@@ -356,6 +356,7 @@ function workshopAnalytics(stepName){
 // по цеху, а не по заказу — рабочему цеха не нужно открывать заказы по одному, чтобы увидеть
 // свою очередь. Переиспользует productionOperationCardHtml/workshopAnalytics без дублирования логики.
 let selectedWorkshopName='';
+let workshopsStatusFilter='all';
 function allWorkshopNames(){
   const names=[];
   DEFAULT_ORDER_STEPS.forEach(s=>{if(s.name&&!names.includes(s.name))names.push(s.name)});
@@ -476,10 +477,27 @@ function refreshActiveElapsedTimers(){
   });
 }
 if(typeof window!=='undefined')setInterval(()=>{if(typeof refreshActiveElapsedTimers==='function')refreshActiveElapsedTimers()},30000);
+function workshopMatchesStatusFilter(name,filter){
+  if(!filter||filter==='all')return true;
+  const stat=workshopAnalytics(name);
+  if(filter==='overdue')return stat.overdue>0;
+  const {running,paused}=workshopOpStatusCounts(stat.queue);
+  if(filter==='running')return running>0;
+  if(filter==='paused')return paused>0;
+  if(filter==='idle')return running===0&&paused===0;
+  return true;
+}
+function setWorkshopsStatusFilter(key){workshopsStatusFilter=key;renderWorkshops()}
+function workshopsFilterChipsHtml(){
+  const items=[['all','Все'],['running','В работе'],['paused','Пауза'],['idle','Ожидает'],['overdue','Просрочено']];
+  return `<div class="quick-filter-row" id="workshopsFilterRow">${items.map(([key,label])=>`<button type="button" class="filter-chip${workshopsStatusFilter===key?' active':''}" data-filter="${key}" onclick="setWorkshopsStatusFilter('${key}')">${escapeHtml(label)}</button>`).join('')}</div>`;
+}
 function workshopsOverviewHtml(){
   const names=allWorkshopNames();
   if(!names.length)return `<div class="workshop-empty">Цехов пока нет — добавьте этапы (столярка, швейный цех и т.д.) в технологию заказов.</div>`;
-  return `${workshopsSummaryBarHtml(names)}${workshopsActiveNowHtml()}<div class="workshops-list-head"><span></span><span>Цех</span><span></span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${names.map(workshopOverviewRowHtml).join('')}</div>`;
+  const filtered=names.filter(n=>workshopMatchesStatusFilter(n,workshopsStatusFilter));
+  const list=filtered.length?filtered.map(workshopOverviewRowHtml).join(''):`<div class="workshop-empty">Нет цехов с таким статусом</div>`;
+  return `${workshopsSummaryBarHtml(names)}${workshopsActiveNowHtml()}${workshopsFilterChipsHtml()}<div class="workshops-list-head"><span></span><span>Цех</span><span></span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${list}</div>`;
 }
 function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
