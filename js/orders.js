@@ -363,31 +363,52 @@ function allWorkshopNames(){
   return names;
 }
 function jsStrArg(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
-function workshopOverviewCardHtml(name){
+function workshopStatusBadgeHtml(stat){
+  const busy=stat.active>0;
+  return `<span class="production-status-pill${busy?' running':''}">${busy?escapeHtml(t('prodStatusRunning')):escapeHtml(t('prodQueueWaiting'))}</span>`;
+}
+function workshopsStatBarHtml(stat){
+  return `<div class="workshops-stat-bar">
+    <div><span>📋</span><div><small>${escapeHtml(t('queue'))}</small><b>${stat.queue}</b></div></div>
+    <div><span>▶</span><div><small>${escapeHtml(t('prodInProgress'))}</small><b>${stat.active}</b></div></div>
+    <div><span>⏱</span><div><small>${escapeHtml(t('plannedTime'))}</small><b>${stat.plan} ${escapeHtml(t('minutesShort'))}</b></div></div>
+    <div><span>⏱</span><div><small>${escapeHtml(t('actualTime'))}</small><b>${stat.actual} ${escapeHtml(t('minutesShort'))}</b></div></div>
+    <div><span>⚠</span><div><small>${escapeHtml(t('overdue'))}</small><b class="${stat.overdue?'danger-text':''}">${stat.overdue}</b></div></div>
+    <div><span>📈</span><div><small>${escapeHtml(t('prodLoad'))}</small><b>${stat.load}%</b></div></div>
+  </div>`;
+}
+function workshopsSummaryBarHtml(names){
+  const stats=names.map(n=>workshopAnalytics(n));
+  const queue=stats.reduce((s,x)=>s+x.queue.length,0);
+  const active=stats.reduce((s,x)=>s+x.active,0);
+  const plan=stats.reduce((s,x)=>s+x.plan,0);
+  const actual=stats.reduce((s,x)=>s+x.actual,0);
+  const overdue=stats.reduce((s,x)=>s+x.overdue,0);
+  const load=stats.length?Math.round(stats.reduce((s,x)=>s+x.load,0)/stats.length):0;
+  return workshopsStatBarHtml({queue,active,plan,actual,overdue,load});
+}
+function workshopOverviewRowHtml(name){
   const stat=workshopAnalytics(name);
   const overdue=stat.overdue>0;
   const overloaded=!overdue&&stat.queue.length>=2&&stat.load>=80;
-  const busy=!overdue&&!overloaded&&stat.active>0;
-  const cls=overdue?'danger':overloaded?'warn':busy?'busy':'idle';
+  const cls=overdue?'danger':overloaded?'warn':'';
   const note=overdue?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:overloaded?`⚠ ${escapeHtml(t('prodWarnOverloaded'))}`:'';
-  return `<button type="button" class="workshop-card ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
-    <div class="workshop-card-top">
-      <span class="workshop-card-icon">${workshopIcon(name)}</span>
-      <h4>${escapeHtml(name)}</h4>
-      <span class="workshop-card-dot"></span>
-    </div>
-    <div class="workshop-card-stats">
-      <div><b>${stat.queue.length}</b><span>${escapeHtml(t('queue'))}</span></div>
-      <div><b>${stat.active}</b><span>${escapeHtml(t('prodInProgress'))}</span></div>
-    </div>
-    <div class="workshop-card-bar"><i style="width:${stat.load}%"></i></div>
-    ${note?`<span class="workshop-card-note">${note}</span>`:''}
+  return `<button type="button" class="workshop-list-row ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
+    <span class="workshop-list-row-icon">${workshopIcon(name)}</span>
+    <span class="workshop-list-row-name">
+      <b>${escapeHtml(name)}</b>
+      ${workshopStatusBadgeHtml(stat)}
+    </span>
+    <span class="workshop-list-row-stat"><b>${stat.queue.length}</b><small>${escapeHtml(t('queue'))}</small></span>
+    <span class="workshop-list-row-stat"><b>${stat.active}</b><small>${escapeHtml(t('prodInProgress'))}</small></span>
+    <span class="workshop-list-row-note">${note}</span>
+    <span class="workshop-list-row-arrow">›</span>
   </button>`;
 }
 function workshopsOverviewHtml(){
   const names=allWorkshopNames();
   if(!names.length)return `<div class="workshop-empty">Цехов пока нет — добавьте этапы (столярка, швейный цех и т.д.) в технологию заказов.</div>`;
-  return `<div class="workshops-grid">${names.map(workshopOverviewCardHtml).join('')}</div>`;
+  return `${workshopsSummaryBarHtml(names)}<div class="workshops-list">${names.map(workshopOverviewRowHtml).join('')}</div>`;
 }
 function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
@@ -426,18 +447,16 @@ function workshopQueueItemHtml(row){
 function workshopDetailHtml(name){
   const stat=workshopAnalytics(name);
   const cards=stat.queue.map(workshopQueueItemHtml).join('');
-  return `<div class="workshop-detail-head">
-      <button type="button" class="btn small" onclick="closeWorkshopDetail()">← ${escapeHtml(t('back'))}</button>
+  return `<div class="workshop-breadcrumb">
+      <button type="button" onclick="closeWorkshopDetail()">Цеха</button>
+      <span class="workshop-breadcrumb-sep">›</span>
+      <span>${escapeHtml(name)}</span>
+    </div>
+    <div class="workshop-detail-head">
       <h3>${workshopIcon(name)} ${escapeHtml(name)}</h3>
+      ${workshopStatusBadgeHtml(stat)}
     </div>
-    <div class="production-kpi-grid">
-      <div class="production-kpi"><span>📋</span><small>${escapeHtml(t('queue'))}</small><b>${stat.queue.length}</b></div>
-      <div class="production-kpi"><span>▶</span><small>${escapeHtml(t('prodInProgress'))}</small><b>${stat.active}</b></div>
-      <div class="production-kpi"><span>⏱</span><small>${escapeHtml(t('plannedTime'))}</small><b>${stat.plan} ${escapeHtml(t('minutesShort'))}</b></div>
-      <div class="production-kpi"><span>⏱</span><small>${escapeHtml(t('actualTime'))}</small><b>${stat.actual} ${escapeHtml(t('minutesShort'))}</b></div>
-      <div class="production-kpi"><span>⚠</span><small>${escapeHtml(t('overdue'))}</small><b class="${stat.overdue?'danger-text':''}">${stat.overdue}</b></div>
-      <div class="production-kpi"><span>📈</span><small>${escapeHtml(t('prodLoad'))}</small><b>${stat.load}%</b></div>
-    </div>
+    ${workshopsStatBarHtml({queue:stat.queue.length,active:stat.active,plan:stat.plan,actual:stat.actual,overdue:stat.overdue,load:stat.load})}
     ${stat.warnings.length?`<div class="production-warnings">${stat.warnings.map(w=>`<span>⚠ ${escapeHtml(w)}</span>`).join('')}</div>`:''}
     <div class="workshop-queue-list">${cards||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`}</div>`;
 }
