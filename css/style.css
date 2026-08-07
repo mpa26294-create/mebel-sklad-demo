@@ -3057,11 +3057,9 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-list-row.danger .workshop-list-row-note{background:var(--red);color:var(--redText)}
 .workshop-list-row-arrow{color:#98a2b3;font-size:16px;text-align:center}
 .workshop-empty{padding:36px 16px;text-align:center;color:#8490a3;font-size:12px;border:1px dashed #e5e9f0;border-radius:14px}
-.workshop-breadcrumb{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px}
-.workshop-breadcrumb button{padding:0;border:0;background:none;color:#175cd3;font-size:12px;font-weight:650;cursor:pointer}
-.workshop-breadcrumb-sep{color:#98a2b3}
-.workshop-breadcrumb>span:last-child{color:#8490a3}
 .workshop-detail-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.workshop-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:12.5px;font-weight:650;cursor:pointer;white-space:nowrap}
+.workshop-detail-sep{width:1px;height:16px;background:#e5e9f0;flex-shrink:0}
 .workshop-detail-head h3{margin:0;color:#101828;font-size:16px}
 .workshop-queue-list{display:flex;flex-direction:column;gap:8px;margin-top:16px}
 .workshop-queue-item{display:flex;flex-direction:column;border:0.5px solid #e5e9f0;border-radius:12px;overflow:hidden}

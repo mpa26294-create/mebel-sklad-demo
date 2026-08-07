@@ -447,12 +447,9 @@ function workshopQueueItemHtml(row){
 function workshopDetailHtml(name){
   const stat=workshopAnalytics(name);
   const cards=stat.queue.map(workshopQueueItemHtml).join('');
-  return `<div class="workshop-breadcrumb">
-      <button type="button" onclick="closeWorkshopDetail()">Цеха</button>
-      <span class="workshop-breadcrumb-sep">›</span>
-      <span>${escapeHtml(name)}</span>
-    </div>
-    <div class="workshop-detail-head">
+  return `<div class="workshop-detail-head">
+      <button type="button" class="workshop-back-link" onclick="closeWorkshopDetail()">‹ Цеха</button>
+      <span class="workshop-detail-sep"></span>
       <h3>${workshopIcon(name)} ${escapeHtml(name)}</h3>
       ${workshopStatusBadgeHtml(stat)}
     </div>
@@ -464,6 +461,8 @@ function renderWorkshops(){
   const el=document.getElementById('workshopsContent');
   if(!el)return;
   el.innerHTML=selectedWorkshopName?workshopDetailHtml(selectedWorkshopName):workshopsOverviewHtml();
+  const desc=document.getElementById('workshopsTopbarDesc');
+  if(desc)desc.textContent=selectedWorkshopName?`Очередь операций — цех «${selectedWorkshopName}»`:'Очередь операций по цехам — по всем заказам сразу';
 }
 function productionWarnings(o){
   const names=[...new Set(orderSteps(o).filter(s=>Number(s.minutes||0)>0).map(s=>s.name).filter(Boolean))],list=[];
