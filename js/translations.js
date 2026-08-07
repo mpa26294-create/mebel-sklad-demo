@@ -87,6 +87,102 @@ Object.assign(I18N.lv,{saveAndContinueLater:'Saglabāt un turpināt vēlāk',tec
 Object.assign(I18N.ru,{catEcoLeather:'Экокожа',catLeather:'Кожа',hintEcoLeather:'рулоны, цвет, коллекция',hintLeather:'площадь, цвет, коллекция'});
 Object.assign(I18N.en,{catEcoLeather:'Eco leather',catLeather:'Leather',hintEcoLeather:'rolls, color, collection',hintLeather:'area, color, collection'});
 Object.assign(I18N.lv,{catEcoLeather:'Ekoāda',catLeather:'Āda',hintEcoLeather:'ruļļi, krāsa, kolekcija',hintLeather:'platība, krāsa, kolekcija'});
+Object.assign(I18N.ru,{workshops:'Цеха',changelog:'История версий',languageLabel:'Язык интерфейса',languageHint:'Меняет язык всего приложения. Выбор сохраняется в этом браузере.'});
+Object.assign(I18N.en,{workshops:'Workshops',changelog:'Release notes',languageLabel:'Interface language',languageHint:'Changes the language of the whole app. The choice is saved in this browser.'});
+Object.assign(I18N.lv,{workshops:'Cehi',changelog:'Versiju vēsture',languageLabel:'Saskarnes valoda',languageHint:'Maina visas lietotnes valodu. Izvēle tiek saglabāta šajā pārlūkā.'});
+Object.assign(I18N.ru,{
+  workshopRiskWarningPrefix:'риск не успеть к сроку —',orderWordOne:'заказ',orderWordMany:'заказ(ов)',workshopRiskShort:'риск не успеть',
+  gotIt:'Понятно',explanation:'Пояснение',
+  startedAtPrefix:'Начато',nothingActiveNow:'Сейчас ничего не выполняется',activeNowHeading:'Сейчас в работе',doneTodayLabel:'Сделано сегодня',
+  filterAtRisk:'Риск срыва',
+  loadByWorkshopTitle:'📊 Загрузка по цехам',loadCapacityHintPrefix:'План к фонду',loadCapacityHintSuffix:'ч/нед на цех (5 дней × 8 ч)',
+  noWorkshopsYet:'Цехов пока нет — добавьте этапы (столярка, швейный цех и т.д.) в технологию заказов.',noWorkshopsForFilter:'Нет цехов с таким статусом',workshopColumnHeader:'Цех',
+  dueTodayNote:'сегодня',etaApprox:'готово ≈',backToWorkshops:'‹ Цеха',
+  workshopQueueForNamePrefix:'Очередь операций — цех',workshopQueueAllDesc:'Очередь операций по цехам — по всем заказам сразу',
+  materialsNotAssignedToWorkshop:'Материалы для этого цеха не указаны',lastWriteOffLabel:'Последнее списание',unitsGenitive:'изделий',materialsWrittenOffLabel:'Списано материалов',setsWord:'комплектов',
+  backToAllWorkshops:'← Все цеха',undoWriteOff:'↶ Отменить списание',
+  partialCompleteHintPrefix:'Если указать меньше остатка, операция останется в работе. Полностью завершится только при',
+  changeQuantity:'Изменить количество',confirmWriteOffTitle:'Подтверждение списания',insufficientMaterialTitle:'Недостаточно материала',
+  completedMsgDone:'выполнено',materialsAutoWrittenOff:'материалы списаны автоматически',positionsWord:'поз.',
+  noWriteOffsToUndo:'Списаний для отмены нет',confirmUndoWriteOffPrefix:'Отменить последнее списание',operationWord:'операция',
+  undoneLastWriteOff:'Отменено последнее списание',writeOffCancelledForOrder:'Отмена списания по заказу',returnedWord:'возвращено',materialsWriteOffUndone:'Отменено списание материалов',
+  loadTitleFull:'Загрузка цеха',planMinTitle:'План, мин',factMinTitle:'Факт, мин',materialsTitle:'Материалы',sessionsByShiftTitle:'Выполнено по сменам',
+  infoQueueText:'Сколько заказов сейчас ждут выполнения операции в этом цехе — включая ещё не начатые, в работе и на паузе. Завершённые и отменённые операции в очередь не входят.',
+  infoActiveText:'Сколько операций в цехе прямо сейчас реально выполняется — статус «в работе», не на паузе.',
+  infoPlannedTimeText:'Сумма нормативного времени по всем операциям в очереди цеха: время на одно изделие по технологии × количество изделий, для каждого заказа в очереди.',
+  infoActualTimeText:'Сумма реально потраченного времени по всем операциям в очереди — считается с момента старта операции; время, проведённое на паузе, не учитывается.',
+  infoOverdueText:'Количество заказов в очереди цеха, у которых дата сдачи уже прошла, а операция в этом цехе ещё не завершена.',
+  infoLoadText:'Отношение планового времени очереди к недельному фонду цеха — 40 часов (5 дней × 8 часов = 2400 минут). Например, 1200 / 2400 = 50%. Больше 100% значит, что цех не успевает выполнить всю текущую очередь за неделю при работе по 8 часов в день.',
+  infoDoneText:'Сколько изделий из заказа уже подтверждено как готовые по этой операции (кнопкой «Завершить»). Может расти по частям, не обязательно всё сразу.',
+  infoPlanText:'Нормативное время на всю партию изделий этой операции: время на 1 изделие по технологии × количество изделий в заказе.',
+  infoFactText:'Реально потраченное время с момента старта операции до сейчас (или до завершения), за вычетом времени на паузе.',
+  infoDiffText:'Факт минус План. Положительное число (красным) — операция отстаёт от норматива. Ноль или отрицательное (зелёным) — укладывается в норматив или идёт быстрее.',
+  infoMaterialsText:'Показывает, хватит ли на складе материалов, привязанных к этому цеху, чтобы закрыть всю оставшуюся часть партии. «Списано материалов» — сколько комплектов уже списано под уже подтверждённые изделия, из скольких потребуется всего на заказ.',
+  infoSessionsText:'История подтверждений выполнения по этой операции: сколько изделий сдано за один раз, когда начата и завершена смена, кто выполнил.',
+  missingMaterialsWarningTitle:'Не хватает материалов',manageOpsInWorkshopsHint:'Управление операциями (старт/пауза/завершение, материалы) — в разделе «Цеха». Здесь только сводка по заказу.'
+});
+Object.assign(I18N.en,{
+  workshopRiskWarningPrefix:'risk of missing the deadline —',orderWordOne:'order',orderWordMany:'orders',workshopRiskShort:'at risk of delay',
+  gotIt:'Got it',explanation:'Explanation',
+  startedAtPrefix:'Started',nothingActiveNow:'Nothing is running right now',activeNowHeading:'Currently in progress',doneTodayLabel:'Done today',
+  filterAtRisk:'At risk',
+  loadByWorkshopTitle:'📊 Load by workshop',loadCapacityHintPrefix:'Plan vs. fund',loadCapacityHintSuffix:'h/week per workshop (5 days × 8 h)',
+  noWorkshopsYet:'No workshops yet — add stages (carpentry, sewing, etc.) to order technology.',noWorkshopsForFilter:'No workshops with this status',workshopColumnHeader:'Workshop',
+  dueTodayNote:'today',etaApprox:'ready ≈',backToWorkshops:'‹ Workshops',
+  workshopQueueForNamePrefix:'Operation queue — workshop',workshopQueueAllDesc:'Operation queue by workshop — across all orders',
+  materialsNotAssignedToWorkshop:'No materials assigned to this workshop',lastWriteOffLabel:'Last write-off',unitsGenitive:'items',materialsWrittenOffLabel:'Materials written off',setsWord:'sets',
+  backToAllWorkshops:'← All workshops',undoWriteOff:'↶ Undo write-off',
+  partialCompleteHintPrefix:'If you enter less than the remaining amount, the operation stays in progress. It will be fully completed only at',
+  changeQuantity:'Change quantity',confirmWriteOffTitle:'Confirm write-off',insufficientMaterialTitle:'Insufficient material',
+  completedMsgDone:'completed',materialsAutoWrittenOff:'materials written off automatically',positionsWord:'items',
+  noWriteOffsToUndo:'No write-offs to undo',confirmUndoWriteOffPrefix:'Undo the last write-off',operationWord:'operation',
+  undoneLastWriteOff:'Last write-off undone',writeOffCancelledForOrder:'Write-off cancelled for order',returnedWord:'returned',materialsWriteOffUndone:'Materials write-off undone',
+  loadTitleFull:'Workshop load',planMinTitle:'Plan, min',factMinTitle:'Actual, min',materialsTitle:'Materials',sessionsByShiftTitle:'Completed by shifts',
+  infoQueueText:'How many orders are currently waiting for this operation in this workshop — including not yet started, in progress, and paused. Completed and cancelled operations are not counted in the queue.',
+  infoActiveText:'How many operations in the workshop are actually running right now — status "in progress", not paused.',
+  infoPlannedTimeText:'The sum of standard time for all operations in the workshop queue: time per item according to technology × quantity of items, for each order in the queue.',
+  infoActualTimeText:'The sum of actually spent time across all operations in the queue — counted from the moment the operation starts; time spent paused is not counted.',
+  infoOverdueText:'The number of orders in the workshop queue whose due date has already passed while the operation in this workshop is still not completed.',
+  infoLoadText:'The ratio of the queue\'s planned time to the workshop\'s weekly capacity fund — 40 hours (5 days × 8 hours = 2400 minutes). For example, 1200 / 2400 = 50%. Above 100% means the workshop cannot finish the whole current queue within a week working 8 hours a day.',
+  infoDoneText:'How many items from the order have already been confirmed as ready for this operation (with the "Complete" button). Can grow in parts, not necessarily all at once.',
+  infoPlanText:'The standard time for the whole batch of items in this operation: time per item according to technology × quantity of items in the order.',
+  infoFactText:'The actually spent time from the moment the operation started until now (or until completion), minus time spent paused.',
+  infoDiffText:'Actual minus Plan. A positive number (red) means the operation is behind schedule. Zero or negative (green) means it is on schedule or ahead.',
+  infoMaterialsText:'Shows whether there is enough material in stock, assigned to this workshop, to finish the remaining part of the batch. "Materials written off" — how many sets have already been written off for already confirmed items, out of how many are needed for the whole order.',
+  infoSessionsText:'The history of completion confirmations for this operation: how many items were submitted at once, when the shift started and ended, who did it.',
+  missingMaterialsWarningTitle:'Missing materials',manageOpsInWorkshopsHint:'Managing operations (start/pause/complete, materials) is in the "Workshops" section. This is just an order summary.'
+});
+Object.assign(I18N.lv,{
+  workshopRiskWarningPrefix:'risks nepaspēt termiņā —',orderWordOne:'pasūtījums',orderWordMany:'pasūtījumi',workshopRiskShort:'kavēšanās risks',
+  gotIt:'Sapratu',explanation:'Paskaidrojums',
+  startedAtPrefix:'Sākts',nothingActiveNow:'Šobrīd nekas netiek darīts',activeNowHeading:'Šobrīd darbā',doneTodayLabel:'Šodien izgatavots',
+  filterAtRisk:'Kavēšanās risks',
+  loadByWorkshopTitle:'📊 Noslodze pa cehiem',loadCapacityHintPrefix:'Plāns pret fondu',loadCapacityHintSuffix:'st/ned. uz cehu (5 dienas × 8 st)',
+  noWorkshopsYet:'Cehu vēl nav — pievienojiet posmus (galdniecība, šūšana u.c.) pasūtījumu tehnoloģijā.',noWorkshopsForFilter:'Nav cehu ar šādu statusu',workshopColumnHeader:'Cehs',
+  dueTodayNote:'šodien',etaApprox:'gatavs ≈',backToWorkshops:'‹ Cehi',
+  workshopQueueForNamePrefix:'Operāciju rinda — cehs',workshopQueueAllDesc:'Operāciju rinda pa cehiem — visiem pasūtījumiem uzreiz',
+  materialsNotAssignedToWorkshop:'Šim ceham materiāli nav norādīti',lastWriteOffLabel:'Pēdējā norakstīšana',unitsGenitive:'izstrādājumu',materialsWrittenOffLabel:'Norakstīti materiāli',setsWord:'komplektu',
+  backToAllWorkshops:'← Visi cehi',undoWriteOff:'↶ Atcelt norakstīšanu',
+  partialCompleteHintPrefix:'Ja norādīsiet mazāk par atlikumu, operācija paliks darbā. Pilnībā tiks pabeigta tikai pie',
+  changeQuantity:'Mainīt daudzumu',confirmWriteOffTitle:'Norakstīšanas apstiprinājums',insufficientMaterialTitle:'Nepietiek materiāla',
+  completedMsgDone:'pabeigts',materialsAutoWrittenOff:'materiāli norakstīti automātiski',positionsWord:'poz.',
+  noWriteOffsToUndo:'Nav ko atcelt',confirmUndoWriteOffPrefix:'Atcelt pēdējo norakstīšanu',operationWord:'operācija',
+  undoneLastWriteOff:'Pēdējā norakstīšana atcelta',writeOffCancelledForOrder:'Norakstīšana atcelta pasūtījumam',returnedWord:'atgriezts',materialsWriteOffUndone:'Materiālu norakstīšana atcelta',
+  loadTitleFull:'Ceha noslodze',planMinTitle:'Plāns, min',factMinTitle:'Fakts, min',materialsTitle:'Materiāli',sessionsByShiftTitle:'Pabeigts pa maiņām',
+  infoQueueText:'Cik pasūtījumu šobrīd gaida šīs operācijas izpildi šajā cehā — ieskaitot vēl nesāktos, darbā esošos un pauzētos. Pabeigtās un atceltās operācijas rindā netiek skaitītas.',
+  infoActiveText:'Cik operāciju cehā šobrīd faktiski tiek izpildītas — statuss "darbā", nevis pauzē.',
+  infoPlannedTimeText:'Visu cehā rindā esošo operāciju normatīvā laika summa: laiks vienam izstrādājumam pēc tehnoloģijas × izstrādājumu skaits, katram rindā esošajam pasūtījumam.',
+  infoActualTimeText:'Visu rindā esošo operāciju faktiski patērētā laika summa — tiek skaitīts no operācijas sākuma; pauzē pavadītais laiks netiek ieskaitīts.',
+  infoOverdueText:'Pasūtījumu skaits ceha rindā, kuriem izpildes termiņš jau ir pagājis, bet operācija šajā cehā vēl nav pabeigta.',
+  infoLoadText:'Rindas plānotā laika attiecība pret ceha nedēļas fondu — 40 stundas (5 dienas × 8 stundas = 2400 minūtes). Piemēram, 1200 / 2400 = 50%. Virs 100% nozīmē, ka cehs nepaspēs izpildīt visu pašreizējo rindu nedēļas laikā, strādājot pa 8 stundām dienā.',
+  infoDoneText:'Cik izstrādājumu no pasūtījuma jau ir apstiprināti kā gatavi šai operācijai (ar pogu "Pabeigt"). Var pieaugt pa daļām, ne obligāti uzreiz.',
+  infoPlanText:'Normatīvais laiks visai šīs operācijas izstrādājumu partijai: laiks vienam izstrādājumam pēc tehnoloģijas × izstrādājumu skaits pasūtījumā.',
+  infoFactText:'Faktiski patērētais laiks no operācijas sākuma līdz šim brīdim (vai līdz pabeigšanai), atskaitot pauzē pavadīto laiku.',
+  infoDiffText:'Fakts mīnus Plāns. Pozitīvs skaitlis (sarkans) — operācija atpaliek no normatīva. Nulle vai negatīvs (zaļš) — atbilst normatīvam vai ir ātrāka.',
+  infoMaterialsText:'Rāda, vai noliktavā pietiek šim ceham piesaistīto materiālu, lai pabeigtu atlikušo partijas daļu. "Norakstīti materiāli" — cik komplektu jau ir norakstīti par jau apstiprinātajiem izstrādājumiem, no cik nepieciešams visam pasūtījumam.',
+  infoSessionsText:'Šīs operācijas izpildes apstiprinājumu vēsture: cik izstrādājumu nodots vienā reizē, kad maiņa sākta un beigta, kas to izpildīja.',
+  missingMaterialsWarningTitle:'Nepietiek materiālu',manageOpsInWorkshopsHint:'Operāciju pārvaldība (sākt/pauzēt/pabeigt, materiāli) ir sadaļā "Cehi". Šeit ir tikai pasūtījuma kopsavilkums.'
+});
 let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
 const CATEGORY_I18N_KEYS={'Поролон':'catFoam','Ткань':'catFabric','Экокожа':'catEcoLeather','Кожа':'catLeather','Древесина':'catWood','Фанера':'catPlywood','ДСП':'catChipboard','Крепёж':'catFasteners','Фурнитура':'catHardware'};
@@ -100,7 +196,7 @@ function langButtons(){
 }
 
 function sideLangButtons(){ return `<div class="side-lang"><button type="button" onclick="setLang('ru')" class="${currentLang==='ru'?'active':''}">RU</button><button type="button" onclick="setLang('en')" class="${currentLang==='en'?'active':''}">EN</button><button type="button" onclick="setLang('lv')" class="${currentLang==='lv'?'active':''}">LV</button></div>`; }
-function setLang(lang){ currentLang=lang; localStorage.setItem('furnicore_lang', lang); renderAuthBox(); renderAll(); applyI18n(); }
+function setLang(lang){ currentLang=lang; localStorage.setItem('furnicore_lang', lang); renderAuthBox(); renderAll(); applyI18n(); const ws=document.getElementById('workshops'); if(ws&&ws.classList.contains('active')&&typeof renderWorkshops==='function')renderWorkshops(); }
 function applyI18n(){
   document.documentElement.lang=currentLang==='lv'?'lv':currentLang==='en'?'en':'ru'; document.title=t('appTitle');
   const qs=(s)=>document.querySelector(s);
@@ -109,8 +205,9 @@ function applyI18n(){
   const navLabels={
     stock:t('stock'),
     orders:t('orders'),
+    workshops:t('workshops'),
     refs:t('refs'),
-    changelog:'История версий',
+    changelog:t('changelog'),
     history:t('history'),
     settings:t('settings')
   };
@@ -124,7 +221,8 @@ function applyI18n(){
   const b1=qs('#stock .topbar .btn.primary'); if(b1) b1.textContent=t('addMaterial'); const b2=qs('#orders .btn.primary'); if(b2) b2.textContent=t('newOrder'); const b3=qs('#models .btn.primary'); if(b3) b3.textContent=t('newModel');
   const labelMap=[['#quickAddBox .field:nth-child(1) label','skuMaterial'],['#quickAddBox .field:nth-child(2) label','qtyWithUnit'],['#quickAddBox .field.full label','foundMaterial']]; labelMap.forEach(([sel,key])=>{const el=qs(sel); if(el) el.textContent=t(key);});
   if(typeof syncQuickOperationUI==='function')syncQuickOperationUI(); const toolBtns=document.querySelectorAll('.toolbar .btn'); if(toolBtns[0]) toolBtns[0].textContent=t('filters'); if(toolBtns[1]) toolBtns[1].textContent=t('reset');
-  const si=qs('#settings h3'); if(si) si.textContent=t('exportImport'); const sp=qs('#settings p.muted'); if(sp) sp.textContent=t('jsonHint'); const sb=document.querySelectorAll('#settings .actions .btn'); if(sb[0]) sb[0].textContent=t('downloadJson'); if(sb[1]) sb[1].childNodes[0].textContent=t('uploadJson'); if(sb[2]) sb[2].textContent=t('wipe');
+  const si=document.getElementById('exportImportTitle'); if(si) si.lastChild.textContent=' '+t('exportImport'); const sp=document.getElementById('exportImportHint'); if(sp) sp.textContent=t('jsonHint'); const sb=document.querySelectorAll('#settings .actions .btn'); if(sb[0]) sb[0].textContent=t('downloadJson'); if(sb[1]) sb[1].childNodes[0].textContent=t('uploadJson'); if(sb[2]) sb[2].textContent=t('wipe');
+  const langTitle=document.getElementById('settingsLangTitle'); if(langTitle) langTitle.textContent=t('languageLabel'); const langHint=document.getElementById('settingsLangHint'); if(langHint) langHint.textContent=t('languageHint'); const langSwitchBox=document.getElementById('settingsLangSwitch'); if(langSwitchBox&&typeof sideLangButtons==='function') langSwitchBox.innerHTML=sideLangButtons();
   renderFilters(); updateSubFilter();
   const ph={topSearchInput:'searchTop',searchInput:'searchFull',quickSku:'skuIn',quickQty:'number',loginEmail:'email',loginPassword:'password'}; Object.entries(ph).forEach(([id,key])=>{ const el=document.getElementById(id); if(el) el.placeholder=t(key); });
   const qInfo=document.getElementById('quickInfo'); if(qInfo && !document.getElementById('quickSku')?.value) qInfo.textContent=t('enterSku');
