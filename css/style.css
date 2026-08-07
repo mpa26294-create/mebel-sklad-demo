@@ -3441,6 +3441,13 @@ body{background:#f7f8fb!important}
 .production-session-list small{display:block;margin-top:2px;color:#98a2b3;font-size:10px}
 .production-session-list strong{color:#175cd3;font-size:11px;white-space:nowrap}
 .production-session-list em{color:#667085;font-size:10px;font-style:normal;white-space:nowrap}
+.stat-info-btn{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;margin-left:5px;padding:0;border:none;border-radius:50%;background:var(--soft,#eef1f5);color:var(--muted,#667085);font-size:9px;font-style:normal;font-weight:700;line-height:1;cursor:pointer;vertical-align:middle;flex-shrink:0}
+.stat-info-btn:hover{background:var(--line,#d0d5dd);color:var(--text,#101828)}
+.workshops-stat-bar small .stat-info-btn{transform:translateY(-1px)}
+.production-op-kpis small .stat-info-btn,.production-quantity-progress small .stat-info-btn{transform:translateY(-1px)}
+.production-op-materials strong .stat-info-btn{background:rgba(255,255,255,.6)}
+.production-session-list h5{display:flex;align-items:center}
+.stat-info-text{font-size:13.5px;line-height:1.55;color:var(--text,#101828)}
 .quick-roll-fields{display:grid;gap:8px}
 .quick-roll-fields .field span{display:block;margin-bottom:7px;color:#555c68;font-size:12px;font-weight:500}
 .quick-roll-fields .area-preview{min-height:34px}
