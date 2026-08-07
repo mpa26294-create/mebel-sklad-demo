@@ -399,16 +399,53 @@ function workshopOverviewRowHtml(name){
       <b>${escapeHtml(name)}</b>
       ${workshopStatusBadgeHtml(stat)}
     </span>
-    <span class="workshop-list-row-stat"><b>${stat.queue.length}</b><small>${escapeHtml(t('queue'))}</small></span>
-    <span class="workshop-list-row-stat"><b>${stat.active}</b><small>${escapeHtml(t('prodInProgress'))}</small></span>
+    <span class="workshop-list-row-stat">${stat.queue.length}</span>
+    <span class="workshop-list-row-stat">${stat.active}</span>
     <span class="workshop-list-row-note">${note}</span>
     <span class="workshop-list-row-arrow">›</span>
   </button>`;
 }
+function currentlyActiveOperations(){
+  const rows=[];
+  allWorkshopNames().forEach(name=>{
+    productionQueueForWorkshop(name).forEach(row=>{
+      const op=productionOp(row.order,row.index);
+      if(op&&op.status==='running')rows.push({order:row.order,op,workshopName:name});
+    });
+  });
+  rows.sort((a,b)=>String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||'')));
+  return rows;
+}
+function todayCompletedUnitsCount(){
+  const todayStr=today();
+  let sum=0;
+  (data.orders||[]).forEach(o=>{
+    const logs=ensureWorkflowProduction(o).consumptionLogs||[];
+    logs.forEach(l=>{if(!l.undone&&String(l.at||'').slice(0,10)===todayStr)sum+=Number(l.qty||0)});
+  });
+  return sum;
+}
+function workshopsActiveNowHtml(){
+  const rows=currentlyActiveOperations();
+  const doneToday=todayCompletedUnitsCount();
+  const list=rows.length?rows.map(r=>{
+    const total=orderProductQty(r.order),completed=productionCompletedQty(r.order,r.op),pct=productionOpPercent(r.order,r.op);
+    return `<button type="button" class="workshops-active-row" onclick="openWorkshopDetail('${jsStrArg(r.workshopName)}')">
+      <span class="workshops-active-icon">${workshopIcon(r.workshopName)}</span>
+      <span class="workshops-active-name"><b>${escapeHtml(r.workshopName)}</b><small>${escapeHtml(r.order.number||'—')}${r.order.client?` · ${escapeHtml(r.order.client)}`:''}</small></span>
+      <span class="workshops-active-progress"><i><b style="width:${pct}%"></b></i></span>
+      <span class="workshops-active-qty">${completed} / ${total}</span>
+    </button>`;
+  }).join(''):`<div class="workshop-empty">Сейчас ничего не выполняется</div>`;
+  return `<div class="workshops-active-panel">
+    <div class="workshops-active-head"><h4>⏱ Сейчас в работе</h4><span class="workshops-active-today">Сделано сегодня: <b>${doneToday} шт</b></span></div>
+    <div class="workshops-active-list">${list}</div>
+  </div>`;
+}
 function workshopsOverviewHtml(){
   const names=allWorkshopNames();
   if(!names.length)return `<div class="workshop-empty">Цехов пока нет — добавьте этапы (столярка, швейный цех и т.д.) в технологию заказов.</div>`;
-  return `${workshopsSummaryBarHtml(names)}<div class="workshops-list">${names.map(workshopOverviewRowHtml).join('')}</div>`;
+  return `${workshopsSummaryBarHtml(names)}${workshopsActiveNowHtml()}<div class="workshops-list-head"><span></span><span>Цех</span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${names.map(workshopOverviewRowHtml).join('')}</div>`;
 }
 function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
