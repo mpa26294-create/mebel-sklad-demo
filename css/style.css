@@ -3041,6 +3041,22 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshops-stat-bar>div>span{font-size:16px}
 .workshops-stat-bar small{display:block;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .workshops-stat-bar b{display:block;margin-top:3px;color:var(--text);font-size:14px;font-weight:600}
+.workshops-load-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+.workshops-load-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.workshops-load-head h4{margin:0;color:var(--text);font-size:13.5px;font-weight:600}
+.workshops-load-hint{color:var(--muted);font-size:11px;white-space:nowrap}
+.workshops-load-list{display:flex;flex-direction:column;gap:10px}
+.workshops-load-row{display:grid;grid-template-columns:24px 108px minmax(0,1fr) 48px 60px;gap:12px;align-items:center;width:100%;padding:2px 0;border:0;background:none;text-align:left;cursor:pointer}
+.workshops-load-icon{font-size:14px;text-align:center}
+.workshops-load-name{color:var(--text);font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workshops-load-bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden}
+.workshops-load-bar i{display:block;height:100%;border-radius:99px;background:#8490a3;transition:width .2s}
+.workshops-load-row.warn .workshops-load-bar i{background:#e0982e}
+.workshops-load-row.danger .workshops-load-bar i{background:var(--redText)}
+.workshops-load-pct{color:var(--text);font-size:12px;font-weight:700;text-align:right}
+.workshops-load-row.warn .workshops-load-pct{color:#b54708}
+.workshops-load-row.danger .workshops-load-pct{color:var(--redText)}
+.workshops-load-qty{color:var(--muted);font-size:11px;text-align:right;white-space:nowrap}
 .workshops-active-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
 #workshopsFilterRow{margin-top:14px;margin-bottom:0}
 .workshops-active-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
@@ -3107,7 +3123,7 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-queue-expanded{border-top:0.5px solid #e5e9f0;background:#fafbfc;padding:12px}
 .workshop-queue-order-link{display:inline-flex;margin-bottom:10px;padding:0;border:0;background:none;color:#175cd3;font-size:12px;font-weight:650;cursor:pointer}
 .workshop-queue-expanded .production-operation-card{border-radius:12px}
-@media(max-width:760px){.workshops-stat-bar{overflow-x:auto;flex-wrap:nowrap}.workshops-stat-bar>div{flex:0 0 auto}.workshops-list-head{display:none}.workshops-active-row{grid-template-columns:30px minmax(0,1fr) 50px;grid-template-areas:"icon name qty" ". progress progress"}.workshops-active-icon{grid-area:icon}.workshops-active-name{grid-area:name}.workshops-active-qty{grid-area:qty}.workshops-active-progress{grid-area:progress}.workshops-active-status,.workshops-active-time{display:none}.workshop-list-row{grid-template-columns:34px minmax(0,1fr) 16px;grid-template-areas:"icon name arrow" ". stats stats";row-gap:8px}.workshop-list-row-icon{grid-area:icon}.workshop-list-row-name{grid-area:name}.workshop-list-row-arrow{grid-area:arrow}.workshop-list-row-stat,.workshop-list-row-note,.workshop-list-row-badge{grid-area:stats;display:none}.workshop-queue-row{grid-template-columns:8px minmax(0,1fr) 16px;grid-template-areas:"dot info chevron" ". progress ."}.workshop-row-progress{grid-area:progress;width:100%}.production-status-pill{display:none}}
+@media(max-width:760px){.workshops-stat-bar{overflow-x:auto;flex-wrap:nowrap}.workshops-stat-bar>div{flex:0 0 auto}.workshops-list-head{display:none}.workshops-load-row{grid-template-columns:20px minmax(0,1fr) 42px;grid-template-areas:"icon name pct" ". bar bar" ". qty qty"}.workshops-load-icon{grid-area:icon}.workshops-load-name{grid-area:name}.workshops-load-pct{grid-area:pct}.workshops-load-bar{grid-area:bar}.workshops-load-qty{grid-area:qty;text-align:left}.workshops-active-row{grid-template-columns:30px minmax(0,1fr) 50px;grid-template-areas:"icon name qty" ". progress progress"}.workshops-active-icon{grid-area:icon}.workshops-active-name{grid-area:name}.workshops-active-qty{grid-area:qty}.workshops-active-progress{grid-area:progress}.workshops-active-status,.workshops-active-time{display:none}.workshop-list-row{grid-template-columns:34px minmax(0,1fr) 16px;grid-template-areas:"icon name arrow" ". stats stats";row-gap:8px}.workshop-list-row-icon{grid-area:icon}.workshop-list-row-name{grid-area:name}.workshop-list-row-arrow{grid-area:arrow}.workshop-list-row-stat,.workshop-list-row-note,.workshop-list-row-badge{grid-area:stats;display:none}.workshop-queue-row{grid-template-columns:8px minmax(0,1fr) 16px;grid-template-areas:"dot info chevron" ". progress ."}.workshop-row-progress{grid-area:progress;width:100%}.production-status-pill{display:none}}
 
 /* Компактный список операций внутри заказа — детали и управление вынесены в раздел "Цеха". */
 .production-compact-hint{padding:9px 12px;border:1px dashed #d8dde5;border-radius:10px;background:#fafbfc;color:#8490a3;font-size:11px}

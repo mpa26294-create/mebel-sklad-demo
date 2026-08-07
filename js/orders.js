@@ -338,18 +338,20 @@ function productionQueueState(orderId,stepIndex){
   const op=productionOp(o,stepIndex),label=op?.status==='running'?t('prodQueueNow'):idx===0?t('prodQueueNext'):idx>0?t('prodQueueWaiting'):t('prodQueueWaiting');
   return {position:idx>=0?idx+1:0,total:queue.length,label};
 }
+const WORKSHOP_WEEKLY_CAPACITY_MINUTES=5*8*60; // 5 рабочих дней по 8 часов = 2400 мин/нед на цех
 function workshopAnalytics(stepName){
   const queue=productionQueueForWorkshop(stepName),todayStr=today();
   const active=queue.filter(row=>['В работе','В производстве'].includes(String(row.order.status||''))).length;
   const overdue=queue.filter(row=>row.order.dueDate&&row.order.dueDate<todayStr).length;
   const plan=queue.reduce((s,row)=>s+productionPlanMinutesForStep(row.order,row.index),0);
   const actual=queue.reduce((s,row)=>s+productionActualMinutes(productionOp(row.order,row.index)),0);
-  const load=Math.max(0,Math.min(100,Math.round((active/(queue.length||1))*100 + Math.min(40,plan/240))));
+  const remainingQty=queue.reduce((s,row)=>{const op=productionOp(row.order,row.index);return s+Math.max(0,orderProductQty(row.order)-productionCompletedQty(row.order,op))},0);
+  const load=Math.max(0,Math.round(plan/WORKSHOP_WEEKLY_CAPACITY_MINUTES*100));
   const warnings=[];
-  if(load>=80&&queue.length>=2)warnings.push(`${t('prodWarnOverloaded')} ${stepName}`);
+  if(load>=100)warnings.push(`${t('prodWarnOverloaded')} ${stepName}`);
   if(overdue>0)warnings.push(`${stepName} ${t('prodWarnDelayed')} +${orderTimeText(Math.max(60,actual-plan))}`);
   if(plan>0&&actual>plan*1.35)warnings.push(`${stepName} ${t('prodWarnPlanExceeded')}`);
-  return {queue,active,overdue,plan,actual,load,warnings};
+  return {queue,active,overdue,plan,actual,load,remainingQty,warnings};
 }
 
 // ===== Раздел "Цеха": та же производственная информация, что и в заказе, но сгруппированная
@@ -409,9 +411,10 @@ function workshopsSummaryBarHtml(names){
 function workshopOverviewRowHtml(name){
   const stat=workshopAnalytics(name);
   const overdue=stat.overdue>0;
-  const overloaded=!overdue&&stat.queue.length>=2&&stat.load>=80;
-  const cls=overdue?'danger':overloaded?'warn':'';
-  const note=overdue?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:overloaded?`⚠ ${escapeHtml(t('prodWarnOverloaded'))}`:'';
+  const overCapacity=!overdue&&stat.load>=100;
+  const nearCapacity=!overdue&&!overCapacity&&stat.load>=80;
+  const cls=overdue||overCapacity?'danger':nearCapacity?'warn':'';
+  const note=overdue?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:overCapacity?`⚠ ${escapeHtml(t('prodWarnOverloaded'))} (${stat.load}%)`:nearCapacity?`⚠ ${stat.load}% ${escapeHtml(t('prodLoad')).toLowerCase()}`:'';
   return `<button type="button" class="workshop-list-row ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
     <span class="workshop-list-row-icon">${workshopIcon(name)}</span>
     <span class="workshop-list-row-name"><b>${escapeHtml(name)}</b></span>
@@ -492,12 +495,32 @@ function workshopsFilterChipsHtml(){
   const items=[['all','Все'],['running','В работе'],['paused','Пауза'],['idle','Ожидает'],['overdue','Просрочено']];
   return `<div class="quick-filter-row" id="workshopsFilterRow">${items.map(([key,label])=>`<button type="button" class="filter-chip${workshopsStatusFilter===key?' active':''}" data-filter="${key}" onclick="setWorkshopsStatusFilter('${key}')">${escapeHtml(label)}</button>`).join('')}</div>`;
 }
+function workshopLoadRowHtml(name){
+  const stat=workshopAnalytics(name);
+  const overCapacity=stat.load>=100,nearCapacity=!overCapacity&&stat.load>=80;
+  const cls=overCapacity?'danger':nearCapacity?'warn':'';
+  return `<button type="button" class="workshops-load-row ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
+    <span class="workshops-load-icon">${workshopIcon(name)}</span>
+    <span class="workshops-load-name">${escapeHtml(name)}</span>
+    <span class="workshops-load-bar"><i style="width:${Math.min(100,stat.load)}%"></i></span>
+    <span class="workshops-load-pct">${stat.load}%</span>
+    <span class="workshops-load-qty">${stat.remainingQty} шт</span>
+  </button>`;
+}
+function workshopsLoadPanelHtml(names){
+  if(!names.length)return '';
+  const sorted=[...names].sort((a,b)=>workshopAnalytics(b).load-workshopAnalytics(a).load);
+  return `<div class="workshops-load-panel">
+    <div class="workshops-load-head"><h4>📊 Загрузка по цехам</h4><span class="workshops-load-hint">План к фонду ${Math.round(WORKSHOP_WEEKLY_CAPACITY_MINUTES/60)} ч/нед на цех (5 дней × 8 ч)</span></div>
+    <div class="workshops-load-list">${sorted.map(workshopLoadRowHtml).join('')}</div>
+  </div>`;
+}
 function workshopsOverviewHtml(){
   const names=allWorkshopNames();
   if(!names.length)return `<div class="workshop-empty">Цехов пока нет — добавьте этапы (столярка, швейный цех и т.д.) в технологию заказов.</div>`;
   const filtered=names.filter(n=>workshopMatchesStatusFilter(n,workshopsStatusFilter));
   const list=filtered.length?filtered.map(workshopOverviewRowHtml).join(''):`<div class="workshop-empty">Нет цехов с таким статусом</div>`;
-  return `${workshopsSummaryBarHtml(names)}${workshopsActiveNowHtml()}${workshopsFilterChipsHtml()}<div class="workshops-list-head"><span></span><span>Цех</span><span></span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${list}</div>`;
+  return `${workshopsSummaryBarHtml(names)}${workshopsLoadPanelHtml(names)}${workshopsActiveNowHtml()}${workshopsFilterChipsHtml()}<div class="workshops-list-head"><span></span><span>Цех</span><span></span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${list}</div>`;
 }
 function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
