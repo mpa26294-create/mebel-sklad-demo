@@ -363,9 +363,27 @@ function allWorkshopNames(){
   return names;
 }
 function jsStrArg(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
-function workshopStatusBadgeHtml(stat){
-  const busy=stat.active>0;
-  return `<span class="production-status-pill${busy?' running':''}">${busy?escapeHtml(t('prodStatusRunning')):escapeHtml(t('prodQueueWaiting'))}</span>`;
+function workshopOpStatusCounts(queue){
+  let running=0,paused=0;
+  (queue||[]).forEach(row=>{
+    const op=productionOp(row.order,row.index);
+    if(op?.status==='running')running++;
+    else if(op?.status==='paused')paused++;
+  });
+  return {running,paused};
+}
+function workshopStatusBadgeHtml(queue){
+  const {running,paused}=workshopOpStatusCounts(queue);
+  if(running>0)return `<span class="production-status-pill running">${escapeHtml(t('prodStatusRunning'))}</span>`;
+  if(paused>0)return `<span class="production-status-pill paused">${escapeHtml(t('prodStatusPaused'))}</span>`;
+  return `<span class="production-status-pill">${escapeHtml(t('prodQueueWaiting'))}</span>`;
+}
+function productionStartedAtText(iso){
+  if(!iso)return '—';
+  const d=new Date(iso);
+  if(Number.isNaN(d.getTime()))return '—';
+  if(d.toISOString().slice(0,10)===today())return d.toLocaleTimeString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB',{hour:'2-digit',minute:'2-digit'});
+  return productionDateTimeText(iso);
 }
 function workshopsStatBarHtml(stat){
   return `<div class="workshops-stat-bar">
@@ -395,10 +413,8 @@ function workshopOverviewRowHtml(name){
   const note=overdue?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:overloaded?`⚠ ${escapeHtml(t('prodWarnOverloaded'))}`:'';
   return `<button type="button" class="workshop-list-row ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
     <span class="workshop-list-row-icon">${workshopIcon(name)}</span>
-    <span class="workshop-list-row-name">
-      <b>${escapeHtml(name)}</b>
-      ${workshopStatusBadgeHtml(stat)}
-    </span>
+    <span class="workshop-list-row-name"><b>${escapeHtml(name)}</b></span>
+    <span class="workshop-list-row-badge">${workshopStatusBadgeHtml(stat.queue)}</span>
     <span class="workshop-list-row-stat">${stat.queue.length}</span>
     <span class="workshop-list-row-stat">${stat.active}</span>
     <span class="workshop-list-row-note">${note}</span>
@@ -410,10 +426,14 @@ function currentlyActiveOperations(){
   allWorkshopNames().forEach(name=>{
     productionQueueForWorkshop(name).forEach(row=>{
       const op=productionOp(row.order,row.index);
-      if(op&&op.status==='running')rows.push({order:row.order,op,workshopName:name});
+      if(op&&(op.status==='running'||op.status==='paused'))rows.push({order:row.order,op,workshopName:name});
     });
   });
-  rows.sort((a,b)=>String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||'')));
+  rows.sort((a,b)=>{
+    const rank=r=>r.op.status==='running'?0:1;
+    const d=rank(a)-rank(b);
+    return d||String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||''));
+  });
   return rows;
 }
 function todayCompletedUnitsCount(){
@@ -425,14 +445,18 @@ function todayCompletedUnitsCount(){
   });
   return sum;
 }
+function activeElapsedElId(orderId,stepIndex){return `activeElapsed_${orderId}_${stepIndex}`}
 function workshopsActiveNowHtml(){
   const rows=currentlyActiveOperations();
   const doneToday=todayCompletedUnitsCount();
   const list=rows.length?rows.map(r=>{
     const total=orderProductQty(r.order),completed=productionCompletedQty(r.order,r.op),pct=productionOpPercent(r.order,r.op);
-    return `<button type="button" class="workshops-active-row" onclick="openWorkshopDetail('${jsStrArg(r.workshopName)}')">
+    const running=r.op.status==='running';
+    return `<button type="button" class="workshops-active-row ${running?'running':'paused'}" onclick="openWorkshopDetail('${jsStrArg(r.workshopName)}')">
       <span class="workshops-active-icon">${workshopIcon(r.workshopName)}</span>
       <span class="workshops-active-name"><b>${escapeHtml(r.workshopName)}</b><small>${escapeHtml(r.order.number||'—')}${r.order.client?` · ${escapeHtml(r.order.client)}`:''}</small></span>
+      <span class="workshops-active-status"><span class="workshops-active-dot ${running?'running':'paused'}"></span>${running?escapeHtml(t('prodStatusRunning')):escapeHtml(t('prodStatusPaused'))}</span>
+      <span class="workshops-active-time"><small>Начато ${escapeHtml(productionStartedAtText(r.op.startedAt))}</small><b id="${activeElapsedElId(r.order.id,r.op.stepIndex)}">${escapeHtml(orderTimeText(productionActualMinutes(r.op)))}</b></span>
       <span class="workshops-active-progress"><i><b style="width:${pct}%"></b></i></span>
       <span class="workshops-active-qty">${completed} / ${total}</span>
     </button>`;
@@ -442,10 +466,20 @@ function workshopsActiveNowHtml(){
     <div class="workshops-active-list">${list}</div>
   </div>`;
 }
+function refreshActiveElapsedTimers(){
+  const workshopsSection=document.getElementById('workshops');
+  if(!workshopsSection||!workshopsSection.classList.contains('active')||selectedWorkshopName)return;
+  currentlyActiveOperations().forEach(r=>{
+    if(r.op.status!=='running')return;
+    const el=document.getElementById(activeElapsedElId(r.order.id,r.op.stepIndex));
+    if(el)el.textContent=orderTimeText(productionActualMinutes(r.op));
+  });
+}
+if(typeof window!=='undefined')setInterval(()=>{if(typeof refreshActiveElapsedTimers==='function')refreshActiveElapsedTimers()},30000);
 function workshopsOverviewHtml(){
   const names=allWorkshopNames();
   if(!names.length)return `<div class="workshop-empty">Цехов пока нет — добавьте этапы (столярка, швейный цех и т.д.) в технологию заказов.</div>`;
-  return `${workshopsSummaryBarHtml(names)}${workshopsActiveNowHtml()}<div class="workshops-list-head"><span></span><span>Цех</span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${names.map(workshopOverviewRowHtml).join('')}</div>`;
+  return `${workshopsSummaryBarHtml(names)}${workshopsActiveNowHtml()}<div class="workshops-list-head"><span></span><span>Цех</span><span></span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${names.map(workshopOverviewRowHtml).join('')}</div>`;
 }
 function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
@@ -488,7 +522,7 @@ function workshopDetailHtml(name){
       <button type="button" class="workshop-back-link" onclick="closeWorkshopDetail()">‹ Цеха</button>
       <span class="workshop-detail-sep"></span>
       <h3>${workshopIcon(name)} ${escapeHtml(name)}</h3>
-      ${workshopStatusBadgeHtml(stat)}
+      ${workshopStatusBadgeHtml(stat.queue)}
     </div>
     ${workshopsStatBarHtml({queue:stat.queue.length,active:stat.active,plan:stat.plan,actual:stat.actual,overdue:stat.overdue,load:stat.load})}
     ${stat.warnings.length?`<div class="production-warnings">${stat.warnings.map(w=>`<span>⚠ ${escapeHtml(w)}</span>`).join('')}</div>`:''}
