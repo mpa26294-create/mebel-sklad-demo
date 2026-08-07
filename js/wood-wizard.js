@@ -1,6 +1,5 @@
 // v6.40 — Unified Wood Group Picker: choose lumber or sheet materials before opening the form.
 (function(){
-  const VERSION_LABEL='v6.54 — Local Preview Actions Fix';
   const LUMBER_TYPES=['Доска','Брус','Рейка','Мебельный щит'];
   const SHEET_TYPES=['Фанера','MDF','HDF','ДСП','ДВП','OSB'];
   const ALL_TYPES=[...LUMBER_TYPES,...SHEET_TYPES,'Другое'];
@@ -22,7 +21,7 @@
   const unitMode=()=>isSheetType(typeOf())?'sheet':(document.getElementById('woodUnitType')?.value||'piece');
 
   function applyVersion(){
-    document.querySelectorAll('.product-footer b,.version-badge').forEach(el=>el.textContent=VERSION_LABEL);
+    if(typeof applyBuildVersion==='function')applyBuildVersion();
   }
 
   function ensureStyles(){

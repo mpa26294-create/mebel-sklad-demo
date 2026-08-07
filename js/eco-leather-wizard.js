@@ -1,6 +1,5 @@
 // v6.34 — Apple flows for Fabric, Eco Leather and Leather.
 (function(){
-  const VERSION_LABEL='v6.54 — Local Preview Actions Fix';
   let installed=false;
   let materialState='stock';
 
@@ -13,7 +12,7 @@
   const esc=value=>typeof escapeHtml==='function'?escapeHtml(String(value??'')):String(value??'');
 
   function applyVersion(){
-    document.querySelectorAll('.product-footer b,.version-badge').forEach(el=>el.textContent=VERSION_LABEL);
+    if(typeof applyBuildVersion==='function')applyBuildVersion();
   }
 
   function ensureStyles(){

@@ -120,6 +120,8 @@ Object.assign(I18N.ru,{
   infoMaterialsText:'Показывает, хватит ли на складе материалов, привязанных к этому цеху, чтобы закрыть всю оставшуюся часть партии. «Списано материалов» — сколько комплектов уже списано под уже подтверждённые изделия, из скольких потребуется всего на заказ.',
   infoSessionsText:'История подтверждений выполнения по этой операции: сколько изделий сдано за один раз, когда начата и завершена смена, кто выполнил.',
   missingMaterialsWarningTitle:'Не хватает материалов',manageOpsInWorkshopsHint:'Управление операциями (старт/пауза/завершение, материалы) — в разделе «Цеха». Здесь только сводка по заказу.',
+  auto:'Авто',wsCarpentry:'Столярка',wsSewing:'Швейный цех',wsGluing:'Поклейка',wsUpholstery:'Тапицерка',wsAssembly:'Сборка',wsPackaging:'Упаковка',
+  telegramIntegrationTitle:'Интеграции → Telegram',telegramLockedHint:'Настройки скрыты. Для просмотра и изменения нужен PIN.',telegramEnterPinBtn:'Ввести PIN',telegramUnlockedHint:'Секретные данные замаскированы. Для показа значения PIN запрашивается повторно.',telegramCloseAccessBtn:'Закрыть доступ',telegramValueNotSet:'Значение не задано',telegramShowBtn:'👁 Показать',telegramCopyBtn:'Копировать',telegramUnsavedChanges:'Есть несохранённые изменения',telegramCopiedToast:'Скопировано',telegramWrongPinError:'Неверный PIN',telegramPinDefaultTitle:'PIN-код',telegramPinDefaultMessage:'Введите PIN для доступа к настройкам Telegram.',telegramPinUnlockReason:'Введите PIN, чтобы открыть настройки Telegram.',telegramPinShowReason:'Введите PIN, чтобы показать значение.',telegramPinExportReason:'Введите PIN, чтобы экспортировать системные настройки.',telegramAccessDeniedToast:'Доступ к Telegram не открыт',telegramSaveConfirm:'Сохранить изменения Telegram-настроек?',
   profileSettingsTitle:'Профиль',profileSettingsHint:'Имя и роль показываются в правом верхнем углу приложения.',profileNameLabel:'Отображаемое имя',profileRoleLabel:'Роль',profileNamePlaceholder:'Например, Мартин',profileRolePlaceholder:'Например, Администратор',profileSaved:'Профиль сохранён',roleNotSet:'Роль не указана',
   notificationsTitle:'Уведомления',markAllRead:'Прочитать все',noNotifications:'Уведомлений пока нет'
 });
@@ -153,6 +155,8 @@ Object.assign(I18N.en,{
   infoMaterialsText:'Shows whether there is enough material in stock, assigned to this workshop, to finish the remaining part of the batch. "Materials written off" — how many sets have already been written off for already confirmed items, out of how many are needed for the whole order.',
   infoSessionsText:'The history of completion confirmations for this operation: how many items were submitted at once, when the shift started and ended, who did it.',
   missingMaterialsWarningTitle:'Missing materials',manageOpsInWorkshopsHint:'Managing operations (start/pause/complete, materials) is in the "Workshops" section. This is just an order summary.',
+  auto:'Auto',wsCarpentry:'Carpentry',wsSewing:'Sewing shop',wsGluing:'Gluing',wsUpholstery:'Upholstery',wsAssembly:'Assembly',wsPackaging:'Packaging',
+  telegramIntegrationTitle:'Integrations → Telegram',telegramLockedHint:'Settings are hidden. A PIN is required to view or change them.',telegramEnterPinBtn:'Enter PIN',telegramUnlockedHint:'Secret values are masked. Showing a value requires the PIN again.',telegramCloseAccessBtn:'Close access',telegramValueNotSet:'Value not set',telegramShowBtn:'👁 Show',telegramCopyBtn:'Copy',telegramUnsavedChanges:'You have unsaved changes',telegramCopiedToast:'Copied',telegramWrongPinError:'Incorrect PIN',telegramPinDefaultTitle:'PIN code',telegramPinDefaultMessage:'Enter the PIN to access Telegram settings.',telegramPinUnlockReason:'Enter the PIN to open Telegram settings.',telegramPinShowReason:'Enter the PIN to show the value.',telegramPinExportReason:'Enter the PIN to export system settings.',telegramAccessDeniedToast:'Telegram access was not opened',telegramSaveConfirm:'Save changes to Telegram settings?',
   profileSettingsTitle:'Profile',profileSettingsHint:'Your name and role are shown in the top-right corner of the app.',profileNameLabel:'Display name',profileRoleLabel:'Role',profileNamePlaceholder:'E.g. Martin',profileRolePlaceholder:'E.g. Administrator',profileSaved:'Profile saved',roleNotSet:'Role not set',
   notificationsTitle:'Notifications',markAllRead:'Mark all read',noNotifications:'No notifications yet'
 });
@@ -186,6 +190,8 @@ Object.assign(I18N.lv,{
   infoMaterialsText:'Rāda, vai noliktavā pietiek šim ceham piesaistīto materiālu, lai pabeigtu atlikušo partijas daļu. "Norakstīti materiāli" — cik komplektu jau ir norakstīti par jau apstiprinātajiem izstrādājumiem, no cik nepieciešams visam pasūtījumam.',
   infoSessionsText:'Šīs operācijas izpildes apstiprinājumu vēsture: cik izstrādājumu nodots vienā reizē, kad maiņa sākta un beigta, kas to izpildīja.',
   missingMaterialsWarningTitle:'Nepietiek materiālu',manageOpsInWorkshopsHint:'Operāciju pārvaldība (sākt/pauzēt/pabeigt, materiāli) ir sadaļā "Cehi". Šeit ir tikai pasūtījuma kopsavilkums.',
+  auto:'Auto',wsCarpentry:'Galdniecība',wsSewing:'Šūšanas cehs',wsGluing:'Līmēšana',wsUpholstery:'Tapsēšana',wsAssembly:'Montāža',wsPackaging:'Iepakošana',
+  telegramIntegrationTitle:'Integrācijas → Telegram',telegramLockedHint:'Iestatījumi ir slēpti. Lai skatītu vai mainītu, nepieciešams PIN.',telegramEnterPinBtn:'Ievadīt PIN',telegramUnlockedHint:'Slepenie dati ir maskēti. Lai parādītu vērtību, atkal nepieciešams PIN.',telegramCloseAccessBtn:'Aizvērt piekļuvi',telegramValueNotSet:'Vērtība nav iestatīta',telegramShowBtn:'👁 Rādīt',telegramCopyBtn:'Kopēt',telegramUnsavedChanges:'Ir nesaglabātas izmaiņas',telegramCopiedToast:'Kopēts',telegramWrongPinError:'Nepareizs PIN',telegramPinDefaultTitle:'PIN kods',telegramPinDefaultMessage:'Ievadiet PIN, lai piekļūtu Telegram iestatījumiem.',telegramPinUnlockReason:'Ievadiet PIN, lai atvērtu Telegram iestatījumus.',telegramPinShowReason:'Ievadiet PIN, lai parādītu vērtību.',telegramPinExportReason:'Ievadiet PIN, lai eksportētu sistēmas iestatījumus.',telegramAccessDeniedToast:'Piekļuve Telegram netika atvērta',telegramSaveConfirm:'Saglabāt izmaiņas Telegram iestatījumos?',
   profileSettingsTitle:'Profils',profileSettingsHint:'Vārds un loma tiek rādīti lietotnes augšējā labajā stūrī.',profileNameLabel:'Attēlotais vārds',profileRoleLabel:'Loma',profileNamePlaceholder:'Piemēram, Mārtiņš',profileRolePlaceholder:'Piemēram, Administrators',profileSaved:'Profils saglabāts',roleNotSet:'Loma nav norādīta',
   notificationsTitle:'Paziņojumi',markAllRead:'Atzīmēt visus kā lasītus',noNotifications:'Paziņojumu vēl nav'
 });
@@ -193,6 +199,8 @@ let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
 const CATEGORY_I18N_KEYS={'Поролон':'catFoam','Ткань':'catFabric','Экокожа':'catEcoLeather','Кожа':'catLeather','Древесина':'catWood','Фанера':'catPlywood','ДСП':'catChipboard','Крепёж':'catFasteners','Фурнитура':'catHardware'};
 function categoryLabel(cat){return t(CATEGORY_I18N_KEYS[cat]||cat)}
+const WORKSHOP_I18N_KEYS={'Столярка':'wsCarpentry','Швейный цех':'wsSewing','Поклейка':'wsGluing','Тапицерка':'wsUpholstery','Сборка':'wsAssembly','Упаковка':'wsPackaging'};
+function workshopLabel(name){return t(WORKSHOP_I18N_KEYS[name]||name)}
 function langButtons(){
   return `<div class="lang-switch">
     <button type="button" onclick="setLang('ru')" class="${currentLang==='ru'?'active':''}">RU</button>
@@ -202,7 +210,7 @@ function langButtons(){
 }
 
 function sideLangButtons(){ return `<div class="side-lang"><button type="button" onclick="setLang('ru')" class="${currentLang==='ru'?'active':''}">RU</button><button type="button" onclick="setLang('en')" class="${currentLang==='en'?'active':''}">EN</button><button type="button" onclick="setLang('lv')" class="${currentLang==='lv'?'active':''}">LV</button></div>`; }
-function setLang(lang){ currentLang=lang; localStorage.setItem('furnicore_lang', lang); renderAuthBox(); renderAll(); applyI18n(); const ws=document.getElementById('workshops'); if(ws&&ws.classList.contains('active')&&typeof renderWorkshops==='function')renderWorkshops(); }
+function setLang(lang){ currentLang=lang; localStorage.setItem('furnicore_lang', lang); renderAuthBox(); renderAll(); applyI18n(); const ws=document.getElementById('workshops'); if(ws&&ws.classList.contains('active')&&typeof renderWorkshops==='function')renderWorkshops(); if(typeof renderNotificationSettings==='function'&&document.querySelector('.notification-settings-panel'))renderNotificationSettings(); }
 function applyI18n(){
   document.documentElement.lang=currentLang==='lv'?'lv':currentLang==='en'?'en':'ru'; document.title=t('appTitle');
   const qs=(s)=>document.querySelector(s);

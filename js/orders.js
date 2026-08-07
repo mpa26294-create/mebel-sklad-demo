@@ -164,7 +164,7 @@ function technologyMaterialStatus(o,item){const per=orderItemPerUnitQty(item,o),
 function technologyMaterialRowHtml(o,item,index){const m=(data.materials||[]).find(x=>String(x.id)===String(item.materialId)),category=item.category||m?.category||'Поролон',unit=((m?.unit==='рулон'&&(category==='Ткань'||category==='Экокожа'))?orderUnitForMaterial(m,category):(item.unit||orderUnitForMaterial(m,category))),workshop=materialWorkshopForItem(item,m),per=orderItemPerUnitQty({...item,unit},o),total=calcOrderItemTotalQty(per,orderProductQty(o),unit),effective={...item,qty:total,perUnitQty:per,unit,workshop},status=technologyMaterialStatus(o,effective),shortage=Math.max(0,Number(status.state.av.missing||0)),showOrder=per>0&&(shortage>0||orderItemPurchaseStatus(item)==='ordered'),orderQty=orderItemPurchaseQty(item,shortage);return `<div class="technology-material-row"><div class="field"><label>${escapeHtml(u42('category'))}</label><select class="select" onchange="updateTechnologyMaterial('${o.id}',${index},'category',this.value)">${ORDER_MATERIAL_CATS.map(cat=>`<option value="${cat}" ${cat===category?'selected':''}>${escapeHtml(categoryLabel(cat))}</option>`).join('')}</select></div><div class="field"><label>${escapeHtml(u42('material'))}</label><select class="select" onchange="updateTechnologyMaterial('${o.id}',${index},'materialId',this.value)">${materialOptions(category,item.materialId)}</select></div><div class="field"><label>Цех</label><select class="select" onchange="updateTechnologyMaterial('${o.id}',${index},'workshop',this.value)">${materialWorkshopOptions(o,workshop)}</select></div><div class="field"><label>${escapeHtml(u42('perOne'))}</label><input class="input" type="number" min="0" step="0.01" value="${Number(per||0)}" onchange="updateTechnologyMaterial('${o.id}',${index},'perUnitQty',this.value)"></div><div class="field"><label>${escapeHtml(u42('totalNeed'))}</label><div class="readonly-pill">${escapeHtml(qtyWithUnit(total,unit))}</div></div><div class="field"><label>${escapeHtml(u42('unit'))}</label><select class="select" onchange="updateTechnologyMaterial('${o.id}',${index},'unit',this.value)">${orderUnitOptions(category,unit)}</select></div><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('removeMaterial'))}" onclick="removeTechnologyMaterial('${o.id}',${index})">×</button><div class="technology-material-status ${status.tone}"><span>${escapeHtml(status.label)} · ${escapeHtml(workshop||'цех не указан')}</span>${showOrder?`<div class="technology-order-controls"><label>${escapeHtml(t('orderedQuantity'))}</label><input class="input" id="technologyOrderQty_${o.id}_${index}" type="number" min="0.01" step="0.01" value="${Number(orderQty||0)}"><button class="btn small" type="button" onclick="markTechnologyMaterialOrdered('${o.id}',${index})">${escapeHtml(t('markAsOrdered'))}</button></div>`:''}</div></div>`}
 function orderTechnologyMaterialsHtml(o){const items=orderMaterials(o),buttons=`<div class="actions order-tech-actions"><button class="btn primary order-tech-cta" type="button" onclick="openTechnologyMaterials('${o.id}')">＋ ${escapeHtml(t('addMaterialFromStock'))}</button><button class="btn order-tech-cta secondary" type="button" onclick="openTechnologyNewMaterial('${o.id}')">＋ ${escapeHtml(t('addNewMaterialToStock'))}</button></div>`;return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('technologyMaterials'))}</h4><p>${escapeHtml(t('materialsReserveHint'))}</p></div>${buttons}</div><div class="technology-material-list">${items.map((item,index)=>technologyMaterialRowHtml(o,item,index)).join('')||`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('technologyMaterials'))}</b><span>${escapeHtml(t('noTechnologyMaterials'))}</span></div>`}</div></section>`}
 function orderTechnologyHtml(o){const inProduction=['В производстве','В работе','Готов'].includes(String(o.status||''));const action=inProduction?`<button class="btn primary order-to-production" type="button" onclick="saveProductionTechnologyEdit('${o.id}')">${escapeHtml(currentLang==='ru'?'Редактировать технологию':currentLang==='en'?'Edit technology':'Rediģēt tehnoloģiju')}</button>`:`<button class="btn primary order-to-production" type="button" onclick="transferOrderToProduction('${o.id}')">${escapeHtml(t('transferToProduction'))} →</button>`;return `<div class="order-technology-screen">${orderTechnologyOperationsHtml(o)}${orderTechnologyMaterialsHtml(o)}${orderTechnologySummaryHtml(o)}<div class="order-tech-footer-actions"><button class="btn order-save-technology" type="button" onclick="saveTechnologyForLater('${o.id}')">${escapeHtml(t('saveAndContinueLater'))}</button>${action}</div></div>`}
-function orderTechnologyOperationsHtml(o){const qty=orderProductQty(o),steps=orderSteps(o),presets=['Столярка','Швейный цех','Поклейка','Тапицерка','Сборка','Упаковка'],addBtn=`<button class="btn primary order-tech-cta" type="button" onclick="addTechnologyOperation('${o.id}')">＋ ${escapeHtml(t('addOperation'))}</button>`;return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('techOperations'))}</h4><p>${escapeHtml(t('techOperationsHint'))}</p></div>${addBtn}</div>${steps.length?`<div class="order-tech-table-scroll"><table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('orderProductCount'))}</th><th>${escapeHtml(t('totalTime'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th><th></th></tr></thead><tbody>${steps.map((s,index)=>`<tr><td><div class="technology-stage-picker"><select class="select" aria-label="${escapeHtml(t('operationTemplate'))}" onchange="applyTechnologyOperationTemplate('${o.id}',${index},this.value)"><option value="">${escapeHtml(t('chooseOperationTemplate'))}</option>${presets.map(name=>`<option value="${escapeHtml(name)}" ${s.name===name?'selected':''}>${escapeHtml(name)}</option>`).join('')}</select><input class="input" value="${escapeHtml(s.name||'')}" placeholder="${escapeHtml(t('customOperationName'))}" onchange="updateTechnologyOperation('${o.id}',${index},'name',this.value)"></div></td><td><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(s.minutes||0)}" onchange="updateTechnologyOperation('${o.id}',${index},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div></td><td><b>${qty}</b></td><td><b>${Number(s.minutes||0)*qty} ${escapeHtml(t('minutesShort'))}</b></td><td><input class="input" value="${escapeHtml(s.responsible||'')}" placeholder="${escapeHtml(t('notSpecified'))}" onchange="updateTechnologyOperation('${o.id}',${index},'responsible',this.value)"></td><td><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechnologyOperation('${o.id}',${index})">×</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('techOperations'))}</b><span>${escapeHtml(t('techOperationsHint'))}</span></div>`}</section>`}
+function orderTechnologyOperationsHtml(o){const qty=orderProductQty(o),steps=orderSteps(o),presets=['Столярка','Швейный цех','Поклейка','Тапицерка','Сборка','Упаковка'],addBtn=`<button class="btn primary order-tech-cta" type="button" onclick="addTechnologyOperation('${o.id}')">＋ ${escapeHtml(t('addOperation'))}</button>`;return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('techOperations'))}</h4><p>${escapeHtml(t('techOperationsHint'))}</p></div>${addBtn}</div>${steps.length?`<div class="order-tech-table-scroll"><table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('orderProductCount'))}</th><th>${escapeHtml(t('totalTime'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th><th></th></tr></thead><tbody>${steps.map((s,index)=>`<tr><td><div class="technology-stage-picker"><select class="select" aria-label="${escapeHtml(t('operationTemplate'))}" onchange="applyTechnologyOperationTemplate('${o.id}',${index},this.value)"><option value="">${escapeHtml(t('chooseOperationTemplate'))}</option>${presets.map(name=>`<option value="${escapeHtml(name)}" ${s.name===name?'selected':''}>${escapeHtml(workshopLabel(name))}</option>`).join('')}</select><input class="input" value="${escapeHtml(s.name||'')}" placeholder="${escapeHtml(t('customOperationName'))}" onchange="updateTechnologyOperation('${o.id}',${index},'name',this.value)"></div></td><td><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(s.minutes||0)}" onchange="updateTechnologyOperation('${o.id}',${index},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div></td><td><b>${qty}</b></td><td><b>${Number(s.minutes||0)*qty} ${escapeHtml(t('minutesShort'))}</b></td><td><input class="input" value="${escapeHtml(s.responsible||'')}" placeholder="${escapeHtml(t('notSpecified'))}" onchange="updateTechnologyOperation('${o.id}',${index},'responsible',this.value)"></td><td><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechnologyOperation('${o.id}',${index})">×</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('techOperations'))}</b><span>${escapeHtml(t('techOperationsHint'))}</span></div>`}</section>`}
 function applyTechnologyOperationTemplate(id,index,value){if(value)updateTechnologyOperation(id,index,'name',value)}
 function materialDefaultWorkshop(category='',m=null){
   const cat=category||m?.category||'';
@@ -185,7 +185,7 @@ function materialWorkshopOptions(o,selected=''){
   const current=String(selected||'').trim();
   const names=orderWorkshopNames(o);
   if(current&&!names.includes(current))names.unshift(current);
-  return [`<option value="">Авто</option>`,...names.map(name=>`<option value="${escapeHtml(name)}" ${name===current?'selected':''}>${escapeHtml(name)}</option>`)].join('');
+  return [`<option value="">${escapeHtml(t('auto'))}</option>`,...names.map(name=>`<option value="${escapeHtml(name)}" ${name===current?'selected':''}>${escapeHtml(workshopLabel(name))}</option>`)].join('');
 }
 function operationMaterials(o,op){
   const target=String(op?.stepName||'').trim();
@@ -478,7 +478,7 @@ function workshopOverviewRowHtml(name){
   const note=overdue?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:overCapacity?`⚠ ${escapeHtml(t('prodWarnOverloaded'))} (${stat.load}%)`:atRisk?`⚠ ${escapeHtml(t('workshopRiskShort'))} — ${stat.atRisk}`:nearCapacity?`⚠ ${stat.load}% ${escapeHtml(t('prodLoad')).toLowerCase()}`:'';
   return `<button type="button" class="workshop-list-row ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
     <span class="workshop-list-row-icon">${workshopIcon(name)}</span>
-    <span class="workshop-list-row-name"><b>${escapeHtml(name)}</b></span>
+    <span class="workshop-list-row-name"><b>${escapeHtml(workshopLabel(name))}</b></span>
     <span class="workshop-list-row-badge">${workshopStatusBadgeHtml(stat.queue)}</span>
     <span class="workshop-list-row-stat">${stat.queue.length}</span>
     <span class="workshop-list-row-stat">${stat.active}</span>
@@ -519,7 +519,7 @@ function workshopsActiveNowHtml(){
     const running=r.op.status==='running';
     return `<button type="button" class="workshops-active-row ${running?'running':'paused'}" onclick="openWorkshopDetail('${jsStrArg(r.workshopName)}')">
       <span class="workshops-active-icon">${workshopIcon(r.workshopName)}</span>
-      <span class="workshops-active-name"><b>${escapeHtml(r.workshopName)}</b><small>${escapeHtml(r.order.number||'—')}${r.order.client?` · ${escapeHtml(r.order.client)}`:''}</small></span>
+      <span class="workshops-active-name"><b>${escapeHtml(workshopLabel(r.workshopName))}</b><small>${escapeHtml(r.order.number||'—')}${r.order.client?` · ${escapeHtml(r.order.client)}`:''}</small></span>
       <span class="workshops-active-status"><span class="workshops-active-dot ${running?'running':'paused'}"></span>${running?escapeHtml(t('prodStatusRunning')):escapeHtml(t('prodStatusPaused'))}</span>
       <span class="workshops-active-time"><small>${escapeHtml(t('startedAtPrefix'))} ${escapeHtml(productionStartedAtText(r.op.startedAt))}</small><b id="${activeElapsedElId(r.order.id,r.op.stepIndex)}">${escapeHtml(orderTimeText(productionActualMinutes(r.op)))}</b></span>
       <span class="workshops-active-progress"><i><b style="width:${pct}%"></b></i></span>
@@ -563,7 +563,7 @@ function workshopLoadRowHtml(name){
   const cls=overCapacity?'danger':nearCapacity?'warn':'';
   return `<button type="button" class="workshops-load-row ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
     <span class="workshops-load-icon">${workshopIcon(name)}</span>
-    <span class="workshops-load-name">${escapeHtml(name)}</span>
+    <span class="workshops-load-name">${escapeHtml(workshopLabel(name))}</span>
     <span class="workshops-load-bar"><i style="width:${Math.min(100,stat.load)}%"></i></span>
     <span class="workshops-load-pct">${stat.load}%</span>
     <span class="workshops-load-qty">${stat.remainingQty} ${escapeHtml(t('unitPieces'))}</span>
@@ -626,7 +626,7 @@ function workshopDetailHtml(name){
   return `<div class="workshop-detail-head">
       <button type="button" class="workshop-back-link" onclick="closeWorkshopDetail()">${escapeHtml(t('backToWorkshops'))}</button>
       <span class="workshop-detail-sep"></span>
-      <h3>${workshopIcon(name)} ${escapeHtml(name)}</h3>
+      <h3>${workshopIcon(name)} ${escapeHtml(workshopLabel(name))}</h3>
       ${workshopStatusBadgeHtml(stat.queue)}
     </div>
     ${workshopsStatBarHtml({queue:stat.queue.length,active:stat.active,plan:stat.plan,actual:stat.actual,overdue:stat.overdue,load:stat.load})}
@@ -719,7 +719,7 @@ function productionSessionHistoryHtml(op){
 function productionOperationCardHtml(o,op){
   const plan=productionPlanMinutesForStep(o,op.stepIndex),actual=productionActualMinutes(op),diff=actual-plan,pct=productionOpPercent(o,op),completed=productionCompletedQty(o,op),total=orderProductQty(o),state=productionQueueState(o.id,op.stepIndex),status=productionStatusClass(op.status),compact=op.status==='done'&&op.collapsed!==false,comments=Array.isArray(op.comments)?op.comments:[],toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart'),toggleIcon=op.status==='running'?'⏸':'▶';
   const canUndo=!!lastActiveConsumptionLog(o,op.stepIndex);
-  return `<article class="production-operation-card ${status} ${compact?'compact':''}" id="productionOp_${o.id}_${op.stepIndex}"><div class="production-op-strip"></div><div class="production-op-main"><div class="production-op-heading"><div><h4>${workshopIcon(op.stepName)} ${escapeHtml(op.stepName)}</h4><span>${escapeHtml(t('queue'))}: ${state.position?`${state.position} ${t('of')} ${state.total}`:state.label}</span></div><span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span></div><div class="production-quantity-progress"><small>${escapeHtml(t('prodDone'))}${infoBtn('done')}</small><b>${completed} / ${total}</b></div><div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div><div class="production-op-kpis"><div><span class="op-kpi-icon plan">📅</span><span><small>${escapeHtml(t('plan'))}${infoBtn('plan')}</small><b>${plan} ${escapeHtml(t('minutesShort'))}</b></span></div><div><span class="op-kpi-icon fact">▶</span><span><small>${escapeHtml(t('fact'))}${infoBtn('fact')}</small><b>${actual} ${escapeHtml(t('minutesShort'))}</b></span></div><div><span class="op-kpi-icon diff">📊</span><span><small>${escapeHtml(t('difference'))}${infoBtn('diff')}</small><b class="${diff>0?'danger-text':'ok-text'}">${diff>0?'+':''}${diff} ${escapeHtml(t('minutesShort'))}</b></span></div></div>${productionOperationMaterialStatusHtml(o,op)}${productionSessionHistoryHtml(op)}${diff>0?`<div class="production-delay">⚠ +${escapeHtml(orderTimeText(diff))}</div>`:''}${compact?`<button class="btn small" type="button" onclick="toggleProductionOperationCompact('${o.id}',${op.stepIndex})">${escapeHtml(t('expand'))}</button>`:`<div class="production-comment-box"><textarea class="input" id="prodComment_${o.id}_${op.stepIndex}" placeholder="${escapeHtml(t('prodCommentPlaceholder'))}">${escapeHtml(op.comment||'')}</textarea><button class="btn small" type="button" onclick="saveProductionComment('${o.id}',${op.stepIndex})">${escapeHtml(t('save'))}</button></div><div class="production-comments">${comments.slice(0,3).map(c=>`<div><b>${escapeHtml(c.by||'—')}</b><span>${escapeHtml(productionDateTimeText(c.at))}</span><p>${escapeHtml(c.text||'')}</p></div>`).join('')}</div>`}</div><div class="production-op-actions"><button class="btn small" type="button" onclick="closeWorkshopDetail()">${escapeHtml(t('backToAllWorkshops'))}</button><button class="btn small primary" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='done'||op.status==='cancelled'?'disabled':''}>${toggleIcon} ${escapeHtml(toggleLabel)}</button><button class="btn small" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>✔ ${escapeHtml(t('prodComplete'))}</button><button class="btn small" type="button" onclick="undoLastProductionConsumption('${o.id}',${op.stepIndex})" ${canUndo?'':'disabled'}>${escapeHtml(t('undoWriteOff'))}</button></div></article>`;
+  return `<article class="production-operation-card ${status} ${compact?'compact':''}" id="productionOp_${o.id}_${op.stepIndex}"><div class="production-op-strip"></div><div class="production-op-main"><div class="production-op-heading"><div><h4>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}</h4><span>${escapeHtml(t('queue'))}: ${state.position?`${state.position} ${t('of')} ${state.total}`:state.label}</span></div><span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span></div><div class="production-quantity-progress"><small>${escapeHtml(t('prodDone'))}${infoBtn('done')}</small><b>${completed} / ${total}</b></div><div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div><div class="production-op-kpis"><div><span class="op-kpi-icon plan">📅</span><span><small>${escapeHtml(t('plan'))}${infoBtn('plan')}</small><b>${plan} ${escapeHtml(t('minutesShort'))}</b></span></div><div><span class="op-kpi-icon fact">▶</span><span><small>${escapeHtml(t('fact'))}${infoBtn('fact')}</small><b>${actual} ${escapeHtml(t('minutesShort'))}</b></span></div><div><span class="op-kpi-icon diff">📊</span><span><small>${escapeHtml(t('difference'))}${infoBtn('diff')}</small><b class="${diff>0?'danger-text':'ok-text'}">${diff>0?'+':''}${diff} ${escapeHtml(t('minutesShort'))}</b></span></div></div>${productionOperationMaterialStatusHtml(o,op)}${productionSessionHistoryHtml(op)}${diff>0?`<div class="production-delay">⚠ +${escapeHtml(orderTimeText(diff))}</div>`:''}${compact?`<button class="btn small" type="button" onclick="toggleProductionOperationCompact('${o.id}',${op.stepIndex})">${escapeHtml(t('expand'))}</button>`:`<div class="production-comment-box"><textarea class="input" id="prodComment_${o.id}_${op.stepIndex}" placeholder="${escapeHtml(t('prodCommentPlaceholder'))}">${escapeHtml(op.comment||'')}</textarea><button class="btn small" type="button" onclick="saveProductionComment('${o.id}',${op.stepIndex})">${escapeHtml(t('save'))}</button></div><div class="production-comments">${comments.slice(0,3).map(c=>`<div><b>${escapeHtml(c.by||'—')}</b><span>${escapeHtml(productionDateTimeText(c.at))}</span><p>${escapeHtml(c.text||'')}</p></div>`).join('')}</div>`}</div><div class="production-op-actions"><button class="btn small" type="button" onclick="closeWorkshopDetail()">${escapeHtml(t('backToAllWorkshops'))}</button><button class="btn small primary" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='done'||op.status==='cancelled'?'disabled':''}>${toggleIcon} ${escapeHtml(toggleLabel)}</button><button class="btn small" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>✔ ${escapeHtml(t('prodComplete'))}</button><button class="btn small" type="button" onclick="undoLastProductionConsumption('${o.id}',${op.stepIndex})" ${canUndo?'':'disabled'}>${escapeHtml(t('undoWriteOff'))}</button></div></article>`;
 }
 function productionKpiHtml(o){
   const qty=orderProductQty(o),matCount=orderMaterials(o).length,plan=calcOrderMinutes(o),actual=productionOps(o).reduce((s,op)=>s+productionActualMinutes(op),0),pct=calcWorkflowProductionPercent(o),missing=orderMissingItems(o).length;
@@ -735,7 +735,7 @@ function productionOperationCompactRowHtml(o,op){
   const pct=productionOpPercent(o,op),status=productionStatusClass(op.status),completed=productionCompletedQty(o,op),total=orderProductQty(o),coverage=productionMaterialCoverage(o,operationMaterials(o,op),completed);
   return `<button type="button" class="production-op-compact ${status}" onclick="openWorkshopFromOrder('${jsStrArg(op.stepName)}')">
     <span class="production-op-compact-icon">${workshopIcon(op.stepName)}</span>
-    <span class="production-op-compact-name"><b>${escapeHtml(op.stepName)}</b><small>${escapeHtml(t('queue'))}: ${escapeHtml(productionQueueState(o.id,op.stepIndex).label)}</small></span>
+    <span class="production-op-compact-name"><b>${escapeHtml(workshopLabel(op.stepName))}</b><small>${escapeHtml(t('queue'))}: ${escapeHtml(productionQueueState(o.id,op.stepIndex).label)}</small></span>
     <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
     <span class="production-op-compact-progress"><i><b style="width:${pct}%"></b></i></span>
     <span class="production-op-compact-qty">${completed} / ${total}</span>
@@ -988,12 +988,12 @@ let telegramSettingsUnlocked=false;
 let telegramSettingsSnapshot=null;
 function telegramSettings(){return data.settings?.notifications||{}}
 function telegramMasked(value){return value?'************':''}
-function telegramPinModal(title='PIN-код',message='Введите PIN для доступа к настройкам Telegram.'){
+function telegramPinModal(title,message){
   return new Promise(resolve=>{
-    const body=`<div class="pin-modal"><p>${escapeHtml(message)}</p><input class="input" id="telegramPinInput" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="PIN"><div class="auth-error" id="telegramPinError"></div></div>`;
-    const foot=`<button class="btn" type="button" onclick="window.__telegramPinResolve(false);closeModal()">Отмена</button><button class="btn primary" type="button" onclick="checkTelegramPinModal()">Открыть</button>`;
+    const body=`<div class="pin-modal"><p>${escapeHtml(message||t('telegramPinDefaultMessage'))}</p><input class="input" id="telegramPinInput" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="PIN"><div class="auth-error" id="telegramPinError"></div></div>`;
+    const foot=`<button class="btn" type="button" onclick="window.__telegramPinResolve(false);closeModal()">${t('cancel')}</button><button class="btn primary" type="button" onclick="checkTelegramPinModal()">${t('telegramEnterPinBtn')}</button>`;
     window.__telegramPinResolve=resolve;
-    openModal(title,body,foot);
+    openModal(title||t('telegramPinDefaultTitle'),body,foot);
     setTimeout(()=>document.getElementById('telegramPinInput')?.focus(),0);
   });
 }
@@ -1007,12 +1007,12 @@ window.checkTelegramPinModal=function(){
     if(typeof resolve==='function')resolve(true);
     return;
   }
-  if(err)err.textContent='Неверный PIN';
+  if(err)err.textContent=t('telegramWrongPinError');
   input?.select();
 };
 async function requireTelegramPin(reason){
-  const ok=await telegramPinModal('Telegram PIN',reason||'Введите PIN для доступа к настройкам Telegram.');
-  if(!ok)toast('Доступ к Telegram не открыт');
+  const ok=await telegramPinModal(t('telegramPinDefaultTitle'),reason||t('telegramPinDefaultMessage'));
+  if(!ok)toast(t('telegramAccessDeniedToast'));
   return !!ok;
 }
 function lockTelegramSettings(){
@@ -1021,29 +1021,29 @@ function lockTelegramSettings(){
   renderNotificationSettings();
 }
 async function unlockTelegramSettings(){
-  if(!await requireTelegramPin('Введите PIN, чтобы открыть настройки Telegram.'))return;
+  if(!await requireTelegramPin(t('telegramPinUnlockReason')))return;
   telegramSettingsUnlocked=true;
   renderNotificationSettings();
 }
 function secureFieldHtml(id,label,value){
   const has=!!String(value||'');
-  return `<div class="field secret-field"><label>${escapeHtml(label)}</label><div class="secret-input-row"><input class="input" id="${id}" type="password" autocomplete="off" value="${escapeHtml(String(value||''))}" placeholder="${has?'************':'—'}" oninput="markTelegramSettingsDirty()"><button class="btn small" type="button" onclick="showTelegramSecret('${id}')">👁 Показать</button><button class="btn small" type="button" onclick="copyTelegramSecret('${id}')">Копировать</button></div><small>${has?telegramMasked(value):'Значение не задано'}</small></div>`;
+  return `<div class="field secret-field"><label>${escapeHtml(label)}</label><div class="secret-input-row"><input class="input" id="${id}" type="password" autocomplete="off" value="${escapeHtml(String(value||''))}" placeholder="${has?'************':'—'}" oninput="markTelegramSettingsDirty()"><button class="btn small" type="button" onclick="showTelegramSecret('${id}')">${t('telegramShowBtn')}</button><button class="btn small" type="button" onclick="copyTelegramSecret('${id}')">${t('telegramCopyBtn')}</button></div><small>${has?telegramMasked(value):t('telegramValueNotSet')}</small></div>`;
 }
 function renderNotificationSettings(){
   const panel=document.querySelector('.notification-settings-panel');
   if(!panel)return;
   if(!telegramSettingsUnlocked){
-    panel.innerHTML=`<div class="telegram-lock-card"><div><h3 id="notificationSettingsTitle">Интеграции → Telegram</h3><p class="muted" id="notificationSettingsHint">Настройки скрыты. Для просмотра и изменения нужен PIN.</p></div><button class="btn primary" type="button" onclick="unlockTelegramSettings()">Ввести PIN</button></div>`;
+    panel.innerHTML=`<div class="telegram-lock-card"><div><h3 id="notificationSettingsTitle">${t('telegramIntegrationTitle')}</h3><p class="muted" id="notificationSettingsHint">${t('telegramLockedHint')}</p></div><button class="btn primary" type="button" onclick="unlockTelegramSettings()">${t('telegramEnterPinBtn')}</button></div>`;
     return;
   }
   const settings=telegramSettings();
   telegramSettingsSnapshot={telegramBotToken:String(settings.telegramBotToken||''),telegramChatId:String(settings.telegramChatId||'')};
-  panel.innerHTML=`<h3 id="notificationSettingsTitle">Интеграции → Telegram</h3><p class="muted" id="notificationSettingsHint">Секретные данные замаскированы. Для показа значения PIN запрашивается повторно.</p><div class="form-grid secure-settings-grid">${secureFieldHtml('telegramBotToken','Telegram Bot Token',settings.telegramBotToken)}${secureFieldHtml('telegramChatId','Telegram Chat ID',settings.telegramChatId)}</div><div class="secure-settings-actions"><span id="telegramSettingsDirty" class="secure-dirty-note"></span><button class="btn" type="button" onclick="lockTelegramSettings()">Закрыть доступ</button><button class="btn primary" id="saveNotificationSettingsBtn" type="button" onclick="saveNotificationSettings()">Сохранить</button></div>`;
+  panel.innerHTML=`<h3 id="notificationSettingsTitle">${t('telegramIntegrationTitle')}</h3><p class="muted" id="notificationSettingsHint">${t('telegramUnlockedHint')}</p><div class="form-grid secure-settings-grid">${secureFieldHtml('telegramBotToken',t('telegramTokenLabel'),settings.telegramBotToken)}${secureFieldHtml('telegramChatId',t('telegramChatIdLabel'),settings.telegramChatId)}</div><div class="secure-settings-actions"><span id="telegramSettingsDirty" class="secure-dirty-note"></span><button class="btn" type="button" onclick="lockTelegramSettings()">${t('telegramCloseAccessBtn')}</button><button class="btn primary" id="saveNotificationSettingsBtn" type="button" onclick="saveNotificationSettings()">${t('save')}</button></div>`;
 }
-function markTelegramSettingsDirty(){const note=document.getElementById('telegramSettingsDirty');if(note)note.textContent='Есть несохранённые изменения';}
+function markTelegramSettingsDirty(){const note=document.getElementById('telegramSettingsDirty');if(note)note.textContent=t('telegramUnsavedChanges');}
 async function showTelegramSecret(id){
   if(!telegramSettingsUnlocked)return unlockTelegramSettings();
-  if(!await requireTelegramPin('Введите PIN, чтобы показать значение.'))return;
+  if(!await requireTelegramPin(t('telegramPinShowReason')))return;
   const input=document.getElementById(id);
   if(input)input.type=input.type==='password'?'text':'password';
 }
@@ -1051,7 +1051,7 @@ async function copyTelegramSecret(id){
   if(!telegramSettingsUnlocked)return unlockTelegramSettings();
   const input=document.getElementById(id);
   if(!input)return;
-  try{await navigator.clipboard.writeText(input.value||'');toast('Скопировано')}catch(e){input.select();document.execCommand('copy');toast('Скопировано')}
+  try{await navigator.clipboard.writeText(input.value||'');toast(t('telegramCopiedToast'))}catch(e){input.select();document.execCommand('copy');toast(t('telegramCopiedToast'))}
 }
 function telegramSettingsDiff(prev,next){
   const out=[];
@@ -1060,12 +1060,12 @@ function telegramSettingsDiff(prev,next){
   return out;
 }
 function saveNotificationSettings(){
-  if(!telegramSettingsUnlocked){toast('Сначала введите PIN');return;}
+  if(!telegramSettingsUnlocked){toast(t('telegramEnterPinBtn'));return;}
   if(!data.settings||typeof data.settings!=='object')data.settings={};
   const prev=telegramSettingsSnapshot||telegramSettings();
   const next={telegramBotToken:document.getElementById('telegramBotToken')?.value.trim()||'',telegramChatId:document.getElementById('telegramChatId')?.value.trim()||''};
   const diffs=telegramSettingsDiff(prev,next);
-  if(diffs.length&&!confirm('Сохранить изменения Telegram-настроек?'))return;
+  if(diffs.length&&!confirm(t('telegramSaveConfirm')))return;
   data.settings.notifications={...(data.settings.notifications||{}),...next};
   diffs.forEach(([field,text])=>{if(typeof auditAdd==='function')auditAdd('telegram_settings_changed','settings','telegram','Telegram',text,{field,secret:true})});
   save();

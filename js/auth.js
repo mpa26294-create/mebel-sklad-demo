@@ -194,7 +194,6 @@ if(typeof document!=='undefined')document.addEventListener('click',(e)=>{
 
 /* v6.29: fixed one-screen Apple foam flow */
 (function(){
-  const VERSION_LABEL='v6.54 — Local Preview Actions Fix';
   let foamState='stock';
 
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
@@ -204,7 +203,7 @@ if(typeof document!=='undefined')document.addEventListener('click',(e)=>{
   const qtyLabel=format=>format==='sheet'?'листов':'шт';
   const stateFrom=(found,attrs)=>attrs.status||(attrs.purchaseStatus==='ordered'?'ordered':(Number(found?.quantity||0)>0||attrs.storageLocation?'stock':'card'));
 
-  function applyVersion(){document.querySelectorAll('.product-footer b,.version-badge').forEach(el=>el.textContent=VERSION_LABEL)}
+  function applyVersion(){if(typeof applyBuildVersion==='function')applyBuildVersion()}
 
   function openFormatChoice(){
     const body=`<div style="padding:12px 0 6px;text-align:center"><h3 style="margin:0 0 8px;font-size:24px">Как хранится поролон?</h3><p class="muted" style="margin:0 0 22px">Выберите один вариант. Остальное настроится автоматически.</p><div class="category-picker" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button class="category-card" type="button" onclick="chooseFoamFormat('sheet')"><div class="cat-ico">▱</div><div><b>Листы</b><span>Учёт целыми листами</span></div><span style="margin-left:auto;font-size:25px;color:#8b92a0">›</span></button><button class="category-card" type="button" onclick="chooseFoamFormat('part')"><div class="cat-ico">◇</div><div><b>Детали</b><span>Учёт отдельными штуками</span></div><span style="margin-left:auto;font-size:25px;color:#8b92a0">›</span></button></div></div>`;
