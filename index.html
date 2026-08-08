@@ -114,7 +114,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.89</span></div></div>
+      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.90</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -158,12 +158,12 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=6.89"></script>
+<script src="js/changelog.js?v=6.90"></script>
 <script src="js/ui.js?v=6.40"></script>
 <script src="js/app.js?v=6.47"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.9"></script>
-<script src="js/translations.js?v=6.9"></script>
+<script src="js/translations.js?v=6.10"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -172,7 +172,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.89 — этап 2.4: перевод живого UI раздела История';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.90 — этап 2.5: перевод мастеров древесины и рулонных материалов';
 </script>
 <script src="js/auth.js?v=6.4"></script>
 <script src="js/materials.js?v=6.42"></script>
@@ -1425,11 +1425,13 @@ function fabricColorHex(color){
   const found=FABRIC_COLOR_OPTIONS.find(([name])=>name.toLowerCase()===label);
   return found?.[1]||'#d1d5db';
 }
+const FABRIC_COLOR_I18N_KEYS={'Бежевый':'colorBeige','Молочный':'colorMilk','Серый':'colorGrey','Графит':'colorGraphite','Чёрный':'colorBlack','Белый':'colorWhite','Коричневый':'colorBrown','Карамель':'colorCaramel','Красный':'colorRed','Бордовый':'colorBurgundy','Синий':'colorBlue','Голубой':'colorLightBlue','Зелёный':'colorGreen','Оливковый':'colorOlive','Жёлтый':'colorYellow','Оранжевый':'colorOrange','Розовый':'colorPink','Фиолетовый':'colorPurple'};
+function colorNameLabel(name){return t(FABRIC_COLOR_I18N_KEYS[name]||name)}
 function fabricColorPickerHtml(selected=''){
   const value=fabricColorValue(selected);
   const hasKnown=!value || FABRIC_COLOR_OPTIONS.some(([name])=>name.toLowerCase()===value.toLowerCase());
   const options=hasKnown?FABRIC_COLOR_OPTIONS:[[value,fabricColorHex(value)],...FABRIC_COLOR_OPTIONS];
-  return `<div class="field full fabric-color-field"><label>Цвет</label><input type="hidden" id="fabricColor" value="${escapeHtml(value)}"><div class="fabric-color-picker">${options.map(([name,hex])=>`<button class="fabric-color-option ${value.toLowerCase()===name.toLowerCase()?'active':''}" type="button" data-color="${escapeHtml(name)}" onclick="selectFabricColor(this.dataset.color)"><span style="background:${hex}"></span><b>${escapeHtml(name)}</b></button>`).join('')}</div></div>`;
+  return `<div class="field full fabric-color-field"><label>${t('colorLabel')}</label><input type="hidden" id="fabricColor" value="${escapeHtml(value)}"><div class="fabric-color-picker">${options.map(([name,hex])=>`<button class="fabric-color-option ${value.toLowerCase()===name.toLowerCase()?'active':''}" type="button" data-color="${escapeHtml(name)}" onclick="selectFabricColor(this.dataset.color)"><span style="background:${hex}"></span><b>${escapeHtml(colorNameLabel(name))}</b></button>`).join('')}</div></div>`;
 }
 function selectFabricColor(color){
   const value=fabricColorValue(color);
@@ -1600,9 +1602,9 @@ function materialWizardFooter(saveCall){
 }
 function materialStateCards(current='card'){
   const cards=[
-    ['card','Только создать карточку','Материал появится в базе без остатка.'],
-    ['ordered','Заказано','Материал заказан, но ещё не пришёл.'],
-    ['stock','На складе','Материал уже физически находится на складе.']
+    ['card',t('materialCardOnlyTitle'),t('materialCardOnlyDesc')],
+    ['ordered',t('woodOrderedTitle'),t('materialOrderedDesc')],
+    ['stock',t('woodInStockTitle'),t('materialInStockDesc')]
   ];
   return `<div class="material-state-cards">${cards.map(([value,title,desc])=>`<button class="material-state-card ${current===value?'active':''}" type="button" data-state="${value}" onclick="selectMaterialCreateState('${value}')"><b>${title}</b><span>${desc}</span></button>`).join('')}</div><input type="hidden" id="materialCreateState" value="${current}">`;
 }
@@ -1617,16 +1619,16 @@ function materialBaseUnit(cat){
 function isSheetMaterialCategory(cat){return ['Фанера','МДФ','ДСП','ДВП','OSB'].includes(String(cat||''))}
 function materialWizardParamDefs(cat){
   if(cat==='Ткань'||cat==='Экокожа')return [
-    ['color','Цвет','color'],
-    ['rollWidth','Ширина рулона, м','number'],
-    ['rollLength','Длина рулона, м','number'],
-    ['composition','Состав / материал','text'],
-    ['density','Плотность, г/м²','number']
+    ['color',t('colorLabel'),'color'],
+    ['rollWidth',t('rollWidthMLabel'),'number'],
+    ['rollLength',t('rollLengthMLabel'),'number'],
+    ['composition',t('compositionLabel'),'text'],
+    ['density',t('densityGm2Label'),'number']
   ];
   if(cat==='Кожа')return [
-    ['color','Цвет','color'],
-    ['thickness','Толщина, мм','number'],
-    ['finish','Фактура / обработка','text']
+    ['color',t('colorLabel'),'color'],
+    ['thickness',t('thicknessMmLabel'),'number'],
+    ['finish',t('finishLabel'),'text']
   ];
   if(cat==='Поролон')return [['density','Плотность, кг/м³','number'],['hardness','Жёсткость','text'],['thickness','Толщина, мм','number']];
   if(isSheetMaterialCategory(cat))return [
@@ -1742,9 +1744,9 @@ function fabricSubtypeOptions(category='Ткань',value=''){
 }
 function fabricModalTitle(category,id=null){
   const names={
-    'Ткань': id?'Редактировать ткань':'Добавить ткань',
-    'Экокожа': id?'Редактировать экокожу':'Добавить экокожу',
-    'Кожа': id?'Редактировать кожу':'Добавить кожу'
+    'Ткань': id?t('editFabricTitle'):t('addFabricTitle'),
+    'Экокожа': id?t('editEcoLeatherTitle'):t('addEcoLeatherTitle'),
+    'Кожа': id?t('editLeatherTitle'):t('addLeatherTitle')
   };
   return names[category]||(id?t('editMaterialGeneric'):t('addMaterialGeneric'));
 }
@@ -1889,36 +1891,36 @@ function openFabricModal(id=null,category='Ткань'){
   const orderedQtyValue=(!isLeather&&found&&typeof isLinearFabricStock==='function'&&isLinearFabricStock(found))?convertMaterialQty(attrs.orderedQty||0,found.unit||unit,unit,found):stockNumForUnit(attrs.orderedQty||0,unit);
   const modalTitle=fabricModalTitle(fabricCategory,id);
   const orderedFields=isLeather?`
-          <div class="field"><label>Площадь, м²</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}"></div>
-          <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
-          <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>`:`
-          <div class="field"><label>Заказано, пог. м</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(orderedQtyValue,unit)}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
-          <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
+          <div class="field"><label>${t('orderedAreaM2Label')}</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(attrs.orderedQty||0,unit),unit)}"></div>
+          <div class="field"><label>${t('expectedReceiptDateLabel')}</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
+          <div class="field full"><label>${t('purchaseNoteLabel')}</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="${t('purchaseNotePlaceholder')}"></div>`:`
+          <div class="field"><label>${t('orderedLinearMLabel')}</label><input id="fabricOrderedQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(orderedQtyValue,unit)}" oninput="updateFabricAreaPreview()"></div>
+          <div class="field"><label>${t('expectedReceiptDateLabel')}</label><input id="fabricExpectedDate" class="input" type="date" value="${attrs.expectedReceiptDate||''}"></div>
+          <div class="field full"><label>${t('purchaseNoteLabel')}</label><input id="fabricPurchaseNote" class="input" value="${escapeHtml(attrs.purchaseNote||attrs.order||'')}" placeholder="${t('purchaseNotePlaceholder')}"></div>
           <div class="area-preview hidden" id="fabricOrderedAreaPreview"></div>`;
   const stockFields=isLeather?`
-          <div class="field"><label>Площадь, м²</label><input id="fabricQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}"></div>
-          <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="Стеллаж / зона"></div>
+          <div class="field"><label>${t('stockAreaM2Label')}</label><input id="fabricQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockNumForUnit(found?.quantity||0,unit),unit)}"></div>
+          <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="${t('shelfZonePlaceholder')}"></div>
           <div class="field"><label>${t('purchasePrice')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
           <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>`:`
-          <div class="field"><label>На складе, пог. м</label><input id="fabricQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockQtyValue,unit)}" oninput="updateFabricAreaPreview()"></div>
-          <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="Стеллаж / зона"></div>
+          <div class="field"><label>${t('stockLinearMLabel')}</label><input id="fabricQty" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${inputQtyValue(stockQtyValue,unit)}" oninput="updateFabricAreaPreview()"></div>
+          <div class="field"><label>${t('storageLocation')}</label><input id="fabricStorageLocation" class="input" value="${attrs.storageLocation||''}" placeholder="${t('shelfZonePlaceholder')}"></div>
           <div class="field"><label>${t('purchasePrice')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${attrs.purchasePrice||''}"></div>
           <div class="field"><label>${t('receiptDate')}</label><input id="fabricReceiptDate" class="input" type="date" value="${attrs.receiptDate||''}"></div>
           <div class="area-preview hidden" id="fabricStockAreaPreview"></div>`;
   const body=`<div class="fabric-wizard material-wizard fabric-single-card" data-step="1" data-material-id="${id||''}">
     <section class="wizard-card">
-      <h4>${isLeather?'Данные кожи':'Данные рулона'}</h4>
+      <h4>${isLeather?t('leatherDataTitle'):t('rollDataTitle')}</h4>
       <div class="fabric-form-grid">
-        <div class="field"><label>${t('name')}</label><input id="fabricName" class="input" value="${found?.name||''}" placeholder="Например: Bella 23889"></div>
+        <div class="field"><label>${t('name')}</label><input id="fabricName" class="input" value="${found?.name||''}" placeholder="${t('fabricNamePlaceholder')}"></div>
         <input id="fabricCategory" type="hidden" value="${escapeHtml(fabricCategory)}">
         <div class="field"><label>${t('sku')}</label><input id="fabricSku" class="input" value="${found?.sku||nextSku(fabricCategory,'',id||'')}"></div>
-        <div class="field"><label>${t('collection')}</label><input id="fabricCollection" class="input" value="${escapeHtml(attrs.collection||'')}" placeholder="Например: Cristal Premium"></div>
-        <div class="field"><label>${t('manufacturer')}</label><input id="fabricManufacturer" class="input" value="${escapeHtml(attrs.manufacturer||'')}" placeholder="Производитель"></div>
+        <div class="field"><label>${t('collection')}</label><input id="fabricCollection" class="input" value="${escapeHtml(attrs.collection||'')}" placeholder="${t('collectionPlaceholder')}"></div>
+        <div class="field"><label>${t('manufacturer')}</label><input id="fabricManufacturer" class="input" value="${escapeHtml(attrs.manufacturer||'')}" placeholder="${t('manufacturer')}"></div>
         ${materialWizardParamsHtml(fabricCategory,attrs,'fabric')}
         ${isLeather?'':`<div class="area-preview hidden" id="fabricParamAreaPreview"></div>`}
       </div>
-      <h4>Состояние материала</h4>
+      <h4>${t('materialStateTitle2')}</h4>
       ${materialStateCards(currentState)}
       <div class="fabric-form-grid">
         <div class="state-fields ${currentState==='ordered'?'':'hidden'}" data-state-fields="ordered">

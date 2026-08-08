@@ -23,14 +23,14 @@ function applyBuildVersion() {
 function loadMaterialUxImmediately() {
   if (!document.querySelector('script[data-module="material-flow-v634"]')) {
     const script = document.createElement('script');
-    script.src = 'js/eco-leather-wizard.js?v=6.35';
+    script.src = 'js/eco-leather-wizard.js?v=6.36';
     script.dataset.module = 'material-flow-v634';
     script.async = false;
     document.head.appendChild(script);
   }
   if (!document.querySelector('script[data-module="wood-flow-v639"]')) {
     const script = document.createElement('script');
-    script.src = 'js/wood-wizard.js?v=6.41';
+    script.src = 'js/wood-wizard.js?v=6.42';
     script.dataset.module = 'wood-flow-v639';
     script.async = false;
     document.head.appendChild(script);

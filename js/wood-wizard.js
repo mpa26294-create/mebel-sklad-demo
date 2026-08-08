@@ -69,22 +69,23 @@
     document.head.appendChild(style);
   }
 
+  const tt=(k,f)=>typeof t==='function'?t(k):f;
   function stateCards(){
     return `<div class="wood-state-cards">
-      <button class="wood-state-card" type="button" data-wood-state="card" onclick="setWoodCreateState('card')"><b>Только карточка</b><span>Создать материал без остатка.</span></button>
-      <button class="wood-state-card" type="button" data-wood-state="ordered" onclick="setWoodCreateState('ordered')"><b>Заказано</b><span>Материал заказан, но ещё не поступил.</span></button>
-      <button class="wood-state-card" type="button" data-wood-state="stock" onclick="setWoodCreateState('stock')"><b>На складе</b><span>Материал уже находится на складе.</span></button>
+      <button class="wood-state-card" type="button" data-wood-state="card" onclick="setWoodCreateState('card')"><b>${tt('woodOnlyCardTitle','Только карточка')}</b><span>${tt('woodOnlyCardHint','Создать материал без остатка.')}</span></button>
+      <button class="wood-state-card" type="button" data-wood-state="ordered" onclick="setWoodCreateState('ordered')"><b>${tt('woodOrderedTitle','Заказано')}</b><span>${tt('woodOrderedHint','Материал заказан, но ещё не поступил.')}</span></button>
+      <button class="wood-state-card" type="button" data-wood-state="stock" onclick="setWoodCreateState('stock')"><b>${tt('woodInStockTitle','На складе')}</b><span>${tt('woodInStockHint','Материал уже находится на складе.')}</span></button>
     </div>`;
   }
 
   function typeGroup(label, types, current){
-    const chips=types.map(v=>`<button type="button" class="wood-type-chip${v===current?' active':''}" data-wood-type="${esc(v)}" onclick="setWoodMaterialType('${esc(v)}')">${esc(v)}</button>`).join('');
+    const chips=types.map(v=>`<button type="button" class="wood-type-chip${v===current?' active':''}" data-wood-type="${esc(v)}" onclick="setWoodMaterialType('${esc(v)}')">${esc(typeof woodTypeLabel==='function'?woodTypeLabel(v):v)}</button>`).join('');
     return `<div class="wood-type-group"><div class="wood-type-group-label">${esc(label)}</div><div class="wood-type-chips">${chips}</div></div>`;
   }
 
   function typePicker(current, group=woodGroup){
     const types=group==='sheet'?[...SHEET_TYPES,'Другое']:LUMBER_TYPES;
-    const label=group==='sheet'?'Тип листового материала':'Тип пиломатериала';
+    const label=group==='sheet'?tt('woodSheetTypeLabel','Тип листового материала'):tt('woodLumberTypeLabel','Тип пиломатериала');
     return `<div class="wood-type-groups">${typeGroup(label,types,current)}</div>`;
   }
 
@@ -98,13 +99,13 @@
   function openWoodGroupPicker(){
     if(!requireAuth())return;
     const body=`<div class="wood-group-picker">
-      <div class="wood-group-intro"><h4>Какой материал хотите добавить?</h4><p>Выберите один вариант. Остальные поля настроятся автоматически.</p></div>
+      <div class="wood-group-intro"><h4>${tt('woodPickerQuestion','Какой материал хотите добавить?')}</h4><p>${tt('woodPickerHint','Выберите один вариант. Остальные поля настроятся автоматически.')}</p></div>
       <div class="wood-group-list">
-        <button class="wood-group-card lumber" type="button" onclick="openWoodGroupForm('lumber')">${groupIcon('lumber')}<span class="wood-group-copy"><b>Пиломатериалы</b><span>Доска, брус, рейка, мебельный щит</span></span><span class="wood-group-arrow">›</span></button>
-        <button class="wood-group-card sheet" type="button" onclick="openWoodGroupForm('sheet')">${groupIcon('sheet')}<span class="wood-group-copy"><b>Листовые материалы</b><span>Фанера, MDF, HDF, ДСП, ДВП, OSB</span></span><span class="wood-group-arrow">›</span></button>
+        <button class="wood-group-card lumber" type="button" onclick="openWoodGroupForm('lumber')">${groupIcon('lumber')}<span class="wood-group-copy"><b>${tt('woodLumberGroupTitle','Пиломатериалы')}</b><span>${tt('woodLumberGroupDesc','Доска, брус, рейка, мебельный щит')}</span></span><span class="wood-group-arrow">›</span></button>
+        <button class="wood-group-card sheet" type="button" onclick="openWoodGroupForm('sheet')">${groupIcon('sheet')}<span class="wood-group-copy"><b>${tt('woodSheetGroupTitle','Листовые материалы')}</b><span>${tt('woodSheetGroupDesc','Фанера, MDF, HDF, ДСП, ДВП, OSB')}</span></span><span class="wood-group-arrow">›</span></button>
       </div>
     </div>`;
-    openModal('Добавить древесину',body,'');
+    openModal(tt('addWoodTitle','Добавить древесину'),body,'');
     const modal=document.querySelector('#modalBackdrop .modal');
     modal?.classList.add('wood-group-select');
     const back=document.getElementById('modalBackBtn');
@@ -139,13 +140,13 @@
     const custom=document.getElementById('woodCustomTypeField');
     if(custom)custom.style.display=other?'block':'none';
     const speciesLabel=document.getElementById('woodSpeciesLabel');
-    if(speciesLabel)speciesLabel.textContent=sheet?'Порода / декор':'Порода древесины';
+    if(speciesLabel)speciesLabel.textContent=sheet?tt('woodSpeciesDecorLabel','Порода / декор'):tt('woodSpeciesLabel','Порода древесины');
     const dimsTitle=document.getElementById('woodDimensionsTitle');
-    if(dimsTitle)dimsTitle.textContent=sheet?'Размеры листа':'Размеры';
+    if(dimsTitle)dimsTitle.textContent=sheet?tt('woodSheetDimensionsTitle','Размеры листа'):tt('woodDimensionsTitle','Размеры');
     const widthLabel=document.getElementById('woodWidthLabel');
     const lengthLabel=document.getElementById('woodLengthLabel');
-    if(widthLabel)widthLabel.textContent=sheet?'Ширина листа, мм':'Ширина, мм';
-    if(lengthLabel)lengthLabel.textContent=sheet?'Длина листа, мм':'Длина, мм';
+    if(widthLabel)widthLabel.textContent=sheet?tt('woodSheetWidthLabel','Ширина листа, мм'):tt('woodWidthLabel','Ширина, мм');
+    if(lengthLabel)lengthLabel.textContent=sheet?tt('woodSheetLengthLabel','Длина листа, мм'):tt('woodLengthLabel','Длина, мм');
     const unitField=document.getElementById('woodUnitField');
     if(unitField)unitField.style.display=lumber?'block':'none';
     if(lumber){
@@ -160,9 +161,9 @@
 
   function quantityLabel(prefix){
     const mode=unitMode();
-    if(mode==='sheet')return `${prefix}, листов`;
+    if(mode==='sheet')return `${prefix}, ${tt('sheetsUnitSuffix','листов')}`;
     if(mode==='m3')return `${prefix}, м³`;
-    return `${prefix}, шт`;
+    return `${prefix}, ${tt('pcsUnitSuffix','шт')}`;
   }
 
   function quantityStep(){return unitMode()==='m3'?'0.001':'1';}
@@ -172,12 +173,12 @@
     const hidden=document.getElementById('woodCreateState');if(hidden)hidden.value=woodState;
     const ordered=document.getElementById('woodOrderedFields');if(ordered)ordered.style.display=woodState==='ordered'?'grid':'none';
     const stock=document.getElementById('woodStockFields');if(stock)stock.style.display=woodState==='stock'?'grid':'none';
-    const orderedLabel=document.getElementById('woodOrderedLabel');if(orderedLabel)orderedLabel.textContent=quantityLabel('Заказано');
-    const stockLabel=document.getElementById('woodStockLabel');if(stockLabel)stockLabel.textContent=quantityLabel('На складе');
-    const minLabel=document.getElementById('woodMinLabel');if(minLabel)minLabel.textContent=quantityLabel('Мин. остаток');
+    const orderedLabel=document.getElementById('woodOrderedLabel');if(orderedLabel)orderedLabel.textContent=quantityLabel(tt('woodOrderedTitle','Заказано'));
+    const stockLabel=document.getElementById('woodStockLabel');if(stockLabel)stockLabel.textContent=quantityLabel(tt('woodInStockTitle','На складе'));
+    const minLabel=document.getElementById('woodMinLabel');if(minLabel)minLabel.textContent=quantityLabel(tt('minQuantity','Мин. остаток'));
     ['woodOrderedCount','woodStockCount','woodMinCount'].forEach(id=>{const el=document.getElementById(id);if(el)el.step=quantityStep();});
     const priceLabel=document.getElementById('woodPriceLabel');
-    if(priceLabel)priceLabel.textContent=unitMode()==='sheet'?'Цена закупки, за лист':unitMode()==='m3'?'Цена закупки, за м³':'Цена закупки, за штуку';
+    if(priceLabel)priceLabel.textContent=unitMode()==='sheet'?tt('priceForSheet','Цена закупки, за лист'):unitMode()==='m3'?tt('priceForM3','Цена закупки, за м³'):tt('priceForPiece','Цена закупки, за штуку');
     updateWoodPreview();
   }
   window.setWoodCreateState=function(state){woodState=['card','ordered','stock'].includes(state)?state:'stock';syncWoodState();};
@@ -190,19 +191,19 @@
     const box=document.getElementById('woodCalcPreview');
     if(!box)return;
     if(!(width>0&&length>0&&thickness>0)){
-      box.textContent='Укажите размеры — расчёт появится автоматически.';
+      box.textContent=tt('woodSpecifySizesHint','Укажите размеры — расчёт появится автоматически.');
       return;
     }
     const area=(width/1000)*(length/1000);
     const pieceVolume=area*(thickness/1000);
     const mode=unitMode();
     if(mode==='sheet'){
-      box.textContent=`Площадь 1 листа: ${area.toFixed(3)} м² · листов: ${Math.trunc(qty)} · общая площадь: ${(area*qty).toFixed(3)} м² · объём: ${(pieceVolume*qty).toFixed(4)} м³`;
+      box.textContent=`${tt('woodPreviewSheet','Площадь 1 листа')}: ${area.toFixed(3)} м² · ${tt('woodPreviewSheetsCount','листов')}: ${Math.trunc(qty)} · ${tt('woodPreviewTotalArea','общая площадь')}: ${(area*qty).toFixed(3)} м² · ${tt('woodPreviewVolume','объём')}: ${(pieceVolume*qty).toFixed(4)} м³`;
     }else if(mode==='m3'){
       const approx=pieceVolume>0?Math.floor(qty/pieceVolume):0;
-      box.textContent=`Объём 1 штуки: ${pieceVolume.toFixed(5)} м³ · введено: ${qty.toFixed(3)} м³ · примерно: ${approx} шт`;
+      box.textContent=`${tt('woodPreviewOnePiece','Объём 1 штуки')}: ${pieceVolume.toFixed(5)} м³ · ${tt('woodPreviewEntered','введено')}: ${qty.toFixed(3)} м³ · ${tt('woodPreviewApprox','примерно')}: ${approx} ${tt('pcsUnitSuffix','шт')}`;
     }else{
-      box.textContent=`Объём 1 штуки: ${pieceVolume.toFixed(5)} м³ · штук: ${Math.trunc(qty)} · общий объём: ${(pieceVolume*qty).toFixed(4)} м³`;
+      box.textContent=`${tt('woodPreviewOnePiece','Объём 1 штуки')}: ${pieceVolume.toFixed(5)} м³ · ${tt('woodPreviewPiecesCount','штук')}: ${Math.trunc(qty)} · ${tt('woodPreviewTotalVolume','общий объём')}: ${(pieceVolume*qty).toFixed(4)} м³`;
     }
   }
   window.updateWoodPreview=updateWoodPreview;
@@ -220,36 +221,36 @@
     if(!id&&!a.status)woodState='stock';
     const currentUnit=isSheetType(currentType)?'sheet':(a.unitType||((found?.unit==='м³')?'m3':'piece'));
     const date=a.arrivalDate||a.receiptDate||a.expectedReceiptDate||todayValue();
-    const body=`<div class="wood-unified material-wizard" data-material-id="${id||''}"><section class="wizard-card"><h4>Данные древесины</h4><div class="fabric-form-grid">
-      <div class="field"><label>Название</label><input id="woodName" class="input" value="${esc(found?.name||'')}" placeholder="Например: Брус сосна 50×100×3000"></div>
-      <div class="field full"><label>Тип материала</label><input id="woodMaterialType" type="hidden" value="${esc(currentType)}">${typePicker(currentType,woodGroup)}</div>
-      <div class="field" id="woodCustomTypeField" style="display:none"><label>Укажите тип</label><input id="woodCustomType" class="input" value="${esc(a.customMaterialType||'')}"></div>
-      <div class="field"><label>Артикул</label><input id="woodSku" class="input" value="${esc(found?.sku||nextSku('Древесина','',id||''))}"></div>
-      <div class="field"><label id="woodSpeciesLabel">Порода древесины</label><input id="woodSpecies" class="input" value="${esc(a.woodSpecies||a.woodType||'')}" placeholder="Дуб, бук, сосна"></div>
-      <div class="field"><label>Производитель / поставщик</label><input id="woodSupplier" class="input" value="${esc(a.supplier||a.manufacturer||'')}"></div>
-      <div class="field full"><h4 id="woodDimensionsTitle" style="margin:4px 0 0">Размеры</h4></div>
-      <div class="field"><label>Толщина, мм</label><input id="woodThickness" class="input" type="number" min="0" step="1" value="${esc(a.thickness||'')}" oninput="updateWoodPreview()"></div>
-      <div class="field"><label id="woodWidthLabel">Ширина, мм</label><input id="woodWidth" class="input" type="number" min="0" step="1" value="${esc(a.width||'')}" oninput="updateWoodPreview()"></div>
-      <div class="field"><label id="woodLengthLabel">Длина, мм</label><input id="woodLength" class="input" type="number" min="0" step="1" value="${esc(a.length_mm||a.length||'')}" oninput="updateWoodPreview()"></div>
-      <div class="field"><label>Сорт, необязательно</label><input id="woodGrade" class="input" value="${esc(a.grade||'')}"></div>
-      <div class="field" id="woodUnitField"><label>Единица учёта</label><input id="woodUnitType" type="hidden" value="${esc(currentUnit==='sheet'?'piece':currentUnit)}"><div class="wood-unit-switch"><button type="button" data-wood-unit-button="piece" onclick="setWoodUnitMode('piece')">Шт.</button><button type="button" data-wood-unit-button="m3" onclick="setWoodUnitMode('m3')">м³</button></div></div>
-      <div class="field full"><div class="wood-form-note ${woodGroup==='sheet'?'sheet':''}">${woodGroup==='sheet'?'Для листовых материалов учёт ведётся автоматически в листах.':'Для пиломатериалов доступен учёт в штуках или кубических метрах.'}</div></div>
-    </div><div class="wood-section"><h4>Состояние материала</h4>${stateCards()}<input id="woodCreateState" type="hidden" value="${woodState}">
+    const body=`<div class="wood-unified material-wizard" data-material-id="${id||''}"><section class="wizard-card"><h4>${tt('woodDataTitle','Данные древесины')}</h4><div class="fabric-form-grid">
+      <div class="field"><label>${tt('name','Название')}</label><input id="woodName" class="input" value="${esc(found?.name||'')}" placeholder="${tt('woodNamePlaceholder','Например: Брус сосна 50×100×3000')}"></div>
+      <div class="field full"><label>${tt('materialTypeLabel2','Тип материала')}</label><input id="woodMaterialType" type="hidden" value="${esc(currentType)}">${typePicker(currentType,woodGroup)}</div>
+      <div class="field" id="woodCustomTypeField" style="display:none"><label>${tt('specifyTypeLabel','Укажите тип')}</label><input id="woodCustomType" class="input" value="${esc(a.customMaterialType||'')}"></div>
+      <div class="field"><label>${tt('sku','Артикул')}</label><input id="woodSku" class="input" value="${esc(found?.sku||nextSku('Древесина','',id||''))}"></div>
+      <div class="field"><label id="woodSpeciesLabel">${tt('woodSpeciesLabel','Порода древесины')}</label><input id="woodSpecies" class="input" value="${esc(a.woodSpecies||a.woodType||'')}" placeholder="${tt('woodSpeciesPlaceholder','Дуб, бук, сосна')}"></div>
+      <div class="field"><label>${tt('manufacturerSupplierLabel','Производитель / поставщик')}</label><input id="woodSupplier" class="input" value="${esc(a.supplier||a.manufacturer||'')}"></div>
+      <div class="field full"><h4 id="woodDimensionsTitle" style="margin:4px 0 0">${tt('woodDimensionsTitle','Размеры')}</h4></div>
+      <div class="field"><label>${tt('thicknessMmLabel','Толщина, мм')}</label><input id="woodThickness" class="input" type="number" min="0" step="1" value="${esc(a.thickness||'')}" oninput="updateWoodPreview()"></div>
+      <div class="field"><label id="woodWidthLabel">${tt('woodWidthLabel','Ширина, мм')}</label><input id="woodWidth" class="input" type="number" min="0" step="1" value="${esc(a.width||'')}" oninput="updateWoodPreview()"></div>
+      <div class="field"><label id="woodLengthLabel">${tt('woodLengthLabel','Длина, мм')}</label><input id="woodLength" class="input" type="number" min="0" step="1" value="${esc(a.length_mm||a.length||'')}" oninput="updateWoodPreview()"></div>
+      <div class="field"><label>${tt('gradeOptionalLabel','Сорт, необязательно')}</label><input id="woodGrade" class="input" value="${esc(a.grade||'')}"></div>
+      <div class="field" id="woodUnitField"><label>${tt('unitOfMeasureLabel2','Единица учёта')}</label><input id="woodUnitType" type="hidden" value="${esc(currentUnit==='sheet'?'piece':currentUnit)}"><div class="wood-unit-switch"><button type="button" data-wood-unit-button="piece" onclick="setWoodUnitMode('piece')">${tt('pcsShortLabel','Шт.')}</button><button type="button" data-wood-unit-button="m3" onclick="setWoodUnitMode('m3')">м³</button></div></div>
+      <div class="field full"><div class="wood-form-note ${woodGroup==='sheet'?'sheet':''}">${woodGroup==='sheet'?tt('woodSheetNoteText','Для листовых материалов учёт ведётся автоматически в листах.'):tt('woodLumberNoteText','Для пиломатериалов доступен учёт в штуках или кубических метрах.')}</div></div>
+    </div><div class="wood-section"><h4>${tt('materialStateTitle2','Состояние материала')}</h4>${stateCards()}<input id="woodCreateState" type="hidden" value="${woodState}">
       <div class="fabric-form-grid" id="woodOrderedFields" style="display:none">
-        <div class="field"><label id="woodOrderedLabel">Заказано</label><input id="woodOrderedCount" class="input" type="number" min="0" step="1" value="${esc(a.orderedCount??a.orderedQty??0)}" oninput="updateWoodPreview()"></div>
-        <div class="field"><label>Ожидаемая дата поступления</label><input id="woodExpectedDate" class="input" type="date" value="${esc(date)}"></div>
-        <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="woodPurchaseNote" class="input" value="${esc(a.purchaseOrderInfo||a.purchaseNote||a.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
+        <div class="field"><label id="woodOrderedLabel">${tt('woodOrderedTitle','Заказано')}</label><input id="woodOrderedCount" class="input" type="number" min="0" step="1" value="${esc(a.orderedCount??a.orderedQty??0)}" oninput="updateWoodPreview()"></div>
+        <div class="field"><label>${tt('expectedReceiptDateLabel','Ожидаемая дата поступления')}</label><input id="woodExpectedDate" class="input" type="date" value="${esc(date)}"></div>
+        <div class="field full"><label>${tt('purchaseNoteLabel','№ закупки / поставщик / комментарий')}</label><input id="woodPurchaseNote" class="input" value="${esc(a.purchaseOrderInfo||a.purchaseNote||a.order||'')}" placeholder="${tt('purchaseNotePlaceholder','PO-102 · Поставщик · комментарий')}"></div>
       </div>
       <div class="fabric-form-grid" id="woodStockFields" style="display:none">
-        <div class="field"><label id="woodStockLabel">На складе</label><input id="woodStockCount" class="input" type="number" min="0" step="1" value="${esc(a.stockCount??found?.quantity??0)}" oninput="updateWoodPreview()"></div>
-        <div class="field"><label id="woodMinLabel">Мин. остаток</label><input id="woodMinCount" class="input" type="number" min="0" step="1" value="${esc(a.minStockCount??found?.minQuantity??0)}"></div>
-        <div class="field"><label>Место хранения</label><input id="woodStorageLocation" class="input" value="${esc(a.storageLocation||'')}" placeholder="Стеллаж / зона"></div>
-        <div class="field"><label id="woodPriceLabel">Цена закупки</label><input id="woodPurchasePrice" class="input" type="number" min="0" step="0.01" value="${esc(a.purchasePrice||'')}"></div>
-        <div class="field"><label>Дата поступления</label><input id="woodReceiptDate" class="input" type="date" value="${esc(date)}"></div>
+        <div class="field"><label id="woodStockLabel">${tt('woodInStockTitle','На складе')}</label><input id="woodStockCount" class="input" type="number" min="0" step="1" value="${esc(a.stockCount??found?.quantity??0)}" oninput="updateWoodPreview()"></div>
+        <div class="field"><label id="woodMinLabel">${tt('minQuantity','Мин. остаток')}</label><input id="woodMinCount" class="input" type="number" min="0" step="1" value="${esc(a.minStockCount??found?.minQuantity??0)}"></div>
+        <div class="field"><label>${tt('storageLocation','Место хранения')}</label><input id="woodStorageLocation" class="input" value="${esc(a.storageLocation||'')}" placeholder="${tt('shelfZonePlaceholder','Стеллаж / зона')}"></div>
+        <div class="field"><label id="woodPriceLabel">${tt('purchasePrice','Цена закупки')}</label><input id="woodPurchasePrice" class="input" type="number" min="0" step="0.01" value="${esc(a.purchasePrice||'')}"></div>
+        <div class="field"><label>${tt('receiptDate','Дата поступления')}</label><input id="woodReceiptDate" class="input" type="date" value="${esc(date)}"></div>
       </div>
       <div class="wood-calc-preview" id="woodCalcPreview"></div>
     </div></section></div>`;
-    const formTitle=id?'Редактировать древесину':(woodGroup==='sheet'?'Добавить листовой материал':'Добавить пиломатериал');
+    const formTitle=id?tt('editWoodTitle','Редактировать древесину'):(woodGroup==='sheet'?tt('addSheetMaterialTitle','Добавить листовой материал'):tt('addLumberMaterialTitle','Добавить пиломатериал'));
     openModal(formTitle,body,`<button class="btn primary" type="button" onclick="saveWoodV639('${id||''}')">${typeof t==='function'?t('save'):'Сохранить'}</button>`);
     document.querySelector('#modalBackdrop .modal')?.classList.remove('wood-group-select');
     const back=document.getElementById('modalBackBtn');if(back)back.onclick=()=>{if(id){closeModal();return;}openWoodGroupPicker();};
@@ -267,9 +268,9 @@
     const min=state==='stock'?readNum('woodMinCount'):0;
     const ordered=state==='ordered'?readNum('woodOrderedCount'):0;
     const price=state==='stock'?readNum('woodPurchasePrice'):0;
-    if([width,length,thickness,stock,min,ordered,price].some(v=>v===null)){toast('Значения не могут быть отрицательными.');return;}
-    if(mode!=='m3'&&![stock,min,ordered].every(Number.isInteger)){toast('Количество должно быть целым числом.');return;}
-    if(!(width>0&&length>0&&thickness>0)){toast('Укажите толщину, ширину и длину.');return;}
+    if([width,length,thickness,stock,min,ordered,price].some(v=>v===null)){toast(tt('valuesCannotBeNegative','Значения не могут быть отрицательными.'));return;}
+    if(mode!=='m3'&&![stock,min,ordered].every(Number.isInteger)){toast(tt('quantityMustBeInteger','Количество должно быть целым числом.'));return;}
+    if(!(width>0&&length>0&&thickness>0)){toast(tt('specifyDimensionsHint','Укажите толщину, ширину и длину.'));return;}
     const selectedType=typeOf();
     const custom=(document.getElementById('woodCustomType')?.value||'').trim();
     const materialType=selectedType==='Другое'?(custom||'Другое'):selectedType;

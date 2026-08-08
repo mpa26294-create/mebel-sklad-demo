@@ -10,6 +10,7 @@
     return Number.isFinite(value)&&value>=0?value:null;
   };
   const esc=value=>typeof escapeHtml==='function'?escapeHtml(String(value??'')):String(value??'');
+  const tt=(k,f)=>typeof t==='function'?t(k):f;
 
   function applyVersion(){
     if(typeof applyBuildVersion==='function')applyBuildVersion();
@@ -36,12 +37,12 @@
   }
 
   function cardsHtml(isLeather=false){
-    const orderedText=isLeather?'Кожа заказана, но ещё не поступила.':'Рулоны заказаны, но ещё не пришли.';
-    const stockText=isLeather?'Кожа уже находится на складе.':'Рулоны уже находятся на складе.';
+    const orderedText=isLeather?tt('ecoLeatherOrderedHint','Кожа заказана, но ещё не поступила.'):tt('ecoRollOrderedHint','Рулоны заказаны, но ещё не пришли.');
+    const stockText=isLeather?tt('ecoLeatherStockHint','Кожа уже находится на складе.'):tt('ecoRollStockHint','Рулоны уже находятся на складе.');
     return `<div class="eco-state-cards">
-      <button class="eco-state-card" type="button" data-apple-state="card" onclick="setAppleMaterialState('card')"><b>Только карточка</b><span>Создать материал без остатка.</span></button>
-      <button class="eco-state-card" type="button" data-apple-state="ordered" onclick="setAppleMaterialState('ordered')"><b>Заказано</b><span>${orderedText}</span></button>
-      <button class="eco-state-card" type="button" data-apple-state="stock" onclick="setAppleMaterialState('stock')"><b>На складе</b><span>${stockText}</span></button>
+      <button class="eco-state-card" type="button" data-apple-state="card" onclick="setAppleMaterialState('card')"><b>${tt('woodOnlyCardTitle','Только карточка')}</b><span>${tt('woodOnlyCardHint','Создать материал без остатка.')}</span></button>
+      <button class="eco-state-card" type="button" data-apple-state="ordered" onclick="setAppleMaterialState('ordered')"><b>${tt('woodOrderedTitle','Заказано')}</b><span>${orderedText}</span></button>
+      <button class="eco-state-card" type="button" data-apple-state="stock" onclick="setAppleMaterialState('stock')"><b>${tt('woodInStockTitle','На складе')}</b><span>${stockText}</span></button>
     </div>`;
   }
 
@@ -66,7 +67,7 @@
     const box=document.getElementById(materialState==='ordered'?'ecoOrderedRollPreview':'ecoStockRollPreview');
     if(!box)return;
     const one=width*length,total=one*count;
-    box.textContent=width>0&&length>0?`Площадь 1 рулона: ${one.toFixed(2)} м² · рулонов: ${count} · всего: ${total.toFixed(2)} м²`:'Укажите ширину и длину рулона — площадь рассчитается автоматически.';
+    box.textContent=width>0&&length>0?`${tt('rollPreviewOneRoll','Площадь 1 рулона')}: ${one.toFixed(2)} м² · ${tt('rollPreviewRollsCount','рулонов')}: ${count} · ${tt('rollPreviewTotal','всего')}: ${total.toFixed(2)} м²`:tt('rollPreviewHint','Укажите ширину и длину рулона — площадь рассчитается автоматически.');
   }
   window.updateEcoRollPreview=updateRollPreview;
 
@@ -75,7 +76,7 @@
     const field=qtyInput?.closest('.field');
     if(!field)return;
     const saved=state==='ordered'?Number(attrs.orderedRollCount||attrs.orderedQty||0):Number(attrs.rollCount||found?.quantity||0);
-    field.innerHTML=`<label>Количество рулонов</label><input id="${state==='ordered'?'ecoOrderedRollCount':'ecoStockRollCount'}" class="input" type="number" min="0" step="1" inputmode="numeric" value="${Number.isFinite(saved)?saved:0}" oninput="updateEcoRollPreview()">`;
+    field.innerHTML=`<label>${tt('rollCountLabel','Количество рулонов')}</label><input id="${state==='ordered'?'ecoOrderedRollCount':'ecoStockRollCount'}" class="input" type="number" min="0" step="1" inputmode="numeric" value="${Number.isFinite(saved)?saved:0}" oninput="updateEcoRollPreview()">`;
     const preview=document.createElement('div');
     preview.id=state==='ordered'?'ecoOrderedRollPreview':'ecoStockRollPreview';preview.className='eco-roll-preview';host.appendChild(preview);
     host.querySelectorAll('input[id$="RollWidth"],input[id$="RollLength"]').forEach(input=>input.addEventListener('input',updateRollPreview));
@@ -84,14 +85,14 @@
   function replaceLeatherFields(host,state,attrs,found){
     if(!host)return;
     host.innerHTML=state==='ordered'?`
-      <div class="field"><label>Площадь заказана, м²</label><input id="leatherOrderedArea" class="input" type="number" min="0" step="0.01" value="${esc(attrs.orderedQty||0)}"></div>
-      <div class="field"><label>Ожидаемая дата поступления</label><input id="fabricExpectedDate" class="input" type="date" value="${esc(attrs.expectedReceiptDate||'')}"></div>
-      <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="fabricPurchaseNote" class="input" value="${esc(attrs.purchaseNote||attrs.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>`:`
-      <div class="field"><label>Площадь на складе, м²</label><input id="leatherStockArea" class="input" type="number" min="0" step="0.01" value="${esc(found?.quantity||0)}"></div>
-      <div class="field"><label>Мин. остаток, м²</label><input id="leatherMinArea" class="input" type="number" min="0" step="0.01" value="${esc(found?.minQuantity||0)}"></div>
-      <div class="field"><label>Место хранения</label><input id="fabricStorageLocation" class="input" value="${esc(attrs.storageLocation||'')}" placeholder="Стеллаж / зона"></div>
-      <div class="field"><label>Цена закупки, за м²</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${esc(attrs.purchasePrice||'')}"></div>
-      <div class="field"><label>Дата поступления</label><input id="fabricReceiptDate" class="input" type="date" value="${esc(attrs.receiptDate||'')}"></div>`;
+      <div class="field"><label>${tt('orderedAreaM2Label','Площадь заказана, м²')}</label><input id="leatherOrderedArea" class="input" type="number" min="0" step="0.01" value="${esc(attrs.orderedQty||0)}"></div>
+      <div class="field"><label>${tt('expectedReceiptDateLabel','Ожидаемая дата поступления')}</label><input id="fabricExpectedDate" class="input" type="date" value="${esc(attrs.expectedReceiptDate||'')}"></div>
+      <div class="field full"><label>${tt('purchaseNoteLabel','№ закупки / поставщик / комментарий')}</label><input id="fabricPurchaseNote" class="input" value="${esc(attrs.purchaseNote||attrs.order||'')}" placeholder="${tt('purchaseNotePlaceholder','PO-102 · Поставщик · комментарий')}"></div>`:`
+      <div class="field"><label>${tt('stockAreaM2Label','Площадь на складе, м²')}</label><input id="leatherStockArea" class="input" type="number" min="0" step="0.01" value="${esc(found?.quantity||0)}"></div>
+      <div class="field"><label>${tt('minAreaM2Label','Мин. остаток, м²')}</label><input id="leatherMinArea" class="input" type="number" min="0" step="0.01" value="${esc(found?.minQuantity||0)}"></div>
+      <div class="field"><label>${tt('storageLocation','Место хранения')}</label><input id="fabricStorageLocation" class="input" value="${esc(attrs.storageLocation||'')}" placeholder="${tt('shelfZonePlaceholder','Стеллаж / зона')}"></div>
+      <div class="field"><label>${tt('purchasePriceM2Label','Цена закупки, за м²')}</label><input id="fabricPurchasePrice" class="input" type="number" min="0" step="0.01" value="${esc(attrs.purchasePrice||'')}"></div>
+      <div class="field"><label>${tt('receiptDate','Дата поступления')}</label><input id="fabricReceiptDate" class="input" type="date" value="${esc(attrs.receiptDate||'')}"></div>`;
   }
 
   function todayIfEmpty(id){const input=document.getElementById(id);if(input&&!input.value)input.value=new Date().toISOString().slice(0,10)}
@@ -115,10 +116,10 @@
     if(isLeather){replaceLeatherFields(orderedFields,'ordered',attrs,found);replaceLeatherFields(stockFields,'stock',attrs,found)}
     else{replaceWithRollCount(orderedFields,'ordered',attrs,found);replaceWithRollCount(stockFields,'stock',attrs,found)}
     const wrap=document.createElement('div');wrap.className='eco-state-wrap';
-    wrap.innerHTML=`<h4 class="eco-flow-heading">Состояние материала</h4>${cardsHtml(isLeather)}<input type="hidden" id="materialCreateState" value="${materialState}"><div class="eco-state-fields" id="ecoStateFields"></div>`;
+    wrap.innerHTML=`<h4 class="eco-flow-heading">${tt('materialStateTitle2','Состояние материала')}</h4>${cardsHtml(isLeather)}<input type="hidden" id="materialCreateState" value="${materialState}"><div class="eco-state-fields" id="ecoStateFields"></div>`;
     const host=wrap.querySelector('#ecoStateFields');if(orderedFields)host.appendChild(orderedFields);if(stockFields)host.appendChild(stockFields);step1.appendChild(wrap);
     step2?.remove();step3.remove();wizard.querySelector('.wizard-steps')?.remove();step1.classList.remove('hidden');
-    step1.querySelector('h4').textContent=isLeather?'Данные кожи':(category==='Ткань'?'Данные ткани':'Данные экокожи');wizard.dataset.step='1';
+    step1.querySelector('h4').textContent=isLeather?tt('leatherDataTitle','Данные кожи'):(category==='Ткань'?tt('fabricDataTitle','Данные ткани'):tt('ecoLeatherDataTitle','Данные экокожи'));wizard.dataset.step='1';
     ['fabricComposition','fabricDensity'].forEach(fieldId=>document.getElementById(fieldId)?.closest('.field')?.remove());
     const footer=document.getElementById('modalFoot');
     if(footer)footer.innerHTML=`<button class="btn primary" type="button" onclick="${isLeather?'saveLeatherV634':'saveRollMaterialV634'}('${id||''}')">${typeof t==='function'?t('save'):'Сохранить'}</button>`;
@@ -135,7 +136,7 @@
     const width=state==='ordered'?num('fabricOrderedRollWidth'):(state==='stock'?num('fabricStockRollWidth'):Number(old.rollWidth||0));
     const length=state==='ordered'?num('fabricOrderedRollLength'):(state==='stock'?num('fabricStockRollLength'):Number(old.rollLength||0));
     const count=state==='ordered'?num('ecoOrderedRollCount'):(state==='stock'?num('ecoStockRollCount'):0),price=state==='stock'?num('fabricPurchasePrice'):0;
-    if([width,length,count,price].some(v=>v===null)||!Number.isInteger(count)){toast('Значения не могут быть отрицательными. Количество рулонов должно быть целым числом.');return}
+    if([width,length,count,price].some(v=>v===null)||!Number.isInteger(count)){toast(tt('rollValuesNegativeIntegerToast','Значения не могут быть отрицательными. Количество рулонов должно быть целым числом.'));return}
     const area=Number(((width||0)*(length||0)).toFixed(2)),totalArea=Number((area*(count||0)).toFixed(2));
     const attrs={...old,materialType:category,collection:(document.getElementById('fabricCollection')?.value||'').trim(),manufacturer:(document.getElementById('fabricManufacturer')?.value||'').trim(),color:(document.getElementById('fabricColor')?.value||old.color||'').trim(),rollWidth:width||'',rollWidthMm:width?Math.round(width*1000):'',rollLength:length||'',rollCount:state==='stock'?count:0,orderedRollCount:state==='ordered'?count:0,area:area||'',totalArea,storageLocation:state==='stock'?(document.getElementById('fabricStorageLocation')?.value||'').trim():null,receiptDate:state==='stock'?(document.getElementById('fabricReceiptDate')?.value||null):null,purchasePrice:state==='stock'?price:null,expectedReceiptDate:state==='ordered'?(document.getElementById('fabricExpectedDate')?.value||null):null,purchaseNote:state==='ordered'?(document.getElementById('fabricPurchaseNote')?.value||'').trim()||null:null,purchaseStatus:state==='ordered'?'ordered':(state==='stock'?'instock':'noorder'),orderedQty:state==='ordered'?count:0,status:state,reservedQty:Number(old.reservedQty||0)};
     const obj={id:id||null,sku,name,category,subcategory:category,attributes:attrs,unit:'рулон',quantity:state==='stock'?count:0,minQuantity:Number(found?.minQuantity||0),lastUpdated:today()};
@@ -148,7 +149,7 @@
     const sku=(document.getElementById('fabricSku')?.value||'').trim()||nextSku('Кожа','',id||'');if(typeof warnFabricDuplicate==='function'&&warnFabricDuplicate())return;
     const name=(document.getElementById('fabricName')?.value||'').trim()||'Кожа',state=document.getElementById('materialCreateState')?.value||materialState;
     const qty=state==='stock'?num('leatherStockArea'):0,min=state==='stock'?num('leatherMinArea'):0,ordered=state==='ordered'?num('leatherOrderedArea'):0,price=state==='stock'?num('fabricPurchasePrice'):0;
-    if([qty,min,ordered,price].some(v=>v===null)){toast('Площадь, минимальный остаток и цена не могут быть отрицательными.');return}
+    if([qty,min,ordered,price].some(v=>v===null)){toast(tt('areaMinPriceNegativeToast','Площадь, минимальный остаток и цена не могут быть отрицательными.'));return}
     const attrs={...old,materialType:'Кожа',collection:(document.getElementById('fabricCollection')?.value||'').trim(),manufacturer:(document.getElementById('fabricManufacturer')?.value||'').trim(),color:(document.getElementById('fabricColor')?.value||old.color||'').trim(),storageLocation:state==='stock'?(document.getElementById('fabricStorageLocation')?.value||'').trim():null,receiptDate:state==='stock'?(document.getElementById('fabricReceiptDate')?.value||null):null,purchasePrice:state==='stock'?price:null,expectedReceiptDate:state==='ordered'?(document.getElementById('fabricExpectedDate')?.value||null):null,purchaseNote:state==='ordered'?(document.getElementById('fabricPurchaseNote')?.value||'').trim()||null:null,purchaseStatus:state==='ordered'?'ordered':(state==='stock'?'instock':'noorder'),orderedQty:ordered,status:state,reservedQty:Number(old.reservedQty||0),rollWidth:null,rollLength:null,rollCount:null};
     const obj={id:id||null,sku,name,category:'Кожа',subcategory:'Кожа',attributes:attrs,unit:'м²',quantity:qty,minQuantity:min,lastUpdated:today()};
     const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;if(id){closeModal();await loadMaterialsFromSupabase();renderAll();toast(t('savedMaterial'));return}await finishMaterialSaveAndReturn(obj.sku,obj.category);
