@@ -138,30 +138,72 @@ function setOrderMetaForSave(draft,prev){const now=auditNow();const meta=Object.
 
 function safeEsc(v){return (typeof escapeHtml==='function')?escapeHtml(v):String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function auditTranslateTerm(value){const text=String(value??'').trim();if(currentLang==='ru')return text;const terms={
-  'Артикул':['SKU','Artikuls'],'Название':['Name','Nosaukums'],'Категория':['Category','Kategorija'],'Подкатегория':['Subcategory','Apakškategorija'],'Единица учёта':['Unit','Mērvienība'],'Остаток':['Stock','Atlikums'],'Мин. остаток':['Min. stock','Min. atlikums'],'Количество':['Quantity','Daudzums'],'Статус':['Status','Statuss'],'Заказчик':['Customer','Klients'],'Номер заказа':['Order number','Pasūtījuma numurs'],'Количество изделий':['Product quantity','Izstrādājumu skaits'],'Срок сдачи':['Deadline','Termiņš'],'Дата создания':['Creation date','Izveides datums'],'Комментарий':['Comment','Komentārs'],'Марка / плотность':['Grade / density','Marka / blīvums'],'Новый':['New','Jauns'],'В работе':['In progress','Darbā'],'В производстве':['In production','Ražošanā'],'Готов':['Completed','Pabeigts'],'Завершён':['Completed','Pabeigts'],'Отменён':['Cancelled','Atcelts'],'completed':['Completed','Pabeigts'],'cancelled':['Cancelled','Atcelts'],'Раскрой материалов':['Material cutting','Materiālu piegriešana'],'Швейный цех':['Sewing workshop','Šūšanas cehs'],'Столярный цех':['Carpentry workshop','Galdniecības cehs'],'Поклейка поролона':['Foam gluing','Porolona līmēšana'],'Тапицерские работы':['Upholstery work','Apšūšanas darbi'],'Сборка':['Assembly','Montāža'],'Упаковка':['Packaging','Iepakošana']};const pair=terms[text];return pair?pair[currentLang==='en'?0:1]:text}
+  'Артикул':['SKU','Artikuls'],'Название':['Name','Nosaukums'],'Категория':['Category','Kategorija'],'Подкатегория':['Subcategory','Apakškategorija'],'Единица учёта':['Unit','Mērvienība'],'Остаток':['Stock','Atlikums'],'Мин. остаток':['Min. stock','Min. atlikums'],'Количество':['Quantity','Daudzums'],'Статус':['Status','Statuss'],'Заказчик':['Customer','Klients'],'Номер заказа':['Order number','Pasūtījuma numurs'],'Количество изделий':['Product quantity','Izstrādājumu skaits'],'Срок сдачи':['Deadline','Termiņš'],'Дата создания':['Creation date','Izveides datums'],'Комментарий':['Comment','Komentārs'],'Марка / плотность':['Grade / density','Marka / blīvums'],'Новый':['New','Jauns'],'В работе':['In progress','Darbā'],'В производстве':['In production','Ražošanā'],'Готов':['Completed','Pabeigts'],'Завершён':['Completed','Pabeigts'],'Отменён':['Cancelled','Atcelts'],'completed':['Completed','Pabeigts'],'cancelled':['Cancelled','Atcelts'],'Раскрой материалов':['Material cutting','Materiālu piegriešana'],'Швейный цех':['Sewing workshop','Šūšanas cehs'],'Столярный цех':['Carpentry workshop','Galdniecības cehs'],'Поклейка поролона':['Foam gluing','Porolona līmēšana'],'Тапицерские работы':['Upholstery work','Apšūšanas darbi'],'Сборка':['Assembly','Montāža'],'Упаковка':['Packaging','Iepakošana'],
+  'Заказ':['Order','Pasūtījums'],'Операция':['Operation','Operācija'],'Автоматически списано':['Automatically written off','Automātiski norakstīts'],'Выполнено':['Completed','Izgatavots'],'Расход на изделие':['Consumption per item','Patēriņš uz izstrādājumu'],'Списано':['Written off','Norakstīts'],'Остаток до':['Stock before','Atlikums pirms'],'Остаток после':['Stock after','Atlikums pēc'],'Материал':['Material','Materiāls']};const pair=terms[text];return pair?pair[currentLang==='en'?0:1]:text}
+// v6.92: known short i18n-key-backed audit phrases, reused to translate persisted (always-Russian) history text at display time.
+const AUDIT_PHRASE_KEYS=['historyProductionOperationStarted','historyProductionPaused','completedMsgDone','unitsGenitive','materialsAutoWrittenOff','positionsWord','undoneLastWriteOff','writeOffCancelledForOrder','returnedWord','materialsWriteOffUndone','historyProductionComment','historyTransferredCompletion','historyFinalComment','delayReason','notSpecified','timelineOrderClosed','historyTechnologyFilled','historyTechnologyStarted','historyTechnologySavedLater','historyOperationAdded','historyOperationRemoved','operationStage','historyTimeChanged','minutesShort','historyOperationChanged','historyMaterialAddedFromStock','historyNewMaterialAdded','historyTechnologyMaterialChanged','historyMaterialMarkedOrdered','historyMaterialRemoved','historyTransferredProduction','historyOrderSentTechnologist','historyOrderStarted','historyOrderCompleted','historyOrderCancelled','historyMaterialAdded'];
+function auditPhraseReplace(text){
+  const str=String(text||'');if(currentLang==='ru'||!str||typeof I18N==='undefined')return str;
+  const pairs=AUDIT_PHRASE_KEYS.map(k=>({k,ru:I18N.ru&&I18N.ru[k]})).filter(e=>e.ru).sort((a,b)=>b.ru.length-a.ru.length);
+  let result=str;
+  pairs.forEach(({k,ru})=>{
+    const esc=ru.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const re=new RegExp('(^|[^Ѐ-ӿ])'+esc+'(?![Ѐ-ӿ])','g');
+    result=result.replace(re,(_,pre)=>pre+t(k));
+  });
+  return result;
+}
 function auditLocalizedText(raw,row){const text=String(raw||'');if(currentLang==='ru'||!text)return text;const en=currentLang==='en';let m;
-  if((m=text.match(/^Производство:\s*(.+?)\s*·\s*сделано\s*(\d+)\s*издел/i)))return `${en?'Production':'Ražošana'}: ${auditTranslateTerm(m[1])} · ${en?`${m[2]} items completed`:`izgatavoti ${m[2]} izstrādājumi`}`;
+  if((m=text.match(/^Заказ:\s*(.+?)\.\s*Операция:\s*(.+?)\.\s*Расход на изделие:\s*(.+?)\.\s*Выполнено изделий:\s*(\d+)\.\s*Списано:\s*(.+?)\.\s*Остаток до:\s*(.+?)\.\s*Остаток после:\s*(.+?)\.?\s*$/i)))
+    return en?`Order: ${m[1]}. Operation: ${workshopLabel(m[2])}. Consumption per item: ${m[3]}. Items completed: ${m[4]}. Written off: ${m[5]}. Stock before: ${m[6]}. Stock after: ${m[7]}.`
+      :`Pasūtījums: ${m[1]}. Operācija: ${workshopLabel(m[2])}. Patēriņš uz izstrādājumu: ${m[3]}. Izgatavoti izstrādājumi: ${m[4]}. Norakstīts: ${m[5]}. Atlikums pirms: ${m[6]}. Atlikums pēc: ${m[7]}.`;
+  if((m=text.match(/^(.+?):\s*выполнено\s*(\d+)\s*изделий,\s*материалы\s*списаны\s*автоматически\s*\((\d+)\s*поз\.?\)\.?\s*$/i)))
+    return en?`${workshopLabel(m[1])}: ${m[2]} items completed, materials written off automatically (${m[3]} items)`
+      :`${workshopLabel(m[1])}: izgatavoti ${m[2]} izstrādājumi, materiāli norakstīti automātiski (${m[3]} poz.)`;
+  if((m=text.match(/^Производство:\s*(.+?)\s*·\s*сделано\s*(\d+)\s*издел/i)))return `${en?'Production':'Ražošana'}: ${workshopLabel(m[1])} · ${en?`${m[2]} items completed`:`izgatavoti ${m[2]} izstrādājumi`}`;
   if(/^Заказ переведён в работу$/i.test(text))return en?'Order moved to production':'Pasūtījums nodots ražošanā';
   if(/^Заказ завершён$/i.test(text))return en?'Order completed':'Pasūtījums pabeigts';
   if(/^Заказ отменён\. Материалы заморожены/i.test(text))return en?'Order cancelled. Materials frozen pending reconciliation':'Pasūtījums atcelts. Materiāli iesaldēti līdz pārrēķinam';
   if(/^Заказ отменён\. Резерв освобождён/i.test(text))return en?'Order cancelled. Reservation released':'Pasūtījums atcelts. Rezerve atbrīvota';
+  if(/^Заказ отменён$/i.test(text))return en?'Order cancelled':'Pasūtījums atcelts';
+  if(/^Заказ удалён:\s*(.+)$/i.test(text)&&(m=text.match(/^Заказ удалён:\s*(.+)$/i)))return en?`Order deleted: ${m[1]}`:`Pasūtījums dzēsts: ${m[1]}`;
   if((m=text.match(/^Заказ\s+(.+?)\s+создан$/i)))return en?`Order ${m[1]} created`:`Pasūtījums ${m[1]} izveidots`;
   if((m=text.match(/^Заказ\s+(.+?)\s+изменён$/i)))return en?`Order ${m[1]} updated`:`Pasūtījums ${m[1]} atjaunināts`;
   if(/^Технология заказа заполнена\/изменена$/i.test(text))return en?'Order technology completed/updated':'Pasūtījuma tehnoloģija aizpildīta/atjaunināta';
+  if(/^Технология отредактирована после передачи в производство$/i.test(text))return en?'Technology edited after transfer to production':'Tehnoloģija rediģēta pēc nodošanas ražošanā';
   if((m=text.match(/^Материал\s+(.+?)\s+добавлен$/i)))return en?`Material ${m[1]} added`:`Materiāls ${m[1]} pievienots`;
   if((m=text.match(/^Материал\s+(.+?)\s+изменён$/i)))return en?`Material ${m[1]} updated`:`Materiāls ${m[1]} atjaunināts`;
   if((m=text.match(/^Материал\s+(.+?)\s+удалён$/i)))return en?`Material ${m[1]} deleted`:`Materiāls ${m[1]} dzēsts`;
+  if((m=text.match(/^Материал\s+(.+?)\s+принят на склад$/i)))return en?`Material ${m[1]} received into stock`:`Materiāls ${m[1]} saņemts noliktavā`;
+  if((m=text.match(/^Материал\s+(.+?)\s+принят:\s*(.+)$/i)))return en?`Material ${m[1]} received: ${m[2]}`:`Materiāls ${m[1]} saņemts: ${m[2]}`;
+  if((m=text.match(/^Материал заказан для заказа\s+(.+)$/i)))return en?`Material ordered for order ${m[1]}`:`Materiāls pasūtīts pasūtījumam ${m[1]}`;
+  if((m=text.match(/^Принято по заказу\s+(.+)$/i)))return en?`Received for order ${m[1]}`:`Saņemts pasūtījumam ${m[1]}`;
+  if((m=text.match(/^Закупка по материалу\s+(.+?)\s+сохранена$/i)))return en?`Purchase for material ${m[1]} saved`:`Iepirkums materiālam ${m[1]} saglabāts`;
+  if((m=text.match(/^Закупка материала\s+(.+?)\s+отменена$/i)))return en?`Purchase for material ${m[1]} cancelled`:`Iepirkums materiālam ${m[1]} atcelts`;
+  if((m=text.match(/^Закупка для\s+(.+?)\s+отменена:\s*(.+)$/i)))return en?`Purchase for ${m[1]} cancelled: ${m[2]}`:`Iepirkums ${m[1]} atcelts: ${m[2]}`;
   if((m=text.match(/^Поступление на склад:\s*(.+)$/i)))return `${en?'Warehouse receipt':'Pieņemšana noliktavā'}: ${m[1]}`;
   if((m=text.match(/^Списание со склада:\s*(.+)$/i)))return `${en?'Warehouse write-off':'Norakstīšana no noliktavas'}: ${m[1]}`;
   if((m=text.match(/^Поступление через карточку:\s*(.+)$/i)))return `${en?'Receipt from material card':'Pieņemšana no materiāla kartītes'}: ${m[1]}`;
   if((m=text.match(/^Списание через карточку:\s*(.+)$/i)))return `${en?'Write-off from material card':'Norakstīšana no materiāla kartītes'}: ${m[1]}`;
   if((m=text.match(/^Материал\s+(.+?)\s+заказан:\s*(.+)$/i)))return en?`Material ${m[1]} ordered: ${m[2]}`:`Materiāls ${m[1]} pasūtīts: ${m[2]}`;
   if((m=text.match(/^Заказано для\s+(.+?):\s*(.+)$/i)))return en?`Ordered for ${m[1]}: ${m[2]}`:`Pasūtīts ${m[1]}: ${m[2]}`;
+  if((m=text.match(/^Заказано:\s*(.+)$/i)))return en?`Ordered: ${m[1]}`:`Pasūtīts: ${m[1]}`;
   if((m=text.match(/^Поступление по\s+(.+?):\s*(.+)$/i)))return en?`Receipt for ${m[1]}: ${m[2]}`:`Saņemts ${m[1]}: ${m[2]}`;
   if((m=text.match(/^Добавлен в заказ\s+(.+?):\s*(.+)$/i)))return en?`Added to order ${m[1]}: ${m[2]}`:`Pievienots pasūtījumam ${m[1]}: ${m[2]}`;
   if((m=text.match(/^Удалён из заказа\s+(.+?):\s*(.+)$/i)))return en?`Removed from order ${m[1]}: ${m[2]}`:`Izņemts no pasūtījuma ${m[1]}: ${m[2]}`;
   if((m=text.match(/^Изменено в заказе\s+(.+?):\s*(.+)$/i)))return en?`Changed in order ${m[1]}: ${m[2]}`:`Mainīts pasūtījumā ${m[1]}: ${m[2]}`;
-  return text
+  if(text.indexOf('\n')>=0){
+    const lines=text.split('\n').map(line=>{
+      let lm;
+      if((lm=line.match(/^Заказ\s+(.+)$/i))&&!/[:\.]/.test(lm[1]))return en?`Order ${lm[1]}`:`Pasūtījums ${lm[1]}`;
+      if((lm=line.match(/^Операция\s+(.+)$/i)))return en?`Operation ${workshopLabel(lm[1])}`:`Operācija ${workshopLabel(lm[1])}`;
+      if((lm=line.match(/^Выполнено:\s*(.+)$/i)))return en?`Completed: ${auditPhraseReplace(lm[1])}`:`Izgatavots: ${auditPhraseReplace(lm[1])}`;
+      if(/^Автоматически списано:?\s*$/i.test(line))return en?'Automatically written off:':'Automātiski norakstīts:';
+      return auditPhraseReplace(line);
+    });
+    return lines.join('\n');
+  }
+  return auditPhraseReplace(text)
 }
 function rowText(row){try{const raw=(typeof auditDisplayTextV572==='function')?auditDisplayTextV572(row):(row&&row.text)||'';return auditLocalizedText(raw,row)}catch(e){return auditLocalizedText((row&&row.text)||'',row)}}
 function cleanRow(row){if(!row)return false;if(typeof auditIsGenericMaterialUpdateV576==='function'&&auditIsGenericMaterialUpdateV576(row))return false;if(typeof auditIsGenericOrderUpdateV576==='function'&&auditIsGenericOrderUpdateV576(row))return false;const txt=String(rowText(row)||'').trim();if(!txt)return false;if(/^Материал\s+.+\s+измен[её]н$/i.test(txt))return false;if(/^Заказ\s+.+\s+измен[её]н$/i.test(txt))return false;return true}
@@ -1042,13 +1084,13 @@ if(typeof auditFor === 'function'){
   auditListHtml = function(entity, entityId){
     const rows = auditVisibleRowsV576(entity, entityId);
     if(!rows.length) return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
-    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditLocalizedText(auditDisplayTextV572(r),r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
   };
   auditListHtmlOrder = function(o){
     let rows = auditVisibleRowsV576('order', o.id);
     if(!hasOrderTechnology(o.steps)) rows = rows.filter(r=>r.type!=='technology');
     if(!rows.length) return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
-    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
+    return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditLocalizedText(auditDisplayTextV572(r),r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
   };
 }
 
