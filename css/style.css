@@ -2872,8 +2872,8 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 #stock .order-stat-icon{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border-radius:13px;font-size:20px;font-weight:700;background:#fff1e6;color:#ff6600}
 #orders .order-stat-icon.ready{background:#e7f8ed;color:#18a558}
 #stock .order-stat-icon.ready{background:#e7f8ed;color:#18a558}
-#orders .order-stat-icon.missing{background:#fff1df;color:#e87b0d}
-#stock .order-stat-icon.missing{background:#fff1df;color:#e87b0d}
+#orders .order-stat-icon.missing{background:#fff8e7;color:var(--yellowText)}
+#stock .order-stat-icon.missing{background:#fff8e7;color:var(--yellowText)}
 #orders .order-stat-icon.ordered{background:#e8f1ff;color:#1769e0}
 #stock .order-stat-icon.ordered{background:#e8f1ff;color:#1769e0}
 #orders .order-stat-copy{min-width:0}
