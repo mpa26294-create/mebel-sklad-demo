@@ -234,6 +234,9 @@ Object.assign(I18N.lv,{orderSearchPlaceholder:'Meklēt pēc numura vai klienta..
 Object.assign(I18N.ru,{expandWindowLabel:'Увеличить окно',shrinkWindowLabel:'Уменьшить окно'});
 Object.assign(I18N.en,{expandWindowLabel:'Expand window',shrinkWindowLabel:'Shrink window'});
 Object.assign(I18N.lv,{expandWindowLabel:'Palielināt logu',shrinkWindowLabel:'Samazināt logu'});
+Object.assign(I18N.ru,{historySyncErrorToast:'Ошибка синхронизации истории. Повторяем...',purchaseResetToast:'Заказанное сброшено',updateErrorToast:'Ошибка обновления',purchaseUpdatedToast:'Закупка обновлена',purchaseCancelledToast:'Заказ поставщику отменён',andMoreSuffix:'ещё',orderedToastPrefix:'Заказано',linkedOrdersCountSuffix:'заказов'});
+Object.assign(I18N.en,{historySyncErrorToast:'History sync error. Retrying...',purchaseResetToast:'Order reset',updateErrorToast:'Update error',purchaseUpdatedToast:'Purchase updated',purchaseCancelledToast:'Supplier order cancelled',andMoreSuffix:'more',orderedToastPrefix:'Ordered',linkedOrdersCountSuffix:'orders'});
+Object.assign(I18N.lv,{historySyncErrorToast:'Vēstures sinhronizācijas kļūda. Mēģinām vēlreiz...',purchaseResetToast:'Pasūtītais atiestatīts',updateErrorToast:'Atjaunināšanas kļūda',purchaseUpdatedToast:'Iepirkums atjaunināts',purchaseCancelledToast:'Pasūtījums piegādātājam atcelts',andMoreSuffix:'vēl',orderedToastPrefix:'Pasūtīts',linkedOrdersCountSuffix:'pasūtījumi'});
 let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
 // v6.87: для текста, который навсегда сохраняется в Историю/аудит (в отличие от текста

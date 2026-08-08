@@ -73,7 +73,7 @@ async function persistAuditToSupabase(options={}){
     auditSyncDirty=true;
     auditSyncRetryCount+=1;
     console.warn('Audit sync failed',e);
-    if(typeof toast==='function'&&!options.silent)toast('Ошибка синхронизации истории. Повторяем...');
+    if(typeof toast==='function'&&!options.silent)toast(t('historySyncErrorToast'));
     if(options.retry!==false)retryAuditSync();
     return false;
   }
@@ -125,11 +125,11 @@ window.scheduleAuditSync=scheduleAuditSync;
 function auditFor(entity,entityId){return auditLoad().filter(x=>x.entity===entity&&String(x.entityId)===String(entityId)).slice(0,60)}
 function auditTime(iso){const d=new Date(iso||Date.now());return Number.isNaN(d.getTime())?'—':d.toLocaleString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
 function auditUserHtml(user){const u=escapeHtml(user||'—');return `<span class="profile-chip"><span class="profile-avatar">${escapeHtml(String(user||'?').slice(0,1).toUpperCase())}</span>${u}</span>`}
-function auditListHtml(entity,entityId){const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';return `<div class="audit-list">${rows.map(r=>{const orderBtn=entity==='material'&&r.meta?.orderId?`<button class="btn small" type="button" onclick="event.stopPropagation();openOrderView('${safeEsc(r.meta.orderId)}')">Открыть заказ</button>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${orderBtn}</div></div>`}).join('')}</div>`}
+function auditListHtml(entity,entityId){const rows=auditFor(entity,entityId);if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;return `<div class="audit-list">${rows.map(r=>{const orderBtn=entity==='material'&&r.meta?.orderId?`<button class="btn small" type="button" onclick="event.stopPropagation();openOrderView('${safeEsc(r.meta.orderId)}')">${t('openOrderCard')}</button>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${orderBtn}</div></div>`}).join('')}</div>`}
 function metaVal(obj,key,fallback='—'){return obj&&obj[key]?obj[key]:fallback}
 function ensureMeta(obj){if(!obj.meta||typeof obj.meta!=='object')obj.meta={};return obj.meta}
 function hasOrderTechnology(steps){return (steps||[]).some(s=>Number(s&&s.minutes||0)>0)}
-function auditListHtmlOrder(o){let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`}
+function auditListHtmlOrder(o){let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`}
 function orderProfileHtml(o){const m=ensureMeta(o);const hasTech=hasOrderTechnology(o.steps);return `<div class="audit-profile-grid"><div class="audit-card"><h5>${t('orderProfile')}</h5><div class="audit-kv"><span>${t('createdOrder')}</span><b>${escapeHtml(metaVal(m,'createdBy'))}</b></div><div class="audit-kv"><span>${t('creationDate')}</span><b>${escapeHtml(m.createdAt?auditTime(m.createdAt):(o.date||'—'))}</b></div><div class="audit-kv"><span>${t('technologyBy')}</span><b>${escapeHtml(hasTech?metaVal(m,'technologyBy'):'—')}</b></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(metaVal(m,'updatedBy'))}</b></div></div><div class="audit-card"><h5>${t('orderHistory')}</h5>${auditListHtmlOrder(o)}</div></div>`}
 function materialProfileHtml(m){const a=m.attributes||{};return `<div class="audit-profile-grid"><div class="audit-card"><h5>${t('materialProfile')}</h5><div class="audit-kv"><span>${t('addedMaterial')}</span><b>${escapeHtml(a.createdBy||'—')}</b></div><div class="audit-kv"><span>${t('additionDate')}</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>${t('lastMovement')}</span><b>${escapeHtml(a.stockChangedBy||a.updatedBy||'—')}</b></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>${t('materialHistory')}</h5>${auditListHtml('material',m.id)}</div></div>`}
 function appendModalAudit(html){const body=document.getElementById('modalBody');if(body && !body.querySelector('.audit-profile-grid')) body.insertAdjacentHTML('beforeend',html)}
@@ -336,11 +336,11 @@ if(typeof updateMaterialInSupabase==='function'){
 // More detailed rows in audit lists: show changed fields under the main history line.
 const __auditListHtmlV570=auditListHtml;
 auditListHtml=function(entity,entityId){
-  const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+  const rows=auditFor(entity,entityId);if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
   return `<div class="audit-list">${rows.map(r=>{const details=(r.meta&&Array.isArray(r.meta.diffs)&&r.meta.diffs.length)?`<span>${r.meta.diffs.map(x=>'• '+escapeHtml(x)).join('<br>')}</span>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${details}</div></div>`}).join('')}</div>`;
 };
 auditListHtmlOrder=function(o){
-  let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+  let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
   return `<div class="audit-list">${rows.map(r=>{const details=(r.meta&&Array.isArray(r.meta.diffs)&&r.meta.diffs.length)?`<span>${r.meta.diffs.map(x=>'• '+escapeHtml(x)).join('<br>')}</span>`:'';return `<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span>${details}</div></div>`}).join('')}</div>`;
 };
 
@@ -421,11 +421,11 @@ if(typeof saveOrder==='function'){
 // In history cards show only one short clear line. Details are kept in meta for future export, but not duplicated visually.
 if(typeof auditFor==='function'){
   auditListHtml=function(entity,entityId){
-    const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    const rows=auditFor(entity,entityId);if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
     return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
   };
   auditListHtmlOrder=function(o){
-    let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
     return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
   };
 }
@@ -499,11 +499,11 @@ function auditDisplayTextV572(row){
 }
 if(typeof auditFor==='function'){
   auditListHtml=function(entity,entityId){
-    const rows=auditFor(entity,entityId);if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    const rows=auditFor(entity,entityId);if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
     return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
   };
   auditListHtmlOrder=function(o){
-    let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return '<div class="audit-empty">Истории пока нет.</div>';
+    let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
     return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
   };
 }
@@ -616,7 +616,7 @@ if(typeof materialProfileHtml === 'function'){
   materialProfileHtml = function(m){
     ensureMaterialAuditMetaV573(m, {persist:true});
     const a=m.attributes||{};
-    return `<div class="audit-profile-grid"><div class="audit-card"><h5>Профиль материала</h5><div class="audit-kv"><span>Добавил материал</span><b>${escapeHtml(a.createdBy||'—')}</b></div><div class="audit-kv"><span>Дата добавления</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>Последнее движение</span><b>${escapeHtml(a.stockChangedBy||a.updatedBy||'—')}</b></div><div class="audit-kv"><span>Последнее изменение</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>История материала</h5>${auditListHtml('material',m.id)}</div></div>`;
+    return `<div class="audit-profile-grid"><div class="audit-card"><h5>${t('materialProfile')}</h5><div class="audit-kv"><span>${t('addedMaterial')}</span><b>${escapeHtml(a.createdBy||'—')}</b></div><div class="audit-kv"><span>${t('additionDate')}</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>${t('lastMovement')}</span><b>${escapeHtml(a.stockChangedBy||a.updatedBy||'—')}</b></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>${t('materialHistory')}</h5>${auditListHtml('material',m.id)}</div></div>`;
   };
 }
 
@@ -698,13 +698,13 @@ if(typeof setMaterialOrderedQty === 'function'){
       await loadMaterialsFromSupabase();
       renderAll();
       openMaterialDetails(id);
-      const linked=m.attributes.manualPurchaseOrders?.length?` · заказов: ${m.attributes.manualPurchaseOrders.length}`:'';
-      toast(q>0?`Заказано ${qtyWithUnit(q,unit)}${linked}`:'Заказанное сброшено');
+      const linked=m.attributes.manualPurchaseOrders?.length?` · ${t('linkedOrdersCountSuffix')}: ${m.attributes.manualPurchaseOrders.length}`:'';
+      toast(q>0?`${t('orderedToastPrefix')} ${qtyWithUnit(q,unit)}${linked}`:t('purchaseResetToast'));
     }).catch(err=>{
       window.__suppressGenericMaterialUpdateAuditV574 = false;
       m.attributes=oldAttrs;
       console.error(err);
-      toast('Ошибка обновления');
+      toast(t('updateErrorToast'));
     });
   };
 }
@@ -750,7 +750,7 @@ if(typeof saveOrderMaterialPurchase === 'function'){
     }else{
       closeModal();
     }
-    toast(opts.toastText||'Закупка обновлена');
+    toast(opts.toastText||t('purchaseUpdatedToast'));
   };
 }
 
@@ -793,7 +793,7 @@ if(typeof cancelOrderMaterialPurchase === 'function'){
     if(m)auditAdd('purchase_cancel','material',m.id,m.sku||m.name,`Закупка для ${orderShortNameV574(o)} отменена: ${qtyWithUnit(oldQty,unit)} → 0 ${unitLabel(unit)}`,{diffs});
     renderAll();
     openOrderMaterialPurchase(orderId,materialId);
-    toast('Заказ поставщику отменён');
+    toast(t('purchaseCancelledToast'));
   };
 }
 
@@ -864,13 +864,13 @@ if(typeof setMaterialOrderedQty === 'function'){
       await loadMaterialsFromSupabase();
       renderAll();
       openMaterialDetails(id);
-      const linked=m.attributes.manualPurchaseOrders?.length?` · заказов: ${m.attributes.manualPurchaseOrders.length}`:'';
-      toast(q>0?`Заказано ${qtyWithUnit(q,unit)}${linked}`:'Заказанное сброшено');
+      const linked=m.attributes.manualPurchaseOrders?.length?` · ${t('linkedOrdersCountSuffix')}: ${m.attributes.manualPurchaseOrders.length}`:'';
+      toast(q>0?`${t('orderedToastPrefix')} ${qtyWithUnit(q,unit)}${linked}`:t('purchaseResetToast'));
     }).catch(err=>{
       window.__suppressGenericMaterialUpdateAuditV574 = false;
       m.attributes=oldAttrs;
       console.error(err);
-      toast('Ошибка обновления');
+      toast(t('updateErrorToast'));
     });
   };
 }
@@ -916,7 +916,7 @@ if(typeof saveOrderMaterialPurchase === 'function'){
     }else{
       closeModal();
     }
-    toast(opts.toastText||'Закупка обновлена');
+    toast(opts.toastText||t('purchaseUpdatedToast'));
   };
 }
 
@@ -939,7 +939,7 @@ if(typeof cancelOrderMaterialPurchase === 'function'){
     if(m)auditAdd('purchase_cancel','material',m.id,m.sku||m.name,auditSimpleCancelOrderedTextV575(oldQty,unit),{diffs});
     renderAll();
     openOrderMaterialPurchase(orderId,materialId);
-    toast('Заказ поставщику отменён');
+    toast(t('purchaseCancelledToast'));
   };
 }
 
@@ -1041,13 +1041,13 @@ if(typeof saveOrder === 'function'){
 if(typeof auditFor === 'function'){
   auditListHtml = function(entity, entityId){
     const rows = auditVisibleRowsV576(entity, entityId);
-    if(!rows.length) return '<div class="audit-empty">Истории пока нет.</div>';
+    if(!rows.length) return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
     return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
   };
   auditListHtmlOrder = function(o){
     let rows = auditVisibleRowsV576('order', o.id);
     if(!hasOrderTechnology(o.steps)) rows = rows.filter(r=>r.type!=='technology');
-    if(!rows.length) return '<div class="audit-empty">Истории пока нет.</div>';
+    if(!rows.length) return `<div class="audit-empty">${t('historyEmpty')}.</div>`;
     return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(auditDisplayTextV572(r))}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`;
   };
 }

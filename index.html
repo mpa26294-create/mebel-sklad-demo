@@ -114,7 +114,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.88</span></div></div>
+      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.89</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -158,12 +158,12 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=6.88"></script>
+<script src="js/changelog.js?v=6.89"></script>
 <script src="js/ui.js?v=6.40"></script>
 <script src="js/app.js?v=6.47"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.9"></script>
-<script src="js/translations.js?v=6.8"></script>
+<script src="js/translations.js?v=6.9"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -172,7 +172,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.88 — этап 2.3: перевод разделов Модели/Цеха/Справочники/Заказы/История версий';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.89 — этап 2.4: перевод живого UI раздела История';
 </script>
 <script src="js/auth.js?v=6.4"></script>
 <script src="js/materials.js?v=6.42"></script>
@@ -2893,7 +2893,7 @@ renderAll=function(){__renderAllV565();const av=document.getElementById('appVers
 @media(max-width:1100px){.history-toolbar{grid-template-columns:1fr 1fr}.history-summary{grid-template-columns:repeat(2,1fr)}.history-row{grid-template-columns:120px 1fr 34px}.history-user{display:none}}
 @media(max-width:720px){.history-toolbar,.history-summary{grid-template-columns:1fr}.history-row{grid-template-columns:1fr 34px}.history-time{grid-column:1/-1}.history-main{grid-column:1}.history-go{grid-column:2;grid-row:2}}
 </style>
-<script src="js/history.js?v=6.3"></script>
+<script src="js/history.js?v=6.4"></script>
 <script>installOrderStatusHandlers();</script>
 
 
