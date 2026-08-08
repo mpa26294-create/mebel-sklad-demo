@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOLM — демо для iPad</title>
+<style>
+:root{--bg:#f7f8fa;--card:#fff;--text:#101114;--muted:#6f7480;--line:#e7e9ee;--soft:#f1f2f4;--dark:#17181b;--yellow:#fff7df;--yellowText:#8a650e;--red:#fff1f1;--redText:#c73535;--radius:14px;--shadow:0 16px 40px rgba(20,24,32,.05);--accentbg:#e6f1fb;--accenttext:#185fa5}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+.demo-note{background:#17181b;color:#fff;text-align:center;padding:10px 16px;font-size:13px}
+.app{display:flex;min-height:100vh}
+.rail{width:104px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:24px 0;gap:10px;flex-shrink:0}
+.logo{width:48px;height:48px;border-radius:14px;background:var(--soft);display:grid;place-items:center;font-weight:600;font-size:16px;margin-bottom:14px}
+.tile{width:80px;height:80px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);cursor:pointer;border:none;background:none;font-family:inherit}
+.tile.active{background:var(--accentbg);color:var(--accenttext)}
+.tile ico{width:26px;height:26px;border-radius:8px;background:currentColor;opacity:.85;display:block}
+.tile span{font-size:12px;font-weight:500}
+.main{flex:1;padding:26px 32px 60px;max-width:920px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.topbar h1{font-size:26px;margin:0;font-weight:600;letter-spacing:-.02em}
+.profile{display:flex;align-items:center;gap:14px}
+.bell{width:48px;height:48px;border-radius:50%;background:var(--soft);display:grid;place-items:center;position:relative;cursor:pointer}
+.bell b{position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--redText)}
+.user{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 14px 6px 6px;cursor:pointer}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--dark);color:#fff;display:grid;place-items:center;font-weight:600;font-size:14px}
+.user span{font-size:14px;font-weight:500}
+.tabs{display:flex;gap:10px;margin-bottom:22px;overflow-x:auto}
+.tab{min-height:48px;padding:0 22px;border-radius:24px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:15px;font-weight:500;white-space:nowrap;cursor:pointer;font-family:inherit}
+.tab.active{background:var(--dark);color:#fff;border-color:var(--dark)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px}
+.stat span{display:block;color:var(--muted);font-size:13px;margin-bottom:10px}
+.stat b{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;min-height:76px;cursor:pointer;text-align:left;font-family:inherit;width:100%}
+.row:active{background:var(--soft)}
+.row-ico{width:48px;height:48px;border-radius:14px;background:var(--soft);display:grid;place-items:center;font-size:22px;flex-shrink:0}
+.row-body{flex:1;min-width:0}
+.row-body b{display:block;font-size:16px;font-weight:600}
+.row-body span{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+.row-badge{padding:6px 12px;border-radius:20px;font-size:13px;font-weight:500;white-space:nowrap}
+.row-badge.ok{background:#eaf3de;color:#3b6d11}
+.row-badge.warn{background:var(--yellow);color:var(--yellowText)}
+.chev{color:var(--muted);font-size:20px}
+.detail{display:none}
+.detail.active{display:block}
+.list-screen.hidden{display:none}
+.back{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 8px;border:none;background:none;color:var(--text);font-size:16px;font-weight:500;cursor:pointer;margin-bottom:18px;font-family:inherit}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:16px}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.card-head b{font-size:17px;font-weight:600}
+.progress{height:12px;background:var(--soft);border-radius:8px;overflow:hidden;margin:18px 0 24px}
+.progress i{display:block;height:100%;background:#378add}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.btn{min-height:58px;border-radius:16px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:16px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn.primary{background:var(--dark);color:#fff;border-color:var(--dark)}
+.btnrow2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.btn.ghost{min-height:52px}
+</style>
+</head>
+<body>
+<div class="demo-note">Автономный демо-макет — не связан с рабочим сайтом MOLM, ничего в реальном приложении не меняет</div>
+<div class="app">
+  <div class="rail">
+    <div class="logo">M</div>
+    <button class="tile" aria-label="Склад"><ico></ico><span>Склад</span></button>
+    <button class="tile" aria-label="Заказы"><ico></ico><span>Заказы</span></button>
+    <button class="tile active" aria-label="Цеха"><ico></ico><span>Цеха</span></button>
+    <button class="tile" aria-label="Модели"><ico></ico><span>Модели</span></button>
+    <button class="tile" aria-label="Настройки"><ico></ico><span>Настройки</span></button>
+  </div>
+  <div class="main">
+    <div id="listScreen" class="list-screen">
+      <div class="topbar">
+        <h1>Цеха</h1>
+        <div class="profile">
+          <div class="bell"><b></b>🔔</div>
+          <div class="user"><div class="avatar">М</div><span>Мартин</span></div>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab active">Все</button>
+        <button class="tab">В работе</button>
+        <button class="tab">Просрочено</button>
+        <button class="tab">Загружены</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>В очереди</span><b>18</b></div>
+        <div class="stat"><span>Активно сейчас</span><b>5</b></div>
+        <div class="stat"><span>Сделано сегодня</span><b>27</b></div>
+      </div>
+      <div class="list">
+        <button class="row" onclick="openDetail('carpentry')">
+          <div class="row-ico">🪚</div>
+          <div class="row-body"><b>Столярка</b><span>6 в очереди · загрузка 82%</span></div>
+          <div class="row-badge warn">near capacity</div>
+          <div class="chev">›</div>
+        </button>
+        <button class="row" onclick="openDetail('sewing')">
+          <div class="row-ico">🧵</div>
+          <div class="row-body"><b>Швейный цех</b><span>3 в очереди · загрузка 54%</span></div>
+          <div class="row-badge ok">в норме</div>
+          <div class="chev">›</div>
+        </button>
+        <button class="row" onclick="openDetail('gluing')">
+          <div class="row-ico">🧴</div>
+          <div class="row-body"><b>Поклейка</b><span>2 в очереди · загрузка 40%</span></div>
+          <div class="row-badge ok">в норме</div>
+          <div class="chev">›</div>
+        </button>
+        <button class="row" onclick="openDetail('assembly')">
+          <div class="row-ico">🛋</div>
+          <div class="row-body"><b>Сборка</b><span>4 в очереди · загрузка 61%</span></div>
+          <div class="row-badge ok">в норме</div>
+          <div class="chev">›</div>
+        </button>
+      </div>
+    </div>
+
+    <div id="carpentry" class="detail card-wrap">
+      <button class="back" onclick="closeDetail()">‹ Все цеха</button>
+      <div class="card">
+        <div class="card-head"><b>Z-0001 · шкаф-купе</b><span class="row-badge ok">в работе</span></div>
+        <span style="color:var(--muted);font-size:14px">Изготовлено 4 из 10 · план 480 мин</span>
+        <div class="progress"><i style="width:40%"></i></div>
+        <div class="btnrow">
+          <button class="btn">⏸ Пауза</button>
+          <button class="btn primary">✔ Готово +1</button>
+        </div>
+        <div class="btnrow2">
+          <button class="btn ghost">⚠ Материалы</button>
+          <button class="btn ghost">↺ История</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sewing" class="detail card-wrap">
+      <button class="back" onclick="closeDetail()">‹ Все цеха</button>
+      <div class="card">
+        <div class="card-head"><b>Z-0004 · диван Milano</b><span class="row-badge ok">в работе</span></div>
+        <span style="color:var(--muted);font-size:14px">Изготовлено 2 из 6 · план 300 мин</span>
+        <div class="progress"><i style="width:33%"></i></div>
+        <div class="btnrow">
+          <button class="btn">⏸ Пауза</button>
+          <button class="btn primary">✔ Готово +1</button>
+        </div>
+        <div class="btnrow2">
+          <button class="btn ghost">⚠ Материалы</button>
+          <button class="btn ghost">↺ История</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gluing" class="detail card-wrap">
+      <button class="back" onclick="closeDetail()">‹ Все цеха</button>
+      <div class="card">
+        <div class="card-head"><b>Z-0002 · кресло Vento</b><span class="row-badge warn">пауза</span></div>
+        <span style="color:var(--muted);font-size:14px">Изготовлено 1 из 3 · план 90 мин</span>
+        <div class="progress"><i style="width:33%"></i></div>
+        <div class="btnrow">
+          <button class="btn primary">▶ Продолжить</button>
+          <button class="btn">✔ Готово +1</button>
+        </div>
+        <div class="btnrow2">
+          <button class="btn ghost">⚠ Материалы</button>
+          <button class="btn ghost">↺ История</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="assembly" class="detail card-wrap">
+      <button class="back" onclick="closeDetail()">‹ Все цеха</button>
+      <div class="card">
+        <div class="card-head"><b>Z-0003 · стол Oslo</b><span class="row-badge ok">в работе</span></div>
+        <span style="color:var(--muted);font-size:14px">Изготовлено 3 из 4 · план 120 мин</span>
+        <div class="progress"><i style="width:75%"></i></div>
+        <div class="btnrow">
+          <button class="btn">⏸ Пауза</button>
+          <button class="btn primary">✔ Готово +1</button>
+        </div>
+        <div class="btnrow2">
+          <button class="btn ghost">⚠ Материалы</button>
+          <button class="btn ghost">↺ История</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function openDetail(id){
+  document.getElementById('listScreen').classList.add('hidden');
+  document.querySelectorAll('.detail').forEach(function(d){d.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+}
+function closeDetail(){
+  document.querySelectorAll('.detail').forEach(function(d){d.classList.remove('active')});
+  document.getElementById('listScreen').classList.remove('hidden');
+}
+document.querySelectorAll('.tab').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active')});
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

@@ -296,7 +296,7 @@ const PRODUCTION_STATUS_META={
   done:{label:'prodStatusDone',tone:'done'},
   cancelled:{label:'prodStatusCancelled',tone:'cancelled'}
 };
-function productionActorName(){try{if(typeof profileUserName==='function')return profileUserName();if(typeof actorName==='function')return actorName();}catch(e){}return t('unknownUser')}
+function productionActorName(){try{if(typeof profileDisplayName==='function')return profileDisplayName();if(typeof actorName==='function')return actorName();}catch(e){}return t('unknownUser')}
 function productionNow(){return new Date().toISOString()}
 function productionDateValue(iso){const d=new Date(iso||'');return Number.isNaN(d.getTime())?0:d.getTime()}
 function productionMinutesBetween(start,end){const a=productionDateValue(start),b=productionDateValue(end||productionNow());return a&&b?Math.max(0,Math.round((b-a)/60000)):0}
@@ -328,15 +328,27 @@ function productionEtaText(o){const min=productionLeftMinutes(o);if(!min)return 
 function productionStatusLabel(status){return t(PRODUCTION_STATUS_META[status]?.label||'prodStatusNotStarted')}
 function productionStatusClass(status){return PRODUCTION_STATUS_META[status]?.tone||'idle'}
 function workshopIcon(name){const n=String(name||'').toLowerCase();if(n.includes('стол')||n.includes('wood')||n.includes('gald'))return '🪚';if(n.includes('швей')||n.includes('sew')||n.includes('šū'))return '🧵';if(n.includes('пок')||n.includes('glue')||n.includes('līm'))return '🧴';if(n.includes('тап')||n.includes('uphol'))return '🛋';if(n.includes('упак')||n.includes('pack'))return '📦';return '📦'}
+// v6.86: завершённые/отменённые операции больше не считаются частью очереди цеха — иначе
+// уже сделанная на 100% работа продолжала засчитываться в "Очередь"/"В работе"/"Загрузка" и
+// могла ложно показывать цех "перегруженным", хотя по факту в нём не осталось работы.
 function productionQueueForWorkshop(stepName){
-  const rows=(data.orders||[]).flatMap(order=>orderSteps(order).map((step,index)=>({order,step,index}))).filter(row=>Number(row.step.minutes||0)>0&&String(row.step.name||'').trim()===String(stepName||'').trim()&&!orderIsTerminal(row.order.status));
+  const rows=(data.orders||[]).flatMap(order=>orderSteps(order).map((step,index)=>({order,step,index}))).filter(row=>{
+    if(Number(row.step.minutes||0)<=0)return false;
+    if(String(row.step.name||'').trim()!==String(stepName||'').trim())return false;
+    if(orderIsTerminal(row.order.status))return false;
+    const op=productionOp(row.order,row.index);
+    if(op&&(op.status==='done'||op.status==='cancelled'))return false;
+    return true;
+  });
   rows.sort((a,b)=>String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||'')));
   return rows;
 }
 function productionQueueState(orderId,stepIndex){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return {position:0,total:0,label:t('prodQueueWaiting')};
   const step=orderSteps(o)[Number(stepIndex)]||{},queue=productionQueueForWorkshop(step.name),idx=queue.findIndex(row=>String(row.order.id)===String(orderId));
-  const op=productionOp(o,stepIndex),label=op?.status==='running'?t('prodQueueNow'):idx===0?t('prodQueueNext'):idx>0?t('prodQueueWaiting'):t('prodQueueWaiting');
+  const op=productionOp(o,stepIndex);
+  if(op&&(op.status==='done'||op.status==='cancelled'))return {position:0,total:queue.length,label:productionStatusLabel(op.status)};
+  const label=op?.status==='running'?t('prodQueueNow'):idx===0?t('prodQueueNext'):idx>0?t('prodQueueWaiting'):t('prodQueueWaiting');
   return {position:idx>=0?idx+1:0,total:queue.length,label};
 }
 const WORKSHOP_WEEKLY_CAPACITY_MINUTES=5*8*60; // 5 рабочих дней по 8 часов = 2400 мин/нед на цех
@@ -856,7 +868,13 @@ async function updateTechnologyMaterial(id,index,field,value){const o=(data.orde
 async function markTechnologyMaterialOrdered(id,index){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const items=orderMaterials(o).map(item=>({...item})),item=items[index],input=document.getElementById(`technologyOrderQty_${id}_${index}`),qty=Math.max(0,Number(input?.value||0));if(!item||qty<=0){toast(t('enterOrderedQuantity'));return}item.purchaseStatus='ordered';item.purchaseQty=qty;o.materials=items;auditAdd('purchase','order',o.id,o.number,`${t('historyMaterialMarkedOrdered')}: ${qtyWithUnit(qty,item.unit||'')}`,{materialId:item.materialId,purchaseQty:qty});await persistTechnologyOrder(o);toast(t('materialMarkedOrdered'))}
 async function removeTechnologyMaterial(id,index){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const removed=orderMaterials(o)[index];if(!removed)return;const m=(data.materials||[]).find(x=>String(x.id)===String(removed.materialId));o.materials=orderMaterials(o).filter((_,i)=>i!==index);auditAdd('technology_material_removed','order',o.id,o.number,`${t('historyMaterialRemoved')}: ${m?materialTitle(m):removed.materialId}`);await persistTechnologyOrder(o)}
 async function transferOrderToProduction(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;if(!hasOrderTechnology(o.steps)){toast(t('technologyRequired'));return}technologyAuditOnce(o);const from=o.status;if(typeof setOrderStatusPersisted==='function'){if(!await setOrderStatusPersisted(id,'В производстве')){if(String(o.status)!=='В производстве')return}}else{o.status='В производстве';save()}o.status='В производстве';save();orderWorkflowSelection.set(String(id),2);auditAdd('technology_to_production','order',o.id,o.number,t('historyTransferredProduction'),{from,to:'В производстве'});const root=document.getElementById('orderWorkflowModal');if(root){root.innerHTML=orderWorkflowStepperHtml(o,'modal')+orderWorkflowContentHtml(o,true);setCleanModalClass('order-clean-modal');renderOrders()}else refreshOrderStatusUI(id,false);toast(t('transferredProduction'))}
-async function saveProductionTechnologyEdit(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;technologyAuditOnce(o);auditAdd('technology_edit_production','order',o.id,o.number,currentLang==='ru'?'Технология отредактирована после передачи в производство':currentLang==='en'?'Technology edited after production transfer':'Tehnoloģija rediģēta pēc nodošanas ražošanai');orderWorkflowSelection.set(String(id),2);save();const root=document.getElementById('orderWorkflowModal');if(root)root.innerHTML=orderWorkflowStepperHtml(o,'modal')+orderWorkflowContentHtml(o,true);else renderOrders();toast(currentLang==='ru'?'Технология обновлена':currentLang==='en'?'Technology updated':'Tehnoloģija atjaunināta')}
+async function saveProductionTechnologyEdit(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;technologyAuditOnce(o);
+  // v6.86: журнал истории раньше записывался на языке, который был активен в момент действия
+  // (currentLang), из-за чего в истории одного заказа могли соседствовать записи на разных
+  // языках. Текст, который остаётся в истории навсегда, теперь всегда пишется по-русски —
+  // это не меняет то, как переводится сам интерфейс во время просмотра.
+  auditAdd('technology_edit_production','order',o.id,o.number,'Технология отредактирована после передачи в производство');
+  orderWorkflowSelection.set(String(id),2);save();const root=document.getElementById('orderWorkflowModal');if(root)root.innerHTML=orderWorkflowStepperHtml(o,'modal')+orderWorkflowContentHtml(o,true);else renderOrders();toast(currentLang==='ru'?'Технология обновлена':currentLang==='en'?'Technology updated':'Tehnoloģija atjaunināta')}
 function selectOrderWorkflowStage(event,id,index,context='card'){
   event?.stopPropagation();orderWorkflowSelection.set(String(id),index);
   if(context==='modal'){

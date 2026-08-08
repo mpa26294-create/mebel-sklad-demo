@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOLM — демо в стиле Apple Health</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:#f2f2f7;color:#101114}
+.demo-note{background:#17181b;color:#fff;text-align:center;padding:10px 16px;font-size:13px}
+.app{display:flex;min-height:100vh}
+.sidebar{width:300px;background:#f8f8fa;border-right:1px solid #e4e4e9;padding:18px;flex-shrink:0;transition:margin-left .25s ease,opacity .2s ease;overflow-y:auto}
+.sidebar.collapsed{margin-left:-300px;opacity:0}
+.topline{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.toggle{width:38px;height:38px;border-radius:10px;border:none;background:#e4e9fb;color:#2563eb;font-size:18px;cursor:pointer;flex-shrink:0}
+h1.pagetitle{font-size:30px;font-weight:700;margin:0 0 14px}
+.search{display:flex;align-items:center;gap:8px;background:#e9e9ee;border-radius:10px;padding:9px 12px;margin-bottom:20px}
+.search input{border:none;background:none;outline:none;flex:1;font-size:15px;color:#101114}
+.search span{color:#8a8a91}
+.navgroup-head{display:flex;align-items:center;justify-content:space-between;color:#6f7480;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:0 4px;margin:18px 0 8px;cursor:pointer}
+.navlist{display:flex;flex-direction:column;gap:2px}
+.navlist.collapsed{display:none}
+.navitem{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:10px;border:none;background:none;cursor:pointer;text-align:left;font-size:15px;color:#101114;width:100%;font-family:inherit}
+.navitem:hover{background:#eceef4}
+.navitem.active{background:#0a84ff;color:#fff}
+.navico{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:15px;color:#fff;flex-shrink:0}
+.main{flex:1;padding:0;overflow-y:auto}
+.hero{padding:40px 40px 26px;background:linear-gradient(120deg,#c9a6f5,#f5a4c9 45%,#ffcf8a)}
+.hero-top{display:flex;align-items:center;gap:16px}
+.avatar{width:64px;height:64px;border-radius:50%;background:#101114;color:#fff;display:grid;place-items:center;font-size:24px;font-weight:600;flex-shrink:0}
+.hero h2{margin:0;font-size:26px;font-weight:700}
+.hero p{margin:4px 0 0;color:rgba(16,17,20,.65);font-size:14px}
+.section-title{font-size:22px;font-weight:700;margin:26px 40px 12px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:0 40px 40px}
+.card{background:#fff;border-radius:16px;padding:16px 18px}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.card-label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.card-ico{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:13px;color:#fff}
+.card-time{color:#8a8a91;font-size:12px}
+.card b{display:block;font-size:20px;font-weight:700}
+.card span.sub{color:#6f7480;font-size:13px}
+.badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-top:8px}
+.b-blue{background:#e3f0ff;color:#0a58ca}
+.b-green{background:#e6f6ea;color:#1a7f37}
+.b-orange{background:#fff2e0;color:#b5620a}
+.b-red{background:#ffe9e9;color:#c62828}
+.panel{display:none}
+.panel.active{display:block}
+</style>
+</head>
+<body>
+<div class="demo-note">Визуальная демонстрация — статические данные, ничего не сохраняется и не связано с рабочим сайтом MOLM</div>
+<div class="app">
+  <div class="sidebar" id="sidebar">
+    <div class="topline"><button class="toggle" onclick="toggleSidebar()">☰</button></div>
+    <h1 class="pagetitle">MOLM</h1>
+    <div class="search"><span>🔍</span><input placeholder="Поиск" disabled><span>🎙</span></div>
+    <button class="navitem" style="margin-bottom:16px">
+      <div class="navico" style="background:#101114">М</div>
+      <div><b style="display:block;font-size:15px">Мартин</b><span style="font-size:12px;color:#6f7480">Профиль ›</span></div>
+    </button>
+    <div class="navgroup-head" onclick="toggleGroup()"><span>Разделы</span><span id="groupChevron">⌄</span></div>
+    <div class="navlist" id="navlist">
+      <button class="navitem" onclick="showPanel('history',this)"><div class="navico" style="background:#8a8a91">🕘</div>История</button>
+      <button class="navitem" onclick="showPanel('orders',this)"><div class="navico" style="background:#0a84ff">📋</div>Заказы</button>
+      <button class="navitem" onclick="showPanel('stock',this)"><div class="navico" style="background:#ff9500">📦</div>Склад</button>
+      <button class="navitem" onclick="showPanel('workshops',this)"><div class="navico" style="background:#af52de">🧩</div>Цеха</button>
+      <button class="navitem" onclick="showPanel('models',this)"><div class="navico" style="background:#30b0c7">🗂</div>Модели</button>
+      <button class="navitem" onclick="showPanel('settings',this)"><div class="navico" style="background:#6f7480">⚙</div>Настройки</button>
+    </div>
+  </div>
+  <div class="main">
+
+    <div class="panel active" id="panel-history">
+      <div class="hero"><div class="hero-top"><div class="avatar">М</div><div><h2>История</h2><p>Обновлено сегодня, 14:20</p></div></div></div>
+      <div class="section-title">Последние события</div>
+      <div class="grid">
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#af52de">🧵</span>Швейный цех</div><span class="card-time">13:40</span></div><b>Z-0004 передан в пошив</b><span class="sub">Ответственный: Ольга</span></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#ff9500">📦</span>Упаковка</div><span class="card-time">11:15</span></div><b>Z-0002 готов к отгрузке</b><span class="sub">10 из 10 изделий</span></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#0a84ff">🪚</span>Столярка</div><span class="card-time">09:05</span></div><b>Списано 12 листов ДСП</b><span class="sub">Заказ Z-0001</span></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#6f7480">⚙</span>Настройки</div><span class="card-time">вчера, 18:22</span></div><b>Изменён Telegram Bot Token</b><span class="sub">Мартин</span></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#1a7f37">✅</span>Заказы</div><span class="card-time">вчера, 16:40</span></div><b>Z-0003 завершён</b><span class="sub">Стол Oslo · 4 шт</span></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#e5484d">⚠</span>Склад</div><span class="card-time">вчера, 10:02</span></div><b>Экокожа ниже минимума</b><span class="sub">Осталось 18 пог.м</span></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-orders">
+      <div class="hero"><div class="hero-top"><div class="avatar">М</div><div><h2>Заказы</h2><p>24 активных заказа</p></div></div></div>
+      <div class="section-title">Все заказы</div>
+      <div class="grid">
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#0a84ff">🛋</span>Z-0001</div><span class="card-time">до 12.08</span></div><b>Шкаф-купе</b><span class="sub">Клиент: ООО «Интерьер»</span><div class="badge b-blue">в работе · 4/10</div></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#af52de">🪑</span>Z-0002</div><span class="card-time">до 15.08</span></div><b>Кресло Vento</b><span class="sub">Клиент: Анна К.</span><div class="badge b-orange">пауза · 1/3</div></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#1a7f37">🪵</span>Z-0003</div><span class="card-time">готов</span></div><b>Стол Oslo</b><span class="sub">Клиент: Bureau Plus</span><div class="badge b-green">завершён</div></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#e5484d">🛏</span>Z-0004</div><span class="card-time">до 20.08</span></div><b>Диван Milano</b><span class="sub">Клиент: Дмитрий П.</span><div class="badge b-red">ждёт материалы</div></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-stock">
+      <div class="hero"><div class="hero-top"><div class="avatar">М</div><div><h2>Склад</h2><p>128 позиций на учёте</p></div></div></div>
+      <div class="section-title">Категории материалов</div>
+      <div class="grid">
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#0a84ff">🪵</span>Древесина</div></div><b>42 м³</b><div class="badge b-green">в норме</div></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#af52de">🧥</span>Экокожа</div></div><b>18 пог.м</b><div class="badge b-red">низкий остаток</div></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#ff9500">🧽</span>Поролон</div></div><b>76 м²</b><div class="badge b-green">в норме</div></div>
+        <div class="card"><div class="card-top"><div class="card-label"><span class="card-ico" style="background:#6f7480">🔩</span>Фурнитура</div></div><b>950 шт</b><div class="badge b-green">в норме</div></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-workshops">
+      <div class="hero"><div class="hero-top"><div class="avatar">М</div><div><h2>Цеха</h2><p>Демонстрация — раздел не наполнен</p></div></div></div>
+      <div class="grid" style="padding-top:26px"><div class="card"><b>Скоро</b><span class="sub">Этот раздел ещё не оформлен в демо-стиле</span></div></div>
+    </div>
+    <div class="panel" id="panel-models">
+      <div class="hero"><div class="hero-top"><div class="avatar">М</div><div><h2>Модели</h2><p>Демонстрация — раздел не наполнен</p></div></div></div>
+      <div class="grid" style="padding-top:26px"><div class="card"><b>Скоро</b><span class="sub">Этот раздел ещё не оформлен в демо-стиле</span></div></div>
+    </div>
+    <div class="panel" id="panel-settings">
+      <div class="hero"><div class="hero-top"><div class="avatar">М</div><div><h2>Настройки</h2><p>Демонстрация — раздел не наполнен</p></div></div></div>
+      <div class="grid" style="padding-top:26px"><div class="card"><b>Скоро</b><span class="sub">Этот раздел ещё не оформлен в демо-стиле</span></div></div>
+    </div>
+
+  </div>
+</div>
+<script>
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+function toggleGroup(){
+  document.getElementById('navlist').classList.toggle('collapsed');
+  var c=document.getElementById('groupChevron');
+  c.textContent=document.getElementById('navlist').classList.contains('collapsed')?'›':'⌄';
+}
+function showPanel(id,btn){
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('panel-'+id).classList.add('active');
+  document.querySelectorAll('.navlist .navitem').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

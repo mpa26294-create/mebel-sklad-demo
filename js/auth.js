@@ -199,7 +199,9 @@ if(typeof document!=='undefined')document.addEventListener('click',(e)=>{
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
   const num=v=>{const n=Number(String(v??'').replace(',','.'));return Number.isFinite(n)?n:null};
   const formatOf=()=>document.getElementById('foamKind')?.value==='sheet'?'sheet':'part';
-  const unitFor=format=>format==='sheet'?'sheet':'part';
+  // v6.86: раньше здесь сохранялись английские 'sheet'/'part' как реальная единица измерения
+  // материала — unitLabel() их не переводит, и в Складе появлялось "part" вместо "шт".
+  const unitFor=format=>format==='sheet'?'лист':'шт';
   const qtyLabel=format=>format==='sheet'?'листов':'шт';
   const stateFrom=(found,attrs)=>attrs.status||(attrs.purchaseStatus==='ordered'?'ordered':(Number(found?.quantity||0)>0||attrs.storageLocation?'stock':'card'));
 
