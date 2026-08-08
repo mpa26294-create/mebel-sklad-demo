@@ -2,6 +2,34 @@
 (function(){
   const releases = [
     {
+      version: 'v6.88',
+      title: 'Этап 2.3: перевод разделов Модели, Цеха, Справочники, Заказы и Истории версий',
+      date: '08.08.2026',
+      description: 'Продолжение Этапа 2 — перевод инлайн-скриптов index.html. Методология этого шага отличалась от предыдущих: вместо ручного чтения кода строка за строкой был написан автоматический jsdom-тест, который открывает сайт, переключает интерфейс на английский, проходит по всем разделам меню и печатает все оставшиеся русские фрагменты текста на странице — это гораздо надёжнее находит реальные "живые" пробелы, чем чтение исходников, потому что часть текста в index.html — это просто заготовка по умолчанию, которая тут же перезаписывается в JS при загрузке (applyI18n()), и такие места на самом деле не баг. Тест обнаружил несколько реальных пробелов: раздел "Модели мебели" был переведён только частично — само название в боковом меню нигде не было в словаре переводов, а вся страница модели (пустое состояние, "Без заметки", "Материалы не указаны", "Удалённый материал", кнопки "Править"/"Удалить", диалог подтверждения удаления) была зашита на русском. Заголовки разделов "Цеха", "Справочники" и "История версий" (в самой шапке страницы, не в меню) не входили в функцию applyI18n() и оставались русскими при любом языке интерфейса. В разделе "Заказы": фильтр по статусу, фильтр по заказчику, фильтр "Материалы: все/доступны/нехватка" и кнопка "Сбросить" не переводились. Плашки "Что добавлено"/"Что исправлено"/"Что необходимо проверить"/"Важно" в Истории версий (это заголовки разделов карточки релиза, в отличие от самого текста релиза) были зашиты на русском. Также кнопка "увеличить/уменьшить окно" в модальных окнах.',
+      added: [
+        'find_untranslated.js (jsdom, вспомогательный инструмент разработки, не часть сайта): загружает сайт, переключает язык, обходит все разделы меню и печатает все оставшиеся кириллические текстовые узлы и атрибуты (placeholder/title/aria-label/value) — используется для поиска реальных пробелов перевода вместо чтения кода вручную.',
+        '~35 новых ключей перевода (RU/EN/LV): раздел Модели (пустое состояние, кнопки, диалог удаления), заголовки и описания разделов Цеха/Справочники/История версий, опции фильтра статуса и поиска в Заказах, заголовки блоков карточки релиза в Истории версий, подписи кнопки развернуть/свернуть окно.'
+      ],
+      fixed: [
+        'Пункт меню и заголовок раздела "Модели мебели" — теперь переводятся (раньше отсутствовали в словаре навигации).',
+        'js/index.html (renderModels, modelItemRow, changeQty): вся страница "Модели мебели" (пустое состояние, карточки моделей, кнопки, диалоги) переведена на 3 языка.',
+        'Заголовки разделов "Цеха", "Справочники" (+описание) и "История версий" (+описание) в шапке страницы — добавлены в applyI18n(), теперь переводятся вместе с остальным интерфейсом.',
+        'Раздел "Заказы": фильтр статуса (с сохранением русских значений в value= для корректной работы фильтрации по данным, как и с названиями цехов), фильтр "Материалы: ...", подпись поиска и кнопка "Сбросить" — переведены.',
+        'Раздел "Склад": единицы измерения в фильтре (шт/м²/м³) теперь тоже переводятся через unitLabel(), а не показываются буквально.',
+        'История версий: заголовки блоков карточки релиза ("Что добавлено", "Что исправлено", "Что необходимо проверить", "Важно") и сводка наверху страницы ("Последняя версия", "Дата выпуска" и т.д.) переведены; при переключении языка на открытой странице Истории версий текст обновляется сразу, без повторного захода в раздел.',
+        'Подписи кнопки "увеличить/уменьшить окно" в модальных окнах переведены.'
+      ],
+      testing: [
+        'Автоматический smoke-тест (jsdom, stage23_index_test.js): нав-подпись и пустое состояние раздела "Модели" на английском; заголовок раздела "Цеха" равен "Workshops"; заголовок и описание "Справочники" переведены; фильтр статуса заказов показывает английские подписи ("New", "In progress"), но value= остаются русскими (проверено явно, чтобы не сломать фильтрацию по данным); кнопка "Сбросить" в Заказах переведена; заголовки блоков карточки Истории версий содержат "Added"/"Fixed"; при переключении на латышский заголовок "Цеха" равен "Cehi". Весь набор предыдущих регрессионных тестов (Этап 1 баги, история заказов на русском языке, перевод Склада, версия внизу слева, перевод цехов и Telegram-панели, виджет профиля, переключение языка) прогнан повторно — всё проходит.'
+      ],
+      notes: [
+        'Правка только на тестовой ветке dev, main не затронут.',
+        'Названия конкретных позиций справочников (винты, гайки, петли, ручки, виды тканей и т.п. в подкатегориях материалов) намеренно оставлены как есть — это конкретные каталожные термины материалов, а не интерфейсный текст, ровно как и названия категорий материалов (уже переводятся отдельно через categoryLabel() при показе).',
+        'Текст самих записей Истории версий (описания релизов, списки "что сделано", заметки) сознательно остаётся на русском — это исторический журнал изменений, как git log, а не живой интерфейс; этот же принцип уже применён к Истории заказов в Этапе 2.1.',
+        'Ещё не переведены: раздел История/аудит-лог как отдельный UI (Этап 2.4 — сам список записей уже переводится, но не проверялся отдельно на 100% полноту), мастера добавления материалов wood-wizard.js и eco-leather-wizard.js (Этап 2.5), часть более редких модальных окон (экспорт/импорт JSON, детальная форма поролона/дерева) — их ещё предстоит прогнать через тот же автоматический тест.'
+      ]
+    },
+    {
       version: 'v6.87',
       title: 'Этап 2.1–2.2: единый язык истории заказов + перевод раздела «Склад» (материалы)',
       date: '08.08.2026',
@@ -931,33 +959,40 @@
 
   function listBlock(title, items, emptyText){
     const rows = Array.isArray(items) ? items.filter(Boolean) : [];
-    if(!rows.length) return `<div class="changelog-block muted-block"><h4>${esc(title)}</h4><p>${esc(emptyText || 'Нет отдельных пунктов.')}</p></div>`;
+    if(!rows.length) return `<div class="changelog-block muted-block"><h4>${esc(title)}</h4><p>${esc(emptyText || (typeof t==='function'?t('clNoItems'):'Нет отдельных пунктов.'))}</p></div>`;
     return `<div class="changelog-block"><h4>${esc(title)}</h4><ul>${rows.map(item=>`<li>${esc(item)}</li>`).join('')}</ul></div>`;
   }
 
   function checklistBlock(items){
     const rows = Array.isArray(items) ? items.filter(Boolean) : [];
-    return `<div class="changelog-block test-block"><h4>Что необходимо проверить</h4>${rows.length?`<ul>${rows.map(item=>`<li><span class="check-empty">□</span>${esc(item)}</li>`).join('')}</ul>`:'<p>Отдельных проверок нет.</p>'}</div>`;
+    const title = typeof t==='function'?t('clTestingTitle'):'Что необходимо проверить';
+    const empty = typeof t==='function'?t('clNoChecks'):'Отдельных проверок нет.';
+    return `<div class="changelog-block test-block"><h4>${esc(title)}</h4>${rows.length?`<ul>${rows.map(item=>`<li><span class="check-empty">□</span>${esc(item)}</li>`).join('')}</ul>`:`<p>${esc(empty)}</p>`}</div>`;
   }
 
   function releaseCard(release, index){
     const expanded = index === 0;
+    const datePrefix = typeof t==='function'?t('clDatePrefix'):'Дата';
+    const addedTitle = typeof t==='function'?t('clAddedTitle'):'Что добавлено';
+    const fixedTitle = typeof t==='function'?t('clFixedTitle'):'Что исправлено';
+    const notesTitle = typeof t==='function'?t('clNotesTitle'):'Важно';
+    const noNotes = typeof t==='function'?t('clNoNotes'):'Важных примечаний нет.';
     return `<article class="changelog-card ${expanded?'open':''}" data-release="${esc(release.version)}">
       <button class="changelog-head" type="button" onclick="toggleChangelogRelease('${esc(release.version)}')" aria-expanded="${expanded?'true':'false'}">
         <span class="release-mark">↗</span>
         <span class="changelog-title">
           <b>${esc(release.version)} — ${esc(release.title)}</b>
-          <small>Дата: ${esc(release.date)}</small>
+          <small>${esc(datePrefix)}: ${esc(release.date)}</small>
         </span>
         <span class="changelog-toggle">⌄</span>
       </button>
       <div class="changelog-content">
         <p class="changelog-description">${esc(release.description)}</p>
         <div class="changelog-grid">
-          ${listBlock('Что добавлено', release.added)}
-          ${listBlock('Что исправлено', release.fixed)}
+          ${listBlock(addedTitle, release.added)}
+          ${listBlock(fixedTitle, release.fixed)}
           ${checklistBlock(release.testing)}
-          ${listBlock('Важно', release.notes, 'Важных примечаний нет.')}
+          ${listBlock(notesTitle, release.notes, noNotes)}
         </div>
       </div>
     </article>`;
@@ -971,7 +1006,8 @@
     if(badge) badge.textContent = latest ? `MOLM ${releaseLabel(latest)}` : 'MOLM';
     const summary = document.getElementById('changelogSummary');
     if(summary){
-      summary.innerHTML = `<div class="changelog-stat"><small>Последняя версия</small><b>${esc(latest?.version || '—')}</b><span>${esc(latest?.title || '')}</span></div><div class="changelog-stat"><small>Дата выпуска</small><b>${esc(latest?.date || '—')}</b><span>актуальный релиз</span></div><div class="changelog-stat"><small>Всего записей</small><b>${releases.length}</b><span>новые версии сверху</span></div>`;
+      const tt = typeof t==='function'?t:(k=>({clLatestVersion:'Последняя версия',clReleaseDate:'Дата выпуска',clCurrentRelease:'актуальный релиз',clTotalEntries:'Всего записей',clNewestFirst:'новые версии сверху'}[k]||k));
+      summary.innerHTML = `<div class="changelog-stat"><small>${esc(tt('clLatestVersion'))}</small><b>${esc(latest?.version || '—')}</b><span>${esc(latest?.title || '')}</span></div><div class="changelog-stat"><small>${esc(tt('clReleaseDate'))}</small><b>${esc(latest?.date || '—')}</b><span>${esc(tt('clCurrentRelease'))}</span></div><div class="changelog-stat"><small>${esc(tt('clTotalEntries'))}</small><b>${releases.length}</b><span>${esc(tt('clNewestFirst'))}</span></div>`;
     }
     list.innerHTML = releases.map(releaseCard).join('');
   }

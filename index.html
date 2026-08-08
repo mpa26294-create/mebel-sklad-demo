@@ -114,7 +114,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.87</span></div></div>
+      <div class="topbar"><div class="title"><h2>История версий</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.88</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -158,12 +158,12 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=6.87"></script>
-<script src="js/ui.js?v=6.39"></script>
+<script src="js/changelog.js?v=6.88"></script>
+<script src="js/ui.js?v=6.40"></script>
 <script src="js/app.js?v=6.47"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.9"></script>
-<script src="js/translations.js?v=6.7"></script>
+<script src="js/translations.js?v=6.8"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -172,7 +172,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.87 — этап 2.2: перевод раздела «Склад» (материалы)';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.88 — этап 2.3: перевод разделов Модели/Цеха/Справочники/Заказы/История версий';
 </script>
 <script src="js/auth.js?v=6.4"></script>
 <script src="js/materials.js?v=6.42"></script>
@@ -1996,13 +1996,13 @@ async function saveFabricMaterial(id=''){
   await finishMaterialSaveAndReturn(obj.sku,obj.category);
 }
 
-function changeQty(id,delta){const m=data.materials.find(x=>String(x.id)===String(id));const val=prompt('На сколько изменить остаток?',delta);if(val===null)return;m.quantity=Number((Number(m.quantity)+Number(val)).toFixed(3));m.lastUpdated=today();save();renderAll()}
+function changeQty(id,delta){const m=data.materials.find(x=>String(x.id)===String(id));const val=prompt(t('promptChangeStockBy'),delta);if(val===null)return;m.quantity=Number((Number(m.quantity)+Number(val)).toFixed(3));m.lastUpdated=today();save();renderAll()}
 function openModelModal(id=null){const model=id?data.models.find(x=>String(x.id)===String(id)):{name:'',note:'',items:[]};const options=data.materials.map(m=>`<option value="${m.id}">${m.sku} — ${materialTitle(m)} (${unitLabel(m.unit)})</option>`).join('');const itemRows=(model.items||[]).map((it,idx)=>modelItemRow(options,it,idx)).join('');const body=`<div class="form-grid"><div class="field"><label>${t('modelName')}</label><input id="modelName" class="input" value="${model.name||''}"></div><div class="field"><label>${t('note')}</label><input id="modelNote" class="input" value="${model.note||''}"></div><div class="field full"><label>${t('materialsPerItem')}</label><div id="modelItems">${itemRows}</div><button class="btn small" style="margin-top:8px" onclick="addModelItem()">+ ${t('addMaterialGeneric')}</button><button class="btn small" style="margin-top:8px" onclick="openAddCategoryModal()">+ ${t('newMaterial')}</button></div></div>`;const foot=`<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" onclick="saveModel('${id||''}')">${t('save')}</button>`;openModal(id?t('editBtn'):t('newModel'),body,foot);window.currentMaterialOptions=options}
-function modelItemRow(options,it={},idx=0){return `<div class="line-item model-input-row"><select class="select mi-material">${options.replace(`value="${it.materialId}"`,`value="${it.materialId}" selected`)}</select><input class="input mi-qty" type="number" step="0.01" value="${it.qty||1}" style="max-width:120px"><button class="btn small danger" onclick="this.closest('.model-input-row').remove()">Удалить</button></div>`}
+function modelItemRow(options,it={},idx=0){return `<div class="line-item model-input-row"><select class="select mi-material">${options.replace(`value="${it.materialId}"`,`value="${it.materialId}" selected`)}</select><input class="input mi-qty" type="number" step="0.01" value="${it.qty||1}" style="max-width:120px"><button class="btn small danger" onclick="this.closest('.model-input-row').remove()">${t('deleteBtn')}</button></div>`}
 function addModelItem(){document.getElementById('modelItems').insertAdjacentHTML('beforeend',modelItemRow(window.currentMaterialOptions||''))}
 function saveModel(id){const items=[...document.querySelectorAll('.model-input-row')].map(r=>{const mat=data.materials.find(m=>String(m.id)===String(r.querySelector('.mi-material').value));return {materialId:mat?.id,qty:Number(r.querySelector('.mi-qty').value||0),unit:mat?.unit||''}}).filter(i=>i.materialId);const obj={id:id||uid(),name:modelName.value.trim()||t('untitled'),note:modelNote.value.trim(),items};if(id)data.models=data.models.map(x=>String(x.id)===String(id)?obj:x);else data.models.push(obj);save();closeModal();renderAll();toast(t('modelSaved'))}
-function renderModels(){const box=document.getElementById('modelsGrid');if(!data.models.length){box.innerHTML='<div class="empty"><b>Моделей пока нет</b>Создайте модель и укажите материалы на 1 изделие.</div>';return}box.innerHTML=data.models.map(m=>`<div class="model-card"><h3>${m.name}</h3><p class="muted">${m.note||'Без заметки'}</p><div class="materials-list">${m.items.map(i=>{const mat=data.materials.find(x=>String(x.id)===String(i.materialId));return `<div class="line-item"><span>${mat?mat.name:'Удалённый материал'}</span><b>${i.qty} ${i.unit}</b></div>`}).join('')||'<span class="muted">Материалы не указаны</span>'}</div><div class="actions" style="margin-top:12px"><button class="btn small" onclick="openModelModal('${m.id}')">Править</button><button class="btn small danger" onclick="deleteModel('${m.id}')">Удалить</button></div></div>`).join('')}
-function deleteModel(id){if(!confirm('Удалить модель?'))return;data.models=data.models.filter(x=>String(x.id)!==String(id));data.orders=data.orders.filter(o=>String(o.modelId)!==String(id));save();renderAll()}
+function renderModels(){const box=document.getElementById('modelsGrid');if(!data.models.length){box.innerHTML=`<div class="empty"><b>${t('noModelsYet')}</b>${t('createModelHint')}</div>`;return}box.innerHTML=data.models.map(m=>`<div class="model-card"><h3>${m.name}</h3><p class="muted">${m.note||t('noNoteWord')}</p><div class="materials-list">${m.items.map(i=>{const mat=data.materials.find(x=>String(x.id)===String(i.materialId));return `<div class="line-item"><span>${mat?mat.name:t('deletedMaterialWord')}</span><b>${i.qty} ${i.unit}</b></div>`}).join('')||`<span class="muted">${t('materialsNotSpecified')}</span>`}</div><div class="actions" style="margin-top:12px"><button class="btn small" onclick="openModelModal('${m.id}')">${t('editShortBtn')}</button><button class="btn small danger" onclick="deleteModel('${m.id}')">${t('deleteBtn')}</button></div></div>`).join('')}
+function deleteModel(id){if(!confirm(t('confirmDeleteModel')))return;data.models=data.models.filter(x=>String(x.id)!==String(id));data.orders=data.orders.filter(o=>String(o.modelId)!==String(id));save();renderAll()}
 
 const ORDER_STATUSES=['Новый','Готов к работе','Не хватает материалов','Материалы заказаны','В работе','Завершён','Отменён'];
 const ORDER_MATERIAL_CATS=['Поролон','Ткань','Экокожа','Кожа','Древесина','Фурнитура'];

@@ -147,7 +147,7 @@ function openModal(title,body,foot){
   lockPageForModal();
   document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact','production-order-modal','modal-expanded');
   const expandBtn=document.querySelector('.modal-expand-btn');
-  if(expandBtn){expandBtn.title='Увеличить окно';expandBtn.setAttribute('aria-label','Увеличить окно')}
+  if(expandBtn){const lbl=typeof t==='function'?t('expandWindowLabel'):'Увеличить окно';expandBtn.title=lbl;expandBtn.setAttribute('aria-label',lbl)}
   updateModalBackButton();
 }
 
@@ -162,5 +162,5 @@ function toggleModalSize(){
   if(!modal)return;
   modal.classList.toggle('modal-expanded');
   const btn=document.querySelector('.modal-expand-btn');
-  if(btn){const label=modal.classList.contains('modal-expanded')?'Уменьшить окно':'Увеличить окно';btn.title=label;btn.setAttribute('aria-label',label)}
+  if(btn){const label=modal.classList.contains('modal-expanded')?(typeof t==='function'?t('shrinkWindowLabel'):'Уменьшить окно'):(typeof t==='function'?t('expandWindowLabel'):'Увеличить окно');btn.title=label;btn.setAttribute('aria-label',label)}
 }
