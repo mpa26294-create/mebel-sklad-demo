@@ -78,9 +78,9 @@ function materialAreaHint(m,meters){
 }
 function reservationOrdersHtml(m){
   const rows=materialReservationOrders(m.id);
-  if(!rows.length)return '<div class="reserve-orders muted">Резерва по заказам нет</div>';
+  if(!rows.length)return `<div class="reserve-orders muted">${t('noReservationsForOrders')}</div>`;
   const unit=materialDisplayUnit(m);
-  return `<div class="reserve-orders">${rows.map(r=>{const qty=convertMaterialQty(materialOrderReservedQty(r.item,m),r.item.unit||unit,unit,m);return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${r.order.id}')"><span><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''}<br><small>Резерв: ${escapeHtml(qtyWithUnit(qty,unit))}</small></span><span class="go">›</span></button>`}).join('')}</div>`;
+  return `<div class="reserve-orders">${rows.map(r=>{const qty=convertMaterialQty(materialOrderReservedQty(r.item,m),r.item.unit||unit,unit,m);return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${r.order.id}')"><span><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''}<br><small>${t('reserveLabel')}: ${escapeHtml(qtyWithUnit(qty,unit))}</small></span><span class="go">›</span></button>`}).join('')}</div>`;
 }
 
 function detailItem(label,value,full=false){return `<div class="detail-card ${full?'full':''}"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${value?escapeHtml(value):'—'}</div></div>`}
@@ -89,9 +89,9 @@ function reservedForOrdersPanel(m){
   const total=reservedQty(m);
   if(total<=0) return '';
   if(!rows.length){
-    return `<div class="reserved-orders-box"><div class="reserved-orders-title">Резерв</div><div class="reserve-orders muted">${escapeHtml(qtyWithUnit(total,m.unit||'шт'))} · без привязки к заказу</div></div>`;
+    return `<div class="reserved-orders-box"><div class="reserved-orders-title">${t('reserveLabel')}</div><div class="reserve-orders muted">${escapeHtml(qtyWithUnit(total,m.unit||'шт'))} · ${t('notLinkedToOrder')}</div></div>`;
   }
-  return `<div class="reserved-orders-box"><div class="reserved-orders-title">Зарезервировано для заказа</div>${reservationOrdersHtml(m)}</div>`;
+  return `<div class="reserved-orders-box"><div class="reserved-orders-title">${t('reservedForOrderTitle')}</div>${reservationOrdersHtml(m)}</div>`;
 }
 function manualPurchaseOrderAllocations(m){
   const list=(m.attributes&&Array.isArray(m.attributes.manualPurchaseOrders))?m.attributes.manualPurchaseOrders:[];
@@ -102,7 +102,7 @@ function manualPurchaseOrderAllocations(m){
 function orderedOrdersHtml(m){
   const rows=materialOrderedOrders(m.id);
   const manual=orderedManualQty(m);
-  if(!rows.length && manual<=0)return '<div class="reserve-orders muted">Заказов поставщику нет</div>';
+  if(!rows.length && manual<=0)return `<div class="reserve-orders muted">${t('noSupplierOrders')}</div>`;
 
   const allocations=manualPurchaseOrderAllocations(m);
   const allocatedTotal=stockNumForUnit(allocations.reduce((s,x)=>s+Number(x.qty||0),0),m.unit||'шт');
@@ -111,30 +111,30 @@ function orderedOrdersHtml(m){
   if(manual>0 && allocations.length){
     manualHtml=allocations.map(a=>{
       const order=(data.orders||[]).find(o=>String(o.id)===String(a.orderId));
-      const title=order?`${escapeHtml(order.number||'—')}${order.client?' · '+escapeHtml(order.client):''}`:'Выбранный заказ';
-      return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${a.orderId}')"><span><b>${title}</b><br><small>Заказано поставщику: ${escapeHtml(qtyWithUnit(convertMaterialQty(a.qty,m.unit||unit,unit,m),unit))}</small></span><span class="go">›</span></button>`;
+      const title=order?`${escapeHtml(order.number||'—')}${order.client?' · '+escapeHtml(order.client):''}`:t('selectedOrderFallback');
+      return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${a.orderId}')"><span><b>${title}</b><br><small>${t('orderedFromSupplier')}: ${escapeHtml(qtyWithUnit(convertMaterialQty(a.qty,m.unit||unit,unit,m),unit))}</small></span><span class="go">›</span></button>`;
     }).join('');
     const rest=stockNumForUnit(manual-allocatedTotal,m.unit||'шт');
     if(rest>0){
-      manualHtml+=`<div class="reserve-order-link" style="cursor:default"><span><b>Ручная закупка</b><br><small>Без привязки: ${escapeHtml(qtyWithUnit(convertMaterialQty(rest,m.unit||unit,unit,m),unit))}</small></span></div>`;
+      manualHtml+=`<div class="reserve-order-link" style="cursor:default"><span><b>${t('manualPurchaseTitle')}</b><br><small>${t('notLinkedShort')}: ${escapeHtml(qtyWithUnit(convertMaterialQty(rest,m.unit||unit,unit,m),unit))}</small></span></div>`;
     }
   }else if(manual>0){
-    manualHtml=`<div class="reserve-order-link" style="cursor:default"><span><b>Ручная закупка</b><br><small>Заказано: ${escapeHtml(qtyWithUnit(convertMaterialQty(manual,m.unit||unit,unit,m),unit))}</small></span></div>`;
+    manualHtml=`<div class="reserve-order-link" style="cursor:default"><span><b>${t('manualPurchaseTitle')}</b><br><small>${t('ordered')}: ${escapeHtml(qtyWithUnit(convertMaterialQty(manual,m.unit||unit,unit,m),unit))}</small></span></div>`;
   }
 
-  const rowsHtml=rows.map(r=>{const qty=convertMaterialQty(Number(orderItemPurchaseQty(r.item,0)||0),r.item.unit||unit,unit,m);return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${r.order.id}')"><span><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''}<br><small>Заказано: ${escapeHtml(qtyWithUnit(qty,unit))}${r.item.purchaseNo?' · '+escapeHtml(r.item.purchaseNo):''}</small></span><span class="go">›</span></button>`}).join('');
+  const rowsHtml=rows.map(r=>{const qty=convertMaterialQty(Number(orderItemPurchaseQty(r.item,0)||0),r.item.unit||unit,unit,m);return `<button class="reserve-order-link" type="button" onclick="goToOrderFromMaterial(event,'${r.order.id}')"><span><b>${escapeHtml(r.order.number||'—')}</b>${r.order.client?` · ${escapeHtml(r.order.client)}`:''}<br><small>${t('ordered')}: ${escapeHtml(qtyWithUnit(qty,unit))}${r.item.purchaseNo?' · '+escapeHtml(r.item.purchaseNo):''}</small></span><span class="go">›</span></button>`}).join('');
   return `<div class="reserve-orders">${manualHtml}${rowsHtml}</div>`;
 }
 function reservationOrdersShort(m){
   const rows=materialReservationOrders(m.id);
   if(!rows.length)return '';
-  return `резерв ${qtyWithUnit(reservedQty(m),m.unit)}`;
+  return `${t('reserveLabel')} ${qtyWithUnit(reservedQty(m),m.unit)}`;
 }
 
 // New function for order usage cards
 function materialOrderUsageCards(m){
   const rows=materialReservationOrders(m.id);
-  if(!rows.length)return '<div class="order-usage-empty">Материал не используется в активных заказах</div>';
+  if(!rows.length)return `<div class="order-usage-empty">${t('materialNotUsedInActiveOrders')}</div>`;
 
   const unit=materialDisplayUnit(m);
   return rows.map(r=>{
@@ -162,29 +162,29 @@ function materialOrderUsageCards(m){
       </div>
       <div class="order-usage-stats order-usage-stats-5">
         <div class="order-usage-stat">
-          <span class="order-usage-label">Всего нужно</span>
+          <span class="order-usage-label">${t('totalNeededLabel')}</span>
           <span class="order-usage-value">${escapeHtml(qtyWithUnit(total,unit))}</span>
         </div>
         <div class="order-usage-stat">
-          <span class="order-usage-label">Уже взято</span>
+          <span class="order-usage-label">${t('alreadyTakenLabel')}</span>
           <span class="order-usage-value">${escapeHtml(qtyWithUnit(taken,unit))}</span>
         </div>
         <div class="order-usage-stat">
-          <span class="order-usage-label">Осталось нужно</span>
+          <span class="order-usage-label">${t('stillNeededLabel')}</span>
           <span class="order-usage-value">${escapeHtml(qtyWithUnit(needed,unit))}</span>
         </div>
         <div class="order-usage-stat">
-          <span class="order-usage-label">Заказано</span>
+          <span class="order-usage-label">${t('ordered')}</span>
           <span class="order-usage-value">${escapeHtml(qtyWithUnit(ordered,unit))}</span>
         </div>
         <div class="order-usage-stat ${shortage>0?'danger':''}">
-          <span class="order-usage-label">Не хватает</span>
+          <span class="order-usage-label">${t('notEnoughLabel')}</span>
           <span class="order-usage-value">${escapeHtml(qtyWithUnit(shortage,unit))}</span>
         </div>
       </div>
       <div class="order-usage-footer">
         <span class="order-usage-status">${escapeHtml(order.status||'—')}</span>
-        <button class="btn small primary" onclick="goToOrderFromMaterial(event,'${order.id}')">Открыть заказ</button>
+        <button class="btn small primary" onclick="goToOrderFromMaterial(event,'${order.id}')">${t('openOrderBtn')}</button>
       </div>
     </div>`;
   }).join('');
@@ -196,7 +196,7 @@ function materialSupplierDeliveries(m){
   const manual=(a.manualPurchaseOrders||[]);
   const rows=materialOrderedOrders(m.id);
 
-  if(!rows.length && manual.length===0)return '<div class="supplier-deliveries-empty">Нет активных поставок</div>';
+  if(!rows.length && manual.length===0)return `<div class="supplier-deliveries-empty">${t('noActiveDeliveries')}</div>`;
 
   const unit=m.unit||'шт';
   const deliveries=[];
@@ -234,7 +234,7 @@ function materialSupplierDeliveries(m){
     });
   });
 
-  if(deliveries.length===0)return '<div class="supplier-deliveries-empty">Нет активных поставок</div>';
+  if(deliveries.length===0)return `<div class="supplier-deliveries-empty">${t('noActiveDeliveries')}</div>`;
 
   return deliveries.map(d=>`
     <div class="supplier-delivery-card">
@@ -244,26 +244,26 @@ function materialSupplierDeliveries(m){
       </div>
       <div class="delivery-info">
         <div class="delivery-info-row">
-          <span class="delivery-label">Для заказа</span>
+          <span class="delivery-label">${t('forOrderLabel')}</span>
           <span class="delivery-value">${escapeHtml(d.orderClient)}</span>
         </div>
         <div class="delivery-info-row">
-          <span class="delivery-label">Поставщик</span>
+          <span class="delivery-label">${t('supplier')}</span>
           <span class="delivery-value">${escapeHtml(d.supplier)}</span>
         </div>
         <div class="delivery-info-row">
-          <span class="delivery-label">Дата заказа</span>
+          <span class="delivery-label">${t('orderDateLabel')}</span>
           <span class="delivery-value">${escapeHtml(d.orderDate)}</span>
         </div>
         <div class="delivery-info-row">
-          <span class="delivery-label">Ожидается</span>
+          <span class="delivery-label">${t('expectedLabel')}</span>
           <span class="delivery-value">${escapeHtml(d.expectedDate)}</span>
         </div>
       </div>
       <div class="delivery-actions">
-        <button class="btn small primary" onclick="acceptMaterialDelivery('${m.id}','${d.orderId}',${d.qty})">Принять</button>
-        <button class="btn small ghost" onclick="editMaterialDelivery('${m.id}','${d.orderId}')">Изменить</button>
-        <button class="btn small danger" onclick="cancelMaterialDelivery('${m.id}','${d.orderId}')">Отменить</button>
+        <button class="btn small primary" onclick="acceptMaterialDelivery('${m.id}','${d.orderId}',${d.qty})">${t('acceptBtn')}</button>
+        <button class="btn small ghost" onclick="editMaterialDelivery('${m.id}','${d.orderId}')">${t('editBtn')}</button>
+        <button class="btn small danger" onclick="cancelMaterialDelivery('${m.id}','${d.orderId}')">${t('cancel')}</button>
       </div>
     </div>
   `).join('');
@@ -271,19 +271,19 @@ function materialSupplierDeliveries(m){
 
 // Placeholder functions for delivery actions
 function acceptMaterialDelivery(materialId,orderId,qty){
-  toast('Функция принятия поставки будет реализована');
+  toast(t('featureAcceptDeliveryStub'));
 }
 
 function editMaterialDelivery(materialId,orderId){
-  toast('Функция редактирования поставки будет реализована');
+  toast(t('featureEditDeliveryStub'));
 }
 
 function cancelMaterialDelivery(materialId,orderId){
-  toast('Функция отмены поставки будет реализована');
+  toast(t('featureCancelDeliveryStub'));
 }
 
 function openNewMaterialOrder(materialId){
-  toast('Функция заказа материала будет реализована');
+  toast(t('featureOrderMaterialStub'));
 }
 
 // Quick actions mode switching
@@ -342,16 +342,16 @@ function quickMaterialAction(materialId,mode){
 
   if(mode==='in'){
     qty=normalizeStockValue(document.getElementById('detailQtyChange')?.value||0,unit,false);
-    if(qty===null){toast('Введите корректное количество');return;}
+    if(qty===null){toast(t('enterValidQuantity'));return;}
     adjustMaterialQty(materialId,1);
   }else if(mode==='out'){
     qty=normalizeStockValue(document.getElementById('detailQtyChange')?.value||0,unit,false);
-    if(qty===null){toast('Введите корректное количество');return;}
+    if(qty===null){toast(t('enterValidQuantity'));return;}
     adjustMaterialQty(materialId,-1);
   }else if(mode==='adjust'){
     const displayUnit=materialDisplayUnit(m);
     const newQty=normalizeStockValue(document.getElementById('quickAdjustNew')?.value||0,displayUnit,false);
-    if(newQty===null){toast('Введите корректное количество');return;}
+    if(newQty===null){toast(t('enterValidQuantity'));return;}
 
     if(isLinearFabricStock(m)){
       const oldQty=stockNumForUnit(m.quantity,unit);
@@ -365,7 +365,7 @@ function quickMaterialAction(materialId,mode){
           loadMaterialsFromSupabase();
           renderAll();
           openMaterialDetails(materialId);
-          toast('Остаток скорректирован');
+          toast(t('stockAdjusted'));
         }else{
           m.quantity=oldQty;
           m.attributes=oldAttrs;
@@ -389,7 +389,7 @@ function quickMaterialAction(materialId,mode){
           loadMaterialsFromSupabase();
           renderAll();
           openMaterialDetails(materialId);
-          toast('Остаток скорректирован');
+          toast(t('stockAdjusted'));
         }
       });
     }
@@ -425,30 +425,30 @@ function loadMaterialHistory(materialId){
   if(!historyList) return;
 
   // Placeholder - will be implemented with actual audit/history data
-  historyList.innerHTML='<div class="history-empty">История пуста</div>';
+  historyList.innerHTML=`<div class="history-empty">${t('historyEmptyGeneric')}</div>`;
 }
 
-function stockInfoBlock(m){const u=m.unit||'';return `<div class="stock-info-grid"><div class="stock-info-card"><div class="stock-info-label">На складе</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,u),u))}</div></div><div class="stock-info-card"><div class="stock-info-label">Зарезервировано</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(reservedQty(m),u))}</div>${reservationOrdersHtml(m)}</div><div class="stock-info-card"><div class="stock-info-label">Заказано</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(orderedQty(m),u))}</div>${orderedOrdersHtml(m)}</div><div class="stock-info-card"><div class="stock-info-label">Доступно</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(availableQty(m),u))}</div></div></div>`}
+function stockInfoBlock(m){const u=m.unit||'';return `<div class="stock-info-grid"><div class="stock-info-card"><div class="stock-info-label">${t('inStockLabel')}</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,u),u))}</div></div><div class="stock-info-card"><div class="stock-info-label">${t('reservedShortLabel')}</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(reservedQty(m),u))}</div>${reservationOrdersHtml(m)}</div><div class="stock-info-card"><div class="stock-info-label">${t('ordered')}</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(orderedQty(m),u))}</div>${orderedOrdersHtml(m)}</div><div class="stock-info-card"><div class="stock-info-label">${t('availableLabel')}</div><div class="stock-info-value">${escapeHtml(qtyWithUnit(availableQty(m),u))}</div></div></div>`}
 function stockNumberInput(id,label,value,unit=''){return `<div class="field"><label>${label}${unit?`, ${escapeHtml(unitLabel(unit))}`:''}</label><input id="${id}" type="number" step="${stockStep(unit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(value,unit),unit)}" inputmode="decimal"></div>`}
-function stockTripleInputs(prefix, values, unit){return `<div class="stock-input-block"><div class="stock-input-head">Складские количества <button class="info-btn" type="button" onclick="showStockStatusHelp()">i</button></div><div class="stock-input-row">${stockNumberInput(prefix+'Ordered','Заказано',values.ordered,unit)}${stockNumberInput(prefix+'Reserved','Зарезервировано',values.reserved,unit)}${stockNumberInput(prefix+'Qty','На складе',values.qty,unit)}</div></div>`}
-function syncStockInputs(prefix,unit){['Qty','Reserved','Ordered','Min'].forEach(suf=>{const el=document.getElementById(prefix+suf);if(!el)return;el.step=stockStep(unit);el.min='0';const v=normalizeStockValue(el.value,unit,true);if(v!==null)el.value=inputQtyValue(v,unit);});const qtyLabel=document.getElementById(prefix+'QtyLabel');if(qtyLabel)qtyLabel.textContent=`На складе, ${unitLabel(unit)}`;}
+function stockTripleInputs(prefix, values, unit){return `<div class="stock-input-block"><div class="stock-input-head">${t('stockQuantitiesTitle')} <button class="info-btn" type="button" onclick="showStockStatusHelp()">i</button></div><div class="stock-input-row">${stockNumberInput(prefix+'Ordered',t('ordered'),values.ordered,unit)}${stockNumberInput(prefix+'Reserved',t('reservedShortLabel'),values.reserved,unit)}${stockNumberInput(prefix+'Qty',t('inStockLabel'),values.qty,unit)}</div></div>`}
+function syncStockInputs(prefix,unit){['Qty','Reserved','Ordered','Min'].forEach(suf=>{const el=document.getElementById(prefix+suf);if(!el)return;el.step=stockStep(unit);el.min='0';const v=normalizeStockValue(el.value,unit,true);if(v!==null)el.value=inputQtyValue(v,unit);});const qtyLabel=document.getElementById(prefix+'QtyLabel');if(qtyLabel)qtyLabel.textContent=`${t('inStockLabel')}, ${unitLabel(unit)}`;}
 
 function stockNeededToOrderQty(m){const u=m.unit||'шт';return Math.max(0,stockNumForUnit(reservedQty(m)-stockNumForUnit(m.quantity,u)-orderedQty(m),u))}
-function stockActionSummaryBlock(m){const u=m.unit||'шт';const stock=stockNumForUnit(m.quantity,u);const reserved=reservedQty(m);const ordered=orderedQty(m);const available=availableQty(m);const need=stockNeededToOrderQty(m);const covered=Math.max(0,stockNumForUnit(stock+ordered-reserved,u));return `<div class="stock-action-summary"><div class="stock-action-title">Склад и заказы</div><div class="stock-action-grid"><div class="stock-action-card"><small>На складе</small><b>${escapeHtml(qtyWithUnit(stock,u))}</b></div><div class="stock-action-card"><small>Зарезервировано</small><b>${escapeHtml(qtyWithUnit(reserved,u))}</b></div><div class="stock-action-card"><small>Заказано</small><b>${escapeHtml(qtyWithUnit(ordered,u))}</b></div><div class="stock-action-card ${need>0?'warn':''}"><small>До заказать</small><b>${escapeHtml(qtyWithUnit(need,u))}</b></div></div>${need>0?`<div class="order-material-note compact"><b>Нужно до заказать: ${escapeHtml(qtyWithUnit(need,u))}</b><br>Расчёт: резерв ${escapeHtml(qtyWithUnit(reserved,u))} − склад ${escapeHtml(qtyWithUnit(stock,u))} − уже заказано ${escapeHtml(qtyWithUnit(ordered,u))}.</div>`:''}<div class="stock-action-lists"><div class="stock-action-list"><h5>Резерв по заказам</h5>${reservationOrdersHtml(m)}</div><div class="stock-action-list"><h5>Заказано поставщику</h5>${orderedOrdersHtml(m)}</div></div></div>`}
+function stockActionSummaryBlock(m){const u=m.unit||'шт';const stock=stockNumForUnit(m.quantity,u);const reserved=reservedQty(m);const ordered=orderedQty(m);const available=availableQty(m);const need=stockNeededToOrderQty(m);const covered=Math.max(0,stockNumForUnit(stock+ordered-reserved,u));return `<div class="stock-action-summary"><div class="stock-action-title">${t('stockAndOrdersTitle')}</div><div class="stock-action-grid"><div class="stock-action-card"><small>${t('inStockLabel')}</small><b>${escapeHtml(qtyWithUnit(stock,u))}</b></div><div class="stock-action-card"><small>${t('reservedShortLabel')}</small><b>${escapeHtml(qtyWithUnit(reserved,u))}</b></div><div class="stock-action-card"><small>${t('ordered')}</small><b>${escapeHtml(qtyWithUnit(ordered,u))}</b></div><div class="stock-action-card ${need>0?'warn':''}"><small>${t('toOrderLabel')}</small><b>${escapeHtml(qtyWithUnit(need,u))}</b></div></div>${need>0?`<div class="order-material-note compact"><b>${t('needToOrderPrefix')}: ${escapeHtml(qtyWithUnit(need,u))}</b><br>${t('calcFormulaLabel')}: ${t('reservedShortWithColon')} ${escapeHtml(qtyWithUnit(reserved,u))} − ${t('minusStockWord')} ${escapeHtml(qtyWithUnit(stock,u))} − ${t('minusOrderedWord')} ${escapeHtml(qtyWithUnit(ordered,u))}.</div>`:''}<div class="stock-action-lists"><div class="stock-action-list"><h5>${t('reserveByOrdersTitle')}</h5>${reservationOrdersHtml(m)}</div><div class="stock-action-list"><h5>${t('orderedToSupplierTitle')}</h5>${orderedOrdersHtml(m)}</div></div></div>`}
 function purchaseOrderPickerHtml(m){
   const reservations=materialReservationOrders(m.id);
   const selected=new Set(manualPurchaseOrderAllocations(m).map(x=>String(x.orderId)));
   if(!reservations.length){
-    return `<div class="purchase-order-picker"><div class="purchase-order-picker-title">Для какого заказа</div><div class="purchase-order-picker-empty">Нет активных заказов с резервом</div></div>`;
+    return `<div class="purchase-order-picker"><div class="purchase-order-picker-title">${t('forWhichOrderLabel')}</div><div class="purchase-order-picker-empty">${t('noActiveReservedOrders')}</div></div>`;
   }
   const selectedCount=reservations.filter(r=>selected.has(String(r.order.id))).length;
-  const label=selectedCount>0 ? `Выбрано: ${selectedCount}` : 'Выберите заказы';
+  const label=selectedCount>0 ? `${t('selectedCountLabel')}: ${selectedCount}` : t('chooseOrdersLabel');
   const rows=reservations.map(r=>{
     const oid=String(r.order.id);
     const checked=selected.has(oid)?'checked':'';
-    return `<label class="purchase-order-option"><input class="manual-purchase-order-check" type="checkbox" value="${escapeHtml(oid)}" ${checked} onchange="refreshPurchaseOrderDropdownLabel(this)"><span><b>${escapeHtml(r.order.number||'—')}${r.order.client?' · '+escapeHtml(r.order.client):''}</b><small>Резерв: ${escapeHtml(qtyWithUnit(r.item.qty,m.unit||'шт'))}</small></span></label>`;
+    return `<label class="purchase-order-option"><input class="manual-purchase-order-check" type="checkbox" value="${escapeHtml(oid)}" ${checked} onchange="refreshPurchaseOrderDropdownLabel(this)"><span><b>${escapeHtml(r.order.number||'—')}${r.order.client?' · '+escapeHtml(r.order.client):''}</b><small>${t('reserveLabel')}: ${escapeHtml(qtyWithUnit(r.item.qty,m.unit||'шт'))}</small></span></label>`;
   }).join('');
-  return `<div class="purchase-order-picker"><div class="purchase-order-picker-title">Для какого заказа</div><div class="purchase-order-dropdown"><button class="purchase-order-toggle" type="button" onclick="togglePurchaseOrderDropdown(this)"><span>${label}</span></button><div class="purchase-order-list">${rows}</div></div></div>`;
+  return `<div class="purchase-order-picker"><div class="purchase-order-picker-title">${t('forWhichOrderLabel')}</div><div class="purchase-order-dropdown"><button class="purchase-order-toggle" type="button" onclick="togglePurchaseOrderDropdown(this)"><span>${label}</span></button><div class="purchase-order-list">${rows}</div></div></div>`;
 }
 function togglePurchaseOrderDropdown(btn){
   const picker=btn.closest('.purchase-order-picker');
@@ -461,7 +461,7 @@ function refreshPurchaseOrderDropdownLabel(input){
   if(!picker)return;
   const count=picker.querySelectorAll('.manual-purchase-order-check:checked').length;
   const label=picker.querySelector('.purchase-order-toggle span');
-  if(label)label.textContent=count>0?`Выбрано: ${count}`:'Выберите заказы';
+  if(label)label.textContent=count>0?`${t('selectedCountLabel')}: ${count}`:t('chooseOrdersLabel');
 }
 function stockAdjustBlock(m){
   const step=stockStep(m.unit||'шт');
@@ -469,8 +469,8 @@ function stockAdjustBlock(m){
   const unitText=unitLabel(m.unit||'шт');
   const need=stockNeededToOrderQty(m);
   const orderedInput=need>0?inputQtyValue(need,m.unit||'шт'):inputQtyValue(orderedManualQty(m)||0,m.unit||'шт');
-  const receiptBtn=(purchaseStatusOf(m)==='ordered'||orderedManualQty(m)>0)?`<button class="btn primary" onclick="openMaterialReceipt('${m.id}')">Поступление</button>`:'';
-  return `${stockActionSummaryBlock(m)}<div class="stock-adjust"><div><div class="stock-adjust-title">${t('changeStock')}</div><div class="stock-adjust-current">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit||''))}</div></div><div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">${t('qtyWithUnit')}, ${escapeHtml(unitText)}</span><input id="detailQtyChange" class="input" type="number" step="${step}" min="${step}" value="${value}" inputmode="decimal"></label></div><button class="btn danger-fill" onclick="adjustMaterialQty('${m.id}',-1)">− ${t('writeOff')}</button><button class="btn primary" onclick="adjustMaterialQty('${m.id}',1)">+ ${t('add')}</button>${receiptBtn}</div><div class="stock-order-control"><div><div class="stock-order-control-title">Заказано поставщику</div><div class="stock-order-control-current">${escapeHtml(qtyWithUnit(orderedManualQty(m),m.unit||''))}</div><div class="hint">Выберите один или несколько заказов, для которых оформлена закупка.</div></div>${purchaseOrderPickerHtml(m)}<div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">Количество, ${escapeHtml(unitText)}</span><input id="detailOrderedQty" class="input" type="number" step="${step}" min="0" value="${orderedInput}" inputmode="decimal"></label></div><button class="btn primary" onclick="setMaterialOrderedQty('${m.id}')">Заказано</button></div>`;
+  const receiptBtn=(purchaseStatusOf(m)==='ordered'||orderedManualQty(m)>0)?`<button class="btn primary" onclick="openMaterialReceipt('${m.id}')">${t('receiptBtn')}</button>`:'';
+  return `${stockActionSummaryBlock(m)}<div class="stock-adjust"><div><div class="stock-adjust-title">${t('changeStock')}</div><div class="stock-adjust-current">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit||''))}</div></div><div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">${t('qtyWithUnit')}, ${escapeHtml(unitText)}</span><input id="detailQtyChange" class="input" type="number" step="${step}" min="${step}" value="${value}" inputmode="decimal"></label></div><button class="btn danger-fill" onclick="adjustMaterialQty('${m.id}',-1)">− ${t('writeOff')}</button><button class="btn primary" onclick="adjustMaterialQty('${m.id}',1)">+ ${t('add')}</button>${receiptBtn}</div><div class="stock-order-control"><div><div class="stock-order-control-title">${t('orderedToSupplierShort')}</div><div class="stock-order-control-current">${escapeHtml(qtyWithUnit(orderedManualQty(m),m.unit||''))}</div><div class="hint">${t('chooseOrdersForPurchaseHint')}</div></div>${purchaseOrderPickerHtml(m)}<div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">${t('quantityLabel')}, ${escapeHtml(unitText)}</span><input id="detailOrderedQty" class="input" type="number" step="${step}" min="0" value="${orderedInput}" inputmode="decimal"></label></div><button class="btn primary" onclick="setMaterialOrderedQty('${m.id}')">${t('markOrderedBtn')}</button></div>`;
 }
 function normalizeQtyForUnit(value,unit){return normalizeStockValue(value,unit,false)}
 function applyMaterialReceipt(mat, addQty){
@@ -493,7 +493,7 @@ function receiptAreaPreview(){
   const length=Number(String(document.getElementById('receiptRollLength')?.value||0).replace(',','.'))||0;
   const box=document.getElementById('receiptAreaPreview');
   if(!box)return;
-  if(width>0&&length>0){box.textContent=`Площадь: ${((width/1000)*length).toFixed(2)} м²`;box.classList.remove('hidden')}
+  if(width>0&&length>0){box.textContent=`${t('areaLabel')}: ${((width/1000)*length).toFixed(2)} м²`;box.classList.remove('hidden')}
   else{box.textContent='';box.classList.add('hidden')}
 }
 function openMaterialReceipt(id){
@@ -504,11 +504,11 @@ function openMaterialReceipt(id){
   const isFabric=m.category==='Ткань'||m.category==='Экокожа';
   const fabricFields=isFabric?`
     <div class="field"><label>${t('fabricRollWidthMm')}</label><input id="receiptRollWidth" class="input" type="number" min="0" step="1" value="${a.rollWidthMm||((Number(a.rollWidth||0)>0)?Math.round(Number(a.rollWidth)*1000):'')}" oninput="receiptAreaPreview()"></div>
-    <div class="field"><label>Длина, м</label><input id="receiptRollLength" class="input" type="number" min="0" step="0.01" value="${a.rollLength||''}" oninput="receiptAreaPreview()"></div>
+    <div class="field"><label>${t('lengthMetersLabel')}</label><input id="receiptRollLength" class="input" type="number" min="0" step="0.01" value="${a.rollLength||''}" oninput="receiptAreaPreview()"></div>
     <div class="area-preview hidden" id="receiptAreaPreview"></div>`:'';
   const receiptValue=isLinearFabricStock(m)?convertMaterialQty(orderedManualQty(m)||0,m.unit||unit,unit,m):(orderedManualQty(m)||0);
-  const body=`<div class="wizard-card"><h4>Поступление</h4><div class="wizard-soft-note">Заполните фактические данные после прихода материала. Информация о заказе сохранится в истории материала.</div><div class="form-grid">${fabricFields}<div class="field"><label>Фактический остаток, ${escapeHtml(unitLabel(unit))}</label><input id="receiptQty" class="input" type="number" min="0" step="${stockStep(unit)}" value="${inputQtyValue(receiptValue,unit)}"></div><div class="field"><label>${t('storageLocation')}</label><input id="receiptStorageLocation" class="input" value="${a.storageLocation||''}" placeholder="Стеллаж / зона"></div><div class="field"><label>${t('purchasePrice')}</label><input id="receiptPurchasePrice" class="input" type="number" min="0" step="0.01" value="${a.purchasePrice||''}"></div><div class="field"><label>${t('receiptDate')}</label><input id="receiptDate" class="input" type="date" value="${a.receiptDate||today()}"></div></div></div>`;
-  openModal('Поступление материала',body,`<button class="btn" onclick="openMaterialDetails('${m.id}')">${t('back')}</button><button class="btn primary" onclick="saveMaterialReceipt('${m.id}')">${t('save')}</button>`);
+  const body=`<div class="wizard-card"><h4>${t('receiptBtn')}</h4><div class="wizard-soft-note">${t('receiptWizardHint')}</div><div class="form-grid">${fabricFields}<div class="field"><label>${t('actualStockLabel')}, ${escapeHtml(unitLabel(unit))}</label><input id="receiptQty" class="input" type="number" min="0" step="${stockStep(unit)}" value="${inputQtyValue(receiptValue,unit)}"></div><div class="field"><label>${t('storageLocation')}</label><input id="receiptStorageLocation" class="input" value="${a.storageLocation||''}" placeholder="${t('shelfZonePlaceholder')}"></div><div class="field"><label>${t('purchasePrice')}</label><input id="receiptPurchasePrice" class="input" type="number" min="0" step="0.01" value="${a.purchasePrice||''}"></div><div class="field"><label>${t('receiptDate')}</label><input id="receiptDate" class="input" type="date" value="${a.receiptDate||today()}"></div></div></div>`;
+  openModal(t('materialReceiptTitle'),body,`<button class="btn" onclick="openMaterialDetails('${m.id}')">${t('back')}</button><button class="btn primary" onclick="saveMaterialReceipt('${m.id}')">${t('save')}</button>`);
   receiptAreaPreview();
 }
 async function saveMaterialReceipt(id){
@@ -540,10 +540,10 @@ async function saveMaterialReceipt(id){
   m.lastUpdated=today();
   const ok=await updateMaterialInSupabase(m);
   if(!ok)return;
-  if(typeof auditAdd==='function')auditAdd('material_receipt','material',m.id,m.sku||m.name,`Поступление материала: ${qtyWithUnit(qty,unit)}`,{...oldOrder,quantity:qty,unit});
+  if(typeof auditAdd==='function')auditAdd('material_receipt','material',m.id,m.sku||m.name,`${(typeof tRu==='function'?tRu('materialReceiptAuditPrefix'):'Поступление материала')}: ${qtyWithUnit(qty,unit)}`,{...oldOrder,quantity:qty,unit});
   await loadMaterialsFromSupabase();
   openMaterialDetails(id);
-  toast('Материал принят на склад');
+  toast(t('materialAcceptedToStockToast'));
 }
 
 function detailField(label,value,full=false){return `<div class="detail-field ${full?'full':''}"><small>${escapeHtml(label)}</small><b>${value?value:'—'}</b></div>`}
@@ -582,57 +582,57 @@ function materialInfoQtyWithUnit(q,m,fromUnit){
 function materialDetailBasics(m){
   const a=m.attributes||{};
   const rows=[];
-  rows.push(detailField('Артикул',escapeHtml(m.sku||'—')));
-  rows.push(detailField('Название',escapeHtml(materialDisplayName(m)||m.name||'—')));
-  rows.push(detailField('Категория',escapeHtml(categoryLabel(m.category)||'—')));
+  rows.push(detailField(t('skuLabel'),escapeHtml(m.sku||'—')));
+  rows.push(detailField(t('nameLabel'),escapeHtml(materialDisplayName(m)||m.name||'—')));
+  rows.push(detailField(t('categoryLabel2'),escapeHtml(categoryLabel(m.category)||'—')));
   if(typeof isFabricCategory==='function'&&isFabricCategory(m.category)){
     const color=a.color||'—';
-    rows.push(detailField('Коллекция / код',escapeHtml(a.collection||'—')));
-    rows.push(detailField('Цвет',`<span class="color-chip only" title="${escapeHtml(color)}" style="background:${materialColorStyle(color)}"></span>`));
-    rows.push(detailField('Тип материала',escapeHtml(a.materialType||m.category)));
+    rows.push(detailField(t('collectionCodeLabel'),escapeHtml(a.collection||'—')));
+    rows.push(detailField(t('colorLabel'),`<span class="color-chip only" title="${escapeHtml(color)}" style="background:${materialColorStyle(color)}"></span>`));
+    rows.push(detailField(t('materialTypeLabel'),escapeHtml(a.materialType||m.category)));
     if(m.category==='Кожа'){
-      rows.push(detailField('Площадь',escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity||0,m.unit||'м²'),m.unit||'м²'))));
+      rows.push(detailField(t('areaShortLabel'),escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity||0,m.unit||'м²'),m.unit||'м²'))));
     }else{
-      rows.push(detailField('Ширина рулона',escapeHtml(a.rollWidth?Number(a.rollWidth).toFixed(2)+' м':'—')));
-      rows.push(detailField('Длина',escapeHtml(materialDisplayQtyWithUnit(m.quantity||0,m,m.unit))));
+      rows.push(detailField(t('rollWidthLabel'),escapeHtml(a.rollWidth?Number(a.rollWidth).toFixed(2)+' м':'—')));
+      rows.push(detailField(t('lengthLabel'),escapeHtml(materialDisplayQtyWithUnit(m.quantity||0,m,m.unit))));
       const areaParts=[
-        a.rollLength?`длина рулона ${Number(a.rollLength).toFixed(2)} м`:null,
-        a.area?`площадь 1 рулона ${Number(a.area).toFixed(2)} м²`:null,
-        materialAreaHint(m,materialLinearStockQty(m))?`общая площадь ${materialAreaHint(m,materialLinearStockQty(m))}`:(a.totalArea?`общая площадь ${Number(a.totalArea).toFixed(2)} м²`:null)
+        a.rollLength?`${t('rollLengthWord')} ${Number(a.rollLength).toFixed(2)} м`:null,
+        a.area?`${t('rollAreaWord')} ${Number(a.area).toFixed(2)} м²`:null,
+        materialAreaHint(m,materialLinearStockQty(m))?`${t('totalAreaWord')} ${materialAreaHint(m,materialLinearStockQty(m))}`:(a.totalArea?`${t('totalAreaWord')} ${Number(a.totalArea).toFixed(2)} м²`:null)
       ].filter(Boolean).join(' · ');
-      if(areaParts)rows.push(detailField('Справочно',`<span class="muted-detail">${escapeHtml(areaParts)}</span>`,true));
+      if(areaParts)rows.push(detailField(t('referenceLabel'),`<span class="muted-detail">${escapeHtml(areaParts)}</span>`,true));
     }
-    rows.push(detailField('Единица учёта',escapeHtml(isLinearFabricStock(m)?'пог. м':(unitLabel(m.unit||'')||'—'))));
+    rows.push(detailField(t('unitOfMeasureLabel'),escapeHtml(isLinearFabricStock(m)?'пог. м':(unitLabel(m.unit||'')||'—'))));
   }else if(m.category==='Поролон'){
-    rows.push(detailField('Размер',escapeHtml(materialDimensions(m)||'—')));
-    rows.push(detailField('Марка / плотность',escapeHtml(a.grade||'—')));
-    rows.push(detailField('Формат',escapeHtml(a.foamKind==='sheet'?'Листы':a.foamKind==='detail'?'Детали':'—')));
+    rows.push(detailField(t('sizeLabel'),escapeHtml(materialDimensions(m)||'—')));
+    rows.push(detailField(t('gradeDensityLabel'),escapeHtml(a.grade||'—')));
+    rows.push(detailField(t('formatLabel'),escapeHtml(a.foamKind==='sheet'?t('sheetsWord'):a.foamKind==='detail'?t('detailsWord'):'—')));
     if(a.foamKind==='sheet'){
-      rows.push(detailField('Количество листов',escapeHtml(a.sheetCount||'—')));
-      rows.push(detailField('Площадь 1 листа',escapeHtml(a.sheetArea?Number(a.sheetArea).toFixed(3)+' м²':'—')));
-      rows.push(detailField('Общая площадь',escapeHtml(a.totalArea?Number(a.totalArea).toFixed(3)+' м²':'—')));
+      rows.push(detailField(t('sheetCountLabel'),escapeHtml(a.sheetCount||'—')));
+      rows.push(detailField(t('sheetAreaLabel'),escapeHtml(a.sheetArea?Number(a.sheetArea).toFixed(3)+' м²':'—')));
+      rows.push(detailField(t('totalAreaLabel'),escapeHtml(a.totalArea?Number(a.totalArea).toFixed(3)+' м²':'—')));
     }
-    if(a.foamKind==='detail')rows.push(detailField('Количество деталей',escapeHtml(a.detailCount||'—')));
-    rows.push(detailField('Единица учёта',escapeHtml(unitLabel(m.unit||'')||'—')));
+    if(a.foamKind==='detail')rows.push(detailField(t('detailCountLabel'),escapeHtml(a.detailCount||'—')));
+    rows.push(detailField(t('unitOfMeasureLabel'),escapeHtml(unitLabel(m.unit||'')||'—')));
   }else if(m.category==='Древесина'){
     const sheet=isWoodSheetMaterial(m);
-    rows.push(detailField('Тип материала',escapeHtml(m.subcategory||a.materialType||'—')));
-    rows.push(detailField('Порода',escapeHtml(a.woodSpecies||a.woodType||'—')));
-    rows.push(detailField('Размер',escapeHtml([a.thickness,a.width,a.length].filter(Boolean).join('×')+(a.thickness||a.width||a.length?' мм':''))));
+    rows.push(detailField(t('materialTypeLabel'),escapeHtml(m.subcategory||a.materialType||'—')));
+    rows.push(detailField(t('woodSpeciesLabel'),escapeHtml(a.woodSpecies||a.woodType||'—')));
+    rows.push(detailField(t('sizeLabel'),escapeHtml([a.thickness,a.width,a.length].filter(Boolean).join('×')+(a.thickness||a.width||a.length?' мм':''))));
     if(sheet){
       const area=woodSheetArea(m);
       const totalArea=Number(a.totalArea||0);
-      rows.push(detailField('Площадь 1 листа',escapeHtml(area?Number(area).toFixed(2)+' м²':'—')));
-      rows.push(detailField('Общая площадь',escapeHtml(totalArea>0?qtyWithUnit(totalArea,'м²'):materialInfoQtyWithUnit(m.quantity||0,m,m.unit))));
+      rows.push(detailField(t('sheetAreaLabel'),escapeHtml(area?Number(area).toFixed(2)+' м²':'—')));
+      rows.push(detailField(t('totalAreaLabel'),escapeHtml(totalArea>0?qtyWithUnit(totalArea,'м²'):materialInfoQtyWithUnit(m.quantity||0,m,m.unit))));
     }else{
-      if(a.sheetArea)rows.push(detailField('Площадь 1 листа',escapeHtml(Number(a.sheetArea).toFixed(2)+' м²')));
-      if(a.totalArea)rows.push(detailField('Общая площадь',escapeHtml(Number(a.totalArea).toFixed(2)+' м²')));
+      if(a.sheetArea)rows.push(detailField(t('sheetAreaLabel'),escapeHtml(Number(a.sheetArea).toFixed(2)+' м²')));
+      if(a.totalArea)rows.push(detailField(t('totalAreaLabel'),escapeHtml(Number(a.totalArea).toFixed(2)+' м²')));
     }
-    rows.push(detailField('Сорт',escapeHtml(a.grade||'—')));
-    rows.push(detailField('Единица учёта',escapeHtml(sheet?'м²':(unitLabel(m.unit||'')||'—'))));
+    rows.push(detailField(t('gradeLabel'),escapeHtml(a.grade||'—')));
+    rows.push(detailField(t('unitOfMeasureLabel'),escapeHtml(sheet?'м²':(unitLabel(m.unit||'')||'—'))));
   }else{
-    rows.push(detailField('Тип / размер',escapeHtml(m.subcategory||a.size||a.thickness||'—')));
-    rows.push(detailField('Характеристики',escapeHtml(materialCompactText(m)||'—'),true));
+    rows.push(detailField(t('typeSizeLabel'),escapeHtml(m.subcategory||a.size||a.thickness||'—')));
+    rows.push(detailField(t('characteristicsLabel'),escapeHtml(materialCompactText(m)||'—'),true));
   }
   return rows.join('');
 }
@@ -640,23 +640,23 @@ function materialDetailExtra(m){
   const a=m.attributes||{};
   const rows=[];
   if(typeof isFabricCategory==='function'&&isFabricCategory(m.category)){
-    rows.push(detailField('Производитель',escapeHtml(a.manufacturer||'—')));
-    rows.push(detailField('Поставщик',escapeHtml(a.supplier||'—')));
-    rows.push(detailField('Место хранения',escapeHtml(a.storageLocation||'—')));
-    rows.push(detailField('Дата поступления',escapeHtml(a.receiptDate||'—')));
-    rows.push(detailField('Цена закупки',escapeHtml(a.purchasePrice||'—')));
+    rows.push(detailField(t('manufacturerLabel'),escapeHtml(a.manufacturer||'—')));
+    rows.push(detailField(t('supplier'),escapeHtml(a.supplier||'—')));
+    rows.push(detailField(t('storageLocationLabel'),escapeHtml(a.storageLocation||'—')));
+    rows.push(detailField(t('receiptDateLabel'),escapeHtml(a.receiptDate||'—')));
+    rows.push(detailField(t('purchasePriceLabel'),escapeHtml(a.purchasePrice||'—')));
   }else{
-    rows.push(detailField('Поставщик',escapeHtml(a.supplier||'—')));
-    rows.push(detailField('Заказ / закупка',escapeHtml(a.order||'—')));
+    rows.push(detailField(t('supplier'),escapeHtml(a.supplier||'—')));
+    rows.push(detailField(t('orderPurchaseLabel'),escapeHtml(a.order||'—')));
   }
   const tags=String(a.tags||'').split(',').map(x=>x.trim()).filter(Boolean);
-  rows.push(`<div class="detail-field full"><small>Теги</small><div class="detail-tags">${tags.length?tags.map(t=>`<span class="detail-tag">${escapeHtml(t)}</span>`).join(''):'<b>—</b>'}</div></div>`);
+  rows.push(`<div class="detail-field full"><small>${t('tagsLabel')}</small><div class="detail-tags">${tags.length?tags.map(t=>`<span class="detail-tag">${escapeHtml(t)}</span>`).join(''):'<b>—</b>'}</div></div>`);
   return rows.join('');
 }
 function materialDetailDocuments(m){
   const a=m.attributes||{};
-  if(!(a.pdfName||a.pdfPath||a.pdfUrl)) return `<div class="detail-doc-row"><div class="doc-ico">PDF</div><div class="doc-info"><b>Документ не прикреплён</b><small>Можно добавить при редактировании материала</small></div></div>`;
-  return `<div class="detail-doc-row"><div class="doc-ico">PDF</div><div class="doc-info"><b>${escapeHtml(a.pdfName||'Документ PDF')}</b><small>Файл материала</small></div><button class="btn small" type="button" onclick="openMaterialPdf('${m.id}')">Открыть</button></div>`;
+  if(!(a.pdfName||a.pdfPath||a.pdfUrl)) return `<div class="detail-doc-row"><div class="doc-ico">PDF</div><div class="doc-info"><b>${t('docNotAttached')}</b><small>${t('docNotAttachedHint')}</small></div></div>`;
+  return `<div class="detail-doc-row"><div class="doc-ico">PDF</div><div class="doc-info"><b>${escapeHtml(a.pdfName||t('docPdfDefault'))}</b><small>${t('docFileLabel')}</small></div><button class="btn small" type="button" onclick="openMaterialPdf('${m.id}')">${t('openDocBtn')}</button></div>`;
 }
 function openMaterialDetails(id){
   const m=data.materials.find(x=>String(x.id)===String(id));
@@ -688,36 +688,36 @@ function openMaterialDetails(id){
   const needInfoText=qtyWithUnit(need,displayUnit);
   const summaryAreaSub=(value)=>isFabricRoll&&materialAreaHint(m,value)?`<small class="summary-subtle">${escapeHtml(materialAreaHint(m,value))}</small>`:'';
 
-  const quickUnitControl=isFabricRoll?`<input type="hidden" id="detailQtyUnit" value="м.п.">`:(isSheetMaterial?`<select id="detailQtyUnit" class="select" onchange="syncDetailQtyUnit()"><option value="sheet">листы</option><option value="m2">м²</option></select>`:`<input type="hidden" id="detailQtyUnit" value="${escapeHtml(unit)}">`);
-  const quickFabricFields=isFabricRoll?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview subtle" id="detailRollPreview"></div><input id="detailRollWidth" type="hidden" value="${escapeHtml(a.rollWidth||((Number(a.rollWidthMm||0)>0)?Number(a.rollWidthMm)/1000:''))}"></div>`:(isSheetMaterial?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview">Площадь 1 листа: ${sheetArea} м²</div></div>`:'');
+  const quickUnitControl=isFabricRoll?`<input type="hidden" id="detailQtyUnit" value="м.п.">`:(isSheetMaterial?`<select id="detailQtyUnit" class="select" onchange="syncDetailQtyUnit()"><option value="sheet">${t('sheetsOption')}</option><option value="m2">м²</option></select>`:`<input type="hidden" id="detailQtyUnit" value="${escapeHtml(unit)}">`);
+  const quickFabricFields=isFabricRoll?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview subtle" id="detailRollPreview"></div><input id="detailRollWidth" type="hidden" value="${escapeHtml(a.rollWidth||((Number(a.rollWidthMm||0)>0)?Number(a.rollWidthMm)/1000:''))}"></div>`:(isSheetMaterial?`<div class="quick-roll-fields" id="detailRollFields"><div class="area-preview">${t('sheetAreaOnePrefix')}: ${sheetArea} м²</div></div>`:'');
 
   // New summary panel
-  const summaryStatus = available > 0 ? 'Достаточно на складе' : (ordered > 0 ? 'Заказано' : (stock > 0 ? 'Зарезервировано под заказы' : 'Нет на складе'));
+  const summaryStatus = available > 0 ? t('enoughInStock') : (ordered > 0 ? t('ordered') : (stock > 0 ? t('reservedForOrdersStatus') : t('noneInStock')));
   const summaryStatusClass = available > 0 ? 'success' : (ordered > 0 ? 'ordered' : (stock > 0 ? 'reserved' : 'danger'));
 
   // Quick actions with three modes
   const quickActionsHtml=`
     <div class="quick-actions-tabs">
-      <button class="quick-tab active" data-mode="in" onclick="switchQuickActionMode('in')">Приход</button>
-      <button class="quick-tab" data-mode="out" onclick="switchQuickActionMode('out')">Списание</button>
-      <button class="quick-tab" data-mode="adjust" onclick="switchQuickActionMode('adjust')">Корректировка</button>
+      <button class="quick-tab active" data-mode="in" onclick="switchQuickActionMode('in')">${t('receiptTabLabel')}</button>
+      <button class="quick-tab" data-mode="out" onclick="switchQuickActionMode('out')">${t('writeoffTabLabel')}</button>
+      <button class="quick-tab" data-mode="adjust" onclick="switchQuickActionMode('adjust')">${t('adjustTabLabel')}</button>
     </div>
     <div class="quick-shared-qty">
-      <label class="field"><span id="detailQtyLabel">Изменить остаток, ${escapeHtml(unitLabel(displayUnit)||displayUnit)}</span><input id="detailQtyChange" class="input" type="number" step="${stockStep(displayUnit)}" min="${stockStep(displayUnit)}" value="${stockDefaultValue(displayUnit)}" inputmode="decimal" oninput="syncDetailRollPreview()"></label>
+      <label class="field"><span id="detailQtyLabel">${t('changeStockLabelWithUnit')}, ${escapeHtml(unitLabel(displayUnit)||displayUnit)}</span><input id="detailQtyChange" class="input" type="number" step="${stockStep(displayUnit)}" min="${stockStep(displayUnit)}" value="${stockDefaultValue(displayUnit)}" inputmode="decimal" oninput="syncDetailRollPreview()"></label>
       ${quickUnitControl}
     </div>
     ${quickFabricFields}
     <div class="quick-actions-content">
       <div class="quick-action-panel active" id="quickActionIn">
-        <button class="btn primary full-width" onclick="adjustMaterialQty('${m.id}',1)">+ Принять на склад</button>
+        <button class="btn primary full-width" onclick="adjustMaterialQty('${m.id}',1)">+ ${t('acceptToStockBtn')}</button>
       </div>
       <div class="quick-action-panel hidden" id="quickActionOut">
-        <button class="btn danger-fill full-width" onclick="adjustMaterialQty('${m.id}',-1)">− Списать со склада</button>
+        <button class="btn danger-fill full-width" onclick="adjustMaterialQty('${m.id}',-1)">− ${t('writeOffFromStockBtn')}</button>
       </div>
       <div class="quick-action-panel hidden" id="quickActionAdjust">
-        <label class="field"><span>Текущий остаток</span><input id="quickAdjustCurrent" class="input" type="number" step="${stockStep(displayUnit)}" min="0" value="${inputQtyValue(stock,displayUnit)}" inputmode="decimal" readonly></label>
-        <label class="field"><span>Новый остаток</span><input id="quickAdjustNew" class="input" type="number" step="${stockStep(displayUnit)}" min="0" value="${inputQtyValue(stock,displayUnit)}" inputmode="decimal"></label>
-        <button class="btn primary full-width" onclick="quickMaterialAction('${m.id}','adjust')">✓ Установить остаток</button>
+        <label class="field"><span>${t('currentStockLabel')}</span><input id="quickAdjustCurrent" class="input" type="number" step="${stockStep(displayUnit)}" min="0" value="${inputQtyValue(stock,displayUnit)}" inputmode="decimal" readonly></label>
+        <label class="field"><span>${t('newStockLabel')}</span><input id="quickAdjustNew" class="input" type="number" step="${stockStep(displayUnit)}" min="0" value="${inputQtyValue(stock,displayUnit)}" inputmode="decimal"></label>
+        <button class="btn primary full-width" onclick="quickMaterialAction('${m.id}','adjust')">✓ ${t('setStockBtn')}</button>
       </div>
     </div>
   `;
@@ -726,18 +726,18 @@ function openMaterialDetails(id){
   const historyHtml=`
     <div class="material-history-block">
       <div class="material-history-header">
-        <div class="material-history-title">История материала</div>
+        <div class="material-history-title">${t('materialHistoryTitle')}</div>
         <div class="material-history-filters">
-          <button class="history-filter-btn active" data-filter="all" onclick="filterMaterialHistory('all')">Все</button>
-          <button class="history-filter-btn" data-filter="in" onclick="filterMaterialHistory('in')">Приход</button>
-          <button class="history-filter-btn" data-filter="out" onclick="filterMaterialHistory('out')">Списание</button>
-          <button class="history-filter-btn" data-filter="reserve" onclick="filterMaterialHistory('reserve')">Резерв</button>
-          <button class="history-filter-btn" data-filter="purchase" onclick="filterMaterialHistory('purchase')">Закупка</button>
-          <button class="history-filter-btn" data-filter="adjust" onclick="filterMaterialHistory('adjust')">Корректировка</button>
+          <button class="history-filter-btn active" data-filter="all" onclick="filterMaterialHistory('all')">${t('all')}</button>
+          <button class="history-filter-btn" data-filter="in" onclick="filterMaterialHistory('in')">${t('receiptTabLabel')}</button>
+          <button class="history-filter-btn" data-filter="out" onclick="filterMaterialHistory('out')">${t('writeoffTabLabel')}</button>
+          <button class="history-filter-btn" data-filter="reserve" onclick="filterMaterialHistory('reserve')">${t('reserveLabel')}</button>
+          <button class="history-filter-btn" data-filter="purchase" onclick="filterMaterialHistory('purchase')">${t('purchaseWord')}</button>
+          <button class="history-filter-btn" data-filter="adjust" onclick="filterMaterialHistory('adjust')">${t('adjustTabLabel')}</button>
         </div>
       </div>
       <div class="material-history-list" id="materialHistoryList">
-        <div class="history-empty">История пуста</div>
+        <div class="history-empty">${t('historyEmptyGeneric')}</div>
       </div>
     </div>
   `;
@@ -746,55 +746,55 @@ function openMaterialDetails(id){
     <div class="material-detail-main">
       <div class="material-hero material-hero-clean">
         <div>
-          <h4>${escapeHtml(materialTitle(m)||materialDisplayName(m)||'Материал')}</h4>
-          <p>${m.category==='Поролон'&&m.sku?'':escapeHtml(m.sku||'Без артикула')+' · '}${escapeHtml(categoryLabel(m.category))}${subtitleSub}</p>
+          <h4>${escapeHtml(materialTitle(m)||materialDisplayName(m)||t('materialFallback'))}</h4>
+          <p>${m.category==='Поролон'&&m.sku?'':escapeHtml(m.sku||t('noSkuLabel'))+' · '}${escapeHtml(categoryLabel(m.category))}${subtitleSub}</p>
         </div>
         <span class="status ${st[0]}">${st[1]}</span>
       </div>
 
       <div class="material-workflow-actions">
-        <button type="button" class="material-workflow-btn danger" onclick="materialDetailGo('writeoff')"><span>−</span><b>Списать</b><small>быстрое списание</small></button>
-        <button type="button" class="material-workflow-btn" onclick="materialDetailGo('stock')"><span>✓</span><b>Наличие</b><small>остаток и резерв</small></button>
-        <button type="button" class="material-workflow-btn" onclick="materialDetailGo('orders')"><span>↗</span><b>В заказах</b><small>где применяется</small></button>
+        <button type="button" class="material-workflow-btn danger" onclick="materialDetailGo('writeoff')"><span>−</span><b>${t('writeOffBtn')}</b><small>${t('quickWriteoffHint')}</small></button>
+        <button type="button" class="material-workflow-btn" onclick="materialDetailGo('stock')"><span>✓</span><b>${t('availabilityBtn')}</b><small>${t('stockReserveHint')}</small></button>
+        <button type="button" class="material-workflow-btn" onclick="materialDetailGo('orders')"><span>↗</span><b>${t('inOrdersBtn')}</b><small>${t('whereUsedHint')}</small></button>
       </div>
 
       <div class="material-summary-panel material-summary-clean" data-detail-stock>
-        <div class="summary-card primary"><span class="summary-label">На складе</span><span class="summary-value">${escapeHtml(stockInfoText)}</span>${summaryAreaSub(stock)}</div>
-        <div class="summary-card"><span class="summary-label">Доступно</span><span class="summary-value">${escapeHtml(availableInfoText)}</span>${summaryAreaSub(available)}</div>
-        <div class="summary-card"><span class="summary-label">Резерв</span><span class="summary-value">${escapeHtml(reservedInfoText)}</span>${summaryAreaSub(reserved)}</div>
-        <div class="summary-card"><span class="summary-label">Заказано</span><span class="summary-value">${escapeHtml(orderedInfoText)}</span>${summaryAreaSub(ordered)}</div>
+        <div class="summary-card primary"><span class="summary-label">${t('inStockLabel')}</span><span class="summary-value">${escapeHtml(stockInfoText)}</span>${summaryAreaSub(stock)}</div>
+        <div class="summary-card"><span class="summary-label">${t('availableLabel')}</span><span class="summary-value">${escapeHtml(availableInfoText)}</span>${summaryAreaSub(available)}</div>
+        <div class="summary-card"><span class="summary-label">${t('reserveLabel')}</span><span class="summary-value">${escapeHtml(reservedInfoText)}</span>${summaryAreaSub(reserved)}</div>
+        <div class="summary-card"><span class="summary-label">${t('ordered')}</span><span class="summary-value">${escapeHtml(orderedInfoText)}</span>${summaryAreaSub(ordered)}</div>
         <div class="summary-status summary-status-${summaryStatusClass}">${summaryStatus}</div>
-        <div class="summary-need ${need>0?'danger':''}">Нужно заказать: ${escapeHtml(needInfoText)}</div>
+        <div class="summary-need ${need>0?'danger':''}">${t('needToOrderColon')}: ${escapeHtml(needInfoText)}</div>
       </div>
 
       <details class="material-detail-section" open>
-        <summary><span>Основное</span><b>Артикул, категория, параметры</b></summary>
+        <summary><span>${t('mainSectionTitle')}</span><b>${t('mainSectionHint')}</b></summary>
         <div class="detail-field-grid compact">${materialDetailBasics(m)}</div>
       </details>
       <details class="material-detail-section">
-        <summary><span>Дополнительно</span><b>Поставщик, хранение, цена, теги</b></summary>
+        <summary><span>${t('extraSectionTitle')}</span><b>${t('extraSectionHint')}</b></summary>
         <div class="detail-field-grid compact">${materialDetailExtra(m)}</div>
       </details>
       <details class="material-detail-section" data-detail-section="orders">
-        <summary><span>Заказы</span><b>Где используется материал</b></summary>
+        <summary><span>${t('ordersSectionTitle')}</span><b>${t('ordersSectionHint')}</b></summary>
         <div class="order-usage-list compact">${materialOrderUsageCards(m)}</div>
       </details>
       <details class="material-detail-section">
-        <summary><span>Документы</span><b>PDF и файлы</b></summary>
+        <summary><span>${t('documentsSectionTitle')}</span><b>${t('documentsSectionHint')}</b></summary>
         ${materialDetailDocuments(m)}
       </details>
       <details class="material-detail-section">
-        <summary><span>История</span><b>Движения и изменения</b></summary>
+        <summary><span>${t('historySectionTitle')}</span><b>${t('historySectionHint')}</b></summary>
         ${historyHtml}
       </details>
     </div>
     <aside class="material-detail-side">
-      <div class="material-side-card action-card" data-detail-action-card><h5>Быстрые действия</h5>${quickActionsHtml}</div>
-      <div class="material-side-card"><h5>Поставки</h5><div class="supplier-deliveries-list">${materialSupplierDeliveries(m)}</div><button class="btn primary full-width" style="width:100%;margin-top:10px" onclick="openNewMaterialOrder('${m.id}')">+ Заказать материал</button></div>
+      <div class="material-side-card action-card" data-detail-action-card><h5>${t('quickActionsTitle')}</h5>${quickActionsHtml}</div>
+      <div class="material-side-card"><h5>${t('deliveriesTitle')}</h5><div class="supplier-deliveries-list">${materialSupplierDeliveries(m)}</div><button class="btn primary full-width" style="width:100%;margin-top:10px" onclick="openNewMaterialOrder('${m.id}')">+ ${t('orderMaterialBtn')}</button></div>
     </aside>
   </div>`;
   const hasPdf=a.pdfPath||a.pdfUrl;
-  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">Удалить материал</button></div><div class="right">${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">Открыть PDF</button>`:''}<button class="btn primary" onclick="openMaterialEditor('${m.id}')">Редактировать</button></div></div>`;
+  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">${t('deleteMaterialBtn')}</button></div><div class="right">${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">${t('openPdfBtn')}</button>`:''}<button class="btn primary" onclick="openMaterialEditor('${m.id}')">${t('editBtn2')}</button></div></div>`;
   openModal(t('infoMaterial'),body,foot);
   const modal=document.querySelector('#modalBackdrop .modal');
   if(modal) modal.classList.add('detail-modal');
@@ -819,10 +819,10 @@ function materialStateOf(m){
     const s=materialDisplayStats(m);
     const min=convertMaterialQty(Number(m.minQuantity||0),m.unit||s.unit,s.unit,m);
     const purchase=purchaseStatusOf(m);
-    if(s.need>0) return ['needorder', `Нужно заказать ${qtyWithUnit(s.need,s.unit)}`];
+    if(s.need>0) return ['needorder', `${t('needToOrderQtyPrefix')} ${qtyWithUnit(s.need,s.unit)}`];
     if(s.ordered>0 || purchase==='ordered') return ['ordered', purchaseStatusLabel('ordered')];
     if(s.stock<=0) return ['out', t('noStock')];
-    if(s.available<=0) return ['reserved', 'Зарезервировано'];
+    if(s.available<=0) return ['reserved', t('reservedStatusWord')];
     if(min>0 && s.available<=min) return ['low', t('lowStock')];
     return ['ok', t('inStock')];
   }
@@ -837,9 +837,9 @@ function materialStateOf(m){
 
   // Статусы разделяем так, чтобы не путать физический остаток и свободный остаток:
   // материал есть, но весь занят заказами = «Зарезервировано», а не «Нет в наличии».
-  if(needToOrder>0) return ['needorder', `Нужно заказать ${qtyWithUnit(needToOrder,unit)}`];
+  if(needToOrder>0) return ['needorder', `${t('needToOrderQtyPrefix')} ${qtyWithUnit(needToOrder,unit)}`];
   if(ordered>0 || purchase==='ordered') return ['ordered', purchaseStatusLabel('ordered')];
-  if(available<=0 && stock>0 && reserved>0) return ['reserved', 'Зарезервировано'];
+  if(available<=0 && stock>0 && reserved>0) return ['reserved', t('reservedStatusWord')];
   if(purchase==='needorder' && needToOrder>0) return ['needorder', purchaseStatusLabel('needorder')];
   if(available<=0 && stock<=0) return ['noorder', purchaseStatusLabel('noorder')];
   if(min>0 && available<=min) return ['low', t('lowStock')];
@@ -867,10 +867,10 @@ function purchaseStatusSelect(id='purchaseStatus', current='instock'){
   </select>`;
 }
 function purchaseStatusLabelBlock(selectHtml){
-  return `<div class="label-row"><label>Статус закупки</label><button class="info-btn" type="button" onclick="showPurchaseStatusInfo()" title="Пояснение">i</button></div>${selectHtml}`;
+  return `<div class="label-row"><label>${t('purchaseStatusLabel2')}</label><button class="info-btn" type="button" onclick="showPurchaseStatusInfo()" title="${t('explanationTitle')}">i</button></div>${selectHtml}`;
 }
 function showPurchaseStatusInfo(){
-  alert('Поля склада:\n\nНа складе — физически лежит сейчас.\nЗарезервировано — уже нужно для заказов клиентов.\nЗаказано — едет от поставщика.\nДоступно = На складе − Зарезервировано.\n\nСтатус закупки:\nНет в наличии — материал есть в базе, но покупать пока не нужно.\nНужно заказать — надо купить.\nУже заказана — ждём поставку.');
+  alert(t('stockFieldsHelp'));
 }
 
 function normalizeSku(v){return String(v||'').trim().toUpperCase().replace(/\s+/g,'')}
@@ -941,8 +941,8 @@ function renderFilters(){
 }
 function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
 function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
-function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,'всего','▤'],['ready',t('categories'),cats,'категории','✓'],['missing',t('lowStock'),low,'требуют внимания','△'],['ordered',t('outStock'),out,'нет на складе','▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
-function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${m.category}${m.subcategory?' · '+m.subcategory:''}</span>`}
+function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤'],['ready',t('categories'),cats,t('categoriesNote'),'✓'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
+function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(m.subcategory):''}</span>`}
 function stockCategoryTabs(){
   const groups=stockRefs().groups;
   const groupLabel=g=>{const key='stockGroup_'+g.id;const label=t(key);return label===key?(g.label||g.id):label};
@@ -953,7 +953,7 @@ function stockSubTabs(){
   if(activeStockGroup==='all')return '';
   const subs=['Все',...(group.subs||[])].filter((v,i,a)=>v&&a.indexOf(v)===i);
   if(subs.length<=1)return '';
-  return `<div class="category-tabs stock-secondary-tabs">${subs.map(s=>{const id=s==='Все'?'all':s;return `<button class="category-tab secondary ${activeStockSub===id?'active':''}" type="button" onclick="selectStockSub('${escapeHtml(id)}')">${escapeHtml(s)}</button>`}).join('')}</div>`;
+  return `<div class="category-tabs stock-secondary-tabs">${subs.map(s=>{const id=s==='Все'?'all':s;const label=s==='Все'?t('all'):s;return `<button class="category-tab secondary ${activeStockSub===id?'active':''}" type="button" onclick="selectStockSub('${escapeHtml(id)}')">${escapeHtml(label)}</button>`}).join('')}</div>`;
 }
 function selectStockGroup(id){
   activeStockGroup=id||'all';
@@ -989,7 +989,7 @@ function attentionMaterials(limit){
 function attentionRowHtml(x){
   const m=x.m;const need=x.need;const low=x.st[0]==='low'&&need<=0;
   const displayUnit=stockDisplayUnit(m);
-  return `<button class="attention-row" type="button" onclick="openMaterialDetails('${m.id}')"><span class="att-dot ${need>0?'need':''}"></span><span class="att-main"><b>${escapeHtml(materialDisplayName(m))}</b><span>${escapeHtml(categoryLabel(m.category))}</span></span><span><span class="att-badge ${low?'low':''}">${need>0?'Нужно заказать':'Заканчивается'}</span></span><span class="att-cell"><small>На складе</small><b>${escapeHtml(qtyWithUnit(stockDisplayQty(m,m.quantity),displayUnit))}</b></span><span class="att-cell"><small>${need>0?'Нужно':'Мин. остаток'}</small><b>${escapeHtml(qtyWithUnit(need>0?need:m.minQuantity,displayUnit))}</b></span><span class="att-go">›</span></button>`;
+  return `<button class="attention-row" type="button" onclick="openMaterialDetails('${m.id}')"><span class="att-dot ${need>0?'need':''}"></span><span class="att-main"><b>${escapeHtml(materialDisplayName(m))}</b><span>${escapeHtml(categoryLabel(m.category))}</span></span><span><span class="att-badge ${low?'low':''}">${need>0?t('needToOrderShortWord'):t('runningOutWord')}</span></span><span class="att-cell"><small>${t('inStockLabel')}</small><b>${escapeHtml(qtyWithUnit(stockDisplayQty(m,m.quantity),displayUnit))}</b></span><span class="att-cell"><small>${need>0?t('needWord'):t('minStockLabel')}</small><b>${escapeHtml(qtyWithUnit(need>0?need:m.minQuantity,displayUnit))}</b></span><span class="att-go">›</span></button>`;
 }
 function renderAttentionBlock(){
   const all=attentionMaterials();
@@ -1053,7 +1053,7 @@ function tableColumnsByCategory(cat){
   const qty=[stockTableText('reserved'),stockTableText('ordered'),t('needToOrder'),t('condition')];
   if(typeof isFabricCategory==='function'&&isFabricCategory(cat))return [t('sku'),t('material'),stockTableText('manufacturer'),stockTableText('color'),stockTableText('rollWidth'),t('inStock'),...qty];
   if(cat==='Поролон')return [t('sku'),t('material'),stockTableText('grade'),stockTableText('density'),stockTableText('hardness'),stockTableText('thickness'),stockTableText('sheetSize'),t('inStock'),...qty];
-  if(cat==='Древесина')return [t('sku'),t('material'),stockTableText('type'),stockTableText('size'),'Количество','Расчёт',t('inStock'),...qty];
+  if(cat==='Древесина')return [t('sku'),t('material'),stockTableText('type'),stockTableText('size'),t('qtyColumnLabel'),t('calcColumnLabel'),t('inStock'),...qty];
   if(isSheetMaterialCategory(cat))return [t('sku'),t('material'),stockTableText('type'),stockTableText('thickness'),stockTableText('sheetSize'),stockTableText('decor'),t('inStock'),...qty];
   if(['Фурнитура','Крепёж'].includes(cat))return [t('sku'),t('material'),stockTableText('type'),stockTableText('size'),stockTableText('manufacturer'),t('inStock'),...qty];
   if(cat==='Наполнители')return [t('sku'),t('material'),stockTableText('type'),stockTableText('density'),t('inStock'),...qty];
@@ -1109,7 +1109,7 @@ function clearFilters(){document.getElementById('searchInput').value='';const t=
 
 function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'hintFabric','Экокожа':'hintEcoLeather','Кожа':'hintLeather','Древесина':'hintWood','Фанера':'hintPlywood','МДФ':'hintPlywood','ДСП':'hintChipboard','ДВП':'hintChipboard','OSB':'hintChipboard','Крепёж':'hintFasteners','Фурнитура':'hintHardware','Наполнители':'hintFiller'};return t(map[cat]||'')}
 
-function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">Нет</option><option value="true" ${attrs[key]?'selected':''}>Да</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
+function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">${t('noOption')}</option><option value="true" ${attrs[key]?'selected':''}>${t('yesOption')}</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
 function categorySubOptions(cat){
   const group=(stockRefs().groups||[]).find(g=>(g.categories||[]).includes(cat));
   const base=(typeof isFabricCategory==='function'&&isFabricCategory(cat))?(CATEGORIES[cat]?.subs||[cat]):(group?.subs||CATEGORIES[cat]?.subs||[]);
@@ -1122,7 +1122,7 @@ function renderStockRefsPanel(){
   const categoryBlock=`<div class="refs-card"><div><b>${t('refsCategories')}</b><small>${t('refsCanAddNoCode')}</small></div><div class="refs-chips">${Object.keys(CATEGORIES).map(s=>`<span>${escapeHtml(categoryLabel(s))}</span>`).join('')}</div><div class="refs-add"><input class="input" id="refNewCategory" placeholder="${t('refsNewCategory')}"><button class="btn" type="button" onclick="addStockCategoryRef()">${t('add')}</button></div></div>`;
   const refItem=(key,value,groupId='')=>`<span class="refs-chip-action"><b>${escapeHtml(value)}</b><button type="button" onclick="${groupId?`renameStockRefSub('${groupId}','${escapeHtml(value)}')`:`renameStockRefList('${key}','${escapeHtml(value)}')`}">✎</button><button type="button" onclick="${groupId?`deleteStockRefSub('${groupId}','${escapeHtml(value)}')`:`deleteStockRefList('${key}','${escapeHtml(value)}')`}">×</button></span>`;
   const groupRows=refs.groups.filter(g=>g.id!=='all').map(g=>{const key='stockGroup_'+g.id,label=t(key);return `<div class="refs-card"><div><b>${escapeHtml(label===key?(g.label||g.id):label)}</b><small>${escapeHtml((g.categories||[]).join(', ')||'—')}</small></div><div class="refs-chips refs-editable">${(g.subs||[]).map(s=>refItem('subs',s,g.id)).join('')}</div><div class="refs-add"><input class="input" id="refSub_${g.id}" placeholder="${t('refsNewSubcategory')}"><button class="btn" type="button" onclick="addStockRefSub('${g.id}')">${t('add')}</button></div></div>`}).join('');
-  const listBlock=(key,titleKey)=>`<div class="refs-card"><div><b>${t(titleKey)}</b><small>${(refs[key]||[]).length} знач.</small></div><div class="refs-chips refs-editable">${sortedRefValues(key).map(s=>refItem(key,s)).join('')}</div><div class="refs-add"><input class="input" id="refList_${key}" placeholder="${t('refsNewValue')}"><button class="btn" type="button" onclick="addStockRefList('${key}')">${t('add')}</button></div></div>`;
+  const listBlock=(key,titleKey)=>`<div class="refs-card"><div><b>${t(titleKey)}</b><small>${(refs[key]||[]).length} ${t('valuesCountSuffix')}</small></div><div class="refs-chips refs-editable">${sortedRefValues(key).map(s=>refItem(key,s)).join('')}</div><div class="refs-add"><input class="input" id="refList_${key}" placeholder="${t('refsNewValue')}"><button class="btn" type="button" onclick="addStockRefList('${key}')">${t('add')}</button></div></div>`;
   box.innerHTML=`<div class="refs-shell"><div class="refs-grid">${categoryBlock}${groupRows}${listBlock('manufacturers','manufacturer')}${listBlock('collections','collections')}${listBlock('suppliers','suppliers')}</div></div>`;
 }
 function addStockCategoryRef(){
@@ -1132,7 +1132,7 @@ function addStockCategoryRef(){
   const refs=stockRefs();
   refs.customCategories=refs.customCategories||[];
   if(!refs.customCategories.includes(value))refs.customCategories.push(value);
-  if(!CATEGORIES[value])CATEGORIES[value]={icon:'＋',cls:'custom',unit:'шт',subs:[],fields:[['type','Тип / описание'],['size','Размер']]};
+  if(!CATEGORIES[value])CATEGORIES[value]={icon:'＋',cls:'custom',unit:'шт',subs:[],fields:[['type',t('typeDescriptionLabel')],['size',t('sizeLabel')]]};
   save();renderStockRefsPanel();renderFilters?.();renderStock();
 }
 function addStockRefSub(groupId){
@@ -1153,7 +1153,7 @@ function addStockRefList(key){
   saveStockRefs();
 }
 function renameStockRefList(key,value){
-  const next=prompt('Новое значение',value);
+  const next=prompt(t('newValuePrompt'),value);
   if(next===null)return;
   const clean=String(next||'').trim();
   if(!clean)return;
@@ -1162,13 +1162,13 @@ function renameStockRefList(key,value){
   saveStockRefs();
 }
 function deleteStockRefList(key,value){
-  if(!confirm('Удалить значение из справочника?'))return;
+  if(!confirm(t('confirmDeleteRefValue')))return;
   const refs=stockRefs();
   refs[key]=(refs[key]||[]).filter(v=>v!==value);
   saveStockRefs();
 }
 function renameStockRefSub(groupId,value){
-  const next=prompt('Новое значение',value);
+  const next=prompt(t('newValuePrompt'),value);
   if(next===null)return;
   const clean=String(next||'').trim();
   if(!clean)return;
@@ -1177,7 +1177,7 @@ function renameStockRefSub(groupId,value){
   save();renderStockRefsPanel();renderStock();
 }
 function deleteStockRefSub(groupId,value){
-  if(!confirm('Удалить подкатегорию из справочника?'))return;
+  if(!confirm(t('confirmDeleteRefSub')))return;
   const group=stockRefs().groups.find(g=>g.id===groupId);
   if(group)group.subs=(group.subs||[]).filter(v=>v!==value);
   save();renderStockRefsPanel();renderStock();
@@ -1185,7 +1185,7 @@ function deleteStockRefSub(groupId,value){
 function openMaterialModal(id=null, presetCategory='Ткань'){
   if(!requireAuth())return;
   const foundMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null;
-  if(id && !foundMaterial){toast('Материал не найден'); return;}
+  if(id && !foundMaterial){toast(t('notFoundMaterial')); return;}
   if(foundMaterial?.category==='Поролон'&&typeof openFoamModal==='function'){openFoamModal(id);return;}
   if(!id&&presetCategory==='Поролон'&&typeof openFoamModal==='function'){openFoamModal();return;}
   if(foundMaterial && typeof isFabricCategory==='function'&&isFabricCategory(foundMaterial.category)){openFabricModal(id,foundMaterial.category);return;}
@@ -1208,8 +1208,8 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
         <div class="field"><label>${t('name')}</label><input id="mName" class="input" value="${m.name||''}" placeholder="${t('name')}"></div>
         <div class="field"><label>${t('sku')}</label><input id="mSku" class="input" value="${m.sku||nextSku(m.category,m.subcategory,id||'')}"><div class="hint">${t('skuAutoHint')}</div></div>
         <div class="field"><label>${materialSubtypeLabel(m.category||preset)}</label><select id="mSub" class="select"></select></div>
-        <div class="field"><label>${t('collection')}</label><input id="mCollection" class="input" value="${escapeHtml(a.collection||'')}" placeholder="Коллекция"></div>
-        <div class="field"><label>${t('manufacturer')}</label><input id="mManufacturer" class="input" value="${escapeHtml(a.manufacturer||'')}" placeholder="Производитель"></div>
+        <div class="field"><label>${t('collection')}</label><input id="mCollection" class="input" value="${escapeHtml(a.collection||'')}" placeholder="${t('collection')}"></div>
+        <div class="field"><label>${t('manufacturer')}</label><input id="mManufacturer" class="input" value="${escapeHtml(a.manufacturer||'')}" placeholder="${t('manufacturer')}"></div>
       </div>
     </section>
     <section class="wizard-card material-wizard-step hidden" data-step="2">
@@ -1217,18 +1217,18 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
       <div class="form-grid">${materialWizardParamsHtml(m.category||preset,a,'m')}${typeof isSheetMaterialCategory==='function'&&isSheetMaterialCategory(m.category||preset)?'<div class="area-preview hidden" id="mParamAreaPreview"></div>':''}</div>
     </section>
     <section class="wizard-card material-wizard-step hidden" data-step="3">
-      <h4>Состояние материала</h4>
+      <h4>${t('materialStateTitle')}</h4>
       ${materialStateCards(currentState)}
       <div class="fabric-form-grid">
       <div class="state-fields ${currentState==='ordered'?'':'hidden'}" data-state-fields="ordered">
-        <div class="field"><label>Заказано, ${unitLabel(m.unit||baseUnit)}</label><input id="mOrderedQty" class="input" type="number" min="0" step="${stockStep(m.unit||baseUnit)}" value="${inputQtyValue(stockNumForUnit(a.orderedQty||0,m.unit||baseUnit),m.unit||baseUnit)}" oninput="syncGenericMaterialPreview()"></div>
-        <div class="field"><label>Ожидаемая дата поступления</label><input id="mExpectedDate" class="input" type="date" value="${a.expectedReceiptDate||''}"></div>
-        <div class="field full"><label>№ закупки / поставщик / комментарий</label><input id="mPurchaseNote" class="input" value="${escapeHtml(a.purchaseNote||a.order||'')}" placeholder="PO-102 · Supplier · комментарий"></div>
+        <div class="field"><label>${t('ordered')}, ${unitLabel(m.unit||baseUnit)}</label><input id="mOrderedQty" class="input" type="number" min="0" step="${stockStep(m.unit||baseUnit)}" value="${inputQtyValue(stockNumForUnit(a.orderedQty||0,m.unit||baseUnit),m.unit||baseUnit)}" oninput="syncGenericMaterialPreview()"></div>
+        <div class="field"><label>${t('expectedReceiptDateLabel')}</label><input id="mExpectedDate" class="input" type="date" value="${a.expectedReceiptDate||''}"></div>
+        <div class="field full"><label>${t('purchaseNoteLabel')}</label><input id="mPurchaseNote" class="input" value="${escapeHtml(a.purchaseNote||a.order||'')}" placeholder="${t('purchaseNotePlaceholder')}"></div>
       </div>
       <div class="stock-only-fields ${currentState==='stock'?'':'hidden'}" data-state-fields="stock" id="mStockStep">
-        <div class="field"><label>На складе, ${unitLabel(m.unit||baseUnit)}</label><input id="mQty" type="number" step="${stockStep(m.unit||baseUnit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(m.quantity||0,m.unit||baseUnit),m.unit||baseUnit)}" inputmode="decimal" oninput="syncGenericMaterialPreview()"></div>
+        <div class="field"><label>${t('inStockLabel')}, ${unitLabel(m.unit||baseUnit)}</label><input id="mQty" type="number" step="${stockStep(m.unit||baseUnit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(m.quantity||0,m.unit||baseUnit),m.unit||baseUnit)}" inputmode="decimal" oninput="syncGenericMaterialPreview()"></div>
         <div class="field"><label>${t('minQuantity')}</label><input id="mMinQty" type="number" step="${stockStep(m.unit||baseUnit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(m.minQuantity||0,m.unit||baseUnit),m.unit||baseUnit)}" inputmode="decimal"></div>
-        <div class="field"><label>${t('storageLocation')}</label><input id="mStorageLocation" class="input" value="${a.storageLocation||''}" placeholder="Стеллаж / зона"></div>
+        <div class="field"><label>${t('storageLocation')}</label><input id="mStorageLocation" class="input" value="${a.storageLocation||''}" placeholder="${t('shelfZonePlaceholder')}"></div>
         <div class="field"><label>${t('purchasePrice')}</label><input id="mPurchasePrice" class="input" type="number" min="0" step="0.01" value="${a.purchasePrice||''}"></div>
         <div class="field"><label>${t('receiptDate')}</label><input id="mReceiptDate" class="input" type="date" value="${a.receiptDate||''}"></div>
       </div>
@@ -1288,11 +1288,11 @@ async function saveMaterial(id){
 }
 async function deleteMaterial(id){
   const mat=data.materials.find(x=>String(x.id)===String(id));
-  const title=mat?materialTitle(mat):'материал';
+  const title=mat?materialTitle(mat):t('materialFallback');
   const usedInOrders=(data.orders||[]).filter(o=>orderMaterials(o).some(i=>String(i.materialId)===String(id)));
   const msg=usedInOrders.length
-    ? `Удалить материал полностью?\n\n${title} используется в заказах: ${usedInOrders.map(o=>o.number||'—').join(', ')}.\nПосле удаления он исчезнет из склада и из этих заказов.`
-    : `Удалить материал полностью?\n\n${title} будет удалён со склада.`;
+    ? t('confirmDeleteMaterialUsed').replace('{title}',title).replace('{orders}',usedInOrders.map(o=>o.number||'—').join(', '))
+    : t('confirmDeleteMaterialSimple').replace('{title}',title);
   if(!confirm(msg))return;
   const ok=await deleteMaterialFromSupabase(id);
   if(!ok)return;
@@ -1302,5 +1302,5 @@ async function deleteMaterial(id){
   closeModal();
   await loadMaterialsFromSupabase();
   renderAll();
-  toast('Материал удалён');
+  toast(t('materialDeletedToast'));
 }
