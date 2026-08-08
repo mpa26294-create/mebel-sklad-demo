@@ -114,7 +114,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.98</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v6.99</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -162,7 +162,7 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=6.98"></script>
+<script src="js/changelog.js?v=6.99"></script>
 <script src="js/ui.js?v=6.41"></script>
 <script src="js/app.js?v=6.47"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -176,7 +176,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.98 — Цеха: устранён конфликт оранжевого в карточке операции';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v6.99 — исправлен реальный краш при завершении/отмене/старте заказа';
 </script>
 <script src="js/auth.js?v=6.4"></script>
 <script src="js/materials.js?v=6.45"></script>
@@ -2899,7 +2899,7 @@ renderAll=function(){__renderAllV565();const av=document.getElementById('appVers
 @media(max-width:1100px){.history-toolbar{grid-template-columns:1fr 1fr}.history-summary{grid-template-columns:repeat(2,1fr)}.history-row{grid-template-columns:120px 1fr 34px}.history-user{display:none}}
 @media(max-width:720px){.history-toolbar,.history-summary{grid-template-columns:1fr}.history-row{grid-template-columns:1fr 34px}.history-time{grid-column:1/-1}.history-main{grid-column:1}.history-go{grid-column:2;grid-row:2}}
 </style>
-<script src="js/history.js?v=6.5"></script>
+<script src="js/history.js?v=6.6"></script>
 <script>installOrderStatusHandlers();</script>
 
 

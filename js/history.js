@@ -6,6 +6,12 @@ function actorName(){
   try{if(typeof profileDisplayName==='function'){const n=profileDisplayName();if(n)return n;}}catch(e){}
   return (currentUser&&currentUser.email)||localStorage.getItem('furnicore_actor_name')||t('unknownUser');
 }
+// v6.99: profileUserName() is called from ~10 places (index.html order-status actions, js/orders.js)
+// but was never defined anywhere in the codebase - every call site threw "profileUserName is not
+// defined" (ReferenceError), which silently broke completeOrder/cancelOrder/startOrderWork and other
+// core order-lifecycle actions before they could finish (found via the "3 clicks" flow audit for Этап 5).
+// actorName() already does exactly what these call sites need, so this is a plain alias, not new logic.
+function profileUserName(){return actorName()}
 function actorShort(email){const v=String(email||actorName());return v.includes('@')?v.split('@')[0]:v}
 function isAuditSyncRow(row){return String(row?.article||'')===AUDIT_SYNC_ARTICLE}
 function auditSyncUpdatedAt(row){return String(row?.attributes?.updatedAt||'')}
