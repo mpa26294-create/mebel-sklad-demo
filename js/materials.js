@@ -936,8 +936,7 @@ function renderFilters(){
   const subEl=document.getElementById('subcategoryFilter');
   if(subEl) subEl.onchange=()=>{stockPage=1;renderAll()};
   const search=document.getElementById('searchInput');
-  if(search) search.oninput=()=>{const t=document.getElementById('topSearchInput'); if(t&&t.value!==search.value)t.value=search.value; stockPage=1;renderAll()};
-  const top=document.getElementById('topSearchInput'); if(top) top.oninput=()=>{document.getElementById('searchInput').value=top.value;stockPage=1;renderAll()};
+  if(search) search.oninput=()=>{stockPage=1;renderAll()};
 }
 function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
 function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
@@ -969,14 +968,13 @@ function selectStockGroup(id){
 }
 function selectStockSub(sub){activeStockSub=sub||'all';fabricStockTypeFilter=activeStockSub==='all'?'':activeStockSub;stockPage=1;renderStock()}
 function stockFiltersForCategory(cat){
-  const searchValue=escapeHtml(document.getElementById('searchInput')?.value||'');
   let extra='';
   if(activeStockGroup==='fabrics'){
     extra=`<select class="select" id="fabricCollectionFilter" onchange="stockPage=1;renderStock()"><option value="">${t('allCollections')}</option>${[...new Set((data.materials||[]).filter(m=>m.category==='Ткань').map(m=>(m.attributes||{}).collection).filter(Boolean))].map(v=>`<option ${document.getElementById('fabricCollectionFilter')?.value===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select><input class="input" id="fabricColorFilter" placeholder="${t('allColors')}" value="${escapeHtml(document.getElementById('fabricColorFilter')?.value||'')}" oninput="stockPage=1;renderStock()">`;
   }else{
     extra=`<select class="select" id="stockStateFilterLocal" onchange="stockPage=1;renderStock()"><option value="">${t('allStates')}</option><option value="needorder" ${document.getElementById('stockStateFilterLocal')?.value==='needorder'?'selected':''}>${t('needToOrder')}</option><option value="low" ${document.getElementById('stockStateFilterLocal')?.value==='low'?'selected':''}>${t('lowStock')}</option><option value="ok" ${document.getElementById('stockStateFilterLocal')?.value==='ok'?'selected':''}>${t('normal')}</option></select><span></span>`;
   }
-  return `<div class="category-filter-row"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="categorySearchInput" name="furnicore_category_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="${t(activeStockGroup==='fabrics'?'searchFabric':'searchMaterials')}" value="${searchValue}" oninput="document.getElementById('searchInput').value=this.value;stockPage=1;renderStock()"></div>${extra}<button class="btn" onclick="toggleAdvancedFilters()">${t('filters')}</button><button class="btn" onclick="clearFilters()">${t('reset')}</button></div>`;
+  return `<div class="category-filter-row">${extra}<button class="btn" onclick="toggleAdvancedFilters()">${t('filters')}</button><button class="btn" onclick="clearFilters()">${t('reset')}</button></div>`;
 }
 function setFabricStockTypeFilter(type){fabricStockTypeFilter=type;activeStockSub=type||'all';stockPage=1;renderStock()}
 function attentionMaterials(limit){
@@ -999,27 +997,12 @@ function renderAttentionBlock(){
   return `<div class="attention-card compact-attention ${more?'':'no-more'}"><div class="attention-head"><b>${t('attentionTitle')}</b><small>${all.length} ${t('itemsWord')}</small></div><div class="attention-list">${rows.map(attentionRowHtml).join('')}</div><div class="attention-more"><button class="btn small" onclick="openAttentionModal()">${t('showAll')}</button></div></div>`;
 }
 
-function renderStockChartBlock(){
-  const w=560,h=210,padL=42,padR=12,padT=18,padB=30;
-  const cats=['Поролон','Ткань','Древесина'];
-  const colors={'Поролон':'#1570ef','Ткань':'#7c3aed','Древесина':'#f97316'};
-  const totals={};
-  cats.forEach(c=>{totals[c]=(data.materials||[]).filter(m=>m.category===c).reduce((s,m)=>s+Number(m.quantity||0),0)});
-  const max=Math.max(10,...Object.values(totals));
-  const points={};
-  cats.forEach((c,ci)=>{
-    const base=totals[c]||0;
-    points[c]=Array.from({length:8},(_,i)=>{
-      const factor=1-(7-i)*0.035 + (ci===1&&i>3?0.06:0) + (ci===2?-(7-i)*0.015:0);
-      return Math.max(0,base*factor);
-    });
-  });
-  const x=i=>padL+i*((w-padL-padR)/7);
-  const y=v=>padT+(max-v)/max*(h-padT-padB);
-  const line=c=>points[c].map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
-  const dots=c=>points[c].map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${colors[c]}"/>`).join('');
-  return `<div class="stock-chart-card"><div class="stock-chart-head"><b>${t('stockDynamics')}</b><select class="select"><option>${t('allCategories')}</option></select></div><div class="chart-legend"><span><i class="legend-dot legend-blue"></i>${categoryLabel('Поролон')}</span><span><i class="legend-dot legend-purple"></i>${t('fabrics')}</span><span><i class="legend-dot legend-orange"></i>${categoryLabel('Древесина')}</span></div><div class="stock-chart"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${[0,1,2,3].map(i=>{const yy=padT+i*((h-padT-padB)/3);return `<line class="chart-grid" x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}"/>`}).join('')}${[0,1,2,3,4,5,6,7].map(i=>`<line class="chart-grid" x1="${x(i)}" y1="${padT}" x2="${x(i)}" y2="${h-padB}"/>`).join('')}<line class="chart-axis" x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}"/>${[0,1,2,3].map(i=>{const val=Math.round(max-(i*max/3));const yy=padT+i*((h-padT-padB)/3);return `<text class="chart-label" x="4" y="${yy+4}">${val}</text>`}).join('')}<text class="chart-label" x="${padL}" y="${h-8}">01.06</text><text class="chart-label" x="${x(2)}" y="${h-8}">08.06</text><text class="chart-label" x="${x(4)}" y="${h-8}">15.06</text><text class="chart-label" x="${x(6)}" y="${h-8}">22.06</text><text class="chart-label" x="${x(7)-22}" y="${h-8}">29.06</text>${cats.map(c=>`<path d="${line(c)}" fill="none" stroke="${colors[c]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots(c)}`).join('')}</svg></div><div style="padding:0 16px 16px"><button class="btn small" type="button">${t('details')}</button></div></div>`;
-}
+// v6.93: renderStockChartBlock() removed (Этап 3) — the "Динамика склада" chart on
+// the Склад overview rendered a decorative trend generated by a formula, not real
+// historical data (no real daily stock-level history is tracked), and it also had
+// hardcoded June date labels unrelated to the current date. Showing fabricated
+// numbers prominently above the real material table contradicted the Этап 1
+// principle "numbers must not lie", so it was removed rather than repositioned.
 
 function filteredMaterialsForSmartTable(){
   const group=stockGroupById(activeStockGroup);
@@ -1101,11 +1084,11 @@ function renderStock(){
   const pages=Array.from({length:totalPages},(_,i)=>i+1).filter(p=>p===1||p===totalPages||Math.abs(p-stockPage)<=1);
   let last=0;
   const pageButtons=pages.map(p=>{const gap=p-last>1?`<span class="muted">…</span>`:'';last=p;return gap+`<button class="pagebtn ${p===stockPage?'active':''}" onclick="setStockPage(${p})">${p}</button>`}).join('');
-  box.innerHTML=`<div class="stock-workspace"><div class="stock-dashboard-row">${renderAttentionBlock()}${renderStockChartBlock()}</div><div class="stock-list-card"><div class="stock-list-top">${stockFiltersForCategory(cat)}${stockCategoryTabs()}</div><div class="smart-table-wrap stock-list-table"><table class="smart-stock-table stock-erp-table"><thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${pageRows.length?pageRows.map(m=>smartRowByCategory(m,tableCat)).join(''):`<tr><td colspan="${cols.length}"><div class="empty"><b>${t('noMaterialsTitle')}</b>${t('addOrChangeFilters')}</div></td></tr>`}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${rows.length?startIndex+1:0}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button></div></div></div></div>`;
+  box.innerHTML=`<div class="stock-workspace">${renderAttentionBlock()}<div class="stock-list-card"><div class="stock-list-top">${stockFiltersForCategory(cat)}${stockCategoryTabs()}</div><div class="smart-table-wrap stock-list-table"><table class="smart-stock-table stock-erp-table"><thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${pageRows.length?pageRows.map(m=>smartRowByCategory(m,tableCat)).join(''):`<tr><td colspan="${cols.length}"><div class="empty"><b>${t('noMaterialsTitle')}</b>${t('addOrChangeFilters')}</div></td></tr>`}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${rows.length?startIndex+1:0}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button></div></div></div></div>`;
 }
 function setStockPage(page){stockPage=page;renderStock()}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPage=1;renderStock()}
-function clearFilters(){document.getElementById('searchInput').value='';const t=document.getElementById('topSearchInput');if(t)t.value='';document.getElementById('categoryFilter').value='';const subcategoryFilter=document.getElementById('subcategoryFilter');if(subcategoryFilter)subcategoryFilter.value='';['stockStateFilter','unitFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['supplierFilter','orderFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});activeQuickFilter='all';fabricStockTypeFilter='';activeStockGroup='all';activeStockSub='all';refreshQuickFilterChips();stockPage=1;updateSubFilter();renderAll()}
+function clearFilters(){document.getElementById('searchInput').value='';document.getElementById('categoryFilter').value='';const subcategoryFilter=document.getElementById('subcategoryFilter');if(subcategoryFilter)subcategoryFilter.value='';['stockStateFilter','unitFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['supplierFilter','orderFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});activeQuickFilter='all';fabricStockTypeFilter='';activeStockGroup='all';activeStockSub='all';refreshQuickFilterChips();stockPage=1;updateSubFilter();renderAll()}
 
 function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'hintFabric','Экокожа':'hintEcoLeather','Кожа':'hintLeather','Древесина':'hintWood','Фанера':'hintPlywood','МДФ':'hintPlywood','ДСП':'hintChipboard','ДВП':'hintChipboard','OSB':'hintChipboard','Крепёж':'hintFasteners','Фурнитура':'hintHardware','Наполнители':'hintFiller'};return t(map[cat]||'')}
 

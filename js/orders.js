@@ -594,7 +594,7 @@ function workshopsOverviewHtml(){
   if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('noWorkshopsYet'))}</div>`;
   const filtered=names.filter(n=>workshopMatchesStatusFilter(n,workshopsStatusFilter));
   const list=filtered.length?filtered.map(workshopOverviewRowHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('noWorkshopsForFilter'))}</div>`;
-  return `${workshopsSummaryBarHtml(names)}${workshopsLoadPanelHtml(names)}${workshopsActiveNowHtml()}${workshopsFilterChipsHtml()}<div class="workshops-list-head"><span></span><span>${escapeHtml(t('workshopColumnHeader'))}</span><span></span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${list}</div>`;
+  return `${workshopsSummaryBarHtml(names)}${workshopsFilterChipsHtml()}<div class="workshops-list-head"><span></span><span>${escapeHtml(t('workshopColumnHeader'))}</span><span></span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${list}</div>${workshopsLoadPanelHtml(names)}${workshopsActiveNowHtml()}`;
 }
 function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
@@ -1122,7 +1122,8 @@ async function saveOrder(id=''){return saveManagerOrder(id)}
 
 
 function orderNextResponsibleText(o){if(['Ожидает технолога','Технология в работе'].includes(String(o.status)))return t('technologistRole');if(['В производстве','В работе'].includes(String(o.status)))return t('productionRole');if(['Готов','Готов к работе'].includes(String(o.status)))return t('completionRole');return '—'}
-function orderInfoHistoryHtml(o){const rows=typeof auditFor==='function'?auditFor('order',o.id).slice(0,20):[];return `<section class="order-info-history"><h4>${escapeHtml(t('orderHistoryTitle'))}</h4>${rows.length?rows.map(row=>`<div><span><b>${escapeHtml(row.text||row.action||'—')}</b><small>${escapeHtml(row.user||row.by||'')}</small></span><time>${escapeHtml(typeof auditTime==='function'?auditTime(row.at):productionDateTimeText(row.at))}</time></div>`).join(''):`<p>${escapeHtml(t('orderHistoryEmpty'))}</p>`}</section>`}
+function orderHistoryRowsHtml(o){const rows=typeof auditFor==='function'?auditFor('order',o.id).slice(0,20):[];return rows.length?rows.map(row=>`<div><span><b>${escapeHtml(row.text||row.action||'—')}</b><small>${escapeHtml(row.user||row.by||'')}</small></span><time>${escapeHtml(typeof auditTime==='function'?auditTime(row.at):productionDateTimeText(row.at))}</time></div>`).join(''):`<p>${escapeHtml(t('orderHistoryEmpty'))}</p>`}
+function orderInfoHistoryHtml(o){return `<section class="order-info-history"><h4>${escapeHtml(t('orderHistoryTitle'))}</h4>${orderHistoryRowsHtml(o)}</section>`}
 function openOrderTechnologyFromInfo(id){
   const o=(data.orders||[]).find(x=>String(x.id)===String(id));
   if(!o){toast('Заказ не найден');return;}
@@ -1142,7 +1143,8 @@ function showOrderInfoModal(id){
 
 function openOrderView(id){
   const o=data.orders.find(x=>String(x.id)===String(id)); if(!o)return;
-  const body=`<div id="orderWorkflowModal">${orderWorkflowStepperHtml(o,'modal')}${orderWorkflowContentHtml(o,true)}</div>`;
+  const historySection=`<details class="material-detail-section"><summary><span>${escapeHtml(t('orderHistoryTitle'))}</span></summary><div class="order-info-history">${orderHistoryRowsHtml(o)}</div></details>`;
+  const body=`<div id="orderWorkflowModal">${orderWorkflowStepperHtml(o,'modal')}${orderWorkflowContentHtml(o,true)}${historySection}</div>`;
   openModal(o.number,body,`<button class="btn danger" style="margin-right:auto" onclick="deleteOrder('${o.id}')">Удалить заказ</button><button class="btn primary" onclick="openOrderModal('${o.id}')">${u42('edit')}</button>`);
   setCleanModalClass('order-clean-modal');
 }

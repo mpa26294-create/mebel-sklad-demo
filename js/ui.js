@@ -63,7 +63,7 @@ document.addEventListener('click',event=>{
 },true);
 
 function hardenSearchAutofill(){
-  const ids=['topSearchInput','searchInput','categorySearchInput','orderSearchInput','supplierFilter','orderFilter','quickSku'];
+  const ids=['searchInput','orderSearchInput','supplierFilter','orderFilter','quickSku'];
   ids.forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
@@ -81,14 +81,10 @@ function hardenSearchAutofill(){
 function clearChromeEmailAutofill(){
   const email=String(window.currentUser?.email||'').trim().toLowerCase();
   if(!email)return;
-  ['topSearchInput','searchInput','categorySearchInput','orderSearchInput'].forEach(id=>{
+  ['searchInput','orderSearchInput'].forEach(id=>{
     const el=document.getElementById(id);
     if(el&&String(el.value||'').trim().toLowerCase()===email){
       el.value='';
-      if(id==='topSearchInput'||id==='categorySearchInput'){
-        const main=document.getElementById('searchInput');
-        if(main&&String(main.value||'').trim().toLowerCase()===email)main.value='';
-      }
     }
   });
 }
