@@ -257,6 +257,9 @@ Object.assign(I18N.lv,{colorBeige:'Bēšs',colorMilk:'Piena',colorGrey:'Pelēks'
 Object.assign(I18N.ru,{catMdf:'МДФ',catFillers:'Наполнители'});
 Object.assign(I18N.en,{catMdf:'MDF',catFillers:'Fillers'});
 Object.assign(I18N.lv,{catMdf:'MDF',catFillers:'Pildmateriāli'});
+Object.assign(I18N.ru,{unitRunningM:'пог. м',unitSheet:'лист',unitM3:'м³',unitKg:'кг',unitRoll:'рулон',unitSheetsPlural:'листы',areaOfChangeLabel:'Площадь изменения'});
+Object.assign(I18N.en,{unitRunningM:'running m',unitSheet:'sheet',unitM3:'m³',unitKg:'kg',unitRoll:'roll',unitSheetsPlural:'sheets',areaOfChangeLabel:'Change area'});
+Object.assign(I18N.lv,{unitRunningM:'tekošie m',unitSheet:'loksne',unitM3:'m³',unitKg:'kg',unitRoll:'rullis',unitSheetsPlural:'loksnes',areaOfChangeLabel:'Izmaiņu laukums'});
 Object.assign(I18N.lv,{ecoRollOrderedHint:'Ruļļi ir pasūtīti, bet vēl nav saņemti.',ecoLeatherOrderedHint:'Āda ir pasūtīta, bet vēl nav saņemta.',ecoRollStockHint:'Ruļļi jau ir noliktavā.',ecoLeatherStockHint:'Āda jau ir noliktavā.',rollCountLabel:'Ruļļu skaits',rollPreviewOneRoll:'1 ruļļa laukums',rollPreviewRollsCount:'ruļļi',rollPreviewTotal:'kopā',rollPreviewHint:'Norādiet ruļļa platumu un garumu — laukums tiks aprēķināts automātiski.',orderedAreaM2Label:'Pasūtītais laukums, m²',stockAreaM2Label:'Laukums noliktavā, m²',minAreaM2Label:'Minimālais atlikums, m²',purchasePriceM2Label:'Iepirkuma cena par m²',leatherDataTitle:'Ādas dati',fabricDataTitle:'Auduma dati',ecoLeatherDataTitle:'Ekoādas dati',rollValuesNegativeIntegerToast:'Vērtības nevar būt negatīvas. Ruļļu skaitam jābūt veselam skaitlim.',areaMinPriceNegativeToast:'Laukums, minimālais atlikums un cena nevar būt negatīvi.'});
 let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }

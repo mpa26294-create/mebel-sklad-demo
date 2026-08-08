@@ -1,5 +1,6 @@
 function discreteStockUnit(unit){return ['шт','лист','рулон'].includes(unit)}
-function unitLabel(unit){return unit==='шт'?t('unitPieces'):unit==='м²'?t('unitM2'):unit==='м.п.'||unit==='пог. м'?'пог. м':unit||''}
+const UNIT_I18N_KEYS={'шт':'unitPieces','part':'unitPieces','м²':'unitM2','м.п.':'unitRunningM','пог. м':'unitRunningM','лист':'unitSheet','м³':'unitM3','кг':'unitKg','рулон':'unitRoll'};
+function unitLabel(unit){const key=UNIT_I18N_KEYS[unit];return key?t(key):(unit||'')}
 function formatQty(qty,unit){const n=Number(qty||0);if(discreteStockUnit(unit))return String(Math.trunc(n));return String(Number(n.toFixed(3))).replace('.',',')}
 function inputQtyValue(qty,unit){const n=Number(qty||0);if(discreteStockUnit(unit))return String(Math.trunc(n));return String(Number(n.toFixed(3)))}
 function qtyWithUnit(qty,unit){return `${formatQty(qty,unit)} ${unitLabel(unit)}`.trim()}

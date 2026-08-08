@@ -589,7 +589,7 @@ function materialDetailBasics(m){
     const color=a.color||'—';
     rows.push(detailField(t('collectionCodeLabel'),escapeHtml(a.collection||'—')));
     rows.push(detailField(t('colorLabel'),`<span class="color-chip only" title="${escapeHtml(color)}" style="background:${materialColorStyle(color)}"></span>`));
-    rows.push(detailField(t('materialTypeLabel'),escapeHtml(a.materialType||m.category)));
+    rows.push(detailField(t('materialTypeLabel'),escapeHtml(categoryLabel(a.materialType||m.category))));
     if(m.category==='Кожа'){
       rows.push(detailField(t('areaShortLabel'),escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity||0,m.unit||'м²'),m.unit||'м²'))));
     }else{
@@ -602,7 +602,7 @@ function materialDetailBasics(m){
       ].filter(Boolean).join(' · ');
       if(areaParts)rows.push(detailField(t('referenceLabel'),`<span class="muted-detail">${escapeHtml(areaParts)}</span>`,true));
     }
-    rows.push(detailField(t('unitOfMeasureLabel'),escapeHtml(isLinearFabricStock(m)?'пог. м':(unitLabel(m.unit||'')||'—'))));
+    rows.push(detailField(t('unitOfMeasureLabel'),escapeHtml(isLinearFabricStock(m)?unitLabel('м.п.'):(unitLabel(m.unit||'')||'—'))));
   }else if(m.category==='Поролон'){
     rows.push(detailField(t('sizeLabel'),escapeHtml(materialDimensions(m)||'—')));
     rows.push(detailField(t('gradeDensityLabel'),escapeHtml(a.grade||'—')));
@@ -616,7 +616,7 @@ function materialDetailBasics(m){
     rows.push(detailField(t('unitOfMeasureLabel'),escapeHtml(unitLabel(m.unit||'')||'—')));
   }else if(m.category==='Древесина'){
     const sheet=isWoodSheetMaterial(m);
-    rows.push(detailField(t('materialTypeLabel'),escapeHtml(m.subcategory||a.materialType||'—')));
+    rows.push(detailField(t('materialTypeLabel'),escapeHtml(woodTypeLabel(m.subcategory||a.materialType||'—'))));
     rows.push(detailField(t('woodSpeciesLabel'),escapeHtml(a.woodSpecies||a.woodType||'—')));
     rows.push(detailField(t('sizeLabel'),escapeHtml([a.thickness,a.width,a.length].filter(Boolean).join('×')+(a.thickness||a.width||a.length?' мм':''))));
     if(sheet){
@@ -629,7 +629,7 @@ function materialDetailBasics(m){
       if(a.totalArea)rows.push(detailField(t('totalAreaLabel'),escapeHtml(Number(a.totalArea).toFixed(2)+' м²')));
     }
     rows.push(detailField(t('gradeLabel'),escapeHtml(a.grade||'—')));
-    rows.push(detailField(t('unitOfMeasureLabel'),escapeHtml(sheet?'м²':(unitLabel(m.unit||'')||'—'))));
+    rows.push(detailField(t('unitOfMeasureLabel'),escapeHtml(sheet?t('unitM2'):(unitLabel(m.unit||'')||'—'))));
   }else{
     rows.push(detailField(t('typeSizeLabel'),escapeHtml(m.subcategory||a.size||a.thickness||'—')));
     rows.push(detailField(t('characteristicsLabel'),escapeHtml(materialCompactText(m)||'—'),true));
@@ -671,7 +671,7 @@ function openMaterialDetails(id){
   const ordered=displayStats.ordered;
   const reserved=displayStats.reserved;
   const need=displayStats.need;
-  const subtitleSub=m.subcategory&&m.subcategory!==m.category?` · ${escapeHtml(m.subcategory)}`:'';
+  const subtitleSub=m.subcategory&&m.subcategory!==m.category?` · ${escapeHtml(woodTypeLabel(m.subcategory))}`:'';
   const isFabricRoll=isLinearFabricMaterial(m);
   const rollLength=Number(a.rollLength||a.orderedRollLength||0);
   const linearBalance=isFabricRoll?stock:(Number(a.linearBalanceMeters||0)||((isFabricRoll&&rollLength)?stock*rollLength:0));
@@ -942,7 +942,7 @@ function renderFilters(){
 function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
 function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤'],['ready',t('categories'),cats,t('categoriesNote'),'✓'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
-function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(m.subcategory):''}</span>`}
+function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(woodTypeLabel(m.subcategory)):''}</span>`}
 function stockCategoryTabs(){
   const groups=stockRefs().groups;
   const groupLabel=g=>{const key='stockGroup_'+g.id;const label=t(key);return label===key?(g.label||g.id):label};
@@ -1081,7 +1081,7 @@ function smartRowByCategory(m,cat){
   if(typeof isFabricCategory==='function'&&isFabricCategory(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m,false)}</td><td>${escapeHtml(materialMaker(m))}</td><td>${a.color?`<span class="color-chip only" title="${escapeHtml(a.color)}" style="background:${materialColorStyle(a.color)}"></span> ${escapeHtml(a.color)}`:'—'}</td><td>${escapeHtml(a.rollWidthMm?`${a.rollWidthMm} мм`:a.rollWidth?`${Number(a.rollWidth).toFixed(2)} м`:'—')}</td>${qtyCells}</tr>`;
   if(cat==='Поролон')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m,false)}</td><td>${escapeHtml(stockAttr(m,'grade','mark')||'—')}</td><td>${escapeHtml(stockAttr(m,'density')||'—')}</td><td>${escapeHtml(stockAttr(m,'hardness')||'—')}</td><td>${escapeHtml(stockAttr(m,'thickness')?`${stockAttr(m,'thickness')} мм`:'—')}</td><td>${escapeHtml(stockDim(stockAttr(m,'width'),stockAttr(m,'length')))}</td>${qtyCells}</tr>`;
   if(cat==='Древесина'){const spec=[a.thickness,a.width,a.length].filter(Boolean).join('×'),amount=qtyWithUnit(stockNumForUnit(m.quantity||0,m.unit||''),m.unit||''),calc=a.totalArea?`${Number(a.totalArea).toFixed(2)} м² · ${Number(a.totalVolume||0).toFixed(4)} м³`:(a.totalVolume?`${Number(a.totalVolume).toFixed(4)} м³`:'—');return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(a.materialType||m.subcategory||'—')}</td><td>${escapeHtml(spec?spec+' мм':'—')}</td><td>${escapeHtml(amount)}</td><td>${escapeHtml(calc)}</td>${qtyCells}</tr>`;}
-  if(isSheetMaterialCategory(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(m.subcategory||stockAttr(m,'type')||categoryLabel(m.category))}</td><td>${escapeHtml(stockAttr(m,'thickness')?`${stockAttr(m,'thickness')} мм`:'—')}</td><td>${escapeHtml(stockDim(stockAttr(m,'width'),stockAttr(m,'length')))}</td><td>${escapeHtml(stockAttr(m,'color','decor')||'—')}</td>${qtyCells}</tr>`;
+  if(isSheetMaterialCategory(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(m.subcategory?woodTypeLabel(m.subcategory):(stockAttr(m,'type')||categoryLabel(m.category)))}</td><td>${escapeHtml(stockAttr(m,'thickness')?`${stockAttr(m,'thickness')} мм`:'—')}</td><td>${escapeHtml(stockDim(stockAttr(m,'width'),stockAttr(m,'length')))}</td><td>${escapeHtml(stockAttr(m,'color','decor')||'—')}</td>${qtyCells}</tr>`;
   if(['Фурнитура','Крепёж'].includes(cat))return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(stockAttr(m,'type')||m.subcategory||'—')}</td><td>${escapeHtml(stockAttr(m,'size','diameter','length')||'—')}</td><td>${escapeHtml(materialMaker(m))}</td>${qtyCells}</tr>`;
   if(cat==='Наполнители')return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(stockAttr(m,'type')||m.subcategory||'—')}</td><td>${escapeHtml(stockAttr(m,'density')||'—')}</td>${qtyCells}</tr>`;
   return `<tr onclick="openMaterialDetails('${m.id}')">${sku}<td>${stockMaterialNameCell(m)}</td><td>${escapeHtml(categoryLabel(m.category))}</td>${qtyCells}<td><button class="iconbtn" type="button" onclick="event.stopPropagation();openMaterialDetails('${m.id}')" aria-label="${escapeHtml(t('open'))}">›</button></td></tr>`;
