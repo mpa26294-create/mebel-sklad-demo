@@ -386,7 +386,13 @@ function workshopQueueEtaMap(queue){
 }
 function workshopAnalytics(stepName){
   const queue=productionQueueForWorkshop(stepName),todayStr=today();
-  const active=queue.filter(row=>['В работе','В производстве'].includes(String(row.order.status||''))).length;
+  // v7.03: "active" раньше считался по статусу ЗАКАЗА ('В работе'/'В производстве') — то есть заказ,
+  // который в целом уже в производстве, но до ЭТОГО конкретного цеха очередь ещё не дошла, тоже
+  // засчитывался как "в работе" здесь. Из-за этого колонка "В работе" могла показывать, например, 1,
+  // хотя статус-бейдж того же цеха честно говорил "Ожидает" (реально запущенных операций не было).
+  // Теперь active = количество операций, которые ДЕЙСТВИТЕЛЬНО запущены (running) именно на этом цехе —
+  // то же самое, что использует бейдж статуса (workshopStatusBadgeHtml/workshopOpStatusCounts).
+  const active=workshopOpStatusCounts(queue).running;
   const overdue=queue.filter(row=>row.order.dueDate&&row.order.dueDate<todayStr).length;
   const etaMap=workshopQueueEtaMap(queue);
   const atRisk=queue.filter(row=>{

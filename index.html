@@ -114,7 +114,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.02</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.03</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -162,7 +162,7 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.02"></script>
+<script src="js/changelog.js?v=7.03"></script>
 <script src="js/ui.js?v=6.41"></script>
 <script src="js/app.js?v=6.47"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -176,11 +176,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.02 — Цеха: «Свободен» вместо «Ожидает» при пустой очереди';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.03 — Цеха: колонка «В работе» считает реально запущенные операции';
 </script>
 <script src="js/auth.js?v=6.4"></script>
 <script src="js/materials.js?v=6.45"></script>
-<script src="js/orders.js?v=6.44"></script>
+<script src="js/orders.js?v=6.45"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
