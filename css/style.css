@@ -831,6 +831,11 @@
   width:18px;
   height:18px;
 }
+/* v7.01: Модели — карточки получили hover-подъём и типографику, как у .stat/.panel в остальном приложении */
+.model-card{transition:transform .15s ease,box-shadow .15s ease}
+.model-card:hover{transform:translateY(-1px);box-shadow:0 14px 32px rgba(20,24,32,.08)}
+.model-card h3{margin:0 0 4px;font-size:16px;font-weight:600;letter-spacing:-.01em;color:#111}
+.model-card>p.muted{margin:0 0 10px;font-size:12.5px}
 .settings-icon-wrapper{
   width:40px;
   height:40px;
