@@ -775,8 +775,8 @@
 }
 #settings .input:focus{
   outline:none;
-  border-color:#6b7280;
-  box-shadow:0 0 0 3px rgba(107,114,128,.08);
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-shadow);
 }
 #settings .input::placeholder{
   color:#9ca3af;
@@ -799,15 +799,15 @@
   transition:all .2s;
 }
 #settings .btn.primary{
-  background:#111;
+  background:linear-gradient(180deg,var(--accent) 0%,var(--accent-dark) 100%);
   color:#fff;
-  border-color:#111;
-  box-shadow:0 4px 12px rgba(0,0,0,.12);
+  border-color:var(--accent-dark);
+  box-shadow:0 4px 12px var(--accent-shadow);
 }
 #settings .btn.primary:hover{
-  background:#222;
+  filter:brightness(1.05);
   transform:translateY(-1px);
-  box-shadow:0 6px 16px rgba(0,0,0,.15);
+  box-shadow:0 6px 16px var(--accent-shadow);
 }
 #settings .btn:not(.primary):not(.danger){
   background:#f9fafb;
@@ -3457,7 +3457,7 @@ body{background:#f7f8fb!important}
 @media(max-width:560px){#stock .stats{grid-template-columns:1fr}#stock .category-filter-row{grid-template-columns:1fr!important}.stock-primary-tabs,.stock-secondary-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}}
 
 /* v6.41 security: Telegram PIN, safe import/export */
-.telegram-lock-card{display:flex;align-items:center;justify-content:space-between;gap:18px}.telegram-lock-card h3,.notification-settings-panel h3{margin:0 0 6px;display:flex;align-items:center;gap:10px;font-size:18px;color:#101828}.telegram-lock-card p{margin:0}.notification-settings-panel .muted{margin:0 0 16px;color:#667085}.secure-settings-grid{margin-top:14px}.secret-field small{display:block;margin-top:7px;color:#98a2b3;font-size:12px;font-weight:700;letter-spacing:.08em}.secret-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}.secret-input-row .btn{white-space:nowrap}.secure-settings-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:18px}.secure-dirty-note{margin-right:auto;color:#b54708;font-size:13px;font-weight:650}.pin-modal p,.secure-export-modal p{margin:0 0 14px;color:#475467;line-height:1.45}.pin-modal .auth-error{min-height:18px;margin-top:8px;color:#d92d20;font-size:13px;font-weight:650}.secure-export-modal{display:grid;gap:10px}.secure-export-modal label{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #e6eaf0;border-radius:12px;background:#fff;color:#101828;font-weight:650}.secure-export-modal input[type="checkbox"]{width:18px;height:18px;accent-color:#111827}.secure-export-note{margin-top:4px;padding:12px 14px;border-radius:12px;background:#f6f8fb;color:#667085;font-size:13px;line-height:1.45}@media(max-width:760px){.telegram-lock-card,.secure-settings-actions{align-items:stretch;flex-direction:column}.secret-input-row{grid-template-columns:1fr}.secure-dirty-note{margin-right:0}}
+.telegram-lock-card{display:flex;align-items:center;justify-content:space-between;gap:18px}.telegram-lock-card h3,.notification-settings-panel h3{margin:0 0 6px;display:flex;align-items:center;gap:10px;font-size:18px;color:#101828}.telegram-lock-card p{margin:0}.notification-settings-panel .muted{margin:0 0 16px;color:#667085}.secure-settings-grid{margin-top:14px}.secret-field small{display:block;margin-top:7px;color:#98a2b3;font-size:12px;font-weight:700;letter-spacing:.08em}.secret-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}.secret-input-row .btn{white-space:nowrap}.secure-settings-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:18px}.secure-dirty-note{margin-right:auto;color:#b54708;font-size:13px;font-weight:650}.pin-modal p,.secure-export-modal p{margin:0 0 14px;color:#475467;line-height:1.45}.pin-modal .auth-error{min-height:18px;margin-top:8px;color:#d92d20;font-size:13px;font-weight:650}.secure-export-modal{display:grid;gap:10px}.secure-export-modal label{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #e6eaf0;border-radius:12px;background:#fff;color:#101828;font-weight:650}.secure-export-modal input[type="checkbox"]{width:18px;height:18px;accent-color:var(--accent)}.secure-export-note{margin-top:4px;padding:12px 14px;border-radius:12px;background:#f6f8fb;color:#667085;font-size:13px;line-height:1.45}@media(max-width:760px){.telegram-lock-card,.secure-settings-actions{align-items:stretch;flex-direction:column}.secret-input-row{grid-template-columns:1fr}.secure-dirty-note{margin-right:0}}
 
 .version-chip{display:inline-flex;min-height:40px;align-items:center;padding:0 14px;border:1px solid #dbe7ff;border-radius:999px;background:#f6f9ff;color:#175cd3;font-size:12px;font-weight:750;white-space:nowrap}.changelog-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.changelog-stat{min-height:104px;padding:18px 20px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow)}.changelog-stat small{display:block;margin-bottom:10px;color:#8a94a5;font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.06em}.changelog-stat b{display:block;color:#101828;font-size:26px;line-height:1.05;font-weight:800;letter-spacing:-.04em}.changelog-stat span{display:block;margin-top:8px;color:#667085;font-size:12px;font-weight:650}.changelog-list{display:flex;flex-direction:column;gap:12px}.changelog-card{overflow:hidden;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:var(--shadow)}.changelog-head{width:100%;display:grid;grid-template-columns:42px minmax(0,1fr) 32px;gap:12px;align-items:center;padding:16px 18px;text-align:left}.release-mark{width:42px;height:42px;border-radius:12px;background:#fff1e6;color:#ff6600;display:grid;place-items:center;font-size:18px;font-weight:850}.changelog-title{min-width:0}.changelog-title b{display:block;color:#101828;font-size:18px;font-weight:800;line-height:1.2;letter-spacing:-.025em;overflow-wrap:anywhere}.changelog-title small{display:block;margin-top:5px;color:#667085;font-size:12px;font-weight:650}.changelog-toggle{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#98a2b3;background:#f8fafc;transition:transform .18s ease}.changelog-card.open .changelog-toggle{transform:rotate(180deg)}.changelog-content{display:none;padding:0 18px 18px}.changelog-card.open .changelog-content{display:block}.changelog-description{margin:0 0 14px;padding:14px 16px;border:1px solid #edf0f4;border-radius:13px;background:#fbfcfd;color:#475467;font-size:13px;line-height:1.5}.changelog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.changelog-block{min-width:0;padding:14px;border:1px solid #edf0f4;border-radius:13px;background:#fff}.changelog-block h4{margin:0 0 10px;color:#101828;font-size:13px;font-weight:800}.changelog-block ul{display:grid;gap:8px;margin:0;padding:0;list-style:none}.changelog-block li{position:relative;padding-left:17px;color:#475467;font-size:12px;line-height:1.45}.changelog-block li:before{content:"";position:absolute;left:0;top:.58em;width:6px;height:6px;border-radius:50%;background:#111827}.changelog-block.test-block li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:6px;padding-left:0}.changelog-block.test-block li:before{content:none}.check-empty{color:#98a2b3;font-weight:850}.changelog-block p{margin:0;color:#667085;font-size:12px;line-height:1.45}.changelog-block.muted-block{background:#fbfcfd}.changelog-block.muted-block h4{color:#667085}
 .local-mode-warning{position:fixed;left:50%;bottom:18px;z-index:9999;transform:translateX(-50%);max-width:min(620px,calc(100vw - 24px));padding:11px 16px;border:1px solid #fed7aa;border-radius:999px;background:#fff7ed;color:#9a3412;box-shadow:0 16px 40px rgba(154,52,18,.16);font-size:12px;font-weight:750;text-align:center}
