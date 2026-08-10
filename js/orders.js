@@ -431,6 +431,10 @@ function workshopStatusBadgeHtml(queue){
   const {running,paused}=workshopOpStatusCounts(queue);
   if(running>0)return `<span class="production-status-pill running">${escapeHtml(t('prodStatusRunning'))}</span>`;
   if(paused>0)return `<span class="production-status-pill paused">${escapeHtml(t('prodStatusPaused'))}</span>`;
+  // v7.02: пустая очередь (queue.length===0) — это не то же самое, что "Ожидает" (задачи есть, но
+  // ещё не начаты). Раньше оба случая показывали один и тот же текст "Ожидает", из-за чего цех без
+  // единой задачи выглядел так, будто что-то реально ждёт своей очереди.
+  if(!queue||!queue.length)return `<span class="production-status-pill">${escapeHtml(t('prodStatusIdle'))}</span>`;
   return `<span class="production-status-pill">${escapeHtml(t('prodQueueWaiting'))}</span>`;
 }
 function productionStartedAtText(iso){
