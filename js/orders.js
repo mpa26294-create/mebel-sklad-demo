@@ -1101,6 +1101,155 @@ function saveNotificationSettings(){
   renderNotificationSettings();
   toast(t('notificationSettingsSaved'));
 }
+
+// ===== v7.04: движок правил уведомлений =====
+// Админ (единственный аккаунт с этим email) настраивает, какие типы уведомлений включены и кто их
+// получает (список email через запятую). Доступ определяется реальным логином через Supabase Auth,
+// а не PIN-кодом — так как у каждого сотрудника свой отдельный аккаунт.
+const NOTIFICATION_ADMIN_EMAIL='mpa26294@gmail.com';
+function isNotificationAdmin(){return !!(typeof currentUser!=='undefined'&&currentUser&&String(currentUser.email||'').trim().toLowerCase()===NOTIFICATION_ADMIN_EMAIL)}
+const NOTIFICATION_RULE_META={
+  orderOverdueRisk:{titleKey:'ruleOrderOverdueTitle',descKey:'ruleOrderOverdueDesc'},
+  lowStock:{titleKey:'ruleLowStockTitle',descKey:'ruleLowStockDesc'},
+  workshopPausedTooLong:{titleKey:'ruleWorkshopPausedTitle',descKey:'ruleWorkshopPausedDesc',hasThreshold:true},
+  orderCompleted:{titleKey:'ruleOrderCompletedTitle',descKey:'ruleOrderCompletedDesc'}
+};
+function notificationRules(){
+  if(!data.settings||typeof data.settings!=='object')data.settings={};
+  if(!data.settings.notificationRules||typeof data.settings.notificationRules!=='object')data.settings.notificationRules={};
+  const rules=data.settings.notificationRules;
+  Object.keys(NOTIFICATION_RULE_META).forEach(key=>{
+    if(!rules[key]||typeof rules[key]!=='object')rules[key]={enabled:false,recipients:[]};
+    if(!Array.isArray(rules[key].recipients))rules[key].recipients=[];
+  });
+  if(!Number.isFinite(rules.workshopPausedTooLong.thresholdHours)||rules.workshopPausedTooLong.thresholdHours<=0)rules.workshopPausedTooLong.thresholdHours=2;
+  return rules;
+}
+function notificationRuleEnabled(key){return !!notificationRules()[key]?.enabled}
+function notificationRuleRecipients(key){return notificationRules()[key]?.recipients||[]}
+function parseEmailList(str){return Array.from(new Set(String(str||'').split(/[,;\n]/).map(s=>s.trim().toLowerCase()).filter(s=>s&&s.includes('@'))))}
+// Дедуп: одно и то же условие (тип+сущность) не создаёт новое уведомление чаще, чем раз в throttleHours -
+// иначе цех "на паузе" или заказ "просрочен" заспамили бы уведомлениями на каждой проверке.
+function shouldPushRuleNotification(type,entityId,throttleHours=24){
+  const cutoff=new Date(Date.now()-throttleHours*3600*1000).toISOString();
+  return !(data.notifications||[]).some(n=>n.type===type&&String(n.entityId||'')===String(entityId)&&String(n.createdAt||'')>cutoff);
+}
+function pushRuleNotification(type,entityId,title,message,extra={}){
+  if(!Array.isArray(data.notifications))data.notifications=[];
+  data.notifications.unshift({id:uid(),type,channel:'internal',entityId:String(entityId||''),recipients:notificationRuleRecipients(type),title,message,createdAt:productionNow(),read:false,...extra});
+}
+function checkOrderOverdueRiskNotifications(){
+  if(!notificationRuleEnabled('orderOverdueRisk'))return;
+  (data.orders||[]).forEach(o=>{
+    if(typeof orderIsTerminal==='function'&&orderIsTerminal(o.status))return;
+    let reason='';
+    if(orderDeadlineClass(o)==='overdue')reason='overdue';
+    if(!reason&&o.dueDate){
+      const steps=orderSteps(o);
+      for(let i=0;i<steps.length;i++){
+        const step=steps[i];if(!step?.name||Number(step.minutes||0)<=0)continue;
+        const op=productionOp(o,i);if(op&&(op.status==='done'||op.status==='cancelled'))continue;
+        const queue=productionQueueForWorkshop(step.name);
+        const eta=workshopQueueEtaMap(queue).get(`${o.id}_${i}`);
+        if(eta&&eta>o.dueDate){reason='risk';break}
+      }
+    }
+    if(!reason)return;
+    if(!shouldPushRuleNotification('orderOverdueRisk',o.id))return;
+    const title=reason==='overdue'?t('notifOrderOverdueTitle'):t('notifOrderRiskTitle');
+    pushRuleNotification('orderOverdueRisk',o.id,title,`${title}: ${o.number}${o.dueDate?` (${t('orderDueDate')}: ${o.dueDate})`:''}`,{orderId:o.id});
+  });
+}
+function checkLowStockNotifications(){
+  if(!notificationRuleEnabled('lowStock'))return;
+  (data.materials||[]).forEach(m=>{
+    const st=typeof statusOf==='function'?statusOf(m):null;
+    if(!st||(st[0]!=='low'&&st[0]!=='out'))return;
+    if(!shouldPushRuleNotification('lowStock',m.id))return;
+    const title=st[0]==='out'?t('notifNoStockTitle'):t('notifLowStockTitle');
+    pushRuleNotification('lowStock',m.id,title,`${title}: ${m.name||'—'}`,{materialId:m.id});
+  });
+}
+function checkWorkshopPausedNotifications(){
+  if(!notificationRuleEnabled('workshopPausedTooLong'))return;
+  const thresholdMin=Math.round((notificationRules().workshopPausedTooLong.thresholdHours||2)*60);
+  (data.orders||[]).forEach(o=>{
+    productionOps(o).forEach(op=>{
+      if(op.status!=='paused'||!op.pausedAt)return;
+      if(productionMinutesBetween(op.pausedAt)<thresholdMin)return;
+      const entityId=`${o.id}_${op.stepIndex}`;
+      if(!shouldPushRuleNotification('workshopPausedTooLong',entityId))return;
+      const title=t('notifWorkshopPausedTitle');
+      pushRuleNotification('workshopPausedTooLong',entityId,title,`${title}: ${typeof workshopLabel==='function'?workshopLabel(op.stepName):op.stepName} · ${o.number}`,{orderId:o.id});
+    });
+  });
+}
+// Завершение заказа - это разовое событие (не постоянное состояние), поэтому вызывается напрямую из
+// completeOrder(), а не сканером по интервалу; троттлинг тут короткий, только на случай двойного клика.
+function notifyOrderCompletedRule(o){
+  if(!o||!notificationRuleEnabled('orderCompleted'))return;
+  if(!shouldPushRuleNotification('orderCompleted',o.id,0.05))return;
+  const title=t('notifOrderCompletedTitle');
+  pushRuleNotification('orderCompleted',o.id,title,`${title}: ${o.number}`,{orderId:o.id});
+}
+function runNotificationRuleChecks(){
+  const before=(data.notifications||[]).length;
+  try{
+    checkOrderOverdueRiskNotifications();
+    checkLowStockNotifications();
+    checkWorkshopPausedNotifications();
+  }catch(e){console.error('runNotificationRuleChecks failed',e)}
+  if((data.notifications||[]).length>before){
+    if(typeof save==='function')save();
+    if(typeof renderTopbarProfile==='function')renderTopbarProfile();
+  }
+}
+let lastNotificationRuleCheckAt=0;
+function maybeRunNotificationRuleChecks(){
+  if(!(typeof currentUser!=='undefined'&&currentUser))return;
+  const nowMs=Date.now();
+  if(nowMs-lastNotificationRuleCheckAt<4*60*1000)return;
+  lastNotificationRuleCheckAt=nowMs;
+  runNotificationRuleChecks();
+}
+if(typeof window!=='undefined')setInterval(()=>{if(typeof maybeRunNotificationRuleChecks==='function')maybeRunNotificationRuleChecks()},5*60*1000);
+function notificationRuleCardHtml(key){
+  const meta=NOTIFICATION_RULE_META[key],rule=notificationRules()[key];
+  const thresholdField=meta.hasThreshold?`<div class="field"><label>${escapeHtml(t('ruleThresholdHoursLabel'))}</label><input class="input" type="number" min="1" step="1" id="ruleThreshold_${key}" value="${Number(rule.thresholdHours||2)}"></div>`:'';
+  return `<div class="notif-rule-card">
+    <label class="notif-rule-head"><input type="checkbox" id="ruleEnabled_${key}" ${rule.enabled?'checked':''}><div><b>${escapeHtml(t(meta.titleKey))}</b><small>${escapeHtml(t(meta.descKey))}</small></div></label>
+    <div class="field"><label>${escapeHtml(t('ruleRecipientsLabel'))}</label><textarea class="input" id="ruleRecipients_${key}" rows="2" placeholder="${escapeHtml(t('ruleRecipientsPlaceholder'))}">${escapeHtml((rule.recipients||[]).join(', '))}</textarea></div>
+    ${thresholdField}
+  </div>`;
+}
+function renderNotificationRulesPanel(){
+  const panel=document.getElementById('notificationRulesPanel');
+  if(!panel)return;
+  if(!isNotificationAdmin()){panel.style.display='none';panel.innerHTML='';return}
+  panel.style.display='';
+  const keys=Object.keys(NOTIFICATION_RULE_META);
+  panel.innerHTML=`<h3 id="notificationRulesTitleEl">${escapeHtml(t('notificationRulesTitle'))}</h3><p class="muted">${escapeHtml(t('notificationRulesHint'))}</p><div class="notif-rules-list">${keys.map(notificationRuleCardHtml).join('')}</div><div class="actions" style="margin-top:16px"><button class="btn primary" type="button" onclick="saveNotificationRules()">${escapeHtml(t('save'))}</button></div>`;
+}
+function saveNotificationRules(){
+  if(!isNotificationAdmin())return;
+  const rules=notificationRules();
+  Object.keys(NOTIFICATION_RULE_META).forEach(key=>{
+    const enabledEl=document.getElementById(`ruleEnabled_${key}`);
+    const recipientsEl=document.getElementById(`ruleRecipients_${key}`);
+    rules[key].enabled=!!enabledEl?.checked;
+    rules[key].recipients=parseEmailList(recipientsEl?.value);
+    if(NOTIFICATION_RULE_META[key].hasThreshold){
+      const thEl=document.getElementById(`ruleThreshold_${key}`);
+      const v=Number(thEl?.value);
+      rules[key].thresholdHours=Number.isFinite(v)&&v>0?v:2;
+    }
+  });
+  save();
+  toast(t('notificationRulesSaved'));
+  if(typeof auditAdd==='function')auditAdd('notification_rules_changed','settings','notification_rules',t('notificationRulesTitle'),tRu('historyNotificationRulesChanged'));
+  renderNotificationRulesPanel();
+}
+
 async function sendOrderNotification(o,method){
   const text=orderNotificationText(o),subject=`${t('notificationOrderHeading')} ${o.number}`;
   if(method==='internal')return true;

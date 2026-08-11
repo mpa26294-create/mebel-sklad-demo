@@ -850,6 +850,16 @@
   width:20px;
   height:20px;
 }
+/* v7.04: панель правил уведомлений (видна только администратору) */
+.notif-rules-list{margin-top:4px}
+.notif-rule-card{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:#fbfbfc}
+.notif-rule-card:last-child{margin-bottom:0}
+.notif-rule-head{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:10px}
+.notif-rule-head input[type="checkbox"]{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+.notif-rule-head b{display:block;font-size:14px;font-weight:600;color:#111}
+.notif-rule-head small{display:block;margin-top:3px;color:var(--muted);font-size:12px;line-height:1.45}
+.notif-rule-card .field{margin-top:8px}
+.notif-rule-card textarea.input{min-height:auto;height:auto;padding:8px 12px;resize:vertical}
 
 /* v6.42: clean stock section redesign */
 #stock .panel{

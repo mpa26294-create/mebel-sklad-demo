@@ -120,8 +120,20 @@ function saveProfileSettings(){
   if(typeof renderTopbarProfile==='function')renderTopbarProfile();
   toast(t('profileSaved'));
 }
+// v7.04: уведомление видно всем (как раньше), если у него нет списка получателей (recipients пуст/не
+// задан) - это старое поведение и единственный существующий тип "новый заказ технологу". Если получатели
+// заданы (новые типы, настроенные админом), уведомление показывается только тем, чей email в списке.
+function notificationVisibleToCurrentUser(n){
+  if(!n||!Array.isArray(n.recipients)||!n.recipients.length)return true;
+  const email=String((typeof currentUser!=='undefined'&&currentUser&&currentUser.email)||'').trim().toLowerCase();
+  if(!email)return false;
+  return n.recipients.map(r=>String(r||'').trim().toLowerCase()).includes(email);
+}
+function visibleNotifications(){
+  return (data.notifications||[]).filter(notificationVisibleToCurrentUser);
+}
 function unreadNotificationCount(){
-  return (data.notifications||[]).filter(n=>!n.read).length;
+  return visibleNotifications().filter(n=>!n.read).length;
 }
 function renderTopbarProfile(){
   const widget=document.getElementById('topbarProfile');
@@ -166,14 +178,14 @@ function renderProfileMenu(){
 function renderNotificationsPanelList(){
   const panel=document.getElementById('tpNotifPanel');
   if(!panel)return;
-  const list=(data.notifications||[]).slice(0,30);
+  const list=visibleNotifications().slice(0,30);
   const unread=list.filter(n=>!n.read).length;
   const head=`<div class="tp-notif-head"><b>${escapeHtml(t('notificationsTitle'))}</b>${unread>0?`<button type="button" onclick="markAllNotificationsRead()">${escapeHtml(t('markAllRead'))}</button>`:''}</div>`;
   const body=list.length?list.map(n=>`<button type="button" class="tp-notif-item ${n.read?'':'unread'}" onclick="openNotification('${n.id}')"><span class="tp-notif-dot"></span><span class="tp-notif-body"><b>${escapeHtml(n.title||'')}</b><small>${escapeHtml(n.message||'')}</small><em>${escapeHtml(typeof productionDateTimeText==='function'?productionDateTimeText(n.createdAt):(n.createdAt||''))}</em></span></button>`).join(''):`<div class="tp-notif-empty">${escapeHtml(t('noNotifications'))}</div>`;
   panel.innerHTML=head+`<div class="tp-notif-list">${body}</div>`;
 }
 function markAllNotificationsRead(){
-  (data.notifications||[]).forEach(n=>n.read=true);
+  visibleNotifications().forEach(n=>n.read=true);
   save();
   renderNotificationsPanelList();
   renderTopbarProfile();

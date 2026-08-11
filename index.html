@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=6.91" />
+  <link rel="stylesheet" href="css/style.css?v=6.92" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -114,7 +114,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.03</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.04</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -141,6 +141,8 @@
         <div class="form-grid"><div class="field"><label id="telegramTokenLabel">Telegram bot token</label><input class="input" id="telegramBotToken" type="password" autocomplete="off" placeholder="123456:ABC..."></div><div class="field"><label id="telegramChatIdLabel">Telegram chat_id</label><input class="input" id="telegramChatId" autocomplete="off" placeholder="-100..."></div></div>
         <button class="btn primary" id="saveNotificationSettingsBtn" type="button" onclick="saveNotificationSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Сохранить</button>
       </div>
+      <!-- v7.04: панель видна только администратору (по логину), заполняется renderNotificationRulesPanel() -->
+      <div class="panel" id="notificationRulesPanel" style="display:none;padding:24px;max-width:720px"></div>
       <div class="panel" style="padding:24px;max-width:720px">
         <h3 id="exportImportTitle" style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Экспорт / импорт</h3>
         <p class="muted" id="exportImportHint" style="margin:0 0 20px;font-size:13px;line-height:1.45;color:#6b7280">Можно сохранить данные в JSON и потом загрузить обратно.</p>
@@ -162,12 +164,12 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.03"></script>
+<script src="js/changelog.js?v=7.04"></script>
 <script src="js/ui.js?v=6.41"></script>
 <script src="js/app.js?v=6.47"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=6.14"></script>
+<script src="js/translations.js?v=6.15"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -176,11 +178,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.03 — Цеха: колонка «В работе» считает реально запущенные операции';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.04 — Настраиваемые уведомления (админ)';
 </script>
-<script src="js/auth.js?v=6.4"></script>
+<script src="js/auth.js?v=6.5"></script>
 <script src="js/materials.js?v=6.45"></script>
-<script src="js/orders.js?v=6.45"></script>
+<script src="js/orders.js?v=6.46"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -2597,7 +2599,7 @@ calcOrderOverallPercent=function(o){
 /* v5.64: open production with clear button, not by status */
   renderOrderStats();
   renderOrderClientFilter();
-function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings();if(typeof protectSearchInputsFromAutofill==='function')protectSearchInputsFromAutofill()}
+function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings();if(typeof renderNotificationRulesPanel==='function')renderNotificationRulesPanel();if(typeof maybeRunNotificationRuleChecks==='function')maybeRunNotificationRuleChecks();if(typeof protectSearchInputsFromAutofill==='function')protectSearchInputsFromAutofill()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
 
 
@@ -3132,7 +3134,7 @@ body:not(.auth-locked) .auth-screen{
   };
   window.openOrderView=showOrderInfoModal;
   window.startOrderWork=async function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;o.status='В работе';o.updatedAt=new Date().toISOString();o.updatedBy=profileUserName();if(typeof auditAdd==='function')auditAdd('order_status','order',o.id,o.number,t('historyOrderStarted'),{status:'В работе'});save();closeOrderMenus();renderAll();toast(t('orderMovedToWork'))};
-  window.completeOrder=async function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const ops=typeof productionOps==='function'?productionOps(o):[];if(!ops.length||productionDoneCount(o)!==ops.length){toast(t('orderProductionIncomplete'));closeOrderMenus();return}o.status='Завершён';o.completedAt=new Date().toISOString();o.updatedAt=o.completedAt;o.updatedBy=profileUserName();if(typeof auditAdd==='function')auditAdd('order_status','order',o.id,o.number,t('historyOrderCompleted'),{status:'Завершён'});save();closeOrderMenus();renderAll();toast(t('orderCompleted'))};
+  window.completeOrder=async function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const ops=typeof productionOps==='function'?productionOps(o):[];if(!ops.length||productionDoneCount(o)!==ops.length){toast(t('orderProductionIncomplete'));closeOrderMenus();return}o.status='Завершён';o.completedAt=new Date().toISOString();o.updatedAt=o.completedAt;o.updatedBy=profileUserName();if(typeof auditAdd==='function')auditAdd('order_status','order',o.id,o.number,t('historyOrderCompleted'),{status:'Завершён'});if(typeof notifyOrderCompletedRule==='function')notifyOrderCompletedRule(o);save();closeOrderMenus();renderAll();toast(t('orderCompleted'))};
   window.cancelOrder=async function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;if(!confirm(t('cancelOrderConfirm')))return;o.status='Отменён';o.cancelledAt=new Date().toISOString();o.updatedAt=o.cancelledAt;o.updatedBy=profileUserName();if(typeof auditAdd==='function')auditAdd('order_status','order',o.id,o.number,t('historyOrderCancelled'),{status:'Отменён'});save();try{syncMaterialReservations();await persistReservationMaterials()}catch(e){}closeOrderMenus();renderAll();toast(t('orderCancelled'))};
 })();
 </script>
