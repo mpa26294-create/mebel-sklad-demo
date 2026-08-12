@@ -79,7 +79,11 @@ function hardenSearchAutofill(){
 }
 
 function clearChromeEmailAutofill(){
-  const email=String(window.currentUser?.email||'').trim().toLowerCase();
+  // v7.10: currentUser — это верхнеуровневая переменная (let), а не свойство window,
+  // поэтому "window.currentUser" тут всегда undefined и эта защита ни разу не срабатывала
+  // с самого начала — именно поэтому автозаполнение email браузером всё же просачивалось
+  // в поле поиска и незаметно фильтровало список материалов до пустоты/нескольких строк.
+  const email=String((typeof currentUser!=='undefined'&&currentUser?.email)||'').trim().toLowerCase();
   if(!email)return;
   ['searchInput','orderSearchInput'].forEach(id=>{
     const el=document.getElementById(id);
@@ -111,6 +115,7 @@ function goBackModal(){
 
 function closeModal(){
   if(typeof stopBarcodeScanner==='function')stopBarcodeScanner(); // v7.07: не оставлять камеру включённой при закрытии модалки
+  if(typeof clearChromeEmailAutofill==='function')clearChromeEmailAutofill(); // v7.10: карточка материала могла спровоцировать автозаполнение поиска email'ом
   document.getElementById('modalBackdrop').classList.remove('show');
   unlockBodyScrollForModal();
   document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact','production-order-modal','modal-expanded');

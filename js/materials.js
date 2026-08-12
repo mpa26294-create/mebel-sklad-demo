@@ -939,7 +939,18 @@ function renderFilters(){
   if(search) search.oninput=()=>{stockPage=1;renderAll()};
 }
 function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
-function filteredMaterials(){const q=document.getElementById('searchInput')?.value?.toLowerCase()||'';const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
+function filteredMaterials(){
+  const searchEl=document.getElementById('searchInput');
+  let q=searchEl?.value?.toLowerCase()||'';
+  // v7.10: браузер иногда автозаполняет это поле сохранённым email пользователя (известная
+  // особенность Chrome для обычных текстовых полей — срабатывает не только при фокусе на самом
+  // поле, поэтому существующая защита protectSearchInputsFromAutofill() не всегда успевает).
+  // Реальный пользователь никогда не станет искать материал по своему email — если значение
+  // поиска в точности совпадает с email текущего пользователя, считаем это автозаполнением,
+  // а не намеренным запросом, и сбрасываем поле, вместо того чтобы отфильтровать весь склад.
+  const acctEmail=String((typeof currentUser!=='undefined'&&currentUser?.email)||'').trim().toLowerCase();
+  if(acctEmail&&q===acctEmail){q='';if(searchEl)searchEl.value='';}
+  const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤'],['ready',t('categories'),cats,t('categoriesNote'),'✓'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(woodTypeLabel(m.subcategory)):''}</span>`}
 function stockCategoryTabs(){

@@ -115,7 +115,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.09</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.10</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -165,8 +165,8 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.07"></script>
-<script src="js/ui.js?v=6.42"></script>
+<script src="js/changelog.js?v=7.10"></script>
+<script src="js/ui.js?v=6.43"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -181,10 +181,10 @@ let currentUser = null;
 let materialsSubscription = null;
 let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.09 — исправлена гонка загрузки склада (материалы «пропадали»)';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.10 — исправлено автозаполнение поиска email на Складе';
 </script>
 <script src="js/auth.js?v=6.5"></script>
-<script src="js/materials.js?v=6.46"></script>
+<script src="js/materials.js?v=6.47"></script>
 <script src="js/orders.js?v=6.46"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
