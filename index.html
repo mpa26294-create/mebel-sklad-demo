@@ -115,7 +115,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.08</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.09</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -179,8 +179,9 @@ const SUPABASE_KEY = "sb_publishable_79Dh3acmslYiBSUyZ9LQBQ_5GGmBS0G";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
+let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.08 — исправлена единица учёта (шт/м³) в карточке древесины';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.09 — исправлена гонка загрузки склада (материалы «пропадали»)';
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/materials.js?v=6.46"></script>
@@ -403,6 +404,15 @@ async function loadMaterialsFromSupabase(options={}){
     if(typeof applyAuditSyncRow==='function')await applyAuditSyncRow(options.auditRowOnly,{render:true});
     return;
   }
+  // v7.09: startAppAfterLogin() subscribes to realtime changes on `materials` BEFORE the initial
+  // full load finishes. If a realtime event fires while the initial load's request is still in
+  // flight, two loadMaterialsFromSupabase() calls race — and network responses can resolve
+  // out of order. Without a guard, whichever response happens to arrive LAST wins and overwrites
+  // data.materials/renderAll(), even if it started FIRST and is now stale — this is exactly what
+  // made the stock list flash down to a handful of rows before recovering on the next re-render.
+  // Fix: stamp each call with a sequence number and only apply the result if it's still the
+  // most recently *started* call by the time its response comes back; drop stale ones silently.
+  const mySeq = ++__materialsLoadSeq;
   const { data: rows, error } = await supabaseClient
     .from('materials')
     .select('*')
@@ -413,6 +423,8 @@ async function loadMaterialsFromSupabase(options={}){
     toast('Ошибка загрузки Supabase');
     return;
   }
+
+  if(mySeq !== __materialsLoadSeq) return; // a newer load has since started — its result is authoritative, this one is stale
 
   const orderRow=(rows||[]).find(isOrderSyncRow);
   const auditRow=(rows||[]).find(row=>typeof isAuditSyncRow==='function'&&isAuditSyncRow(row));
