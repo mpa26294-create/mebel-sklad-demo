@@ -219,7 +219,11 @@
     if(woodGroup==='lumber'&&!isLumberType(currentType))currentType='Доска';
     woodState=a.status||(a.purchaseStatus==='ordered'?'ordered':(Number(found?.quantity||0)>0||a.storageLocation?'stock':'card'));
     if(!id&&!a.status)woodState='stock';
-    const currentUnit=isSheetType(currentType)?'sheet':(a.unitType||((found?.unit==='м³')?'m3':'piece'));
+    // v7.08: при редактировании существующего материала единица учёта (шт/м³) должна браться из
+    // настоящего поля material.unit (источник истины — из него же строится карточка материала),
+    // а не из закешированного attributes.unitType — оно может разойтись с unit (например, если
+    // остаток менялся не через этот визард) и тогда переключатель показывал не то, что реально сохранено.
+    const currentUnit=isSheetType(currentType)?'sheet':(found?(found.unit==='м³'?'m3':'piece'):(a.unitType||'piece'));
     const date=a.arrivalDate||a.receiptDate||a.expectedReceiptDate||todayValue();
     const body=`<div class="wood-unified material-wizard" data-material-id="${id||''}"><section class="wizard-card"><h4>${tt('woodDataTitle','Данные древесины')}</h4><div class="fabric-form-grid">
       <div class="field"><label>${tt('name','Название')}</label><input id="woodName" class="input" value="${esc(found?.name||'')}" placeholder="${tt('woodNamePlaceholder','Например: Брус сосна 50×100×3000')}"></div>
