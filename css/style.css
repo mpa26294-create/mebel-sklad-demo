@@ -3548,3 +3548,46 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 .scan-manual-row{display:flex;gap:10px}
 .scan-manual-row .input{flex:1}
 @media(max-width:560px){.scan-wrap{aspect-ratio:3/4}.scan-manual-row{flex-direction:column}.scan-manual-row .btn{width:100%}}
+
+/* v7.13: раздел "Активность" — кто сейчас на сайте, история активности, календарь по дням */
+#activity{padding:0}
+#activity .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:22px}
+#activity .order-stat-card{min-height:110px;display:flex;align-items:flex-start;gap:14px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.045)}
+#activity .order-stat-icon{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border-radius:13px;font-size:18px;font-weight:700;background:#fff1e6;color:#ff6600}
+#activity .order-stat-icon.ready{background:#e7f8ed;color:#18a558}
+#activity .order-stat-icon.missing{background:#fff8e7;color:var(--yellowText)}
+#activity .order-stat-icon.ordered{background:#e8f1ff;color:#1769e0}
+#activity .panel{border:1px solid var(--line);border-radius:16px;background:#fff;padding:20px;box-shadow:0 4px 12px rgba(16,24,40,.04)}
+#activity .panel h3{margin:0 0 14px;font-size:15px;font-weight:650;color:#111827}
+.activity-layout{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
+.activity-users-panel{max-height:640px;overflow-y:auto}
+.activity-user-row{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.activity-user-row:last-child{border-bottom:none}
+.activity-status-dot{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:#c7cbd3}
+.activity-status-dot.online{background:#18a558;box-shadow:0 0 0 3px rgba(24,165,88,.16)}
+.activity-status-dot.offline{background:#c7cbd3}
+.activity-avatar{width:34px;height:34px;flex:0 0 34px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);display:grid;place-items:center;font-weight:700;font-size:13px}
+.activity-avatar.small{width:26px;height:26px;flex:0 0 26px;font-size:11px}
+.activity-user-info{min-width:0;flex:1 1 auto;display:flex;flex-direction:column;gap:2px}
+.activity-user-info b{font-size:13px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-user-info small{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-user-meta{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.activity-last-seen{font-size:11px;color:var(--muted)}
+.activity-today-time{font-size:12px;font-weight:650;color:#111827}
+.activity-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.activity-cal-head b{font-size:13px;text-transform:capitalize;color:#111827}
+.activity-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:14px}
+.activity-cal-weekday{text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);padding-bottom:4px}
+.activity-cal-cell{position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:10px;background:none;cursor:pointer;font-size:12px;color:#344054;padding:0}
+.activity-cal-cell.empty{cursor:default;background:none;border:none}
+.activity-cal-cell.has-activity{background:var(--accent-soft);color:var(--accent-dark);font-weight:650}
+.activity-cal-cell.is-today{border-color:var(--accent)}
+.activity-cal-cell.selected{background:var(--accent);color:#fff;font-weight:650}
+.activity-cal-dot{position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.7}
+.activity-day-detail{border-top:1px solid var(--line);padding-top:14px}
+.activity-day-detail>b{display:block;margin-bottom:8px;font-size:13px;color:#111827;text-transform:capitalize}
+.activity-day-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.activity-day-row:last-child{border-bottom:none}
+.activity-day-time{margin-left:auto;font-size:12px;font-weight:650;color:#111827;flex:0 0 auto}
+@media(max-width:920px){.activity-layout{grid-template-columns:1fr}#activity .stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){#activity .stats{grid-template-columns:1fr}}

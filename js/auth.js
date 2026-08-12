@@ -74,6 +74,7 @@ async function loginUser(){
   toast(t('loggedIn'));
 }
 async function logoutUser(){
+  if(typeof stopPresenceHeartbeat==='function')stopPresenceHeartbeat();
   await supabaseClient.auth.signOut();
   currentUser=null;
   if(materialsSubscription){await supabaseClient.removeChannel(materialsSubscription);materialsSubscription=null}

@@ -43,6 +43,7 @@ function switchSection(sectionId){
   if(sectionId==='workshops'&&typeof renderWorkshops==='function')renderWorkshops();
   if(sectionId==='history'&&typeof renderSiteHistory==='function')renderSiteHistory();
   if(sectionId==='changelog'&&typeof renderChangelog==='function')renderChangelog();
+  if(sectionId==='activity'&&typeof renderActivity==='function')renderActivity();
   closeMobileSidebar();
   return true;
 }
