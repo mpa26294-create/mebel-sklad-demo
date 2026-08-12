@@ -3468,7 +3468,12 @@ body{background:#f7f8fb!important}
 .quick-roll-fields .area-preview{min-height:34px}
 .consumption-confirm{display:flex;flex-direction:column;gap:12px}.consumption-confirm h4{margin:0;font-size:18px;font-weight:750;color:#111827}.consumption-confirm p{margin:0;color:#667085}.consumption-confirm ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}.consumption-confirm li,.consumption-shortage{border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;background:#fff;display:flex;justify-content:space-between;gap:12px;align-items:center}.consumption-confirm li b{white-space:nowrap;color:#111827}.consumption-confirm.danger h4{color:#dc2626}.consumption-shortage{display:grid;grid-template-columns:1fr;align-items:stretch}.consumption-shortage div{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #eef0f4;padding-top:8px}.production-material-table th,.production-material-table td{white-space:nowrap}
 @media(max-width:1100px){#stock .category-filter-row{grid-template-columns:1fr 1fr!important}.refs-grid{grid-template-columns:1fr}}
-@media(max-width:760px){#stock .topbar{gap:14px}#stock .search-top{width:100%}#stock .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps{grid-template-columns:1fr}.refs-add{grid-template-columns:1fr}.stock-erp-table th:nth-child(4),.stock-erp-table td:nth-child(4),.stock-erp-table th:nth-child(5),.stock-erp-table td:nth-child(5),.stock-erp-table th:nth-child(6),.stock-erp-table td:nth-child(6){display:none}.stock-erp-table .stock-material-title{max-width:180px}}
+/* v7.12: раньше здесь были правила, полностью скрывающие 4/5/6-ю колонки таблицы склада
+   (В наличии/Зарезервировано/Заказано) на узких экранах через display:none — из-за этого
+   пользователь физически не мог увидеть эти данные на телефоне/маленьком окне. Но чуть выше
+   (@media(max-width:920px)) уже настроен горизонтальный скролл для этой же таблицы — он и должен
+   быть единственным способом показать все колонки на узком экране, а не скрытие части данных. */
+@media(max-width:760px){#stock .topbar{gap:14px}#stock .search-top{width:100%}#stock .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps{grid-template-columns:1fr}.refs-add{grid-template-columns:1fr}.stock-erp-table .stock-material-title{max-width:180px}}
 @media(max-width:560px){#stock .stats{grid-template-columns:1fr}#stock .category-filter-row{grid-template-columns:1fr!important}.stock-primary-tabs,.stock-secondary-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}}
 
 /* v6.41 security: Telegram PIN, safe import/export */

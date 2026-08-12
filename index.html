@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=6.93" />
+  <link rel="stylesheet" href="css/style.css?v=6.94" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -115,7 +115,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.11</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.12</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -165,7 +165,7 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.11"></script>
+<script src="js/changelog.js?v=7.12"></script>
 <script src="js/ui.js?v=6.43"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -181,7 +181,7 @@ let currentUser = null;
 let materialsSubscription = null;
 let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.11 — исправлена настоящая причина сброса шт/м³ у древесины при сохранении';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.12 — на Складе снова видны все колонки на маленьком экране';
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/materials.js?v=6.47"></script>
