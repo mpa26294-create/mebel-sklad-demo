@@ -794,7 +794,7 @@ function openMaterialDetails(id){
     </aside>
   </div>`;
   const hasPdf=a.pdfPath||a.pdfUrl;
-  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">${t('deleteMaterialBtn')}</button></div><div class="right">${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">${t('openPdfBtn')}</button>`:''}<button class="btn primary" onclick="openMaterialEditor('${m.id}')">${t('editBtn2')}</button></div></div>`;
+  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">${t('deleteMaterialBtn')}</button></div><div class="right">${m.sku?`<button class="btn ghost" onclick="printMaterialQrLabel('${m.id}')">${t('printQrBtn')}</button>`:''}${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">${t('openPdfBtn')}</button>`:''}<button class="btn primary" onclick="openMaterialEditor('${m.id}')">${t('editBtn2')}</button></div></div>`;
   openModal(t('infoMaterial'),body,foot);
   const modal=document.querySelector('#modalBackdrop .modal');
   if(modal) modal.classList.add('detail-modal');
@@ -1287,4 +1287,148 @@ async function deleteMaterial(id){
   await loadMaterialsFromSupabase();
   renderAll();
   toast(t('materialDeletedToast'));
+}
+
+// ===== v7.07: штрихкоды/QR на складе =====
+// Печатаем QR с артикулом (SKU) материала — свой код, а не код производителя,
+// т.к. единого стандарта штрихкодов у поставщиков ткани/фурнитуры нет.
+// Сканирование ищет материал по этому же SKU через уже существующую findMaterialBySku().
+
+let __scannerStream=null;
+let __scannerRAF=null;
+let __scannerLastMiss='';
+let __scannerLastMissAt=0;
+
+function stopBarcodeScanner(){
+  if(__scannerRAF){cancelAnimationFrame(__scannerRAF);__scannerRAF=null;}
+  if(__scannerStream){
+    __scannerStream.getTracks().forEach(tr=>{try{tr.stop()}catch(e){}});
+    __scannerStream=null;
+  }
+}
+
+function openBarcodeScanner(){
+  const body=`
+    <div class="scan-wrap">
+      <video id="scanVideo" class="scan-video" playsinline autoplay muted></video>
+      <div class="scan-frame"></div>
+      <div class="scan-hint" id="scanHint">${t('scanHintStarting')}</div>
+    </div>
+    <div class="scan-manual">
+      <div class="scan-manual-label">${t('scanManualLabel')}</div>
+      <div class="scan-manual-row">
+        <input id="scanManualInput" class="input" placeholder="${t('skuIn')}" onkeydown="if(event.key==='Enter'){event.preventDefault();scanManualSubmit();}">
+        <button class="btn primary" type="button" onclick="scanManualSubmit()">${t('scanManualSubmit')}</button>
+      </div>
+    </div>`;
+  openModal(t('scanQrTitle'),body,`<button class="btn" type="button" onclick="closeModal()">${t('cancel')}</button>`);
+  startBarcodeScanner();
+  setTimeout(()=>document.getElementById('scanManualInput')?.focus(),250);
+}
+
+function scanManualSubmit(){
+  const val=(document.getElementById('scanManualInput')?.value||'').trim();
+  if(!val){toast(t('enterSkuMsg'));return;}
+  handleScannedCode(val);
+}
+
+async function startBarcodeScanner(){
+  const hint=document.getElementById('scanHint');
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof jsQR!=='function'){
+    if(hint)hint.textContent=t('scanCameraUnavailable');
+    return;
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    if(!document.getElementById('scanVideo')){stream.getTracks().forEach(tr=>tr.stop());return;} // modal already closed
+    __scannerStream=stream;
+    const video=document.getElementById('scanVideo');
+    video.srcObject=stream;
+    await video.play().catch(()=>{});
+    if(hint)hint.textContent=t('scanHint');
+    const canvas=document.createElement('canvas');
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
+    const tick=()=>{
+      const v=document.getElementById('scanVideo');
+      if(!v){stopBarcodeScanner();return;} // modal closed/replaced elsewhere
+      if(v.readyState===v.HAVE_ENOUGH_DATA){
+        canvas.width=v.videoWidth;canvas.height=v.videoHeight;
+        ctx.drawImage(v,0,0,canvas.width,canvas.height);
+        let code=null;
+        try{
+          const imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+          code=jsQR(imgData.data,imgData.width,imgData.height);
+        }catch(e){}
+        if(code&&code.data){
+          const found=handleScannedCode(code.data,true);
+          if(found)return; // stop loop — handleScannedCode already stopped the stream
+        }
+      }
+      __scannerRAF=requestAnimationFrame(tick);
+    };
+    __scannerRAF=requestAnimationFrame(tick);
+  }catch(err){
+    if(hint)hint.textContent=t('scanCameraError');
+  }
+}
+
+// fromCamera=true → called from the scan loop (keep scanning silently on miss).
+// fromCamera=false (manual submit) → show a toast on miss.
+function handleScannedCode(raw,fromCamera){
+  const sku=String(raw||'').trim();
+  if(!sku)return false;
+  const m=typeof findMaterialBySku==='function'?findMaterialBySku(sku):null;
+  if(!m){
+    if(fromCamera){
+      const now=Date.now();
+      if(sku!==__scannerLastMiss||now-__scannerLastMissAt>2500){
+        __scannerLastMiss=sku;__scannerLastMissAt=now;
+        const hint=document.getElementById('scanHint');
+        if(hint)hint.textContent=t('scanNotFoundHint');
+      }
+    }else{
+      toast(t('scanNotFoundToast'));
+    }
+    return false;
+  }
+  stopBarcodeScanner();
+  openMaterialDetails(m.id);
+  setTimeout(()=>{if(typeof materialDetailGo==='function')materialDetailGo('writeoff');},60);
+  return true;
+}
+
+function printMaterialQrLabel(id){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+  if(!m)return;
+  const sku=String(m.sku||'').trim();
+  if(!sku){toast(t('scanNoSkuToast'));return;}
+  const name=(typeof materialDisplayName==='function'?materialDisplayName(m):m.name)||'';
+  const cat=(typeof categoryLabel==='function'?categoryLabel(m.category):m.category)||'';
+  const w=window.open('','_blank','width=420,height=560');
+  if(!w){toast(t('noPopupPrint'));return;}
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(sku)}</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px;margin:0}
+  .qr-label{border:1px dashed #999;border-radius:8px;padding:18px;text-align:center;width:240px}
+  #qrCanvas{margin:0 auto 10px}
+  .qr-sku{font-size:20px;font-weight:700;letter-spacing:1px;margin-top:4px}
+  .qr-name{font-size:12px;color:#444;margin-top:4px;line-height:1.3}
+  @media print{.qr-label{border:none}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head><body>
+  <div class="qr-label">
+    <div id="qrCanvas"></div>
+    <div class="qr-sku">${esc(sku)}</div>
+    <div class="qr-name">${esc(name)}${cat?' · '+esc(cat):''}</div>
+  </div>
+  <script>
+    try{
+      new QRCode(document.getElementById('qrCanvas'),{text:${JSON.stringify(sku)},width:170,height:170,correctLevel:QRCode.CorrectLevel.M});
+      window.onload=function(){setTimeout(function(){window.focus();window.print();},350)};
+    }catch(e){document.getElementById('qrCanvas').textContent='QR error';}
+  </script>
+</body></html>`);
+  w.document.close();
 }

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=6.92" />
+  <link rel="stylesheet" href="css/style.css?v=6.93" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -48,7 +48,7 @@
 
   <main class="main">
     <section id="stock" class="section active">
-      <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><button class="btn primary" onclick="openAddCategoryModal()">＋ Добавить материал</button></div></div>
+      <div class="topbar"><div class="title"><h2>Склад</h2><p>Учёт остатков материалов на складе</p></div><div class="actions"><button class="btn" id="stockScanBtn" onclick="openBarcodeScanner()">▤ <span id="stockScanBtnLabel">Сканировать</span></button><button class="btn primary" onclick="openAddCategoryModal()">＋ Добавить материал</button></div></div>
       <div class="stats" id="stats"></div>
       <div class="quick-add" id="quickAddBox">
         <div class="field"><label>Артикул материала</label><input class="input no-autofill" id="quickSku" name="furnicore_quick_sku" placeholder="Артикул, например A-0001" autocomplete="new-password" aria-autocomplete="none" autocapitalize="characters" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other"></div>
@@ -115,7 +115,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.06</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.07</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -165,12 +165,13 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.06"></script>
-<script src="js/ui.js?v=6.41"></script>
+<script src="js/changelog.js?v=7.07"></script>
+<script src="js/ui.js?v=6.42"></script>
 <script src="js/app.js?v=6.47"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=6.15"></script>
+<script src="js/translations.js?v=6.16"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -179,10 +180,10 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let materialsSubscription = null;
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.06 — убран дублирующий блок профиля/выхода из сайдбара';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.07 — штрихкоды/QR на складе';
 </script>
 <script src="js/auth.js?v=6.5"></script>
-<script src="js/materials.js?v=6.45"></script>
+<script src="js/materials.js?v=6.46"></script>
 <script src="js/orders.js?v=6.46"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}

@@ -110,6 +110,7 @@ function goBackModal(){
 }
 
 function closeModal(){
+  if(typeof stopBarcodeScanner==='function')stopBarcodeScanner(); // v7.07: не оставлять камеру включённой при закрытии модалки
   document.getElementById('modalBackdrop').classList.remove('show');
   unlockBodyScrollForModal();
   document.querySelector('#modalBackdrop .modal')?.classList.remove('wide','purchase-wide','detail-modal','attention-swipe-modal','purchase-compact','production-order-modal','modal-expanded');
@@ -121,6 +122,7 @@ function closeModal(){
 }
 
 function openModal(title,body,foot){
+  if(typeof stopBarcodeScanner==='function')stopBarcodeScanner(); // v7.07: остановить камеру, если модалка заменяется другой (напр. после найденного скана)
   closeMobileSidebar();
   const backdrop=document.getElementById('modalBackdrop');
   if(backdrop){
