@@ -115,7 +115,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.10</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.11</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -165,7 +165,7 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.10"></script>
+<script src="js/changelog.js?v=7.11"></script>
 <script src="js/ui.js?v=6.43"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -181,7 +181,7 @@ let currentUser = null;
 let materialsSubscription = null;
 let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.10 — исправлено автозаполнение поиска email на Складе';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.11 — исправлена настоящая причина сброса шт/м³ у древесины при сохранении';
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/materials.js?v=6.47"></script>
@@ -234,7 +234,14 @@ function dbToMaterial(row){
     subcategory: row.subcategory || '',
     name: row.name || '',
     attributes: row.attributes || {},
-    unit: category==='Древесина'?'м³':(row.unit || ''),
+    // v7.11: это и есть настоящая причина многолетнего бага "шт/м³ не совпадают" — раньше здесь
+    // единица учёта для ВСЕЙ категории "Древесина" принудительно переписывалась на "м³" на каждой
+    // загрузке из Supabase, независимо от того, что реально сохранено в row.unit. Сохранение через
+    // редактирование (saveWoodV639) всегда работало правильно и писало настоящее значение в БД —
+    // но следующая же перезагрузка данных (в том числе сразу после Сохранить) стирала его обратно.
+    // row.unit используется как есть; "м³" остаётся только запасным значением для старых записей,
+    // где unit ещё не был проставлен.
+    unit: row.unit || (category==='Древесина'?'м³':''),
     quantity: Number(row.quantity || 0),
     minQuantity: Number(row.min_quantity || 0),
     lastUpdated: row.created_at ? String(row.created_at).slice(0,10) : today()
