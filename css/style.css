@@ -3595,3 +3595,10 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 .activity-day-time{margin-left:auto;font-size:12px;font-weight:650;color:#111827;flex:0 0 auto}
 @media(max-width:920px){.activity-layout{grid-template-columns:1fr}#activity .stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){#activity .stats{grid-template-columns:1fr}}
+
+/* v7.21: деталка технологии — широкая страница вместо модального окна (см. technologyDetailPageHtml). */
+.tech-detail-page{display:flex;flex-direction:column;gap:14px;max-width:1180px}
+.tech-detail-name-row{padding:14px 16px}
+.tech-detail-name-row .input{max-width:420px}
+.tech-detail-actions{display:flex;justify-content:flex-end;gap:10px;padding:2px 2px 0}
+@media(max-width:760px){.tech-detail-actions{flex-direction:column}.tech-detail-actions .btn{width:100%}.tech-detail-name-row .input{max-width:none}}

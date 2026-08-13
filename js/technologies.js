@@ -62,6 +62,10 @@
 
   // ---------- список / поиск ----------
   let technologySearchQuery='';
+  // v7.21: технология больше не открывается в узком модальном окне — как список цехов/детальный
+  // экран цеха (workshopsOverviewHtml/workshopDetailHtml в orders.js), деталка технологии теперь
+  // рендерится прямо на всю ширину страницы раздела «Технологии» (см. renderTechnologies()).
+  let activeTechnologyId='';
   function updateTechnologySearch(value){technologySearchQuery=String(value||'');renderTechnologies()}
   function filteredTechnologies(){
     const q=technologySearchQuery.trim().toLowerCase();
@@ -81,6 +85,23 @@
   function renderTechnologies(){
     const box=document.getElementById('technologiesList');if(!box)return;
     const countEl=document.getElementById('technologiesCount');if(countEl)countEl.textContent=String((data.technologies||[]).length);
+    const searchWrap=document.getElementById('technologiesSearchWrap');
+    const createBtn=document.getElementById('technologiesCreateBtn');
+    const statsBox=document.getElementById('technologiesStats');
+    if(activeTechnologyId){
+      const tc=(data.technologies||[]).find(x=>String(x.id)===String(activeTechnologyId));
+      if(tc){
+        if(searchWrap)searchWrap.style.display='none';
+        if(createBtn)createBtn.style.display='none';
+        if(statsBox)statsBox.style.display='none';
+        box.innerHTML=technologyDetailPageHtml(tc);
+        return;
+      }
+      activeTechnologyId=''; // технология удалена/не найдена — вернуться к списку
+    }
+    if(searchWrap)searchWrap.style.display='';
+    if(createBtn)createBtn.style.display='';
+    if(statsBox)statsBox.style.display='';
     const rows=filteredTechnologies();
     if(!rows.length){box.innerHTML=`<div class="empty"><b>${escapeHtml(t('noTechnologies'))}</b>${escapeHtml(t('noTechnologiesHint'))}</div>`;return}
     box.innerHTML=`<div class="technology-card-grid">${rows.map(technologyCardHtml).join('')}</div>`;
@@ -122,12 +143,46 @@
     const buttons=`<div class="actions order-tech-actions"><button class="btn primary order-tech-cta" type="button" onclick="openTechMaterialPicker('${tc.id}')">＋ ${escapeHtml(t('addMaterialFromStock'))}</button><button class="btn order-tech-cta secondary" type="button" onclick="openTechNewMaterial('${tc.id}')">＋ ${escapeHtml(t('addNewMaterialToStock'))}</button></div>`;
     return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('technologyMaterials'))}</h4><p>${escapeHtml(t('technologyMaterialsTemplateHint'))}</p></div>${buttons}</div><div class="technology-material-list">${items.map((item,index)=>technologyMaterialRowEditableHtml(tc,item,index)).join('')||`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('technologyMaterials'))}</b><span>${escapeHtml(t('noTechnologyMaterials'))}</span></div>`}</div></section>`;
   }
-  function technologyDetailBody(tc){
-    return `<div class="technology-detail">${technologyOperationsEditableHtml(tc)}${technologyMaterialsEditableHtml(tc)}</div>`;
+  // v7.21: деталка технологии — отдельная широкая страница внутри раздела «Технологии» (не модальное
+  // окно), с явной кнопкой «Сохранить» для названия. Операции/материалы по-прежнему сохраняются
+  // мгновенно при каждом изменении поля (persistTechChange), «Сохранить» дополнительно фиксирует
+  // название и даёт пользователю явное подтверждение, что всё записано.
+  function technologyDetailPageHtml(tc){
+    return `<div class="workshop-detail-head">
+      <button type="button" class="workshop-back-link" onclick="closeTechnologyDetail()">${escapeHtml(t('backToTechnologies'))}</button>
+      <span class="workshop-detail-sep"></span>
+      <h3>${escapeHtml(tc.name||t('createTechnologyTitle'))}</h3>
+    </div>
+    <div class="tech-detail-page">
+      <section class="order-tech-card tech-detail-name-card">
+        <div class="order-tech-head"><div><h4>${escapeHtml(t('technologyName'))}</h4></div></div>
+        <div class="tech-detail-name-row"><input class="input" id="techDetailName" value="${escapeHtml(tc.name||'')}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}"></div>
+      </section>
+      ${technologyOperationsEditableHtml(tc)}
+      ${technologyMaterialsEditableHtml(tc)}
+      <div class="tech-detail-actions">
+        <button class="btn primary" type="button" onclick="saveTechnologyAndReturn('${tc.id}')">${escapeHtml(u42('save'))}</button>
+        <button class="btn danger" type="button" onclick="deleteTechnology('${tc.id}')">${escapeHtml(u42('delete'))}</button>
+      </div>
+    </div>`;
   }
   function openTechnologyDetail(id){
     const tc=(data.technologies||[]).find(x=>String(x.id)===String(id));if(!tc)return;
-    openModal(tc.name||t('createTechnologyTitle'),technologyDetailBody(tc),`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('close'))}</button><button class="btn danger" type="button" onclick="closeModal();deleteTechnology('${tc.id}')">${escapeHtml(u42('delete'))}</button>`);
+    activeTechnologyId=String(id);
+    renderTechnologies();
+  }
+  function closeTechnologyDetail(){
+    activeTechnologyId='';
+    renderTechnologies();
+  }
+  async function saveTechnologyAndReturn(techId){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    const nameInput=document.getElementById('techDetailName');
+    const name=nameInput?nameInput.value.trim():tc.name;
+    if(!name){toast(t('enterTechnologyName'));return}
+    tc.name=name;
+    const ok=await persistTechChange(tc);
+    if(ok)toast(t('technologySaved'));
   }
 
   // ---------- операции: мутаторы (мгновенно сохраняют в Supabase, переоткрывают деталку) ----------
@@ -159,7 +214,7 @@
     const categoryOptions=categories.map(cat=>`<option value="${escapeHtml(cat)}">${escapeHtml(categoryLabel(cat)||cat)}</option>`).join('');
     const hasMaterials=(data.materials||[]).length>0;
     const body=hasMaterials?`<div class="form-grid technology-stock-picker"><div class="field"><label>${escapeHtml(currentLang==='ru'?'Категория':currentLang==='en'?'Category':'Kategorija')}</label><select class="select" id="techMaterialPickerCategory" onchange="updateTechMaterialPickerOptions(this.value)"><option value="">${escapeHtml(currentLang==='ru'?'Все категории':currentLang==='en'?'All categories':'Visas kategorijas')}</option>${categoryOptions}</select></div><div class="field"><label>${escapeHtml(t('material'))}</label><select class="select" id="techMaterialPickerMaterial" onchange="toggleTechMaterialPickerAdd(this.value)"><option value="">${escapeHtml(t('selectMaterialFromStock'))}</option>${typeof materialOptions==='function'?materialOptions('',''):''}</select></div></div>`:`<div class="order-tech-empty">${escapeHtml(t('noWarehouseMaterials'))}</div>`;
-    openModal(t('addMaterialFromStock'),body,`<button class="btn" type="button" onclick="openTechnologyDetail('${techId}')">${escapeHtml(u42('cancel'))}</button><button class="btn primary" id="techMaterialPickerAddBtn" type="button" onclick="addTechMaterialFromStock('${techId}')" disabled>${escapeHtml(u42('add'))}</button>`);
+    openModal(t('addMaterialFromStock'),body,`<button class="btn" type="button" onclick="closeModal();openTechnologyDetail('${techId}')">${escapeHtml(u42('cancel'))}</button><button class="btn primary" id="techMaterialPickerAddBtn" type="button" onclick="addTechMaterialFromStock('${techId}')" disabled>${escapeHtml(u42('add'))}</button>`);
   }
   function updateTechMaterialPickerOptions(category){
     const select=document.getElementById('techMaterialPickerMaterial');if(!select)return;
@@ -177,6 +232,7 @@
     const workshop=typeof materialDefaultWorkshop==='function'?materialDefaultWorkshop(m.category||'',m):'';
     tc.materials=[...(tc.materials||[]),{category:m.category||'',materialId:m.id,workshop,perUnitQty:0,unit}];
     await persistTechChange(tc);
+    closeModal();
     openTechnologyDetail(tc.id);
   }
   async function updateTechMaterial(techId,index,field,value){
@@ -225,6 +281,8 @@
       tc.materials=[...(tc.materials||[]),{category:material.category||'',materialId:material.id,workshop,perUnitQty:0,unit}];
     }
     await persistTechChange(tc);
+    if(typeof modalStack!=='undefined')modalStack=[];
+    closeModal();
     openTechnologyDetail(tc.id);
     return true;
   }
@@ -297,6 +355,8 @@
     // v7.18: сразу открываем полный экран редактирования (операции + материалы) — тот же
     // самый экран, что используется для уже существующих технологий, — чтобы заполнение
     // происходило ровно так же, как раньше заполнялась технология внутри заказа.
+    // v7.21: сначала закрываем модалку создания — деталка теперь страница, а не модальное окно.
+    closeModal();
     openTechnologyDetail(tc.id);
   }
 
@@ -395,7 +455,7 @@
   // экспорт в глобальную область — так же, как остальные модули этого приложения
   Object.assign(window,{
     loadTechnologiesFromSupabase,renderTechnologies,updateTechnologySearch,
-    openTechnologyDetail,deleteTechnology,
+    openTechnologyDetail,closeTechnologyDetail,saveTechnologyAndReturn,deleteTechnology,
     openCreateTechnologyModal,refreshTechCreatePreview,saveNewTechnology,
     technologyApplyBarHtml,applyTechnologyToOrder,
     onTechSaveModeChange,openTechnologySaveDialog,confirmTechnologySave,
