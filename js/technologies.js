@@ -238,18 +238,18 @@
     renderTechnologies();
   }
 
-  // ---------- создание технологии: с нуля (как в заказе) или на основе заказа ----------
-  function technologyPreviewHtml(o){
-    if(!o)return `<div class="order-tech-empty">${escapeHtml(t('techCreateBlankHint'))}</div>`;
-    const steps=(typeof orderSteps==='function'?orderSteps(o):[]);
-    const mats=(typeof orderMaterials==='function'?orderMaterials(o):[]);
-    if(!steps.length&&!mats.length)return `<div class="order-tech-empty">${escapeHtml(t('noTechnologyDataInOrder'))}</div>`;
-    return `<div class="tech-create-counts"><div><small>${escapeHtml(t('totalOperations'))}</small><b>${steps.length}</b></div><div><small>${escapeHtml(t('materialsCount'))}</small><b>${mats.length}</b></div></div>`;
+  // ---------- создание технологии: всегда с нуля, заказ — только для названия/справки ----------
+  // v7.20: раньше выбор заказа-источника подтягивал в новую технологию его шаги/материалы
+  // (снимок). По решению пользователя технология ВСЕГДА создаётся пустой — оператор задаёт
+  // операции, материалы и время сам на следующем экране, вне зависимости от того, выбран ли
+  // заказ. Поле «Заказ-источник» осталось только как удобная подсказка для названия/изделия.
+  function technologyPreviewHtml(){
+    return `<div class="order-tech-empty">${escapeHtml(t('techCreateBlankHint'))}</div>`;
   }
   function refreshTechCreatePreview(){
     const id=document.getElementById('techCreateOrderSelect')?.value||'';
     const o=(data.orders||[]).find(x=>String(x.id)===String(id));
-    const box=document.getElementById('techCreatePreview');if(box)box.innerHTML=technologyPreviewHtml(o);
+    const box=document.getElementById('techCreatePreview');if(box)box.innerHTML=technologyPreviewHtml();
     const nameInput=document.getElementById('techCreateName');
     if(nameInput&&!nameInput.value.trim()&&o)nameInput.value=o.product||o.number||'';
   }
@@ -267,7 +267,7 @@
       pickField=`<div class="field"><label>${escapeHtml(t('sourceOrder'))}</label><select class="select" id="techCreateOrderSelect" onchange="refreshTechCreatePreview()"><option value="">${escapeHtml(t('techCreateBlankOption'))}</option>${optionsHtml}</select></div>`;
     }
     const nameDefault=selected?(selected.product||selected.number||''):'';
-    return `<div class="tech-create-form">${pickField}<div class="field"><label>${escapeHtml(t('technologyName'))}</label><input class="input" id="techCreateName" value="${escapeHtml(nameDefault)}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}"></div><div class="tech-create-preview" id="techCreatePreview">${technologyPreviewHtml(selected)}</div></div>`;
+    return `<div class="tech-create-form">${pickField}<div class="field"><label>${escapeHtml(t('technologyName'))}</label><input class="input" id="techCreateName" value="${escapeHtml(nameDefault)}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}"></div><div class="tech-create-preview" id="techCreatePreview">${technologyPreviewHtml()}</div></div>`;
   }
   function openCreateTechnologyModal(orderId=''){
     if(typeof requireAuth==='function'&&!requireAuth())return;
@@ -285,9 +285,9 @@
     const name=document.getElementById('techCreateName')?.value.trim();
     if(!name){toast(t('enterTechnologyName'));return}
     const o=orderId?(data.orders||[]).find(x=>String(x.id)===String(orderId)):null;
-    const steps=o?technologyStepsSnapshot(o):[];
-    const materials=o?technologyMaterialsSnapshot(o):[];
-    const tc={name,product:o?.product||'',sourceOrderNumber:o?.number||'',steps,materials,createdBy:(typeof profileDisplayName==='function'?profileDisplayName():'')};
+    // v7.20: заказ-источник больше не подтягивает шаги/материалы — технология всегда создаётся
+    // пустой, заказ используется только как подсказка названия/изделия (см. technologyPreviewHtml).
+    const tc={name,product:o?.product||'',sourceOrderNumber:o?.number||'',steps:[],materials:[],createdBy:(typeof profileDisplayName==='function'?profileDisplayName():'')};
     const ok=await insertTechnologyToSupabase(tc);
     if(!ok)return;
     tc.createdAt=new Date().toISOString();tc.updatedAt=tc.createdAt;
