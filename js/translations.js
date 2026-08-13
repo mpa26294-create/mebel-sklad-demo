@@ -282,6 +282,12 @@ Object.assign(I18N.ru,{techOperationsReadonlyHint:'Операции заданы
 Object.assign(I18N.en,{techOperationsReadonlyHint:'Operations come from the technology — edit them in the Technologies section',techOperationsEmptyApplyHint:'No operations yet — apply a technology above or create one in the Technologies section',technologyMaterialsTemplateHint:'Materials per 1 item — not tied to any specific order'});
 Object.assign(I18N.lv,{techOperationsReadonlyHint:'Operācijas nosaka tehnoloģija — rediģējiet tās sadaļā «Tehnoloģijas»',techOperationsEmptyApplyHint:'Operāciju vēl nav — pielietojiet tehnoloģiju augstāk vai izveidojiet to sadaļā «Tehnoloģijas»',technologyMaterialsTemplateHint:'Materiālu sastāvs uz 1 izstrādājumu — nav piesaistīts konkrētam pasūtījumam'});
 
+// v7.18: «Создать технологию» больше не требует заказа — можно начать с нуля, заполнив
+// операции и материалы напрямую (как раньше это делалось внутри заказа).
+Object.assign(I18N.ru,{techCreateBlankOption:'Без заказа — с нуля',techCreateBlankHint:'Технология создастся пустой — операции и материалы добавите на следующем экране'});
+Object.assign(I18N.en,{techCreateBlankOption:'No order — start from scratch',techCreateBlankHint:'The technology will be created empty — add operations and materials on the next screen'});
+Object.assign(I18N.lv,{techCreateBlankOption:'Bez pasūtījuma — no jauna',techCreateBlankHint:'Tehnoloģija tiks izveidota tukša — operācijas un materiālus pievienosiet nākamajā ekrānā'});
+
 let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
 // v6.87: для текста, который навсегда сохраняется в Историю/аудит (в отличие от текста

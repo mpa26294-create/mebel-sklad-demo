@@ -218,9 +218,9 @@
     renderTechnologies();
   }
 
-  // ---------- создание технологии из заказа ----------
+  // ---------- создание технологии: с нуля (как в заказе) или на основе заказа ----------
   function technologyPreviewHtml(o){
-    if(!o)return `<div class="order-tech-empty">${escapeHtml(t('chooseOrderHint'))}</div>`;
+    if(!o)return `<div class="order-tech-empty">${escapeHtml(t('techCreateBlankHint'))}</div>`;
     const steps=(typeof orderSteps==='function'?orderSteps(o):[]);
     const mats=(typeof orderMaterials==='function'?orderMaterials(o):[]);
     if(!steps.length&&!mats.length)return `<div class="order-tech-empty">${escapeHtml(t('noTechnologyDataInOrder'))}</div>`;
@@ -240,8 +240,11 @@
     if(orderId){
       pickField=`<div class="field"><label>${escapeHtml(t('sourceOrder'))}</label><div class="readonly-pill">${escapeHtml(selected?.number||'')}${selected?.product?' · '+escapeHtml(selected.product):''}</div></div><input type="hidden" id="techCreateOrderSelect" value="${escapeHtml(orderId)}">`;
     }else{
+      // v7.18: заказ теперь необязателен — по умолчанию выбрано "с нуля", как при создании
+      // нового заказа: технология создаётся пустой, а операции и материалы добавляются на
+      // следующем экране (тем же способом, что и в заказе).
       const optionsHtml=orders.map(o=>`<option value="${o.id}">${escapeHtml(o.number||'')}${o.product?' · '+escapeHtml(o.product):''}${o.client?' · '+escapeHtml(o.client):''}</option>`).join('');
-      pickField=`<div class="field"><label>${escapeHtml(t('sourceOrder'))}</label><select class="select" id="techCreateOrderSelect" onchange="refreshTechCreatePreview()"><option value="">${escapeHtml(t('chooseOrder'))}</option>${optionsHtml}</select></div>`;
+      pickField=`<div class="field"><label>${escapeHtml(t('sourceOrder'))}</label><select class="select" id="techCreateOrderSelect" onchange="refreshTechCreatePreview()"><option value="">${escapeHtml(t('techCreateBlankOption'))}</option>${optionsHtml}</select></div>`;
     }
     const nameDefault=selected?(selected.product||selected.number||''):'';
     return `<div class="tech-create-form">${pickField}<div class="field"><label>${escapeHtml(t('technologyName'))}</label><input class="input" id="techCreateName" value="${escapeHtml(nameDefault)}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}"></div><div class="tech-create-preview" id="techCreatePreview">${technologyPreviewHtml(selected)}</div></div>`;
@@ -260,19 +263,21 @@
   async function saveNewTechnology(){
     const orderId=document.getElementById('techCreateOrderSelect')?.value||'';
     const name=document.getElementById('techCreateName')?.value.trim();
-    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
-    if(!o){toast(t('chooseOrderHint'));return}
     if(!name){toast(t('enterTechnologyName'));return}
-    const steps=technologyStepsSnapshot(o),materials=technologyMaterialsSnapshot(o);
-    if(!steps.length&&!materials.length){toast(t('noTechnologyDataInOrder'));return}
-    const tc={name,product:o.product||'',sourceOrderNumber:o.number||'',steps,materials,createdBy:(typeof profileDisplayName==='function'?profileDisplayName():'')};
+    const o=orderId?(data.orders||[]).find(x=>String(x.id)===String(orderId)):null;
+    const steps=o?technologyStepsSnapshot(o):[];
+    const materials=o?technologyMaterialsSnapshot(o):[];
+    const tc={name,product:o?.product||'',sourceOrderNumber:o?.number||'',steps,materials,createdBy:(typeof profileDisplayName==='function'?profileDisplayName():'')};
     const ok=await insertTechnologyToSupabase(tc);
     if(!ok)return;
     tc.createdAt=new Date().toISOString();tc.updatedAt=tc.createdAt;
     data.technologies=[tc,...(data.technologies||[])];
-    closeModal();
-    toast(t('technologySaved'));
     renderTechnologies();
+    toast(t('technologySaved'));
+    // v7.18: сразу открываем полный экран редактирования (операции + материалы) — тот же
+    // самый экран, что используется для уже существующих технологий, — чтобы заполнение
+    // происходило ровно так же, как раньше заполнялась технология внутри заказа.
+    openTechnologyDetail(tc.id);
   }
 
   // ---------- применение технологии к заказу ----------
