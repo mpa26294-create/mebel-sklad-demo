@@ -86,15 +86,127 @@
     box.innerHTML=`<div class="technology-card-grid">${rows.map(technologyCardHtml).join('')}</div>`;
   }
 
-  // ---------- деталка (только просмотр) ----------
+  // ---------- деталка: полное редактирование операций и материалов, как в заказе ----------
+  async function persistTechChange(tc){
+    const ok=await updateTechnologyInSupabase(tc);
+    if(ok){tc.updatedAt=new Date().toISOString();if(typeof renderTechnologies==='function')renderTechnologies();}
+    return ok;
+  }
+  const TECH_WORKSHOP_PRESETS=['Столярка','Швейный цех','Поклейка','Тапицерка','Сборка','Упаковка'];
+  function technologyOperationsEditableHtml(tc){
+    const stepsList=tc.steps||[];
+    const addBtn=`<button class="btn primary order-tech-cta" type="button" onclick="addTechOperation('${tc.id}')">＋ ${escapeHtml(t('addOperation'))}</button>`;
+    return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('techOperations'))}</h4><p>${escapeHtml(t('techOperationsHint'))}</p></div>${addBtn}</div>${stepsList.length?`<div class="order-tech-table-scroll"><table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th><th></th></tr></thead><tbody>${stepsList.map((s,index)=>`<tr><td><div class="technology-stage-picker"><select class="select" aria-label="${escapeHtml(t('operationTemplate'))}" onchange="applyTechOperationTemplate('${tc.id}',${index},this.value)"><option value="">${escapeHtml(t('chooseOperationTemplate'))}</option>${TECH_WORKSHOP_PRESETS.map(name=>`<option value="${escapeHtml(name)}" ${s.name===name?'selected':''}>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(name):name)}</option>`).join('')}</select><input class="input" value="${escapeHtml(s.name||'')}" placeholder="${escapeHtml(t('customOperationName'))}" onchange="updateTechOperation('${tc.id}',${index},'name',this.value)"></div></td><td><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(s.minutes||0)}" onchange="updateTechOperation('${tc.id}',${index},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div></td><td><input class="input" value="${escapeHtml(s.responsible||'')}" placeholder="${escapeHtml(t('notSpecified'))}" onchange="updateTechOperation('${tc.id}',${index},'responsible',this.value)"></td><td><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechOperation('${tc.id}',${index})">×</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('techOperations'))}</b><span>${escapeHtml(t('techOperationsHint'))}</span></div>`}</section>`;
+  }
+  function technologyWorkshopOptions(tc,selected=''){
+    const names=[...new Set([...(tc.steps||[]).map(s=>String(s.name||'').trim()).filter(Boolean),...TECH_WORKSHOP_PRESETS])];
+    const current=String(selected||'').trim();
+    if(current&&!names.includes(current))names.unshift(current);
+    return [`<option value="">${escapeHtml(t('auto'))}</option>`,...names.map(name=>`<option value="${escapeHtml(name)}" ${name===current?'selected':''}>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(name):name)}</option>`)].join('');
+  }
+  function technologyMaterialRowEditableHtml(tc,item,index){
+    const m=(data.materials||[]).find(x=>String(x.id)===String(item.materialId));
+    const category=item.category||m?.category||'Поролон';
+    const unit=item.unit||(typeof orderUnitForMaterial==='function'?orderUnitForMaterial(m,category):'')||'';
+    return `<div class="technology-material-row">
+      <div class="field"><label>${escapeHtml(u42('category'))}</label><select class="select" onchange="updateTechMaterial('${tc.id}',${index},'category',this.value)">${(typeof ORDER_MATERIAL_CATS!=='undefined'?ORDER_MATERIAL_CATS:[]).map(cat=>`<option value="${cat}" ${cat===category?'selected':''}>${escapeHtml(categoryLabel(cat))}</option>`).join('')}</select></div>
+      <div class="field"><label>${escapeHtml(u42('material'))}</label><select class="select" onchange="updateTechMaterial('${tc.id}',${index},'materialId',this.value)">${typeof materialOptions==='function'?materialOptions(category,item.materialId):''}</select></div>
+      <div class="field"><label>Цех</label><select class="select" onchange="updateTechMaterial('${tc.id}',${index},'workshop',this.value)">${technologyWorkshopOptions(tc,item.workshop)}</select></div>
+      <div class="field"><label>${escapeHtml(u42('perOne'))}</label><input class="input" type="number" min="0" step="0.01" value="${Number(item.perUnitQty||0)}" onchange="updateTechMaterial('${tc.id}',${index},'perUnitQty',this.value)"></div>
+      <div class="field"><label>${escapeHtml(u42('unit'))}</label><select class="select" onchange="updateTechMaterial('${tc.id}',${index},'unit',this.value)">${typeof orderUnitOptions==='function'?orderUnitOptions(category,unit):''}</select></div>
+      <button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('removeMaterial'))}" onclick="removeTechMaterial('${tc.id}',${index})">×</button>
+    </div>`;
+  }
+  function technologyMaterialsEditableHtml(tc){
+    const items=tc.materials||[];
+    const buttons=`<div class="actions order-tech-actions"><button class="btn primary order-tech-cta" type="button" onclick="openTechMaterialPicker('${tc.id}')">＋ ${escapeHtml(t('addMaterialFromStock'))}</button></div>`;
+    return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('technologyMaterials'))}</h4><p>${escapeHtml(t('technologyMaterialsTemplateHint'))}</p></div>${buttons}</div><div class="technology-material-list">${items.map((item,index)=>technologyMaterialRowEditableHtml(tc,item,index)).join('')||`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('technologyMaterials'))}</b><span>${escapeHtml(t('noTechnologyMaterials'))}</span></div>`}</div></section>`;
+  }
   function technologyDetailBody(tc){
-    const stepsHtml=(tc.steps||[]).length?`<table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th></tr></thead><tbody>${tc.steps.map(s=>`<tr><td>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(s.name||''):(s.name||''))}</td><td>${Number(s.minutes||0)} ${escapeHtml(t('minutesShort'))}</td><td>${escapeHtml(s.responsible||'—')}</td></tr>`).join('')}</tbody></table>`:`<div class="order-tech-empty">${escapeHtml(t('techOperationsHint'))}</div>`;
-    const matsHtml=(tc.materials||[]).length?`<table class="order-tech-table"><thead><tr><th>${escapeHtml(u42('material'))}</th><th>Цех</th><th>${escapeHtml(u42('perOne'))}</th></tr></thead><tbody>${tc.materials.map(item=>{const m=(data.materials||[]).find(x=>String(x.id)===String(item.materialId));return `<tr><td>${escapeHtml(m?materialTitle(m):(item.category||'—'))}</td><td>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(item.workshop||''):(item.workshop||''))}</td><td>${Number(item.perUnitQty||0)} ${escapeHtml(item.unit||'')}</td></tr>`}).join('')}</tbody></table>`:`<div class="order-tech-empty">${escapeHtml(t('noTechnologyMaterials'))}</div>`;
-    return `<div class="technology-detail"><section class="order-tech-card"><h4>${escapeHtml(t('techOperations'))}</h4>${stepsHtml}</section><section class="order-tech-card"><h4>${escapeHtml(t('technologyMaterials'))}</h4>${matsHtml}</section></div>`;
+    return `<div class="technology-detail">${technologyOperationsEditableHtml(tc)}${technologyMaterialsEditableHtml(tc)}</div>`;
   }
   function openTechnologyDetail(id){
     const tc=(data.technologies||[]).find(x=>String(x.id)===String(id));if(!tc)return;
     openModal(tc.name||t('createTechnologyTitle'),technologyDetailBody(tc),`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('close'))}</button><button class="btn danger" type="button" onclick="closeModal();deleteTechnology('${tc.id}')">${escapeHtml(u42('delete'))}</button>`);
+  }
+
+  // ---------- операции: мутаторы (мгновенно сохраняют в Supabase, переоткрывают деталку) ----------
+  async function addTechOperation(techId){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    tc.steps=[...(tc.steps||[]),{name:t('newOperation'),minutes:0,responsible:''}];
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+  }
+  async function updateTechOperation(techId,index,field,value){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    const steps=(tc.steps||[]).map(s=>({...s})),step=steps[index];if(!step)return;
+    step[field]=field==='minutes'?Math.max(0,Math.round(Number(value||0))):String(value||'').trim();
+    tc.steps=steps;
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+  }
+  async function removeTechOperation(techId,index){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    tc.steps=(tc.steps||[]).filter((_,i)=>i!==index);
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+  }
+  function applyTechOperationTemplate(techId,index,value){if(value)updateTechOperation(techId,index,'name',value)}
+
+  // ---------- материалы: мутаторы ----------
+  function openTechMaterialPicker(techId){
+    const categories=typeof technologyStockCategories==='function'?technologyStockCategories():[];
+    const categoryOptions=categories.map(cat=>`<option value="${escapeHtml(cat)}">${escapeHtml(categoryLabel(cat)||cat)}</option>`).join('');
+    const hasMaterials=(data.materials||[]).length>0;
+    const body=hasMaterials?`<div class="form-grid technology-stock-picker"><div class="field"><label>${escapeHtml(currentLang==='ru'?'Категория':currentLang==='en'?'Category':'Kategorija')}</label><select class="select" id="techMaterialPickerCategory" onchange="updateTechMaterialPickerOptions(this.value)"><option value="">${escapeHtml(currentLang==='ru'?'Все категории':currentLang==='en'?'All categories':'Visas kategorijas')}</option>${categoryOptions}</select></div><div class="field"><label>${escapeHtml(t('material'))}</label><select class="select" id="techMaterialPickerMaterial" onchange="toggleTechMaterialPickerAdd(this.value)"><option value="">${escapeHtml(t('selectMaterialFromStock'))}</option>${typeof materialOptions==='function'?materialOptions('',''):''}</select></div></div>`:`<div class="order-tech-empty">${escapeHtml(t('noWarehouseMaterials'))}</div>`;
+    openModal(t('addMaterialFromStock'),body,`<button class="btn" type="button" onclick="openTechnologyDetail('${techId}')">${escapeHtml(u42('cancel'))}</button><button class="btn primary" id="techMaterialPickerAddBtn" type="button" onclick="addTechMaterialFromStock('${techId}')" disabled>${escapeHtml(u42('add'))}</button>`);
+  }
+  function updateTechMaterialPickerOptions(category){
+    const select=document.getElementById('techMaterialPickerMaterial');if(!select)return;
+    select.innerHTML=`<option value="">${escapeHtml(t('selectMaterialFromStock'))}</option>${typeof materialOptions==='function'?materialOptions(category,''):''}`;
+    toggleTechMaterialPickerAdd('');
+  }
+  function toggleTechMaterialPickerAdd(value){const btn=document.getElementById('techMaterialPickerAddBtn');if(btn)btn.disabled=!value}
+  async function addTechMaterialFromStock(techId){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));
+    const materialId=document.getElementById('techMaterialPickerMaterial')?.value;
+    const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
+    if(!tc||!m)return;
+    if((tc.materials||[]).some(item=>String(item.materialId)===String(m.id))){toast(t('materialAlreadyInOrder'));return}
+    const unit=typeof orderUnitForMaterial==='function'?orderUnitForMaterial(m,m.category||''):(m.unit||'');
+    const workshop=typeof materialDefaultWorkshop==='function'?materialDefaultWorkshop(m.category||'',m):'';
+    tc.materials=[...(tc.materials||[]),{category:m.category||'',materialId:m.id,workshop,perUnitQty:0,unit}];
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+  }
+  async function updateTechMaterial(techId,index,field,value){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    const items=(tc.materials||[]).map(item=>({...item})),item=items[index];if(!item)return;
+    if(field==='category'){
+      item.category=String(value||'');
+      const first=(data.materials||[]).find(m=>m.category===item.category);
+      item.materialId=first?.id||'';
+      item.unit=typeof orderUnitForMaterial==='function'?orderUnitForMaterial(first,item.category):item.unit;
+      item.workshop=typeof materialDefaultWorkshop==='function'?materialDefaultWorkshop(item.category,first):item.workshop;
+    }else if(field==='materialId'){
+      const m=(data.materials||[]).find(x=>String(x.id)===String(value));
+      item.materialId=value;
+      item.category=m?.category||item.category;
+      item.unit=typeof orderUnitForMaterial==='function'?orderUnitForMaterial(m,item.category):item.unit;
+      item.workshop=typeof materialDefaultWorkshop==='function'?materialDefaultWorkshop(item.category,m):item.workshop;
+    }else if(field==='workshop')item.workshop=String(value||'').trim();
+    else if(field==='unit')item.unit=String(value||'');
+    else if(field==='perUnitQty')item.perUnitQty=Math.max(0,Number(value||0));
+    items[index]=item;
+    tc.materials=items;
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+  }
+  async function removeTechMaterial(techId,index){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    tc.materials=(tc.materials||[]).filter((_,i)=>i!==index);
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
   }
 
   async function deleteTechnology(id){
@@ -261,6 +373,9 @@
     openTechnologyDetail,deleteTechnology,
     openCreateTechnologyModal,refreshTechCreatePreview,saveNewTechnology,
     technologyApplyBarHtml,applyTechnologyToOrder,
-    onTechSaveModeChange,openTechnologySaveDialog,confirmTechnologySave
+    onTechSaveModeChange,openTechnologySaveDialog,confirmTechnologySave,
+    addTechOperation,updateTechOperation,removeTechOperation,applyTechOperationTemplate,
+    openTechMaterialPicker,updateTechMaterialPickerOptions,toggleTechMaterialPickerAdd,
+    addTechMaterialFromStock,updateTechMaterial,removeTechMaterial
   });
 })();
