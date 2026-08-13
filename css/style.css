@@ -3557,6 +3557,10 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 #activity .order-stat-icon.ready{background:#e7f8ed;color:#18a558}
 #activity .order-stat-icon.missing{background:#fff8e7;color:var(--yellowText)}
 #activity .order-stat-icon.ordered{background:#e8f1ff;color:#1769e0}
+#activity .order-stat-copy{min-width:0}
+#activity .order-stat-label{display:block;color:#58677e;font-size:12px;font-weight:600}
+#activity .order-stat-value{display:block;margin-top:5px;color:#101828;font-size:25px;font-weight:750;line-height:1}
+#activity .order-stat-note{display:block;margin-top:9px;color:#7b8799;font-size:11px;font-style:normal;line-height:1.35}
 #activity .panel{border:1px solid var(--line);border-radius:16px;background:#fff;padding:20px;box-shadow:0 4px 12px rgba(16,24,40,.04)}
 #activity .panel h3{margin:0 0 14px;font-size:15px;font-weight:650;color:#111827}
 .activity-layout{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
