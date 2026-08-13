@@ -44,6 +44,10 @@ function switchSection(sectionId){
   if(sectionId==='history'&&typeof renderSiteHistory==='function')renderSiteHistory();
   if(sectionId==='changelog'&&typeof renderChangelog==='function')renderChangelog();
   if(sectionId==='activity'&&typeof renderActivity==='function')renderActivity();
+  if(sectionId==='technologies'&&typeof renderTechnologies==='function'){
+    renderTechnologies();
+    if(typeof loadTechnologiesFromSupabase==='function')loadTechnologiesFromSupabase().then(()=>renderTechnologies());
+  }
   closeMobileSidebar();
   return true;
 }
