@@ -119,7 +119,7 @@
   }
   function technologyMaterialsEditableHtml(tc){
     const items=tc.materials||[];
-    const buttons=`<div class="actions order-tech-actions"><button class="btn primary order-tech-cta" type="button" onclick="openTechMaterialPicker('${tc.id}')">＋ ${escapeHtml(t('addMaterialFromStock'))}</button></div>`;
+    const buttons=`<div class="actions order-tech-actions"><button class="btn primary order-tech-cta" type="button" onclick="openTechMaterialPicker('${tc.id}')">＋ ${escapeHtml(t('addMaterialFromStock'))}</button><button class="btn order-tech-cta secondary" type="button" onclick="openTechNewMaterial('${tc.id}')">＋ ${escapeHtml(t('addNewMaterialToStock'))}</button></div>`;
     return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('technologyMaterials'))}</h4><p>${escapeHtml(t('technologyMaterialsTemplateHint'))}</p></div>${buttons}</div><div class="technology-material-list">${items.map((item,index)=>technologyMaterialRowEditableHtml(tc,item,index)).join('')||`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('technologyMaterials'))}</b><span>${escapeHtml(t('noTechnologyMaterials'))}</span></div>`}</div></section>`;
   }
   function technologyDetailBody(tc){
@@ -207,6 +207,26 @@
     tc.materials=(tc.materials||[]).filter((_,i)=>i!==index);
     await persistTechChange(tc);
     openTechnologyDetail(tc.id);
+  }
+  // v7.19: «Добавить новый материал на склад» прямо из технологии — тот же мастер создания
+  // материала, что и в заказе (openAddCategoryModal), с возвратом в деталку технологии.
+  function openTechNewMaterial(techId){
+    if(typeof requireAuth==='function'&&!requireAuth())return;
+    window.pendingTechnologyMaterialTechId=String(techId);
+    if(typeof pushModalState==='function')pushModalState();
+    openAddCategoryModal(false);
+  }
+  async function attachCreatedTechnologyMaterialToTech(techId,material){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));
+    if(!tc||!material)return false;
+    if(!(tc.materials||[]).some(item=>String(item.materialId)===String(material.id))){
+      const unit=typeof orderUnitForMaterial==='function'?orderUnitForMaterial(material,material.category||''):(material.unit||'');
+      const workshop=typeof materialDefaultWorkshop==='function'?materialDefaultWorkshop(material.category||'',material):'';
+      tc.materials=[...(tc.materials||[]),{category:material.category||'',materialId:material.id,workshop,perUnitQty:0,unit}];
+    }
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+    return true;
   }
 
   async function deleteTechnology(id){
@@ -381,6 +401,7 @@
     onTechSaveModeChange,openTechnologySaveDialog,confirmTechnologySave,
     addTechOperation,updateTechOperation,removeTechOperation,applyTechOperationTemplate,
     openTechMaterialPicker,updateTechMaterialPickerOptions,toggleTechMaterialPickerAdd,
-    addTechMaterialFromStock,updateTechMaterial,removeTechMaterial
+    addTechMaterialFromStock,updateTechMaterial,removeTechMaterial,
+    openTechNewMaterial,attachCreatedTechnologyMaterialToTech
   });
 })();
