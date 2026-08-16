@@ -3648,6 +3648,9 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 .tech-info-block.blue{background:#eef4ff}
 .tech-info-block.green{background:#eefcf3}
 
+.technology-card-menu{flex:0 0 auto}
+.technology-card-menu .action-menu-btn{width:30px;height:30px;font-size:16px}
+
 @media(max-width:900px){
   .tech-table-head,.tech-table-row{grid-template-columns:minmax(0,1.6fr) 60px 60px 40px}
   .tech-table-head>div:nth-child(2),.tech-table-row .tech-table-workshop,.tech-table-head>div:nth-child(5),.tech-table-row .tech-table-status,.tech-table-head>div:nth-child(6),.tech-table-row .tech-table-updated{display:none}

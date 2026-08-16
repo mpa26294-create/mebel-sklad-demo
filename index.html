@@ -124,7 +124,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.23</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.24</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -211,13 +211,13 @@ let currentUser = null;
 let materialsSubscription = null;
 let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.23 — Технологии: таблица, фильтры, сортировка, пагинация, дублирование (тест)';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.24 — Технологии: меню действий на карточках (тест)';
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.47"></script>
 <script src="js/orders.js?v=6.49"></script>
-<script src="js/technologies.js?v=1.06"></script>
+<script src="js/technologies.js?v=1.07"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 

@@ -127,7 +127,7 @@
   function technologyCardHtml(tc){
     const created=tc.createdAt?new Date(tc.createdAt).toLocaleDateString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB'):'';
     return `<article class="technology-card" onclick="openTechnologyDetail('${tc.id}')">
-      <div class="technology-card-head"><h3>${escapeHtml(tc.name)}</h3><button class="iconbtn" type="button" aria-label="${escapeHtml(u42('delete'))}" onclick="event.stopPropagation();deleteTechnology('${tc.id}')">×</button></div>
+      <div class="technology-card-head"><h3>${escapeHtml(tc.name)}</h3><div class="technology-card-menu" onclick="event.stopPropagation()">${technologyActionMenu(tc.id)}</div></div>
       ${tc.product?`<div class="technology-card-sub">${escapeHtml(tc.product)}</div>`:''}
       <div class="technology-card-stats"><div><small>${escapeHtml(t('totalOperations'))}</small><b>${(tc.steps||[]).length}</b></div><div><small>${escapeHtml(t('materialsCount'))}</small><b>${(tc.materials||[]).length}</b></div></div>
       <div class="technology-card-foot"><span class="tech-status-pill ${technologyStatus(tc)==='active'?'ok':'idle'}">${escapeHtml(technologyStatusLabel(tc))}</span><span>${tc.sourceOrderNumber?escapeHtml(tc.sourceOrderNumber)+' · ':''}${escapeHtml(created)}</span></div>
