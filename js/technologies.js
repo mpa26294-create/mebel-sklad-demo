@@ -581,6 +581,11 @@
     const nameDefault=selected?(selected.product||selected.number||''):'';
     return `<div class="tech-create-form">${pickField}<div class="field"><label>${escapeHtml(t('technologyName'))}</label><input class="input" id="techCreateName" value="${escapeHtml(nameDefault)}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}"></div><div class="tech-create-preview" id="techCreatePreview">${technologyPreviewHtml()}</div></div>`;
   }
+  // v7.28: «Создать технологию» больше не вызывается ниоткуда — по решению пользователя, раздел
+  // «Технологии» больше не предлагает создание с нуля. Технологии теперь появляются здесь только
+  // как побочный эффект тумблера «Сохранить как шаблон» в заказе (см. orders.js:
+  // maybeSaveOrderTechnologyAsTemplate). Функция оставлена нетронутой как неиспользуемый код —
+  // низкий риск, ничего не подключено к ней (см. соглашение репозитория о dead code).
   function openCreateTechnologyModal(orderId=''){
     if(typeof requireAuth==='function'&&!requireAuth())return;
     const body=createTechnologyModalBody(orderId);
@@ -721,6 +726,7 @@
     toggleTechMenu,duplicateTechnology,filteredTechnologies,technologyStatus,
     openTechNewMaterial,attachCreatedTechnologyMaterialToTech,
     getTechPlannedQty,updateTechPlannedQty,technologyMaterialAvailability,technologyOverallAvailability,
-    renameTechDetail
+    renameTechDetail,
+    insertTechnologyToSupabase,technologyStepsSnapshot,technologyMaterialsSnapshot
   });
 })();

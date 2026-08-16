@@ -168,11 +168,71 @@ function orderTechnologyMaterialsHtml(o){const items=orderMaterials(o),buttons=`
 // (technologyApplyBarHtml) + список материалов заказа (резерв/закупка, как и раньше — решение
 // пользователя). Кнопки «Сохранить как технологию»/«Обновить технологию» тоже убраны: теперь
 // технологию создают и редактируют только централизованно, в разделе «Технологии».
+// v7.28: черновик «создать технологию прямо в заказе» — тумблер «Сохранить как шаблон» и название
+// шаблона живут только в памяти (per-orderId), не на самом заказе, и сохраняются по onchange сразу
+// (не только по клику финальной кнопки) — иначе, как и в баге v7.26 с названием технологии, ввод
+// потерялся бы при любой правке операции (каждая правка перерисовывает #orderWorkflowModal целиком).
+const orderTechDraft={};
+function getOrderTechDraft(o){
+  const d=orderTechDraft[o.id]||{};
+  return {saveAsTemplate:d.saveAsTemplate!==false,templateName:typeof d.templateName==='string'?d.templateName:(o.product||o.number||'')};
+}
+function updateOrderTechDraftToggle(orderId,checked){orderTechDraft[orderId]={...(orderTechDraft[orderId]||{}),saveAsTemplate:!!checked}}
+function updateOrderTechDraftName(orderId,value){orderTechDraft[orderId]={...(orderTechDraft[orderId]||{}),templateName:String(value||'')}}
+const ORDER_TECH_WORKSHOP_PRESETS=['Столярка','Швейный цех','Поклейка','Тапицерка','Сборка','Упаковка'];
+// v7.28: редактор операций технологии — вернулся в заказ (был убран в v7.22, но мутаторы
+// addTechnologyOperation/updateTechnologyOperation/removeTechnologyOperation/
+// applyTechnologyOperationTemplate всё это время оставались рабочими, просто без своей разметки).
+// Показывается, пока к заказу не привязана готовая технология (o.technologyId пусто) — по решению
+// пользователя, всегда в этом случае, независимо от того, есть ли уже введённые операции.
+function orderTechnologyOperationsEditableHtml(o){
+  const steps=orderSteps(o);
+  const addBtn=`<button class="btn primary order-tech-cta" type="button" onclick="addTechnologyOperation('${o.id}')">＋ ${escapeHtml(t('addOperation'))}</button>`;
+  return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('techOperations'))}</h4><p>${escapeHtml(t('techOperationsHint'))}</p></div>${addBtn}</div>${steps.length?`<div class="order-tech-table-scroll"><table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th><th></th></tr></thead><tbody>${steps.map((s,index)=>`<tr><td><div class="technology-stage-picker"><select class="select" aria-label="${escapeHtml(t('operationTemplate'))}" onchange="applyTechnologyOperationTemplate('${o.id}',${index},this.value)"><option value="">${escapeHtml(t('chooseOperationTemplate'))}</option>${ORDER_TECH_WORKSHOP_PRESETS.map(name=>`<option value="${escapeHtml(name)}" ${s.name===name?'selected':''}>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(name):name)}</option>`).join('')}</select><input class="input" value="${escapeHtml(s.name||'')}" placeholder="${escapeHtml(t('customOperationName'))}" onchange="updateTechnologyOperation('${o.id}',${index},'name',this.value)"></div></td><td><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(s.minutes||0)}" onchange="updateTechnologyOperation('${o.id}',${index},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div></td><td><input class="input" value="${escapeHtml(s.responsible||'')}" placeholder="${escapeHtml(t('notSpecified'))}" onchange="updateTechnologyOperation('${o.id}',${index},'responsible',this.value)"></td><td><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechnologyOperation('${o.id}',${index})">×</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('techOperations'))}</b><span>${escapeHtml(t('techOperationsHint'))}</span></div>`}</section>`;
+}
+function orderTechTemplateToggleHtml(o){
+  const draft=getOrderTechDraft(o);
+  return `<section class="order-tech-card order-tech-template-card">
+    <div class="order-tech-template-row">
+      <label class="order-tech-template-toggle"><input type="checkbox" ${draft.saveAsTemplate?'checked':''} onchange="updateOrderTechDraftToggle('${o.id}',this.checked)"><span><b>${escapeHtml(t('orderTechSaveAsTemplateLabel'))}</b><small>${escapeHtml(t('orderTechSaveAsTemplateHint'))}</small></span></label>
+      ${draft.saveAsTemplate?`<input class="input order-tech-template-name" value="${escapeHtml(draft.templateName)}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}" onchange="updateOrderTechDraftName('${o.id}',this.value)">`:''}
+    </div>
+  </section>`;
+}
+// v7.28: если тумблер включён и у заказа ещё нет привязанной технологии, при сохранении/переводе
+// в производство создаётся отдельная технология-шаблон (снимок steps/materials заказа) и заказ
+// связывается с ней — так же, как раньше делало «Сохранить как технологию» до v7.22, только теперь
+// это одно действие с тумблером, а не отдельный диалог.
+async function maybeSaveOrderTechnologyAsTemplate(o){
+  if(!o||o.technologyId)return;
+  const steps=orderSteps(o);
+  if(!steps.length)return;
+  const draft=getOrderTechDraft(o);
+  if(!draft.saveAsTemplate)return;
+  const name=String(draft.templateName||o.product||o.number||'').trim();
+  if(!name)return;
+  const tc={
+    name,
+    product:o.product||'',
+    sourceOrderNumber:o.number||'',
+    steps:typeof technologyStepsSnapshot==='function'?technologyStepsSnapshot(o):steps.map(s=>({name:s.name||'',minutes:Number(s.minutes||0),responsible:s.responsible||''})),
+    materials:typeof technologyMaterialsSnapshot==='function'?technologyMaterialsSnapshot(o):[],
+    createdBy:(typeof profileDisplayName==='function'?profileDisplayName():'')
+  };
+  const ok=typeof insertTechnologyToSupabase==='function'&&await insertTechnologyToSupabase(tc);
+  if(!ok)return;
+  tc.createdAt=new Date().toISOString();tc.updatedAt=tc.createdAt;
+  data.technologies=[tc,...(data.technologies||[])];
+  o.technologyId=tc.id;o.technologyName=tc.name;o.technologyAppliedAt=tc.createdAt;
+  if(typeof auditAdd==='function')auditAdd('technology_saved_as_template','order',o.id,o.number,`${tRu('historyTechnologyApplied')}: ${tc.name}`);
+  if(typeof renderTechnologies==='function')renderTechnologies();
+}
 function orderTechnologyHtml(o){
   const inProduction=['В производстве','В работе','Готов'].includes(String(o.status||''));
   const action=inProduction?`<button class="btn primary order-to-production" type="button" onclick="saveProductionTechnologyEdit('${o.id}')">${escapeHtml(currentLang==='ru'?'Редактировать технологию':currentLang==='en'?'Edit technology':'Rediģēt tehnoloģiju')}</button>`:`<button class="btn primary order-to-production" type="button" onclick="transferOrderToProduction('${o.id}')">${escapeHtml(t('transferToProduction'))} →</button>`;
   const applyBar=typeof technologyApplyBarHtml==='function'?technologyApplyBarHtml(o):'';
-  return `<div class="order-technology-screen">${applyBar}${orderTechnologyMaterialsHtml(o)}${orderTechnologySummaryHtml(o)}<div class="order-tech-footer-actions"><button class="btn order-save-technology" type="button" onclick="saveTechnologyForLater('${o.id}')">${escapeHtml(t('saveAndContinueLater'))}</button>${action}</div></div>`;
+  const createSection=!o.technologyId?`${orderTechnologyOperationsEditableHtml(o)}${orderTechTemplateToggleHtml(o)}`:'';
+  return `<div class="order-technology-screen">${applyBar}${createSection}${orderTechnologyMaterialsHtml(o)}${orderTechnologySummaryHtml(o)}<div class="order-tech-footer-actions"><button class="btn order-save-technology" type="button" onclick="saveTechnologyForLater('${o.id}')">${escapeHtml(t('saveAndContinueLater'))}</button>${action}</div></div>`;
 }
 // v7.17→v7.22: старая read-only таблица операций технологии в заказе. С v7.22 больше не
 // вызывается из orderTechnologyHtml (операции показываются только в разделе «Технологии»),
@@ -875,7 +935,7 @@ function refreshOrderWorkflow(id){
 function technologyAuditOnce(o){if(!o||!hasOrderTechnology(o.steps))return;const rows=typeof auditFor==='function'?auditFor('order',o.id):[];if(!rows.some(r=>r.type==='technology_filled'))auditAdd('technology_filled','order',o.id,o.number,tRu('historyTechnologyFilled'))}
 async function persistTechnologyOrder(o){save();try{syncMaterialReservations();await persistReservationMaterials()}catch(e){console.error('Technology reservation sync failed',e)}refreshOrderWorkflow(o.id)}
 function markTechnologyStarted(o){if(String(o?.status)==='Ожидает технолога'){o.status='Технология в работе';auditAdd('technology_started','order',o.id,o.number,tRu('historyTechnologyStarted'))}}
-async function saveTechnologyForLater(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;markTechnologyStarted(o);auditAdd('technology_saved_later','order',o.id,o.number,tRu('historyTechnologySavedLater'));await persistTechnologyOrder(o);closeModal();renderOrders();toast(t('technologySavedLater'))}
+async function saveTechnologyForLater(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;markTechnologyStarted(o);await maybeSaveOrderTechnologyAsTemplate(o);auditAdd('technology_saved_later','order',o.id,o.number,tRu('historyTechnologySavedLater'));await persistTechnologyOrder(o);closeModal();renderOrders();toast(t('technologySavedLater'))}
 async function addTechnologyOperation(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;markTechnologyStarted(o);o.steps=orderSteps(o).map(s=>({...s}));o.steps.push({name:t('newOperation'),minutes:0,responsible:''});auditAdd('technology_operation_added','order',o.id,o.number,tRu('historyOperationAdded'));await persistTechnologyOrder(o)}
 async function removeTechnologyOperation(id,index){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const steps=orderSteps(o).map(s=>({...s})),removed=steps[index];if(!removed)return;markTechnologyStarted(o);steps.splice(index,1);o.steps=steps;auditAdd('technology_operation_removed','order',o.id,o.number,`${tRu('historyOperationRemoved')}: ${removed.name||tRu('operationStage')}`);await persistTechnologyOrder(o)}
 async function updateTechnologyOperation(id,index,field,value){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;o.steps=orderSteps(o).map(s=>({...s}));const step=o.steps[index];if(!step)return;const before=step[field];step[field]=field==='minutes'?Math.max(0,Math.round(Number(value||0))):String(value||'').trim();if(String(before)===String(step[field]))return;markTechnologyStarted(o);if(field==='minutes')auditAdd('technology_time_changed','order',o.id,o.number,`${tRu('historyTimeChanged')}: ${step.name||tRu('operationStage')} · ${before||0} → ${step.minutes} ${tRu('minutesShort')}`);else auditAdd('technology_operation_changed','order',o.id,o.number,`${tRu('historyOperationChanged')}: ${step.name||tRu('operationStage')}`);technologyAuditOnce(o);await persistTechnologyOrder(o)}
@@ -890,7 +950,7 @@ async function attachCreatedTechnologyMaterial(orderId,material){const o=(data.o
 async function updateTechnologyMaterial(id,index,field,value){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const items=orderMaterials(o).map(item=>({...item})),item=items[index];if(!item)return;markTechnologyStarted(o);if(field==='category'){item.category=String(value||'');const first=(data.materials||[]).find(m=>m.category===item.category);item.materialId=first?.id||'';item.unit=orderUnitForMaterial(first,item.category);item.workshop=materialDefaultWorkshop(item.category,first)}else if(field==='materialId'){const m=(data.materials||[]).find(x=>String(x.id)===String(value));item.materialId=value;item.category=m?.category||item.category;item.unit=orderUnitForMaterial(m,item.category);item.workshop=materialDefaultWorkshop(item.category,m)}else if(field==='workshop')item.workshop=String(value||'').trim();else if(field==='unit')item.unit=String(value||orderDefaultUnitForCategory(item.category));else if(field==='perUnitQty')item.perUnitQty=Math.max(0,Number(value||0));const currentMaterial=(data.materials||[]).find(x=>String(x.id)===String(item.materialId));if(!item.workshop)item.workshop=materialDefaultWorkshop(item.category,currentMaterial);if(currentMaterial?.unit==='рулон'&&(item.category==='Ткань'||item.category==='Экокожа')&&item.unit==='рулон')item.unit=orderUnitForMaterial(currentMaterial,item.category);item.qty=calcOrderItemTotalQty(item.perUnitQty,orderProductQty(o),item.unit);o.materials=items;auditAdd('technology_material_changed','order',o.id,o.number,`${tRu('historyTechnologyMaterialChanged')}: ${field}`);await persistTechnologyOrder(o)}
 async function markTechnologyMaterialOrdered(id,index){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const items=orderMaterials(o).map(item=>({...item})),item=items[index],input=document.getElementById(`technologyOrderQty_${id}_${index}`),qty=Math.max(0,Number(input?.value||0));if(!item||qty<=0){toast(t('enterOrderedQuantity'));return}item.purchaseStatus='ordered';item.purchaseQty=qty;o.materials=items;auditAdd('purchase','order',o.id,o.number,`${tRu('historyMaterialMarkedOrdered')}: ${qtyWithUnit(qty,item.unit||'')}`,{materialId:item.materialId,purchaseQty:qty});await persistTechnologyOrder(o);toast(t('materialMarkedOrdered'))}
 async function removeTechnologyMaterial(id,index){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const removed=orderMaterials(o)[index];if(!removed)return;const m=(data.materials||[]).find(x=>String(x.id)===String(removed.materialId));o.materials=orderMaterials(o).filter((_,i)=>i!==index);auditAdd('technology_material_removed','order',o.id,o.number,`${tRu('historyMaterialRemoved')}: ${m?materialTitle(m):removed.materialId}`);await persistTechnologyOrder(o)}
-async function transferOrderToProduction(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;if(!hasOrderTechnology(o.steps)){toast(t('technologyRequired'));return}technologyAuditOnce(o);const from=o.status;if(typeof setOrderStatusPersisted==='function'){if(!await setOrderStatusPersisted(id,'В производстве')){if(String(o.status)!=='В производстве')return}}else{o.status='В производстве';save()}o.status='В производстве';save();orderWorkflowSelection.set(String(id),2);auditAdd('technology_to_production','order',o.id,o.number,tRu('historyTransferredProduction'),{from,to:'В производстве'});const root=document.getElementById('orderWorkflowModal');if(root){root.innerHTML=orderWorkflowStepperHtml(o,'modal')+orderWorkflowContentHtml(o,true);setCleanModalClass('order-clean-modal');renderOrders()}else refreshOrderStatusUI(id,false);toast(t('transferredProduction'))}
+async function transferOrderToProduction(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;if(!hasOrderTechnology(o.steps)){toast(t('technologyRequired'));return}await maybeSaveOrderTechnologyAsTemplate(o);technologyAuditOnce(o);const from=o.status;if(typeof setOrderStatusPersisted==='function'){if(!await setOrderStatusPersisted(id,'В производстве')){if(String(o.status)!=='В производстве')return}}else{o.status='В производстве';save()}o.status='В производстве';save();orderWorkflowSelection.set(String(id),2);auditAdd('technology_to_production','order',o.id,o.number,tRu('historyTransferredProduction'),{from,to:'В производстве'});const root=document.getElementById('orderWorkflowModal');if(root){root.innerHTML=orderWorkflowStepperHtml(o,'modal')+orderWorkflowContentHtml(o,true);setCleanModalClass('order-clean-modal');renderOrders()}else refreshOrderStatusUI(id,false);toast(t('transferredProduction'))}
 async function saveProductionTechnologyEdit(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;technologyAuditOnce(o);
   // v6.86: журнал истории раньше записывался на языке, который был активен в момент действия
   // (currentLang), из-за чего в истории одного заказа могли соседствовать записи на разных

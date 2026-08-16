@@ -3662,6 +3662,17 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 /* v7.27: кнопка «›» на строке материала технологии — открывает карточку материала (Склад). */
 .tech-material-open-btn{align-self:center}
 
+/* v7.28: тумблер «Сохранить как шаблон технологии» под редактором операций в заказе. */
+.order-tech-template-card{padding:14px 16px}
+.order-tech-template-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.order-tech-template-toggle{display:flex;gap:10px;align-items:flex-start;cursor:pointer;flex:1 1 260px}
+.order-tech-template-toggle input[type=checkbox]{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+.order-tech-template-toggle span{display:flex;flex-direction:column;gap:2px}
+.order-tech-template-toggle b{font-size:13px;color:var(--text)}
+.order-tech-template-toggle small{color:var(--muted);font-size:11.5px}
+.order-tech-template-name{flex:1 1 240px;max-width:340px}
+@media(max-width:760px){.order-tech-template-name{max-width:none;width:100%}}
+
 @media(max-width:900px){
   .tech-table-head,.tech-table-row{grid-template-columns:minmax(0,1.6fr) 60px 60px 40px}
   .tech-table-head>div:nth-child(2),.tech-table-row .tech-table-workshop,.tech-table-head>div:nth-child(5),.tech-table-row .tech-table-status,.tech-table-head>div:nth-child(6),.tech-table-row .tech-table-updated{display:none}

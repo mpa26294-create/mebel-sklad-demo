@@ -300,6 +300,14 @@ Object.assign(I18N.ru,{techPlannedQtyLabel:'Количество изделий'
 Object.assign(I18N.en,{techPlannedQtyLabel:'Product quantity',techPlannedQtyHint:'Enter a quantity to see right away whether stock covers a batch of this size.',techPlannedQtyOkPrefix:'Enough materials for',techPlannedQtyOkSuffix:'items',techPlannedQtyShortPrefix:'Missing materials:',techPlannedQtyShortOf:'of'});
 Object.assign(I18N.lv,{techPlannedQtyLabel:'Izstrādājumu skaits',techPlannedQtyHint:'Norādiet daudzumu, lai uzreiz redzētu, vai noliktavā pietiek materiālu šādai partijai.',techPlannedQtyOkPrefix:'Materiālu pietiek',techPlannedQtyOkSuffix:'izstrādājumiem',techPlannedQtyShortPrefix:'Trūkst materiālu:',techPlannedQtyShortOf:'no'});
 
+// v7.28: создание технологии возвращается в заказ — редактор операций показывается прямо там,
+// пока к заказу не привязана готовая технология, с тумблером «Сохранить как шаблон». Раздел
+// «Технологии» больше не предлагает создать технологию с нуля — только просмотр/редактирование/
+// дублирование/удаление уже сохранённых (созданных именно так, из заказа).
+Object.assign(I18N.ru,{orderTechSaveAsTemplateLabel:'Сохранить как шаблон технологии',orderTechSaveAsTemplateHint:'Технология появится в разделе «Технологии» и её можно будет выбрать для других заказов.',orderTechCreateNewTitle:'Или создайте новую',orderTechCreateNewHint:'Задайте операции ниже — материалы редактируются в блоке «Материалы» ниже.'});
+Object.assign(I18N.en,{orderTechSaveAsTemplateLabel:'Save as a technology template',orderTechSaveAsTemplateHint:'The technology will appear in the Technologies section and can be picked for other orders.',orderTechCreateNewTitle:'Or create a new one',orderTechCreateNewHint:'Set the operations below — materials are edited in the Materials block below.'});
+Object.assign(I18N.lv,{orderTechSaveAsTemplateLabel:'Saglabāt kā tehnoloģijas veidni',orderTechSaveAsTemplateHint:'Tehnoloģija parādīsies sadaļā «Tehnoloģijas» un to varēs izvēlēties citiem pasūtījumiem.',orderTechCreateNewTitle:'Vai izveidojiet jaunu',orderTechCreateNewHint:'Norādiet operācijas zemāk — materiālus rediģē blokā «Materiāli» zemāk.'});
+
 let currentLang = localStorage.getItem('furnicore_lang') || 'ru';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key; }
 // v6.87: для текста, который навсегда сохраняется в Историю/аудит (в отличие от текста
