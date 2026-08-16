@@ -280,10 +280,62 @@
     if(current&&!names.includes(current))names.unshift(current);
     return [`<option value="">${escapeHtml(t('auto'))}</option>`,...names.map(name=>`<option value="${escapeHtml(name)}" ${name===current?'selected':''}>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(name):name)}</option>`)].join('');
   }
-  function technologyMaterialRowEditableHtml(tc,item,index){
+  // v7.25: «Количество изделий» — сколько единиц изделия планируется сделать по этой технологии.
+  // Не пишется в Supabase (там сейчас нет такой колонки, а доступ к БД временно недоступен) —
+  // хранится только в localStorage браузера по id технологии, чисто для этого расчёта на клиенте.
+  function getTechPlannedQty(techId){
+    try{
+      const n=Number(localStorage.getItem('molm_tech_qty_'+techId));
+      return Number.isFinite(n)&&n>0?n:1;
+    }catch(e){return 1}
+  }
+  function setTechPlannedQty(techId,value){
+    const n=Math.max(1,Math.round(Number(value||1))||1);
+    try{localStorage.setItem('molm_tech_qty_'+techId,String(n))}catch(e){}
+    return n;
+  }
+  function updateTechPlannedQty(techId,value){
+    setTechPlannedQty(techId,value);
+    renderTechnologies(); // деталка уже открыта (activeTechnologyId установлен) — просто перерисовать
+  }
+  // Хватает ли материала на складе на партию plannedQty штук, с учётом того, что часть остатка уже
+  // зарезервирована другими активными заказами (materialReservedOutsideOrder с excludeOrderId='' —
+  // технология сама не заказ, поэтому резерв всех заказов учитывается целиком).
+  function technologyMaterialAvailability(item,plannedQty){
+    const m=(data.materials||[]).find(x=>String(x.id)===String(item.materialId));
+    if(!m)return {ok:false,missing:0,available:0,stock:0,unit:item.unit||'',need:0,mat:null};
+    const unit=item.unit||(typeof orderUnitForMaterial==='function'?orderUnitForMaterial(m,item.category):'')||m.unit;
+    const stock=typeof convertMaterialQty==='function'?convertMaterialQty(m.quantity,m.unit,unit,m):Number(m.quantity||0);
+    const reservedOther=typeof materialReservedOutsideOrder==='function'?materialReservedOutsideOrder(m.id,'',unit):0;
+    const available=Math.max(0,stock-reservedOther);
+    const need=Math.max(0,Number(item.perUnitQty||0))*Math.max(0,Number(plannedQty||0));
+    return {ok:available>=need,missing:Math.max(0,need-available),available,stock,unit,need,mat:m};
+  }
+  function technologyMaterialStatusPill(item,plannedQty){
+    const av=technologyMaterialAvailability(item,plannedQty);
+    if(!av.mat)return {tone:'bad',label:t('deletedMaterial')};
+    if(av.need<=0)return {tone:'idle',label:t('materialUsageNotSpecified')};
+    if(av.available<=0)return {tone:'bad',label:`${t('needToPurchase')} · ${qtyWithUnit(av.need,av.unit)}`};
+    if(av.available<av.need)return {tone:'warn',label:`${t('partiallyAvailable')} · ${t('missing')}: ${qtyWithUnit(av.missing,av.unit)}`};
+    return {tone:'ok',label:`${t('materialsAvailableStatus')} · ${qtyWithUnit(av.available,av.unit)}`};
+  }
+  function technologyOverallAvailability(tc,plannedQty){
+    const items=tc.materials||[];
+    if(!items.length)return null;
+    const states=items.map(item=>technologyMaterialAvailability(item,plannedQty));
+    return {shortageCount:states.filter(s=>!s.ok).length,total:items.length};
+  }
+  function technologyPlannedQtySummaryHtml(tc,plannedQty){
+    const overall=technologyOverallAvailability(tc,plannedQty);
+    if(!overall)return '';
+    if(overall.shortageCount>0)return `<div class="tech-status-pill idle tech-planned-qty-summary bad">${escapeHtml(t('techPlannedQtyShortPrefix'))} ${overall.shortageCount} ${escapeHtml(t('techPlannedQtyShortOf'))} ${overall.total}</div>`;
+    return `<div class="tech-status-pill ok tech-planned-qty-summary">${escapeHtml(t('techPlannedQtyOkPrefix'))} ${plannedQty} ${escapeHtml(t('techPlannedQtyOkSuffix'))}</div>`;
+  }
+  function technologyMaterialRowEditableHtml(tc,item,index,plannedQty){
     const m=(data.materials||[]).find(x=>String(x.id)===String(item.materialId));
     const category=item.category||m?.category||'Поролон';
     const unit=item.unit||(typeof orderUnitForMaterial==='function'?orderUnitForMaterial(m,category):'')||'';
+    const statusPill=technologyMaterialStatusPill(item,plannedQty);
     return `<div class="technology-material-row">
       <div class="field"><label>${escapeHtml(u42('category'))}</label><select class="select" onchange="updateTechMaterial('${tc.id}',${index},'category',this.value)">${(typeof ORDER_MATERIAL_CATS!=='undefined'?ORDER_MATERIAL_CATS:[]).map(cat=>`<option value="${cat}" ${cat===category?'selected':''}>${escapeHtml(categoryLabel(cat))}</option>`).join('')}</select></div>
       <div class="field"><label>${escapeHtml(u42('material'))}</label><select class="select" onchange="updateTechMaterial('${tc.id}',${index},'materialId',this.value)">${typeof materialOptions==='function'?materialOptions(category,item.materialId):''}</select></div>
@@ -291,12 +343,21 @@
       <div class="field"><label>${escapeHtml(u42('perOne'))}</label><input class="input" type="number" min="0" step="0.01" value="${Number(item.perUnitQty||0)}" onchange="updateTechMaterial('${tc.id}',${index},'perUnitQty',this.value)"></div>
       <div class="field"><label>${escapeHtml(u42('unit'))}</label><select class="select" onchange="updateTechMaterial('${tc.id}',${index},'unit',this.value)">${typeof orderUnitOptions==='function'?orderUnitOptions(category,unit):''}</select></div>
       <button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('removeMaterial'))}" onclick="removeTechMaterial('${tc.id}',${index})">×</button>
+      <div class="technology-material-status ${statusPill.tone}"><span>${escapeHtml(statusPill.label)}</span></div>
     </div>`;
   }
   function technologyMaterialsEditableHtml(tc){
     const items=tc.materials||[];
+    const plannedQty=getTechPlannedQty(tc.id);
     const buttons=`<div class="actions order-tech-actions"><button class="btn primary order-tech-cta" type="button" onclick="openTechMaterialPicker('${tc.id}')">＋ ${escapeHtml(t('addMaterialFromStock'))}</button><button class="btn order-tech-cta secondary" type="button" onclick="openTechNewMaterial('${tc.id}')">＋ ${escapeHtml(t('addNewMaterialToStock'))}</button></div>`;
-    return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('technologyMaterials'))}</h4><p>${escapeHtml(t('technologyMaterialsTemplateHint'))}</p></div>${buttons}</div><div class="technology-material-list">${items.map((item,index)=>technologyMaterialRowEditableHtml(tc,item,index)).join('')||`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('technologyMaterials'))}</b><span>${escapeHtml(t('noTechnologyMaterials'))}</span></div>`}</div></section>`;
+    return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('technologyMaterials'))}</h4><p>${escapeHtml(t('technologyMaterialsTemplateHint'))}</p></div>${buttons}</div><div class="technology-material-list">${items.map((item,index)=>technologyMaterialRowEditableHtml(tc,item,index,plannedQty)).join('')||`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('technologyMaterials'))}</b><span>${escapeHtml(t('noTechnologyMaterials'))}</span></div>`}</div></section>`;
+  }
+  function technologyPlannedQtyCardHtml(tc){
+    const plannedQty=getTechPlannedQty(tc.id);
+    return `<section class="order-tech-card tech-detail-qty-card">
+      <div class="order-tech-head"><div><h4>${escapeHtml(t('techPlannedQtyLabel'))}</h4><p>${escapeHtml(t('techPlannedQtyHint'))}</p></div>${technologyPlannedQtySummaryHtml(tc,plannedQty)}</div>
+      <div class="tech-detail-qty-row"><input class="input" type="number" min="1" step="1" id="techDetailPlannedQty" value="${plannedQty}" onchange="updateTechPlannedQty('${tc.id}',this.value)"></div>
+    </section>`;
   }
   // v7.21: деталка технологии — отдельная широкая страница внутри раздела «Технологии» (не модальное
   // окно), с явной кнопкой «Сохранить» для названия. Операции/материалы по-прежнему сохраняются
@@ -314,6 +375,7 @@
         <div class="tech-detail-name-row"><input class="input" id="techDetailName" value="${escapeHtml(tc.name||'')}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}"></div>
       </section>
       ${technologyOperationsEditableHtml(tc)}
+      ${technologyPlannedQtyCardHtml(tc)}
       ${technologyMaterialsEditableHtml(tc)}
       <div class="tech-detail-actions">
         <button class="btn primary" type="button" onclick="saveTechnologyAndReturn('${tc.id}')">${escapeHtml(u42('save'))}</button>
@@ -640,6 +702,7 @@
     updateTechnologyWorkshopFilter,updateTechnologyStatusFilter,updateTechnologySortMode,
     resetTechnologyFilters,setTechnologyViewMode,goToTechnologiesPage,
     toggleTechMenu,duplicateTechnology,filteredTechnologies,technologyStatus,
-    openTechNewMaterial,attachCreatedTechnologyMaterialToTech
+    openTechNewMaterial,attachCreatedTechnologyMaterialToTech,
+    getTechPlannedQty,updateTechPlannedQty,technologyMaterialAvailability,technologyOverallAvailability
   });
 })();
