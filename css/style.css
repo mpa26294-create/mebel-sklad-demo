@@ -3602,3 +3602,56 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 .tech-detail-name-row .input{max-width:420px}
 .tech-detail-actions{display:flex;justify-content:flex-end;gap:10px;padding:2px 2px 0}
 @media(max-width:760px){.tech-detail-actions{flex-direction:column}.tech-detail-actions .btn{width:100%}.tech-detail-name-row .input{max-width:none}}
+
+/* v7.23: редизайн списка «Технологии» — фильтры, переключатель таблица/карточки, таблица (без
+   горизонтального скролла на десктопе), пагинация, статус-пилюли, инфоблоки под таблицей. */
+#technologiesToolbar:empty{display:none}
+.tech-filters-row{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+.tech-filters-row .select{height:38px;min-width:150px;flex:1 1 160px}
+.tech-filters-row > .btn{height:38px;flex:0 0 auto}
+.tech-view-toggle{display:inline-flex;border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;margin-left:auto;flex:0 0 auto}
+.tech-view-btn{height:32px;padding:0 14px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--muted);background:transparent;border:none;cursor:pointer;transition:background .15s,color .15s}
+.tech-view-btn.active{background:var(--accent-soft);color:var(--accent-dark)}
+.tech-view-btn:hover:not(.active){background:var(--soft)}
+
+.tech-table-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.tech-table-head,.tech-table-row{display:grid;grid-template-columns:minmax(160px,1.6fr) minmax(90px,1fr) 76px 76px 96px 92px 40px;gap:12px;align-items:center;padding:12px 16px}
+.tech-table-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--line)}
+.tech-table-row{border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s;background:#fff}
+.tech-table-row:last-child{border-bottom:none}
+.tech-table-row:hover{background:var(--soft)}
+.tech-table-name{min-width:0;display:flex;flex-direction:column;gap:2px}
+.tech-table-name b{font-size:13.5px;color:var(--text);font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tech-table-sub{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tech-table-workshop{font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tech-table-count{font-size:13px;font-weight:600;color:var(--text);text-align:center}
+.tech-table-status{display:flex}
+.tech-table-updated{font-size:12px;color:var(--muted)}
+.tech-table-actions{display:flex;justify-content:flex-end}
+
+.tech-status-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.tech-status-pill.ok{background:#dcfce7;color:#166534}
+.tech-status-pill.idle{background:var(--soft);color:var(--muted)}
+
+.tech-pagination{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:14px;padding:12px 16px;background:#fff;border:1px solid var(--line);border-radius:14px;font-size:12.5px;color:var(--muted)}
+.tech-pagination-controls{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.tech-page-btn{height:32px;min-width:32px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
+.tech-page-btn:hover:not(:disabled){background:var(--soft)}
+.tech-page-btn:disabled{opacity:.4;cursor:default}
+.tech-page-btn.current{background:var(--accent);border-color:var(--accent-dark);color:#fff}
+
+.tech-info-blocks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+.tech-info-block{border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.tech-info-block b{font-size:13px;color:var(--text)}
+.tech-info-block span{font-size:12px;color:var(--muted);line-height:1.5}
+.tech-info-block.orange{background:var(--accent-soft)}
+.tech-info-block.blue{background:#eef4ff}
+.tech-info-block.green{background:#eefcf3}
+
+@media(max-width:900px){
+  .tech-table-head,.tech-table-row{grid-template-columns:minmax(0,1.6fr) 60px 60px 40px}
+  .tech-table-head>div:nth-child(2),.tech-table-row .tech-table-workshop,.tech-table-head>div:nth-child(5),.tech-table-row .tech-table-status,.tech-table-head>div:nth-child(6),.tech-table-row .tech-table-updated{display:none}
+  .tech-info-blocks{grid-template-columns:1fr}
+  .tech-view-toggle{margin-left:0}
+  .tech-filters-row .select{min-width:0;flex:1 1 130px}
+}

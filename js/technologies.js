@@ -60,40 +60,187 @@
     return true;
   }
 
-  // ---------- список / поиск ----------
+  // ---------- список / поиск / фильтры / сортировка / пагинация ----------
+  // v7.23: список «Технологии» — таблица (по умолчанию) с переключателем на карточки, фильтрами
+  // по цеху/статусу, сортировкой и пагинацией. Статус (Активна/Черновик) — производная величина
+  // (не хранится в БД): технология активна, если в ней есть и операции, и материалы.
   let technologySearchQuery='';
+  let technologyWorkshopFilter='';
+  let technologyStatusFilter='';
+  let technologySortMode='newest';
+  const TECH_PAGE_SIZE=10;
+  let technologyPage=1;
+  let technologyViewMode=(function(){try{return localStorage.getItem('molm_tech_view')==='cards'?'cards':'table'}catch(e){return 'table'}})();
   // v7.21: технология больше не открывается в узком модальном окне — как список цехов/детальный
   // экран цеха (workshopsOverviewHtml/workshopDetailHtml в orders.js), деталка технологии теперь
   // рендерится прямо на всю ширину страницы раздела «Технологии» (см. renderTechnologies()).
   let activeTechnologyId='';
-  function updateTechnologySearch(value){technologySearchQuery=String(value||'');renderTechnologies()}
+
+  function technologyStatus(tc){return (tc.steps||[]).length>0&&(tc.materials||[]).length>0?'active':'draft'}
+  function technologyStatusLabel(tc){return technologyStatus(tc)==='active'?t('techStatusActive'):t('techStatusDraft')}
+  function technologyWorkshopNames(tc){
+    const names=new Set();
+    (tc.steps||[]).forEach(s=>{const n=String(s.name||'').trim();if(n)names.add(n)});
+    (tc.materials||[]).forEach(m=>{const n=String(m.workshop||'').trim();if(n)names.add(n)});
+    return [...names];
+  }
+  function allTechnologyWorkshops(){
+    const names=new Set();
+    (data.technologies||[]).forEach(tc=>technologyWorkshopNames(tc).forEach(n=>names.add(n)));
+    return [...names].sort((a,b)=>String(workshopLabel(a)).localeCompare(String(workshopLabel(b)),'ru'));
+  }
+  function technologyMatchesWorkshop(tc,workshop){return technologyWorkshopNames(tc).includes(workshop)}
+
+  function updateTechnologySearch(value){technologySearchQuery=String(value||'');technologyPage=1;renderTechnologies()}
+  function updateTechnologyWorkshopFilter(value){technologyWorkshopFilter=String(value||'');technologyPage=1;renderTechnologies()}
+  function updateTechnologyStatusFilter(value){technologyStatusFilter=String(value||'');technologyPage=1;renderTechnologies()}
+  function updateTechnologySortMode(value){technologySortMode=String(value||'newest');technologyPage=1;renderTechnologies()}
+  function resetTechnologyFilters(){
+    technologySearchQuery='';technologyWorkshopFilter='';technologyStatusFilter='';technologySortMode='newest';technologyPage=1;
+    const searchInput=document.getElementById('technologiesSearchInput');if(searchInput)searchInput.value='';
+    renderTechnologies();
+  }
+  function setTechnologyViewMode(mode){
+    technologyViewMode=mode==='cards'?'cards':'table';
+    try{localStorage.setItem('molm_tech_view',technologyViewMode)}catch(e){}
+    renderTechnologies();
+  }
+  function goToTechnologiesPage(delta){technologyPage=Math.max(1,technologyPage+Number(delta||0));renderTechnologies()}
+
+  function sortTechnologies(list){
+    const arr=list.slice();
+    if(technologySortMode==='oldest')arr.sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+    else if(technologySortMode==='name')arr.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ru'));
+    else if(technologySortMode==='operations')arr.sort((a,b)=>(b.steps||[]).length-(a.steps||[]).length);
+    else arr.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+    return arr;
+  }
   function filteredTechnologies(){
     const q=technologySearchQuery.trim().toLowerCase();
-    const list=(data.technologies||[]).slice();
-    if(!q)return list;
-    return list.filter(tc=>[tc.name,tc.product,tc.sourceOrderNumber].some(v=>String(v||'').toLowerCase().includes(q)));
+    let list=(data.technologies||[]).slice();
+    if(q)list=list.filter(tc=>[tc.name,tc.product,tc.sourceOrderNumber].some(v=>String(v||'').toLowerCase().includes(q)));
+    if(technologyWorkshopFilter)list=list.filter(tc=>technologyMatchesWorkshop(tc,technologyWorkshopFilter));
+    if(technologyStatusFilter)list=list.filter(tc=>technologyStatus(tc)===technologyStatusFilter);
+    return sortTechnologies(list);
   }
+
   function technologyCardHtml(tc){
     const created=tc.createdAt?new Date(tc.createdAt).toLocaleDateString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB'):'';
     return `<article class="technology-card" onclick="openTechnologyDetail('${tc.id}')">
       <div class="technology-card-head"><h3>${escapeHtml(tc.name)}</h3><button class="iconbtn" type="button" aria-label="${escapeHtml(u42('delete'))}" onclick="event.stopPropagation();deleteTechnology('${tc.id}')">×</button></div>
       ${tc.product?`<div class="technology-card-sub">${escapeHtml(tc.product)}</div>`:''}
       <div class="technology-card-stats"><div><small>${escapeHtml(t('totalOperations'))}</small><b>${(tc.steps||[]).length}</b></div><div><small>${escapeHtml(t('materialsCount'))}</small><b>${(tc.materials||[]).length}</b></div></div>
-      <div class="technology-card-foot"><span>${tc.sourceOrderNumber?escapeHtml(tc.sourceOrderNumber)+' · ':''}${escapeHtml(created)}</span></div>
+      <div class="technology-card-foot"><span class="tech-status-pill ${technologyStatus(tc)==='active'?'ok':'idle'}">${escapeHtml(technologyStatusLabel(tc))}</span><span>${tc.sourceOrderNumber?escapeHtml(tc.sourceOrderNumber)+' · ':''}${escapeHtml(created)}</span></div>
     </article>`;
   }
+
+  function technologyActionMenu(id){
+    return `<div class="action-menu" id="techMenu_${id}"><button class="action-menu-btn" type="button" aria-label="${escapeHtml(u42('actions')||'Actions')}" onclick="toggleTechMenu(event,'${id}')">⋯</button><div class="action-menu-list">
+      <button type="button" onclick="closeOrderMenus();openTechnologyDetail('${id}')">${escapeHtml(t('techActionOpen'))}</button>
+      <button type="button" onclick="closeOrderMenus();openTechnologyDetail('${id}')">${escapeHtml(t('techActionEdit'))}</button>
+      <button type="button" onclick="closeOrderMenus();duplicateTechnology('${id}')">${escapeHtml(t('techActionDuplicate'))}</button>
+      <button type="button" class="danger" onclick="closeOrderMenus();deleteTechnology('${id}')">${escapeHtml(u42('delete'))}</button>
+    </div></div>`;
+  }
+  function toggleTechMenu(e,id){
+    e.stopPropagation();
+    const el=document.getElementById('techMenu_'+id),button=el?.querySelector('.action-menu-btn'),list=el?.querySelector('.action-menu-list'),was=el?.classList.contains('open');
+    closeOrderMenus();
+    if(!el||!button||!list||was)return;
+    el.classList.add('open');
+    const rect=button.getBoundingClientRect(),width=Math.max(190,list.scrollWidth||190),height=list.scrollHeight||190,gap=6,left=Math.max(8,Math.min(window.innerWidth-width-8,rect.right-width)),openUp=window.innerHeight-rect.bottom<height+gap&&rect.top>height+gap;
+    list.style.position='fixed';list.style.left=`${left}px`;list.style.right='auto';list.style.top=`${Math.max(8,openUp?rect.top-height-gap:Math.min(window.innerHeight-height-8,rect.bottom+gap))}px`;list.style.bottom='auto';list.style.zIndex='10000';
+  }
+
+  function technologyTableRowHtml(tc){
+    const updated=tc.updatedAt||tc.createdAt;
+    const updatedText=updated?new Date(updated).toLocaleDateString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB'):'—';
+    const workshops=technologyWorkshopNames(tc);
+    const workshopText=workshops.length?workshops.slice(0,2).map(w=>workshopLabel(w)).join(', ')+(workshops.length>2?` +${workshops.length-2}`:''):'—';
+    const status=technologyStatus(tc);
+    return `<div class="tech-table-row" onclick="openTechnologyDetail('${tc.id}')">
+      <div class="tech-table-name"><b>${escapeHtml(tc.name)}</b>${tc.product?`<span class="tech-table-sub">${escapeHtml(tc.product)}</span>`:''}</div>
+      <div class="tech-table-workshop">${escapeHtml(workshopText)}</div>
+      <div class="tech-table-count">${(tc.steps||[]).length}</div>
+      <div class="tech-table-count">${(tc.materials||[]).length}</div>
+      <div class="tech-table-status"><span class="tech-status-pill ${status==='active'?'ok':'idle'}">${escapeHtml(technologyStatusLabel(tc))}</span></div>
+      <div class="tech-table-updated">${escapeHtml(updatedText)}</div>
+      <div class="tech-table-actions" onclick="event.stopPropagation()">${technologyActionMenu(tc.id)}</div>
+    </div>`;
+  }
+  function technologyTableHtml(rows){
+    return `<div class="tech-table-card"><div class="tech-table-head">
+      <div>${escapeHtml(t('techTableColName'))}</div>
+      <div>${escapeHtml(t('workshopColumnHeader'))}</div>
+      <div>${escapeHtml(t('techTableColOperations'))}</div>
+      <div>${escapeHtml(t('techTableColMaterials'))}</div>
+      <div>${escapeHtml(t('techTableColStatus'))}</div>
+      <div>${escapeHtml(t('techTableColUpdated'))}</div>
+      <div></div>
+    </div>${rows.map(technologyTableRowHtml).join('')}</div>`;
+  }
+
+  function technologyFiltersRowHtml(){
+    const workshops=allTechnologyWorkshops();
+    return `<div class="toolbar tech-filters-row">
+      <select class="select" id="technologyWorkshopFilter" onchange="updateTechnologyWorkshopFilter(this.value)">
+        <option value="">${escapeHtml(t('techFilterWorkshopAll'))}</option>
+        ${workshops.map(w=>`<option value="${escapeHtml(w)}" ${w===technologyWorkshopFilter?'selected':''}>${escapeHtml(workshopLabel(w))}</option>`).join('')}
+      </select>
+      <select class="select" id="technologyStatusFilter" onchange="updateTechnologyStatusFilter(this.value)">
+        <option value="">${escapeHtml(t('techFilterStatusAll'))}</option>
+        <option value="active" ${technologyStatusFilter==='active'?'selected':''}>${escapeHtml(t('techStatusActive'))}</option>
+        <option value="draft" ${technologyStatusFilter==='draft'?'selected':''}>${escapeHtml(t('techStatusDraft'))}</option>
+      </select>
+      <select class="select" id="technologySortMode" onchange="updateTechnologySortMode(this.value)">
+        <option value="newest" ${technologySortMode==='newest'?'selected':''}>${escapeHtml(t('techSortNewest'))}</option>
+        <option value="oldest" ${technologySortMode==='oldest'?'selected':''}>${escapeHtml(t('techSortOldest'))}</option>
+        <option value="name" ${technologySortMode==='name'?'selected':''}>${escapeHtml(t('techSortNameAsc'))}</option>
+        <option value="operations" ${technologySortMode==='operations'?'selected':''}>${escapeHtml(t('techSortOperationsDesc'))}</option>
+      </select>
+      <button class="btn" type="button" onclick="resetTechnologyFilters()">${escapeHtml(t('techResetFilters'))}</button>
+      <div class="tech-view-toggle">
+        <button type="button" class="tech-view-btn ${technologyViewMode==='table'?'active':''}" onclick="setTechnologyViewMode('table')">${escapeHtml(t('techViewTable'))}</button>
+        <button type="button" class="tech-view-btn ${technologyViewMode==='cards'?'active':''}" onclick="setTechnologyViewMode('cards')">${escapeHtml(t('techViewCards'))}</button>
+      </div>
+    </div>`;
+  }
+  function technologyPaginationHtml(total,pages){
+    if(pages<=1)return '';
+    const from=(technologyPage-1)*TECH_PAGE_SIZE+1,to=Math.min(technologyPage*TECH_PAGE_SIZE,total);
+    let pageBtns='';
+    for(let p=1;p<=pages;p++)pageBtns+=`<button type="button" class="tech-page-btn ${p===technologyPage?'current':''}" onclick="goToTechnologiesPage(${p-technologyPage})" ${p===technologyPage?'disabled':''}>${p}</button>`;
+    return `<div class="tech-pagination">
+      <span>${escapeHtml(t('techPaginationShowingPrefix'))} ${from}–${to} ${escapeHtml(t('techPaginationOf'))} ${total}</span>
+      <div class="tech-pagination-controls">
+        <button type="button" class="tech-page-btn" onclick="goToTechnologiesPage(-1)" ${technologyPage<=1?'disabled':''}>‹ ${escapeHtml(t('techPaginationPrev'))}</button>
+        ${pageBtns}
+        <button type="button" class="tech-page-btn" onclick="goToTechnologiesPage(1)" ${technologyPage>=pages?'disabled':''}>${escapeHtml(t('techPaginationNext'))} ›</button>
+      </div>
+    </div>`;
+  }
+  function technologyInfoBlocksHtml(){
+    return `<div class="tech-info-blocks">
+      <div class="tech-info-block orange"><b>${escapeHtml(t('techInfoQuickStartTitle'))}</b><span>${escapeHtml(t('techInfoQuickStartText'))}</span></div>
+      <div class="tech-info-block blue"><b>${escapeHtml(t('techInfoStandardsTitle'))}</b><span>${escapeHtml(t('techInfoStandardsText'))}</span></div>
+      <div class="tech-info-block green"><b>${escapeHtml(t('techInfoRelevanceTitle'))}</b><span>${escapeHtml(t('techInfoRelevanceText'))}</span></div>
+    </div>`;
+  }
+
   function renderTechnologies(){
     const box=document.getElementById('technologiesList');if(!box)return;
     const countEl=document.getElementById('technologiesCount');if(countEl)countEl.textContent=String((data.technologies||[]).length);
     const searchWrap=document.getElementById('technologiesSearchWrap');
     const createBtn=document.getElementById('technologiesCreateBtn');
     const statsBox=document.getElementById('technologiesStats');
+    const toolbarBox=document.getElementById('technologiesToolbar');
     if(activeTechnologyId){
       const tc=(data.technologies||[]).find(x=>String(x.id)===String(activeTechnologyId));
       if(tc){
         if(searchWrap)searchWrap.style.display='none';
         if(createBtn)createBtn.style.display='none';
         if(statsBox)statsBox.style.display='none';
+        if(toolbarBox)toolbarBox.style.display='none';
         box.innerHTML=technologyDetailPageHtml(tc);
         return;
       }
@@ -102,9 +249,17 @@
     if(searchWrap)searchWrap.style.display='';
     if(createBtn)createBtn.style.display='';
     if(statsBox)statsBox.style.display='';
-    const rows=filteredTechnologies();
-    if(!rows.length){box.innerHTML=`<div class="empty"><b>${escapeHtml(t('noTechnologies'))}</b>${escapeHtml(t('noTechnologiesHint'))}</div>`;return}
-    box.innerHTML=`<div class="technology-card-grid">${rows.map(technologyCardHtml).join('')}</div>`;
+    if(toolbarBox){toolbarBox.style.display='';toolbarBox.innerHTML=technologyFiltersRowHtml()}
+    const all=filteredTechnologies();
+    if(!(data.technologies||[]).length){box.innerHTML=`<div class="empty"><b>${escapeHtml(t('noTechnologies'))}</b>${escapeHtml(t('noTechnologiesHint'))}</div>${technologyInfoBlocksHtml()}`;return}
+    if(!all.length){box.innerHTML=`<div class="empty"><b>${escapeHtml(t('techNoResults'))}</b></div>${technologyInfoBlocksHtml()}`;return}
+    const pages=Math.max(1,Math.ceil(all.length/TECH_PAGE_SIZE));
+    if(technologyPage>pages)technologyPage=pages;
+    if(technologyPage<1)technologyPage=1;
+    const start=(technologyPage-1)*TECH_PAGE_SIZE;
+    const rows=all.slice(start,start+TECH_PAGE_SIZE);
+    const listHtml=technologyViewMode==='cards'?`<div class="technology-card-grid">${rows.map(technologyCardHtml).join('')}</div>`:technologyTableHtml(rows);
+    box.innerHTML=`${listHtml}${technologyPaginationHtml(all.length,pages)}${technologyInfoBlocksHtml()}`;
   }
 
   // ---------- деталка: полное редактирование операций и материалов, как в заказе ----------
@@ -296,6 +451,26 @@
     renderTechnologies();
   }
 
+  // v7.23: «Дублировать» — копия технологии (операции+материалы) с новым именем «Название (копия)»,
+  // сразу сохранённая в Supabase как отдельная строка. Исходная технология не изменяется.
+  async function duplicateTechnology(id){
+    const src=(data.technologies||[]).find(x=>String(x.id)===String(id));if(!src)return;
+    const copy={
+      name:`${src.name} ${t('techCopySuffix')}`,
+      product:src.product||'',
+      sourceOrderNumber:src.sourceOrderNumber||'',
+      steps:(src.steps||[]).map(s=>({...s})),
+      materials:(src.materials||[]).map(m=>({...m})),
+      createdBy:(typeof profileDisplayName==='function'?profileDisplayName():'')
+    };
+    const ok=await insertTechnologyToSupabase(copy);
+    if(!ok)return;
+    copy.createdAt=new Date().toISOString();copy.updatedAt=copy.createdAt;
+    data.technologies=[copy,...(data.technologies||[])];
+    toast(t('techDuplicated'));
+    renderTechnologies();
+  }
+
   // ---------- создание технологии: всегда с нуля, заказ — только для названия/справки ----------
   // v7.20: раньше выбор заказа-источника подтягивал в новую технологию его шаги/материалы
   // (снимок). По решению пользователя технология ВСЕГДА создаётся пустой — оператор задаёт
@@ -462,6 +637,9 @@
     addTechOperation,updateTechOperation,removeTechOperation,applyTechOperationTemplate,
     openTechMaterialPicker,updateTechMaterialPickerOptions,toggleTechMaterialPickerAdd,
     addTechMaterialFromStock,updateTechMaterial,removeTechMaterial,
+    updateTechnologyWorkshopFilter,updateTechnologyStatusFilter,updateTechnologySortMode,
+    resetTechnologyFilters,setTechnologyViewMode,goToTechnologiesPage,
+    toggleTechMenu,duplicateTechnology,filteredTechnologies,technologyStatus,
     openTechNewMaterial,attachCreatedTechnologyMaterialToTech
   });
 })();
