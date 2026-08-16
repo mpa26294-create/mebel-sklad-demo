@@ -359,6 +359,22 @@
       <div class="tech-detail-qty-row"><input class="input" type="number" min="1" step="1" id="techDetailPlannedQty" value="${plannedQty}" onchange="updateTechPlannedQty('${tc.id}',this.value)"></div>
     </section>`;
   }
+  // v7.26: раньше название сохранялось только по клику «Сохранить» — если между вводом нового
+  // названия и кликом по кнопке оператор успевал изменить любое другое поле (операцию, материал,
+  // количество изделий), деталка перерисовывалась заново из tc.name, и напечатанное название
+  // молча терялось («во время редактирования технологии не меняется название»). Теперь поле
+  // «Название» сохраняется сразу по onchange (как и остальные поля на этом экране), так что к
+  // моменту любой другой правки новое название уже записано в tc.name и переживает перерисовку.
+  // Кнопка «Сохранить» оставлена как явное подтверждение — она просто повторно сохраняет то же
+  // значение и не может теперь его перезаписать чем-то устаревшим.
+  async function renameTechDetail(techId,value){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    const name=String(value||'').trim();
+    if(!name){toast(t('enterTechnologyName'));return}
+    if(name===tc.name)return;
+    tc.name=name;
+    await persistTechChange(tc);
+  }
   // v7.21: деталка технологии — отдельная широкая страница внутри раздела «Технологии» (не модальное
   // окно), с явной кнопкой «Сохранить» для названия. Операции/материалы по-прежнему сохраняются
   // мгновенно при каждом изменении поля (persistTechChange), «Сохранить» дополнительно фиксирует
@@ -372,7 +388,7 @@
     <div class="tech-detail-page">
       <section class="order-tech-card tech-detail-name-card">
         <div class="order-tech-head"><div><h4>${escapeHtml(t('technologyName'))}</h4></div></div>
-        <div class="tech-detail-name-row"><input class="input" id="techDetailName" value="${escapeHtml(tc.name||'')}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}"></div>
+        <div class="tech-detail-name-row"><input class="input" id="techDetailName" value="${escapeHtml(tc.name||'')}" placeholder="${escapeHtml(t('technologyNamePlaceholder'))}" onchange="renameTechDetail('${tc.id}',this.value)"></div>
       </section>
       ${technologyOperationsEditableHtml(tc)}
       ${technologyPlannedQtyCardHtml(tc)}
@@ -703,6 +719,7 @@
     resetTechnologyFilters,setTechnologyViewMode,goToTechnologiesPage,
     toggleTechMenu,duplicateTechnology,filteredTechnologies,technologyStatus,
     openTechNewMaterial,attachCreatedTechnologyMaterialToTech,
-    getTechPlannedQty,updateTechPlannedQty,technologyMaterialAvailability,technologyOverallAvailability
+    getTechPlannedQty,updateTechPlannedQty,technologyMaterialAvailability,technologyOverallAvailability,
+    renameTechDetail
   });
 })();
