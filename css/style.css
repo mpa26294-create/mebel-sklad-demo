@@ -3659,6 +3659,9 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 .tech-detail-qty-row .input{max-width:180px}
 @media(max-width:760px){.tech-detail-qty-row .input{max-width:none}}
 
+/* v7.27: кнопка «›» на строке материала технологии — открывает карточку материала (Склад). */
+.tech-material-open-btn{align-self:center}
+
 @media(max-width:900px){
   .tech-table-head,.tech-table-row{grid-template-columns:minmax(0,1.6fr) 60px 60px 40px}
   .tech-table-head>div:nth-child(2),.tech-table-row .tech-table-workshop,.tech-table-head>div:nth-child(5),.tech-table-row .tech-table-status,.tech-table-head>div:nth-child(6),.tech-table-row .tech-table-updated{display:none}

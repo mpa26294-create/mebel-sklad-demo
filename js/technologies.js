@@ -343,6 +343,7 @@
       <div class="field"><label>${escapeHtml(u42('perOne'))}</label><input class="input" type="number" min="0" step="0.01" value="${Number(item.perUnitQty||0)}" onchange="updateTechMaterial('${tc.id}',${index},'perUnitQty',this.value)"></div>
       <div class="field"><label>${escapeHtml(u42('unit'))}</label><select class="select" onchange="updateTechMaterial('${tc.id}',${index},'unit',this.value)">${typeof orderUnitOptions==='function'?orderUnitOptions(category,unit):''}</select></div>
       <button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('removeMaterial'))}" onclick="removeTechMaterial('${tc.id}',${index})">×</button>
+      ${m?`<button class="iconbtn tech-material-open-btn" type="button" aria-label="${escapeHtml(u42('open'))}" title="${escapeHtml(u42('open'))}" onclick="event.stopPropagation();openMaterialDetails('${m.id}')">›</button>`:'<span></span>'}
       <div class="technology-material-status ${statusPill.tone}"><span>${escapeHtml(statusPill.label)}</span></div>
     </div>`;
   }
