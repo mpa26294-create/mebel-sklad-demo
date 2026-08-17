@@ -625,12 +625,30 @@
     const current=o.technologyId?(data.technologies||[]).find(x=>String(x.id)===String(o.technologyId)):null;
     const options=(data.technologies||[]).map(tc=>`<option value="${tc.id}">${escapeHtml(tc.name)}${tc.product?' — '+escapeHtml(tc.product):''}</option>`).join('');
     return `<div class="tech-apply-bar">
-      ${current?`<span class="tech-apply-current">${escapeHtml(t('technologyLinked'))}: <b>${escapeHtml(current.name)}</b></span>`:'<span></span>'}
+      ${current?`<span class="tech-apply-current">${escapeHtml(t('technologyLinked'))}: <b>${escapeHtml(current.name)}</b><button class="btn small tech-clear-btn" type="button" onclick="clearOrderTechnology('${o.id}')">${escapeHtml(t('clearTechnologyBtn'))}</button></span>`:'<span></span>'}
       <div class="tech-apply-controls">
         <select class="select" id="technologyApplySelect_${o.id}"><option value="">${escapeHtml(t('chooseTechnology'))}</option>${options}</select>
         <button class="btn" type="button" onclick="applyTechnologyToOrder('${o.id}',document.getElementById('technologyApplySelect_${o.id}').value)">${escapeHtml(t('applyTechnologyBtn'))}</button>
       </div>
     </div>`;
+  }
+  // v7.32: «быстрая отчистка технологии» — по просьбе пользователя отвязывает технологию от
+  // заказа И полностью очищает уже скопированные в заказ этапы/материалы (а не только ссылку),
+  // чтобы форма вернулась в чистое состояние, как у нового заказа, готовое для новой технологии
+  // или ручного заполнения операций с нуля.
+  async function clearOrderTechnology(orderId){
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+    if(!o||!o.technologyId)return;
+    if(!confirm(t('confirmClearTechnology')))return;
+    const oldName=o.technologyName||'';
+    o.technologyId='';
+    o.technologyName='';
+    o.technologyAppliedAt=null;
+    o.steps=[];
+    o.materials=[];
+    if(typeof auditAdd==='function')auditAdd('technology_cleared','order',o.id,o.number,`${tRu('historyTechnologyCleared')}${oldName?': '+oldName:''}`);
+    if(typeof persistTechnologyOrder==='function')await persistTechnologyOrder(o);
+    toast(t('technologyCleared'));
   }
   async function applyTechnologyToOrder(orderId,techId){
     if(!techId)return;
@@ -716,7 +734,7 @@
     loadTechnologiesFromSupabase,renderTechnologies,updateTechnologySearch,
     openTechnologyDetail,closeTechnologyDetail,saveTechnologyAndReturn,deleteTechnology,
     openCreateTechnologyModal,refreshTechCreatePreview,saveNewTechnology,
-    technologyApplyBarHtml,applyTechnologyToOrder,
+    technologyApplyBarHtml,applyTechnologyToOrder,clearOrderTechnology,
     onTechSaveModeChange,openTechnologySaveDialog,confirmTechnologySave,
     addTechOperation,updateTechOperation,removeTechOperation,applyTechOperationTemplate,
     openTechMaterialPicker,updateTechMaterialPickerOptions,toggleTechMaterialPickerAdd,
