@@ -937,6 +937,15 @@ function renderFilters(){
   if(subEl) subEl.onchange=()=>{stockPage=1;renderAll()};
   const search=document.getElementById('searchInput');
   if(search) search.oninput=()=>{stockPage=1;renderAll()};
+  const sortSel=document.getElementById('stockSortSelect');
+  if(sortSel){
+    const options=[['name:1','sortByNameOpt'],['sku:1','sortBySkuOpt'],['createdAt:-1','sortNewestFirstOpt'],['createdAt:1','sortOldestFirstOpt']];
+    const wanted=sortKey+':'+sortDir;
+    const hasWanted=options.some(([v])=>v===wanted);
+    sortSel.innerHTML=options.map(([v,key])=>`<option value="${v}">${escapeHtml(t(key))}</option>`).join('');
+    sortSel.value=hasWanted?wanted:'name:1';
+    sortSel.onchange=()=>{const [k,d]=sortSel.value.split(':');sortKey=k;sortDir=Number(d);stockPage=1;renderStock()};
+  }
 }
 function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
 function filteredMaterials(){
