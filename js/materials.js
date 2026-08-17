@@ -1032,10 +1032,15 @@ function attentionMaterials(limit){
     .sort((a,b)=> (b.need>0)-(a.need>0) || b.need-a.need);
   return Number.isFinite(limit)?rows.slice(0,limit):rows;
 }
+// v7.39: у двух колонок «В наличии»/«Нужно» не было собственных классов — на мобильных их
+// пытались прятать через `.att-cell:nth-of-type(2)/(3)`, но nth-of-type считает позицию
+// среди ВСЕХ <span> одного типа, а не среди элементов с классом .att-cell (те стоят 4-м и
+// 5-м по счёту, не 2-м и 3-м) — селектор никогда не срабатывал, и на узком экране строка
+// не сжималась, а лишь обрезалась. Добавлены собственные классы для надёжного скрытия.
 function attentionRowHtml(x){
   const m=x.m;const need=x.need;const low=x.st[0]==='low'&&need<=0;
   const displayUnit=stockDisplayUnit(m);
-  return `<button class="attention-row" type="button" onclick="openMaterialDetails('${m.id}')"><span class="att-dot ${need>0?'need':''}"></span><span class="att-main"><b>${escapeHtml(materialDisplayName(m))}</b><span>${escapeHtml(categoryLabel(m.category))}</span></span><span><span class="att-badge ${low?'low':''}">${need>0?t('needToOrderShortWord'):t('runningOutWord')}</span></span><span class="att-cell"><small>${t('inStockLabel')}</small><b>${escapeHtml(qtyWithUnit(stockDisplayQty(m,m.quantity),displayUnit))}</b></span><span class="att-cell"><small>${need>0?t('needWord'):t('minStockLabel')}</small><b>${escapeHtml(qtyWithUnit(need>0?need:m.minQuantity,displayUnit))}</b></span><span class="att-go">›</span></button>`;
+  return `<button class="attention-row" type="button" onclick="openMaterialDetails('${m.id}')"><span class="att-dot ${need>0?'need':''}"></span><span class="att-main"><b>${escapeHtml(materialDisplayName(m))}</b><span>${escapeHtml(categoryLabel(m.category))}</span></span><span class="att-badge-wrap"><span class="att-badge ${low?'low':''}">${need>0?t('needToOrderShortWord'):t('runningOutWord')}</span></span><span class="att-cell att-cell-stock"><small>${t('inStockLabel')}</small><b>${escapeHtml(qtyWithUnit(stockDisplayQty(m,m.quantity),displayUnit))}</b></span><span class="att-cell att-cell-need"><small>${need>0?t('needWord'):t('minStockLabel')}</small><b>${escapeHtml(qtyWithUnit(need>0?need:m.minQuantity,displayUnit))}</b></span><span class="att-go">›</span></button>`;
 }
 function renderAttentionBlock(){
   const all=attentionMaterials();

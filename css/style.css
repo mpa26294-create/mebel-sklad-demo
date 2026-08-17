@@ -2053,7 +2053,7 @@
 .stock-ok{color:#16a34a!important;font-weight:600}
 .smart-actions{display:flex;gap:6px;justify-content:flex-end}
 .smart-actions .iconbtn{border-color:var(--line);background:#fff}
-@media(max-width:900px){.stock-workspace{padding:12px}.attention-row{grid-template-columns:12px 1fr 100px 32px}.attention-row .att-cell:nth-of-type(2),.attention-row .att-cell:nth-of-type(3){display:none}.category-filter-row{grid-template-columns:1fr}.category-tabs{flex-wrap:nowrap;overflow:auto;padding-bottom:2px}.category-tab{white-space:nowrap}}
+@media(max-width:900px){.stock-workspace{padding:12px}.attention-row{display:flex!important;flex-wrap:wrap;align-items:center;column-gap:10px;row-gap:6px}.attention-row .att-dot{flex:0 0 auto}.attention-row .att-main{flex:1 1 auto;min-width:0;order:1}.attention-row .att-go{order:2;flex:0 0 auto;margin-left:auto}.attention-row .att-badge-wrap{order:3;flex:0 0 100%;padding-left:22px}.attention-row .att-cell-stock,.attention-row .att-cell-need{display:none!important}.category-filter-row{grid-template-columns:1fr}.category-tabs{flex-wrap:nowrap;overflow:auto;padding-bottom:2px}.category-tab{white-space:nowrap}}
 
 
 /* v5.51: clean row-click table and modern material detail modal */
@@ -2204,13 +2204,18 @@
 .stock-list-card{border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 10px 28px rgba(16,24,40,.035)}
 .stock-list-top{padding:16px 16px 0}.stock-list-table{border-top:1px solid #eef0f4}
 @media(max-width:1100px){.stock-dashboard-row{grid-template-columns:1fr}.stock-chart-card{min-height:300px}}
-@media(max-width:900px){.stock-dashboard-row{gap:12px}.stock-chart{height:220px}.attention-row{grid-template-columns:12px 1fr 104px 32px!important}.attention-row .att-cell:nth-of-type(2),.attention-row .att-cell:nth-of-type(3){display:none!important}.category-filter-row{grid-template-columns:1fr!important}.stock-list-top{padding:12px 12px 0}.category-tabs{flex-wrap:nowrap;overflow:auto;padding-bottom:4px}.category-tab{white-space:nowrap}}
+@media(max-width:900px){.stock-dashboard-row{gap:12px}.stock-chart{height:220px}.attention-row{display:flex!important;flex-wrap:wrap!important;align-items:center!important;column-gap:10px!important;row-gap:6px!important}.attention-row .att-dot{flex:0 0 auto!important}.attention-row .att-main{flex:1 1 auto!important;min-width:0!important;order:1!important}.attention-row .att-go{order:2!important;flex:0 0 auto!important;margin-left:auto!important}.attention-row .att-badge-wrap{order:3!important;flex:0 0 100%!important;padding-left:22px!important}.attention-row .att-cell-stock,.attention-row .att-cell-need{display:none!important}.category-filter-row{grid-template-columns:1fr!important}.stock-list-top{padding:12px 12px 0}.category-tabs{flex-wrap:nowrap;overflow:auto;padding-bottom:4px}.category-tab{white-space:nowrap}}
 
 
 /* v5.53: attention block compact + show-all modal with swipe */
-.attention-card.compact-attention .attention-list{min-height:0!important;max-height:184px;overflow:hidden}
+/* v7.39: список был overflow:hidden — при переполнении строки просто обрезались посередине
+   (см. скриншот с мобильного — вторая позиция «Поролон» была срезана). Теперь список
+   прокручивается, а не обрезается; на мобильных строк меньше по высоте (см. flex-раскладку
+   выше), поэтому лимит высоты чуть увеличен, чтобы обычно помещалось 4 позиции без скролла. */
+.attention-card.compact-attention .attention-list{min-height:0!important;max-height:184px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .attention-card.compact-attention .attention-more{padding:10px 16px;border-top:1px solid #eef0f4;background:#fff}
 .attention-card.compact-attention.no-more .attention-more{display:none!important}
+@media(max-width:920px){.attention-card.compact-attention .attention-list{max-height:248px!important}}
 .attention-swipe-modal{width:min(920px,96vw)!important;overflow:hidden!important}
 .attention-swipe-wrap{padding:16px 18px 20px;background:#fff}
 .attention-swipe-hint{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:#6f7480;font-size:12px}

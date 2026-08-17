@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=7.08" />
+  <link rel="stylesheet" href="css/style.css?v=7.09" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -127,7 +127,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.38</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.39</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -198,7 +198,7 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.38"></script>
+<script src="js/changelog.js?v=7.39"></script>
 <script src="js/ui.js?v=6.44"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -214,11 +214,11 @@ let currentUser = null;
 let materialsSubscription = null;
 let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.38 — поиск на Складе больше не находит по внутреннему id/дате';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что требует внимания»: скролл и фикс мобильной раскладки';
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/presence.js?v=7.13"></script>
-<script src="js/materials.js?v=6.51"></script>
+<script src="js/materials.js?v=6.52"></script>
 <script src="js/orders.js?v=6.51"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
@@ -3143,7 +3143,7 @@ body:not(.auth-locked) .auth-screen{
   .stock-dashboard-row{grid-template-columns:1fr!important;gap:12px!important}.stock-chart{height:200px!important}
   .category-tabs{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding-bottom:5px!important}.category-tab{white-space:nowrap!important;flex:0 0 auto!important}
   .smart-table-wrap,.stock-table-wrap,.order-table-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;border-radius:14px!important}.smart-stock-table,.stock-table,.order-table{min-width:760px!important}
-  .attention-row{grid-template-columns:12px minmax(0,1fr) 82px 28px!important;gap:8px!important;padding:10px 12px!important}.attention-row .att-cell:nth-of-type(2),.attention-row .att-cell:nth-of-type(3){display:none!important}
+  .attention-row{display:flex!important;flex-wrap:wrap!important;align-items:center!important;column-gap:8px!important;row-gap:6px!important;padding:10px 12px!important}.attention-row .att-dot{flex:0 0 auto!important}.attention-row .att-main{flex:1 1 auto!important;min-width:0!important;order:1!important}.attention-row .att-go{order:2!important;flex:0 0 auto!important;margin-left:auto!important}.attention-row .att-badge-wrap{order:3!important;flex:0 0 100%!important;padding-left:20px!important}.attention-row .att-cell-stock,.attention-row .att-cell-need{display:none!important}
   .order-row-action-buttons{justify-content:flex-start!important;gap:6px!important}.order-row-action-buttons .btn{padding:0 9px!important}
   .modal-backdrop.show{padding:10px!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
   #modalBackdrop .modal,.modal{width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;max-height:92dvh!important;border-radius:20px!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
