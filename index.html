@@ -127,7 +127,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.37</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.38</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -198,7 +198,7 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.37"></script>
+<script src="js/changelog.js?v=7.38"></script>
 <script src="js/ui.js?v=6.44"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -214,11 +214,11 @@ let currentUser = null;
 let materialsSubscription = null;
 let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.37 — сортировка на Складе больше не выглядит как второе поле поиска';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.38 — поиск на Складе больше не находит по внутреннему id/дате';
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/presence.js?v=7.13"></script>
-<script src="js/materials.js?v=6.50"></script>
+<script src="js/materials.js?v=6.51"></script>
 <script src="js/orders.js?v=6.51"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>

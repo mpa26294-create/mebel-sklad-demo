@@ -948,6 +948,27 @@ function renderFilters(){
   }
 }
 function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
+// v7.38: поиск сравнивал запрос с JSON.stringify(m) — то есть буквально со ВСЕМ объектом
+// материала, включая внутренний id (UUID из Supabase) и служебные метки времени. Оба почти
+// всегда содержат случайные цифровые подстроки, никак не связанные с видимыми пользователю
+// данными — поэтому запрос вроде «15» находил совершенно посторонние позиции, у которых просто
+// в id или дате обновления встретилась подстрока «15». Теперь ищем только по видимым полям:
+// артикул, название, категория/подкатегория, единица измерения и содержательные атрибуты
+// (цвет, производитель, коллекция, марка, тип, размеры и т.п.) — без id, дат и служебных
+// полей закупки (цена, статус, зарезервировано/заказано, даты поступления).
+function materialSearchHaystack(m){
+  const a=m.attributes||{};
+  const parts=[
+    m.sku,m.name,m.category,m.subcategory,m.unit,
+    typeof categoryLabel==='function'?categoryLabel(m.category):'',
+    a.color,a.manufacturer,a.producer,a.brand,a.supplier,
+    a.collection,a.grade,a.mark,a.materialType,a.type,
+    a.woodSpecies,a.species,a.section,a.decor,a.storageLocation,
+    a.rollWidth,a.rollWidthMm,a.thickness,a.density,a.hardness,
+    a.width,a.length,a.sheetSize,a.size
+  ];
+  return parts.filter(v=>v!==undefined&&v!==null&&v!=='').join(' ').toLowerCase();
+}
 function filteredMaterials(){
   const searchEl=document.getElementById('searchInput');
   let q=searchEl?.value?.toLowerCase()||'';
@@ -959,7 +980,7 @@ function filteredMaterials(){
   // а не намеренным запросом, и сбрасываем поле, вместо того чтобы отфильтровать весь склад.
   const acctEmail=String((typeof currentUser!=='undefined'&&currentUser?.email)||'').trim().toLowerCase();
   if(acctEmail&&q===acctEmail){q='';if(searchEl)searchEl.value='';}
-  const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
+  const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||materialSearchHaystack(m).includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤'],['ready',t('categories'),cats,t('categoriesNote'),'✓'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(woodTypeLabel(m.subcategory)):''}</span>`}
 function stockCategoryTabs(){
