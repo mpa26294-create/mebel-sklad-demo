@@ -3680,3 +3680,8 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
   .tech-view-toggle{margin-left:0}
   .tech-filters-row .select{min-width:0;flex:1 1 130px}
 }
+
+/* v7.34: кнопка «Открыть карточку склада» в быстром поступлении/списании — при точном совпадении артикула. */
+.quick-open-card-btn{height:28px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#30343b;padding:0 10px;font-size:12px;white-space:nowrap;margin-left:12px;transition:background .15s,border-color .15s,color .15s}
+.quick-open-card-btn:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dark)}
+@media(max-width:640px){.quick-info{flex-wrap:wrap;gap:8px}.quick-open-card-btn{margin-left:0}}
