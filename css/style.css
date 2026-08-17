@@ -3690,7 +3690,11 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
    и поиск/сортировка/фильтры сидят прямо над списком материалов — одна панель вместо двух. */
 .stock-category-tabs-wrap{padding:16px 16px 0;border-bottom:1px solid var(--line)}
 .stock-category-tabs-wrap:empty{display:none}
-.stock-toolbar{grid-template-columns:1.6fr .6fr auto auto!important}
-@media(max-width:1100px){.stock-toolbar{grid-template-columns:1fr 1fr!important}}
-@media(max-width:820px){.stock-toolbar{grid-template-columns:1fr!important}}
 @media(max-width:640px){.stock-category-tabs-wrap{padding:14px 14px 0}}
+
+/* v7.36: «Что требует внимания» — отдельная карточка над панелью поиска (не внутри неё),
+   поиск — отдельная строка над сортировкой/фильтрами (не одна строка с ними). */
+#stockAttentionWrap:empty{display:none}
+.stock-search-bar{padding:14px 16px;border-bottom:1px solid var(--line)}
+.stock-toolbar{grid-template-columns:220px auto auto!important;justify-content:start}
+@media(max-width:820px){.stock-toolbar{grid-template-columns:1fr!important}}

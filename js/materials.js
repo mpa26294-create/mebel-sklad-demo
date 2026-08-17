@@ -1108,6 +1108,11 @@ function renderStock(){
   // перерисовывался вместе с вкладками при каждой смене категории.
   const tabsWrap=document.getElementById('stockCategoryTabsWrap');
   if(tabsWrap) tabsWrap.innerHTML=stockCategoryTabs();
+  // v7.36: «Что требует внимания» вынесено из #stockTable в отдельную статическую карточку
+  // #stockAttentionWrap НАД панелью поиска/вкладок — по просьбе пользователя, чтобы самое
+  // важное (что нужно заказать/заканчивается) было видно сразу, не прокручивая мимо поиска.
+  const attentionWrap=document.getElementById('stockAttentionWrap');
+  if(attentionWrap) attentionWrap.innerHTML=renderAttentionBlock();
   const totalPages=Math.max(1,Math.ceil(rows.length/stockPageSize));
   stockPage=Math.min(Math.max(1,stockPage),totalPages);
   const startIndex=(stockPage-1)*stockPageSize;
@@ -1118,7 +1123,7 @@ function renderStock(){
   let last=0;
   const pageButtons=pages.map(p=>{const gap=p-last>1?`<span class="muted">…</span>`:'';last=p;return gap+`<button class="pagebtn ${p===stockPage?'active':''}" onclick="setStockPage(${p})">${p}</button>`}).join('');
   const filtersRow=stockFiltersForCategory(cat);
-  box.innerHTML=`<div class="stock-workspace">${renderAttentionBlock()}<div class="stock-list-card">${filtersRow?`<div class="stock-list-top">${filtersRow}</div>`:''}<div class="smart-table-wrap stock-list-table"><table class="smart-stock-table stock-erp-table"><thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${pageRows.length?pageRows.map(m=>smartRowByCategory(m,tableCat)).join(''):`<tr><td colspan="${cols.length}"><div class="empty"><b>${t('noMaterialsTitle')}</b>${t('addOrChangeFilters')}</div></td></tr>`}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${rows.length?startIndex+1:0}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button></div></div></div></div>`;
+  box.innerHTML=`<div class="stock-workspace"><div class="stock-list-card">${filtersRow?`<div class="stock-list-top">${filtersRow}</div>`:''}<div class="smart-table-wrap stock-list-table"><table class="smart-stock-table stock-erp-table"><thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${pageRows.length?pageRows.map(m=>smartRowByCategory(m,tableCat)).join(''):`<tr><td colspan="${cols.length}"><div class="empty"><b>${t('noMaterialsTitle')}</b>${t('addOrChangeFilters')}</div></td></tr>`}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${rows.length?startIndex+1:0}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button></div></div></div></div>`;
 }
 function setStockPage(page){stockPage=page;renderStock()}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPage=1;renderStock()}
