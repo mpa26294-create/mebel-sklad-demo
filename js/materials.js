@@ -948,6 +948,27 @@ function renderFilters(){
   }
 }
 function updateSubFilter(){const cat=document.getElementById('categoryFilter')?.value||'';const sf=document.getElementById('subcategoryFilter');if(!sf)return;const currentSub=sf.value||'';let subs=cat?(CATEGORIES[cat].subs||[]):Object.values(CATEGORIES).flatMap(x=>x.subs||[]);sf.innerHTML=`<option value="">${t('allSubcategories')}</option>`+subs.map(s=>`<option ${currentSub===s?'selected':''}>${s}</option>`).join('')}
+// v7.38: поиск сравнивал запрос с JSON.stringify(m) — то есть буквально со ВСЕМ объектом
+// материала, включая внутренний id (UUID из Supabase) и служебные метки времени. Оба почти
+// всегда содержат случайные цифровые подстроки, никак не связанные с видимыми пользователю
+// данными — поэтому запрос вроде «15» находил совершенно посторонние позиции, у которых просто
+// в id или дате обновления встретилась подстрока «15». Теперь ищем только по видимым полям:
+// артикул, название, категория/подкатегория, единица измерения и содержательные атрибуты
+// (цвет, производитель, коллекция, марка, тип, размеры и т.п.) — без id, дат и служебных
+// полей закупки (цена, статус, зарезервировано/заказано, даты поступления).
+function materialSearchHaystack(m){
+  const a=m.attributes||{};
+  const parts=[
+    m.sku,m.name,m.category,m.subcategory,m.unit,
+    typeof categoryLabel==='function'?categoryLabel(m.category):'',
+    a.color,a.manufacturer,a.producer,a.brand,a.supplier,
+    a.collection,a.grade,a.mark,a.materialType,a.type,
+    a.woodSpecies,a.species,a.section,a.decor,a.storageLocation,
+    a.rollWidth,a.rollWidthMm,a.thickness,a.density,a.hardness,
+    a.width,a.length,a.sheetSize,a.size
+  ];
+  return parts.filter(v=>v!==undefined&&v!==null&&v!=='').join(' ').toLowerCase();
+}
 function filteredMaterials(){
   const searchEl=document.getElementById('searchInput');
   let q=searchEl?.value?.toLowerCase()||'';
@@ -959,7 +980,7 @@ function filteredMaterials(){
   // а не намеренным запросом, и сбрасываем поле, вместо того чтобы отфильтровать весь склад.
   const acctEmail=String((typeof currentUser!=='undefined'&&currentUser?.email)||'').trim().toLowerCase();
   if(acctEmail&&q===acctEmail){q='';if(searchEl)searchEl.value='';}
-  const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||JSON.stringify(m).toLowerCase().includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
+  const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||materialSearchHaystack(m).includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
 function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤'],['ready',t('categories'),cats,t('categoriesNote'),'✓'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(woodTypeLabel(m.subcategory)):''}</span>`}
 function stockCategoryTabs(){
@@ -987,14 +1008,21 @@ function selectStockGroup(id){
   renderAll();
 }
 function selectStockSub(sub){activeStockSub=sub||'all';fabricStockTypeFilter=activeStockSub==='all'?'':activeStockSub;stockPage=1;renderStock()}
+// v7.35: раньше эта функция ещё раз рисовала кнопки «Фильтры»/«Сбросить» и, вне раздела
+// «Ткани», отдельный селект статуса (stockStateFilterLocal) — оба дублировали то, что уже
+// делают верхний тулбар (те же кнопки) и быстрые фильтры-чипсы (тот же набор статусов). Теперь
+// здесь остаются только действительно уникальные уточнения — коллекция/цвет для тканей;
+// для остальных групп эта строка вообще не рендерится.
+// Заодно исправлена опечатка в id группы: сравнение шло с устаревшим 'fabrics' (во
+// множественном числе), которого не существует в stockRefs().groups (там 'fabric', в
+// единственном числе, см. index.html:675 — там 'fabrics' явно вычищается как legacy id).
+// Из-за этого фильтры по коллекции/цвету тканей ни разу не активировались на вкладке «Ткань».
 function stockFiltersForCategory(cat){
-  let extra='';
-  if(activeStockGroup==='fabrics'){
-    extra=`<select class="select" id="fabricCollectionFilter" onchange="stockPage=1;renderStock()"><option value="">${t('allCollections')}</option>${[...new Set((data.materials||[]).filter(m=>m.category==='Ткань').map(m=>(m.attributes||{}).collection).filter(Boolean))].map(v=>`<option ${document.getElementById('fabricCollectionFilter')?.value===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select><input class="input" id="fabricColorFilter" placeholder="${t('allColors')}" value="${escapeHtml(document.getElementById('fabricColorFilter')?.value||'')}" oninput="stockPage=1;renderStock()">`;
-  }else{
-    extra=`<select class="select" id="stockStateFilterLocal" onchange="stockPage=1;renderStock()"><option value="">${t('allStates')}</option><option value="needorder" ${document.getElementById('stockStateFilterLocal')?.value==='needorder'?'selected':''}>${t('needToOrder')}</option><option value="low" ${document.getElementById('stockStateFilterLocal')?.value==='low'?'selected':''}>${t('lowStock')}</option><option value="ok" ${document.getElementById('stockStateFilterLocal')?.value==='ok'?'selected':''}>${t('normal')}</option></select><span></span>`;
-  }
-  return `<div class="category-filter-row">${extra}<button class="btn" onclick="toggleAdvancedFilters()">${t('filters')}</button><button class="btn" onclick="clearFilters()">${t('reset')}</button></div>`;
+  if(activeStockGroup!=='fabric') return '';
+  const collections=[...new Set((data.materials||[]).filter(m=>m.category==='Ткань').map(m=>(m.attributes||{}).collection).filter(Boolean))];
+  const collVal=document.getElementById('fabricCollectionFilter')?.value||'';
+  const colorVal=document.getElementById('fabricColorFilter')?.value||'';
+  return `<div class="category-filter-row"><select class="select" id="fabricCollectionFilter" onchange="stockPage=1;renderStock()"><option value="">${t('allCollections')}</option>${collections.map(v=>`<option ${collVal===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select><input class="input" id="fabricColorFilter" placeholder="${t('allColors')}" value="${escapeHtml(colorVal)}" oninput="stockPage=1;renderStock()"></div>`;
 }
 function setFabricStockTypeFilter(type){fabricStockTypeFilter=type;activeStockSub=type||'all';stockPage=1;renderStock()}
 function attentionMaterials(limit){
@@ -1004,10 +1032,15 @@ function attentionMaterials(limit){
     .sort((a,b)=> (b.need>0)-(a.need>0) || b.need-a.need);
   return Number.isFinite(limit)?rows.slice(0,limit):rows;
 }
+// v7.39: у двух колонок «В наличии»/«Нужно» не было собственных классов — на мобильных их
+// пытались прятать через `.att-cell:nth-of-type(2)/(3)`, но nth-of-type считает позицию
+// среди ВСЕХ <span> одного типа, а не среди элементов с классом .att-cell (те стоят 4-м и
+// 5-м по счёту, не 2-м и 3-м) — селектор никогда не срабатывал, и на узком экране строка
+// не сжималась, а лишь обрезалась. Добавлены собственные классы для надёжного скрытия.
 function attentionRowHtml(x){
   const m=x.m;const need=x.need;const low=x.st[0]==='low'&&need<=0;
   const displayUnit=stockDisplayUnit(m);
-  return `<button class="attention-row" type="button" onclick="openMaterialDetails('${m.id}')"><span class="att-dot ${need>0?'need':''}"></span><span class="att-main"><b>${escapeHtml(materialDisplayName(m))}</b><span>${escapeHtml(categoryLabel(m.category))}</span></span><span><span class="att-badge ${low?'low':''}">${need>0?t('needToOrderShortWord'):t('runningOutWord')}</span></span><span class="att-cell"><small>${t('inStockLabel')}</small><b>${escapeHtml(qtyWithUnit(stockDisplayQty(m,m.quantity),displayUnit))}</b></span><span class="att-cell"><small>${need>0?t('needWord'):t('minStockLabel')}</small><b>${escapeHtml(qtyWithUnit(need>0?need:m.minQuantity,displayUnit))}</b></span><span class="att-go">›</span></button>`;
+  return `<button class="attention-row" type="button" onclick="openMaterialDetails('${m.id}')"><span class="att-dot ${need>0?'need':''}"></span><span class="att-main"><b>${escapeHtml(materialDisplayName(m))}</b><span>${escapeHtml(categoryLabel(m.category))}</span></span><span class="att-badge-wrap"><span class="att-badge ${low?'low':''}">${need>0?t('needToOrderShortWord'):t('runningOutWord')}</span></span><span class="att-cell att-cell-stock"><small>${t('inStockLabel')}</small><b>${escapeHtml(qtyWithUnit(stockDisplayQty(m,m.quantity),displayUnit))}</b></span><span class="att-cell att-cell-need"><small>${need>0?t('needWord'):t('minStockLabel')}</small><b>${escapeHtml(qtyWithUnit(need>0?need:m.minQuantity,displayUnit))}</b></span><span class="att-go">›</span></button>`;
 }
 function renderAttentionBlock(){
   const all=attentionMaterials();
@@ -1028,7 +1061,7 @@ function filteredMaterialsForSmartTable(){
   const group=stockGroupById(activeStockGroup);
   let rows=filteredMaterials().filter(m=>activeStockGroup==='all'||(group.categories||[]).includes(m.category));
   if(activeStockSub!=='all')rows=rows.filter(m=>stockSubValue(m)===activeStockSub);
-  if(activeStockGroup==='fabrics'){
+  if(activeStockGroup==='fabric'){
     const coll=(document.getElementById('fabricCollectionFilter')?.value||'').toLowerCase();
     const color=(document.getElementById('fabricColorFilter')?.value||'').toLowerCase();
     rows=rows.filter(m=>{
@@ -1037,17 +1070,17 @@ function filteredMaterialsForSmartTable(){
       const sub=String(m.subcategory||type);
       return (!fabricStockTypeFilter||type===fabricStockTypeFilter||sub===fabricStockTypeFilter) && (!coll||String(a.collection||'').toLowerCase()===coll) && (!color||String(a.color||'').toLowerCase().includes(color));
     });
-  }else{
-    const st=document.getElementById('stockStateFilterLocal')?.value||'';
-    if(st) rows=rows.filter(m=>materialStateOf(m)[0]===st);
   }
+  // v7.35: статус (needorder/low/ok/...) больше не фильтруется здесь отдельным полем —
+  // filteredMaterials() (выше) уже применяет activeQuickFilter (быстрые фильтры-чипсы),
+  // который и был единственным реально нужным способом отфильтровать по статусу.
   return rows;
 }
 function stockTableText(key){const dict={ru:{manufacturer:'Производитель',color:'Цвет',rollWidth:'Ширина рулона',reserved:'Зарезервировано',ordered:'Заказано',actions:'Действия',grade:'Марка',density:'Плотность',hardness:'Жёсткость',thickness:'Толщина',sheetSize:'Размер листа',woodSpecies:'Порода',section:'Сечение',length:'Длина',sort:'Сорт',type:'Тип',size:'Размер',decor:'Цвет / декор'},en:{manufacturer:'Manufacturer',color:'Color',rollWidth:'Roll width',reserved:'Reserved',ordered:'Ordered',actions:'Actions',grade:'Grade',density:'Density',hardness:'Hardness',thickness:'Thickness',sheetSize:'Sheet size',woodSpecies:'Species',section:'Section',length:'Length',sort:'Grade',type:'Type',size:'Size',decor:'Color / decor'},lv:{manufacturer:'Ražotājs',color:'Krāsa',rollWidth:'Ruļļa platums',reserved:'Rezervēts',ordered:'Pasūtīts',actions:'Darbības',grade:'Marka',density:'Blīvums',hardness:'Cietība',thickness:'Biezums',sheetSize:'Loksnes izmērs',woodSpecies:'Suga',section:'Šķērsgriezums',length:'Garums',sort:'Šķira',type:'Tips',size:'Izmērs',decor:'Krāsa / dekors'}};return (dict[currentLang]||dict.ru)[key]||key}
 function stockSelectedTableCategory(rows){
   const filterCat=document.getElementById('categoryFilter')?.value||'';
   if(filterCat)return filterCat;
-  if(activeStockGroup==='fabrics')return fabricStockTypeFilter||'Ткань';
+  if(activeStockGroup==='fabric')return fabricStockTypeFilter||'Ткань';
   const cats=[...new Set((rows||[]).map(m=>m.category).filter(Boolean))];
   return cats.length===1?cats[0]:'';
 }
@@ -1095,6 +1128,17 @@ function renderStock(){
   const cat=activeStockGroup;
   const rows=filteredMaterialsForSmartTable();
   const box=document.getElementById('stockTable');
+  // v7.35: категория выбирается вкладками (stockCategoryTabs) — они теперь рендерятся в
+  // отдельный статический контейнер #stockCategoryTabsWrap НАД панелью поиска/фильтров,
+  // а не внутри #stockTable, чтобы поиск оказался ближе к самому списку материалов и не
+  // перерисовывался вместе с вкладками при каждой смене категории.
+  const tabsWrap=document.getElementById('stockCategoryTabsWrap');
+  if(tabsWrap) tabsWrap.innerHTML=stockCategoryTabs();
+  // v7.36: «Что требует внимания» вынесено из #stockTable в отдельную статическую карточку
+  // #stockAttentionWrap НАД панелью поиска/вкладок — по просьбе пользователя, чтобы самое
+  // важное (что нужно заказать/заканчивается) было видно сразу, не прокручивая мимо поиска.
+  const attentionWrap=document.getElementById('stockAttentionWrap');
+  if(attentionWrap) attentionWrap.innerHTML=renderAttentionBlock();
   const totalPages=Math.max(1,Math.ceil(rows.length/stockPageSize));
   stockPage=Math.min(Math.max(1,stockPage),totalPages);
   const startIndex=(stockPage-1)*stockPageSize;
@@ -1104,7 +1148,8 @@ function renderStock(){
   const pages=Array.from({length:totalPages},(_,i)=>i+1).filter(p=>p===1||p===totalPages||Math.abs(p-stockPage)<=1);
   let last=0;
   const pageButtons=pages.map(p=>{const gap=p-last>1?`<span class="muted">…</span>`:'';last=p;return gap+`<button class="pagebtn ${p===stockPage?'active':''}" onclick="setStockPage(${p})">${p}</button>`}).join('');
-  box.innerHTML=`<div class="stock-workspace">${renderAttentionBlock()}<div class="stock-list-card"><div class="stock-list-top">${stockFiltersForCategory(cat)}${stockCategoryTabs()}</div><div class="smart-table-wrap stock-list-table"><table class="smart-stock-table stock-erp-table"><thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${pageRows.length?pageRows.map(m=>smartRowByCategory(m,tableCat)).join(''):`<tr><td colspan="${cols.length}"><div class="empty"><b>${t('noMaterialsTitle')}</b>${t('addOrChangeFilters')}</div></td></tr>`}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${rows.length?startIndex+1:0}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button></div></div></div></div>`;
+  const filtersRow=stockFiltersForCategory(cat);
+  box.innerHTML=`<div class="stock-workspace"><div class="stock-list-card">${filtersRow?`<div class="stock-list-top">${filtersRow}</div>`:''}<div class="smart-table-wrap stock-list-table"><table class="smart-stock-table stock-erp-table"><thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${pageRows.length?pageRows.map(m=>smartRowByCategory(m,tableCat)).join(''):`<tr><td colspan="${cols.length}"><div class="empty"><b>${t('noMaterialsTitle')}</b>${t('addOrChangeFilters')}</div></td></tr>`}</tbody></table></div><div class="table-foot"><span>${t('shown')} <strong>${rows.length?startIndex+1:0}–${startIndex+pageRows.length}</strong> ${t('of')} ${rows.length} ${t('itemsWord')}</span><div class="pager"><span>${t('showBy')} 15</span><button class="pagebtn ${stockPage<=1?'disabled':''}" onclick="setStockPage(${stockPage-1})">‹</button>${pageButtons}<button class="pagebtn ${stockPage>=totalPages?'disabled':''}" onclick="setStockPage(${stockPage+1})">›</button></div></div></div></div>`;
 }
 function setStockPage(page){stockPage=page;renderStock()}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPage=1;renderStock()}
