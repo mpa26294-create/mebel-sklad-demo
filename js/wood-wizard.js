@@ -25,18 +25,40 @@
   const isSheetType=type=>SHEET_TYPES.includes(type)||type==='Другое';
   const isLumberType=type=>LUMBER_TYPES.includes(type);
   const isPartType=type=>PART_TYPES.includes(type)||type==='Другое';
-  // v7.29: у листовых материалов (Фанера/MDF/HDF/ДСП/ДВП/OSB/Другое) единица учёта раньше была
-  // жёстко зашита как «листы» (переключатель шт/м³ вообще скрывался). Теперь для них тоже есть
-  // выбор — «Шт.» (листов) или «м²» (площадь), по аналогии с шт/м³ у пиломатериалов.
-  // v7.30: раньше эта функция сама решала «листовой ли это тип» по названию типа (isSheetType) —
-  // это ломалось для «Деталей», у которых те же названия типов (Фанера и т.д.) означают материал
-  // детали, а не сам лист. Теперь единица учёта всегда определяется по woodGroup (известной группе
-  // текущей открытой формы), а не заново по названию типа.
+  // v7.31: PDF-чертёж для «Детали» — переиспользует ту же инфраструктуру, что и загрузка PDF
+  // у Поролона (PDF_BUCKET/cleanStoragePart/supabaseClient объявлены глобально в index.html).
+  async function uploadWoodPartPdfToSupabase(sku, oldAttrs={}){
+    const input=document.getElementById('woodPartPdf');
+    const file=input?.files?.[0];
+    if(!file){
+      return {pdfName:oldAttrs.pdfName||'',pdfPath:oldAttrs.pdfPath||'',pdfUrl:oldAttrs.pdfUrl||''};
+    }
+    if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){
+      toast(tt('onlyPdf','Можно загружать только PDF'));
+      return null;
+    }
+    const safeSku=cleanStoragePart(String(sku||'file'));
+    const safeName=cleanStoragePart(file.name);
+    const path=`wood-part/${safeSku}/${Date.now()}_${safeName}`;
+    const { error } = await supabaseClient.storage
+      .from(PDF_BUCKET)
+      .upload(path, file, { cacheControl:'3600', upsert:false, contentType:'application/pdf' });
+    if(error){
+      console.error(error);
+      toast(tt('pdfUploadError','Ошибка загрузки PDF'));
+      return null;
+    }
+    const { data: publicData } = supabaseClient.storage.from(PDF_BUCKET).getPublicUrl(path);
+    return { pdfName:file.name, pdfPath:path, pdfUrl:publicData?.publicUrl || '' };
+  }
+  // v7.31: единица учёта больше не выбирается пользователем — она жёстко зафиксирована по группе
+  // (по просьбе пользователя: пиломатериалы всегда в м³, листовые всегда в м², детали всегда в шт.).
+  // Переключатель Шт./м²/м³ (v7.08, v7.29) убран целиком — эта функция больше не читает
+  // #woodUnitType, а просто возвращает единицу текущей группы.
   const unitMode=()=>{
-    if(woodGroup==='part')return 'piece';
-    const raw=document.getElementById('woodUnitType')?.value||'piece';
-    if(woodGroup==='sheet')return raw==='m2'?'m2':'piece';
-    return raw==='m3'?'m3':'piece';
+    if(woodGroup==='sheet')return 'm2';
+    if(woodGroup==='lumber')return 'm3';
+    return 'piece';
   };
 
   function applyVersion(){
@@ -122,9 +144,9 @@
     const body=`<div class="wood-group-picker">
       <div class="wood-group-intro"><h4>${tt('woodPickerQuestion','Какой материал хотите добавить?')}</h4><p>${tt('woodPickerHint','Выберите один вариант. Остальные поля настроятся автоматически.')}</p></div>
       <div class="wood-group-list">
-        <button class="wood-group-card lumber" type="button" onclick="openWoodGroupForm('lumber')">${groupIcon('lumber')}<span class="wood-group-copy"><b>${tt('woodLumberGroupTitle','Пиломатериалы')}</b><span>${tt('woodLumberGroupDesc','Доска, брус, рейка, мебельный щит')}</span></span><span class="wood-group-arrow">›</span></button>
-        <button class="wood-group-card sheet" type="button" onclick="openWoodGroupForm('sheet')">${groupIcon('sheet')}<span class="wood-group-copy"><b>${tt('woodSheetGroupTitle','Листовые материалы')}</b><span>${tt('woodSheetGroupDesc','Фанера, MDF, HDF, ДСП, ДВП, OSB')}</span></span><span class="wood-group-arrow">›</span></button>
-        <button class="wood-group-card part" type="button" onclick="openWoodGroupForm('part')">${groupIcon('part')}<span class="wood-group-copy"><b>${tt('woodPartGroupTitle','Детали')}</b><span>${tt('woodPartGroupDesc','Готовые заготовки: фанера, щит, массив и т.д.')}</span></span><span class="wood-group-arrow">›</span></button>
+        <button class="wood-group-card lumber" type="button" onclick="openWoodGroupForm('lumber')">${groupIcon('lumber')}<span class="wood-group-copy"><b>${tt('woodLumberGroupTitle','Пиломатериалы')}</b><span>${tt('woodLumberGroupDesc','Доска, брус, рейка, мебельный щит — учёт в м³')}</span></span><span class="wood-group-arrow">›</span></button>
+        <button class="wood-group-card sheet" type="button" onclick="openWoodGroupForm('sheet')">${groupIcon('sheet')}<span class="wood-group-copy"><b>${tt('woodSheetGroupTitle','Листовые материалы')}</b><span>${tt('woodSheetGroupDesc','Фанера, MDF, HDF, ДСП, ДВП, OSB — учёт в м²')}</span></span><span class="wood-group-arrow">›</span></button>
+        <button class="wood-group-card part" type="button" onclick="openWoodGroupForm('part')">${groupIcon('part')}<span class="wood-group-copy"><b>${tt('woodPartGroupTitle','Детали')}</b><span>${tt('woodPartGroupDesc','Готовые заготовки: фанера, щит, массив и т.д. — учёт в шт.')}</span></span><span class="wood-group-arrow">›</span></button>
       </div>
     </div>`;
     openModal(tt('addWoodTitle','Добавить древесину'),body,'');
@@ -146,13 +168,6 @@
   }
   window.setWoodMaterialType=setWoodMaterialType;
 
-  function setUnitMode(mode){
-    const select=document.getElementById('woodUnitType');
-    if(select)select.value=(mode==='m3'||mode==='m2')?mode:'piece';
-    syncWoodTypeUi();
-  }
-  window.setWoodUnitMode=setUnitMode;
-
   function syncWoodTypeUi(){
     const type=typeOf();
     const isSheet=woodGroup==='sheet';
@@ -169,15 +184,9 @@
     const lengthLabel=document.getElementById('woodLengthLabel');
     if(widthLabel)widthLabel.textContent=isPart?tt('woodPartWidthLabel','Ширина детали, мм'):isSheet?tt('woodSheetWidthLabel','Ширина листа, мм'):tt('woodWidthLabel','Ширина, мм');
     if(lengthLabel)lengthLabel.textContent=isPart?tt('woodPartLengthLabel','Длина детали, мм'):isSheet?tt('woodSheetLengthLabel','Длина листа, мм'):tt('woodLengthLabel','Длина, мм');
-    const unitField=document.getElementById('woodUnitField');
-    // v7.29: раньше поле «Единица учёта» скрывалось для листовых материалов (учёт был жёстко
-    // «в листах»). Теперь выбор доступен и для них (шт/м²), так что поле всегда видно.
-    // v7.30: у «Деталей» выбора нет вообще — единица всегда «шт.», поле скрыто целиком (в отличие
-    // от листовых, где выбор реален).
-    if(unitField)unitField.style.display=isPart?'none':'block';
-    const select=document.getElementById('woodUnitType');
-    if(select&&!select.value)select.value='piece';
-    document.querySelectorAll('[data-wood-unit-button]').forEach(btn=>btn.classList.toggle('active',btn.dataset.woodUnitButton===unitMode()));
+    // v7.31: выбора единицы учёта больше нет вообще (ни для листовых, ни для пиломатериалов) —
+    // единица жёстко зависит от группы (woodGroup), поле #woodUnitField и переключатель Шт./м²/м³
+    // из формы убраны целиком.
     syncWoodState();
     updateWoodPreview();
   }
@@ -187,7 +196,6 @@
     const mode=unitMode();
     if(mode==='m2')return `${prefix}, м²`;
     if(mode==='m3')return `${prefix}, м³`;
-    if(woodGroup==='sheet')return `${prefix}, ${tt('sheetsUnitSuffix','листов')}`;
     return `${prefix}, ${tt('pcsUnitSuffix','шт')}`;
   }
 
@@ -205,7 +213,7 @@
     const priceLabel=document.getElementById('woodPriceLabel');
     if(priceLabel){
       const mode=unitMode();
-      priceLabel.textContent=mode==='m2'?tt('priceForM2','Цена закупки, за м²'):mode==='m3'?tt('priceForM3','Цена закупки, за м³'):woodGroup==='sheet'?tt('priceForSheet','Цена закупки, за лист'):tt('priceForPiece','Цена закупки, за штуку');
+      priceLabel.textContent=mode==='m2'?tt('priceForM2','Цена закупки, за м²'):mode==='m3'?tt('priceForM3','Цена закупки, за м³'):tt('priceForPiece','Цена закупки, за штуку');
     }
     updateWoodPreview();
   }
@@ -225,9 +233,7 @@
     const area=(width/1000)*(length/1000);
     const pieceVolume=area*(thickness/1000);
     const mode=unitMode();
-    if(mode==='piece'&&woodGroup==='sheet'){
-      box.textContent=`${tt('woodPreviewSheet','Площадь 1 листа')}: ${area.toFixed(3)} м² · ${tt('woodPreviewSheetsCount','листов')}: ${Math.trunc(qty)} · ${tt('woodPreviewTotalArea','общая площадь')}: ${(area*qty).toFixed(3)} м²`;
-    }else if(mode==='m2'){
+    if(mode==='m2'){
       const approx=area>0?Math.floor(qty/area):0;
       box.textContent=`${tt('woodPreviewSheet','Площадь 1 листа')}: ${area.toFixed(3)} м² · ${tt('woodPreviewEntered','введено')}: ${qty.toFixed(3)} м² · ${tt('woodPreviewApprox','примерно')}: ${approx} ${tt('sheetsUnitSuffix','листов')}`;
     }else if(mode==='m3'){
@@ -258,24 +264,9 @@
     if(woodGroup==='lumber'&&!isLumberType(currentType))currentType='Доска';
     woodState=a.status||(a.purchaseStatus==='ordered'?'ordered':(Number(found?.quantity||0)>0||a.storageLocation?'stock':'card'));
     if(!id&&!a.status)woodState='stock';
-    // v7.08: при редактировании существующего материала единица учёта (шт/м³) должна браться из
-    // настоящего поля material.unit (источник истины — из него же строится карточка материала),
-    // а не из закешированного attributes.unitType — оно может разойтись с unit (например, если
-    // остаток менялся не через этот визард) и тогда переключатель показывал не то, что реально сохранено.
-    // v7.29: у листовых материалов раньше единица учёта была жёстко 'sheet' (одно значение на все
-    // случаи, переключатель скрывался). Теперь считываем реальный выбор так же, как у пиломатериалов —
-    // из found.unit/attributes.unitType — но допустимые значения разные для групп: piece/m2 у листовых,
-    // piece/m3 у пиломатериалов. Значение, оставшееся от старой (некорректной) записи из другой группы
-    // (например legacy unit='м³' у Фанеры), сбрасывается на 'piece', а не переносится как есть.
-    // v7.30: у «Деталей» выбора нет вообще — всегда 'piece'.
-    let currentUnit;
-    if(woodGroup==='part'){
-      currentUnit='piece';
-    }else if(isSheetType(currentType)){
-      currentUnit=found?(found.unit==='м²'?'m2':(a.unitType==='m2'?'m2':'piece')):(a.unitType==='m2'?'m2':'piece');
-    }else{
-      currentUnit=found?(found.unit==='м³'?'m3':(a.unitType==='m3'?'m3':'piece')):(a.unitType==='m3'?'m3':'piece');
-    }
+    // v7.31: единица учёта больше не хранится/не выбирается на форме — она всегда выводится из
+    // woodGroup через unitMode() (пиломатериалы → м³, листовые → м², детали → шт.), независимо от
+    // того, что было сохранено раньше в found.unit/attributes.unitType (см. unitMode()).
     const date=a.arrivalDate||a.receiptDate||a.expectedReceiptDate||todayValue();
     const body=`<div class="wood-unified material-wizard" data-material-id="${id||''}"><section class="wizard-card"><h4>${tt('woodDataTitle','Данные древесины')}</h4><div class="fabric-form-grid">
       <div class="field"><label>${tt('name','Название')}</label><input id="woodName" class="input" value="${esc(found?.name||'')}" placeholder="${tt('woodNamePlaceholder','Например: Брус сосна 50×100×3000')}"></div>
@@ -288,9 +279,9 @@
       <div class="field"><label>${tt('thicknessMmLabel','Толщина, мм')}</label><input id="woodThickness" class="input" type="number" min="0" step="1" value="${esc(a.thickness||'')}" oninput="updateWoodPreview()"></div>
       <div class="field"><label id="woodWidthLabel">${tt('woodWidthLabel','Ширина, мм')}</label><input id="woodWidth" class="input" type="number" min="0" step="1" value="${esc(a.width||'')}" oninput="updateWoodPreview()"></div>
       <div class="field"><label id="woodLengthLabel">${tt('woodLengthLabel','Длина, мм')}</label><input id="woodLength" class="input" type="number" min="0" step="1" value="${esc(a.length_mm||a.length||'')}" oninput="updateWoodPreview()"></div>
-      <div class="field"><label>${tt('gradeOptionalLabel','Сорт, необязательно')}</label><input id="woodGrade" class="input" value="${esc(a.grade||'')}"></div>
-      <div class="field" id="woodUnitField"><label>${tt('unitOfMeasureLabel2','Единица учёта')}</label><input id="woodUnitType" type="hidden" value="${esc(currentUnit)}"><div class="wood-unit-switch"><button type="button" data-wood-unit-button="piece" onclick="setWoodUnitMode('piece')">${tt('pcsShortLabel','Шт.')}</button>${woodGroup==='sheet'?`<button type="button" data-wood-unit-button="m2" onclick="setWoodUnitMode('m2')">м²</button>`:woodGroup==='lumber'?`<button type="button" data-wood-unit-button="m3" onclick="setWoodUnitMode('m3')">м³</button>`:''}</div></div>
-      <div class="field full"><div class="wood-form-note ${woodGroup}">${woodGroup==='sheet'?tt('woodSheetNoteText','Для листовых материалов доступен учёт в штуках (листах) или квадратных метрах.'):woodGroup==='part'?tt('woodPartNoteText','Готовая деталь — количество всегда в штуках, размер и материал указываются для справки.'):tt('woodLumberNoteText','Для пиломатериалов доступен учёт в штуках или кубических метрах.')}</div></div>
+      ${woodGroup==='part'?'':`<div class="field"><label>${tt('gradeOptionalLabel','Сорт, необязательно')}</label><input id="woodGrade" class="input" value="${esc(a.grade||'')}"></div>`}
+      <div class="field full"><div class="wood-form-note ${woodGroup}">${woodGroup==='sheet'?tt('woodSheetNoteText','Листовые материалы всегда учитываются в квадратных метрах (м²).'):woodGroup==='part'?tt('woodPartNoteText','Готовая деталь — количество всегда в штуках. Материал и размер указываются для справки.'):tt('woodLumberNoteText','Пиломатериалы всегда учитываются в кубических метрах (м³).')}</div></div>
+      ${woodGroup==='part'?`<div class="field full"><label>${tt('pdfUpload','Загрузка PDF')}</label><label class="file-drop"><small id="woodPartPdfName">${esc(a.pdfName||tt('pdfNotSelected','PDF не выбран'))}</small><span class="btn small" type="button">${tt('choosePdf','Выбрать PDF')}</span><input id="woodPartPdf" type="file" accept="application/pdf" onchange="document.getElementById('woodPartPdfName').textContent=this.files[0]?.name||${JSON.stringify(tt('pdfNotSelected','PDF не выбран'))}"></label><div class="hint">${tt('pdfStorageHint','PDF загружается в Supabase Storage bucket: material-pdfs.')}</div>${a.pdfUrl?`<button class="btn small" style="margin-top:8px" type="button" onclick="openPdfUrl(${JSON.stringify(a.pdfUrl)})">${tt('currentPdf','Открыть текущий PDF')}</button>`:''}</div>`:''}
     </div><div class="wood-section"><h4>${tt('materialStateTitle2','Состояние материала')}</h4>${stateCards()}<input id="woodCreateState" type="hidden" value="${woodState}">
       <div class="fabric-form-grid" id="woodOrderedFields" style="display:none">
         <div class="field"><label id="woodOrderedLabel">${tt('woodOrderedTitle','Заказано')}</label><input id="woodOrderedCount" class="input" type="number" min="0" step="1" value="${esc(a.orderedCount??a.orderedQty??0)}" oninput="updateWoodPreview()"></div>
@@ -335,16 +326,23 @@
     const count=state==='ordered'?ordered:stock;
     // v7.29: 'm2' — количество вводится сразу как общая площадь в м² (как у 'm3' — сразу общий объём),
     // а не как число листов, поэтому площадь/объём/примерное число листов считаются иначе, чем в 'piece'.
-    const totalArea=mode==='m2'?Number(count.toFixed(6)):(woodGroup==='sheet'?Number((area*count).toFixed(6)):null);
+    // v7.31: mode теперь однозначно связан с группой (sheet→m2, lumber→m3, part→piece), так что
+    // отдельная проверка woodGroup==='sheet' здесь больше не нужна — mode==='m2' уже подразумевает её.
+    const totalArea=mode==='m2'?Number(count.toFixed(6)):null;
     const totalVolume=mode==='m3'?Number(count.toFixed(6)):(mode==='m2'?Number((count*((thickness||0)/1000)).toFixed(6)):Number((pieceVolume*count).toFixed(6)));
     const approxPieces=mode==='m3'&&pieceVolume>0?Math.floor(count/pieceVolume):(mode==='m2'&&area>0?Math.floor(count/area):null);
     const species=(document.getElementById('woodSpecies')?.value||'').trim();
     const sku=(document.getElementById('woodSku')?.value||'').trim()||nextSku('Древесина','',id||'');
     const name=(document.getElementById('woodName')?.value||'').trim()||[materialType,species,`${thickness}×${width}×${length}`].filter(Boolean).join(' ');
+    // v7.31: у «Деталей» можно приложить PDF-чертёж; загружаем его в Storage до сборки attrs, чтобы
+    // при ошибке загрузки (неверный формат/сбой сети) сохранение материала прерывалось без потери
+    // остальных введённых данных (форма остаётся открытой, toast с ошибкой уже показан внутри).
+    const pdfData=woodGroup==='part'?await uploadWoodPartPdfToSupabase(sku, old):{pdfName:old.pdfName||'',pdfPath:old.pdfPath||'',pdfUrl:old.pdfUrl||''};
+    if(!pdfData)return;
     // v7.30: materialKind фиксирует реальную группу (lumber/sheet/part), т.к. у «Деталей» название
     // типа (materialType) само по себе больше не может однозначно определить группу — см. openWoodFlow.
-    const attrs={...old,status:state,materialType,materialKind:woodGroup,customMaterialType:selectedType==='Другое'?custom:null,unitType:mode,woodSpecies:species,woodType:species,supplier:(document.getElementById('woodSupplier')?.value||'').trim(),manufacturer:(document.getElementById('woodSupplier')?.value||'').trim(),thickness,width,length,length_mm:length,grade:(document.getElementById('woodGrade')?.value||'').trim(),stockCount:state==='stock'?stock:0,minStockCount:state==='stock'?min:0,orderedCount:state==='ordered'?ordered:0,pieceVolume,totalVolume,sheetArea:woodGroup==='sheet'?area:null,totalArea,approxPieces,storageLocation:state==='stock'?(document.getElementById('woodStorageLocation')?.value||'').trim()||null:null,purchasePrice:state==='stock'?price:null,receiptDate:state==='stock'?(document.getElementById('woodReceiptDate')?.value||null):null,expectedReceiptDate:state==='ordered'?(document.getElementById('woodExpectedDate')?.value||null):null,purchaseOrderInfo:state==='ordered'?(document.getElementById('woodPurchaseNote')?.value||'').trim()||null:null,purchaseNote:state==='ordered'?(document.getElementById('woodPurchaseNote')?.value||'').trim()||null:null,purchaseStatus:state==='ordered'?'ordered':(state==='stock'?'instock':'noorder'),orderedQty:state==='ordered'?ordered:0,reservedQty:Number(old.reservedQty||0)};
-    const unit=mode==='m2'?'м²':mode==='m3'?'м³':(woodGroup==='sheet'?'лист':'шт');
+    const attrs={...old,status:state,materialType,materialKind:woodGroup,customMaterialType:selectedType==='Другое'?custom:null,unitType:mode,woodSpecies:species,woodType:species,supplier:(document.getElementById('woodSupplier')?.value||'').trim(),manufacturer:(document.getElementById('woodSupplier')?.value||'').trim(),thickness,width,length,length_mm:length,grade:(document.getElementById('woodGrade')?.value||'').trim(),stockCount:state==='stock'?stock:0,minStockCount:state==='stock'?min:0,orderedCount:state==='ordered'?ordered:0,pieceVolume,totalVolume,sheetArea:woodGroup==='sheet'?area:null,totalArea,approxPieces,pdfName:pdfData.pdfName,pdfPath:pdfData.pdfPath,pdfUrl:pdfData.pdfUrl,storageLocation:state==='stock'?(document.getElementById('woodStorageLocation')?.value||'').trim()||null:null,purchasePrice:state==='stock'?price:null,receiptDate:state==='stock'?(document.getElementById('woodReceiptDate')?.value||null):null,expectedReceiptDate:state==='ordered'?(document.getElementById('woodExpectedDate')?.value||null):null,purchaseOrderInfo:state==='ordered'?(document.getElementById('woodPurchaseNote')?.value||'').trim()||null:null,purchaseNote:state==='ordered'?(document.getElementById('woodPurchaseNote')?.value||'').trim()||null:null,purchaseStatus:state==='ordered'?'ordered':(state==='stock'?'instock':'noorder'),orderedQty:state==='ordered'?ordered:0,reservedQty:Number(old.reservedQty||0)};
+    const unit=mode==='m2'?'м²':mode==='m3'?'м³':'шт';
     const obj={id:id||null,sku,name,category:'Древесина',subcategory:materialType,attributes:attrs,unit,quantity:state==='stock'?stock:0,minQuantity:state==='stock'?min:0,lastUpdated:todayValue()};
     const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);if(!ok)return;
     if(id){closeModal();await loadMaterialsFromSupabase();renderAll();toast(t('savedMaterial'));return;}
