@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=7.05" />
+  <link rel="stylesheet" href="css/style.css?v=7.06" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -62,7 +62,9 @@
         <div class="field full"><label>Найденный материал</label><div class="quick-info" id="quickInfo">Введите артикул — единица измерения определится автоматически</div></div>
       </div>
       <div class="panel">
-        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="searchInput" name="furnicore_material_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><select class="select" id="stockSortSelect"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
+        <div class="stock-category-tabs-wrap" id="stockCategoryTabsWrap"></div>
+        <div class="toolbar stock-toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="searchInput" name="furnicore_material_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="stockSortSelect"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
+        <select class="select" id="categoryFilter" style="display:none" aria-hidden="true" tabindex="-1"></select>
         <div class="pro-filter-panel" id="proFilterPanel">
           <div class="quick-filter-row" id="quickFilterRow">
             <button class="filter-chip active" type="button" data-filter="all" onclick="setQuickFilter('all')">Все</button>
@@ -74,12 +76,11 @@
             <button class="filter-chip" type="button" data-filter="reserved" onclick="setQuickFilter('reserved')">С резервом</button>
           </div>
           <div class="filter-grid">
-            <div class="field"><label>Статус</label><select class="select" id="stockStateFilter" onchange="stockPage=1;renderAll()"><option value="">Любой</option><option value="ok">В наличии</option><option value="low">Заканчивается</option><option value="out">Нет в наличии</option><option value="needorder">Нужно заказать</option><option value="ordered">Заказано</option></select></div>
             <div class="field"><label>Ед. изм.</label><select class="select" id="unitFilter" onchange="stockPage=1;renderAll()"><option value="">Любая</option><option value="шт">шт</option><option value="м²">м²</option><option value="м³">м³</option></select></div>
             <div class="field"><label>Поставщик</label><input class="input no-autofill" id="supplierFilter" name="furnicore_supplier_filter" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Название" oninput="stockPage=1;renderAll()"></div>
             <div class="field"><label>Заказ / закупка</label><input class="input no-autofill" id="orderFilter" name="furnicore_purchase_filter" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Номер" oninput="stockPage=1;renderAll()"></div>
           </div>
-          <div class="filter-note">Быстрые фильтры сверху работают как готовые профили. Поля ниже нужны только для точного поиска по статусу, единице, поставщику или номеру закупки.</div>
+          <div class="filter-note">Быстрые фильтры сверху работают как готовые профили. Поля ниже нужны только для точного поиска по единице, поставщику или номеру закупки.</div>
         </div>
         <div id="stockTable"></div>
       </div>
@@ -124,7 +125,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.34</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.35</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -195,13 +196,13 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.34"></script>
+<script src="js/changelog.js?v=7.35"></script>
 <script src="js/ui.js?v=6.44"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=6.28"></script>
+<script src="js/translations.js?v=6.29"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -211,11 +212,11 @@ let currentUser = null;
 let materialsSubscription = null;
 let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.34 — Открыть карточку материала из быстрого поступления/списания';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.35 — Поиск склада перенесён над списком, убраны дублирующиеся фильтры';
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/presence.js?v=7.13"></script>
-<script src="js/materials.js?v=6.48"></script>
+<script src="js/materials.js?v=6.49"></script>
 <script src="js/orders.js?v=6.51"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
