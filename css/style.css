@@ -3698,3 +3698,10 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 .stock-search-bar{padding:14px 16px;border-bottom:1px solid var(--line)}
 .stock-toolbar{grid-template-columns:220px auto auto!important;justify-content:start}
 @media(max-width:820px){.stock-toolbar{grid-template-columns:1fr!important}}
+
+/* v7.37: сортировка на Складе наследовала width:100% от базового .select и растягивалась
+   на всю строку — выглядела как второе поле поиска и «съезжала» на отдельную строку от
+   кнопок Фильтры/Сбросить. Фиксируем ширину, чтобы вся строка сортировка+фильтры была
+   одной компактной строкой, явно отличной от широкого поля поиска над ней. */
+#stockSortSelect{width:200px;flex:0 0 auto}
+@media(max-width:820px){#stockSortSelect{width:100%}}
