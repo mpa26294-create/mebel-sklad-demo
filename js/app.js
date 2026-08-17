@@ -30,7 +30,7 @@ function loadMaterialUxImmediately() {
   }
   if (!document.querySelector('script[data-module="wood-flow-v639"]')) {
     const script = document.createElement('script');
-    script.src = 'js/wood-wizard.js?v=6.44';
+    script.src = 'js/wood-wizard.js?v=6.45';
     script.dataset.module = 'wood-flow-v639';
     script.async = false;
     document.head.appendChild(script);
