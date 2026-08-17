@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=6.98" />
+  <link rel="stylesheet" href="css/style.css?v=7.05" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -62,7 +62,7 @@
         <div class="field full"><label>Найденный материал</label><div class="quick-info" id="quickInfo">Введите артикул — единица измерения определится автоматически</div></div>
       </div>
       <div class="panel">
-        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="searchInput" name="furnicore_material_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
+        <div class="toolbar"><div class="searchbox"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input no-autofill" id="searchInput" name="furnicore_material_search" type="search" autocomplete="new-password" aria-autocomplete="none" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Поиск по названию, артикулу, цвету, атрибутам..."/></div><select class="select" id="categoryFilter"></select><select class="select" id="stockSortSelect"></select><button class="btn" type="button" id="advancedFiltersBtn" onclick="toggleAdvancedFilters()">Фильтры</button><button class="btn" onclick="clearFilters()">Сбросить</button></div>
         <div class="pro-filter-panel" id="proFilterPanel">
           <div class="quick-filter-row" id="quickFilterRow">
             <button class="filter-chip active" type="button" data-filter="all" onclick="setQuickFilter('all')">Все</button>
@@ -102,8 +102,9 @@
     </section>
 
     <section id="technologies" class="section">
-      <div class="topbar"><div class="title"><h2>Технологии</h2><p>Готовые шаблоны операций и материалов — из заказа в заказ</p></div><div class="actions"><div class="search-top"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="technologiesSearchInput" placeholder="Поиск по названию, изделию..." oninput="updateTechnologySearch(this.value)"/></div><button class="btn primary" type="button" onclick="openCreateTechnologyModal()">＋ Создать технологию</button></div></div>
+      <div class="topbar"><div class="title"><h2>Технологии</h2><p>Готовые шаблоны операций и материалов — из заказа в заказ</p></div><div class="actions"><div class="search-top" id="technologiesSearchWrap"><svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg><input class="input" id="technologiesSearchInput" placeholder="Поиск по названию, изделию..." oninput="updateTechnologySearch(this.value)"/></div></div></div>
       <div class="stats" id="technologiesStats"><div class="stat"><span>Всего технологий</span><b id="technologiesCount">0</b></div></div>
+      <div id="technologiesToolbar"></div>
       <div id="technologiesList"></div>
     </section>
 
@@ -123,7 +124,7 @@
     </section>
 
     <section id="changelog" class="section">
-      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.17</span></div></div>
+      <div class="topbar"><div class="title"><h2>Релизы</h2><p>Changelog и Release Notes MOLM</p></div><div class="actions"><span class="version-chip" id="changelogCurrentVersion">MOLM v7.34</span></div></div>
       <div class="changelog-summary" id="changelogSummary"></div>
       <div class="changelog-list" id="changelogList"></div>
     </section>
@@ -194,13 +195,13 @@
 <div class="toast" id="toast"></div>
 
 
-<script src="js/changelog.js?v=7.17"></script>
+<script src="js/changelog.js?v=7.34"></script>
 <script src="js/ui.js?v=6.44"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=6.18"></script>
+<script src="js/translations.js?v=6.28"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -210,13 +211,13 @@ let currentUser = null;
 let materialsSubscription = null;
 let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response overwriting a fresher one (see loadMaterialsFromSupabase)
 
-const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.17 — Листовые материалы: единица учёта шт/м²';
+const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.34 — Открыть карточку материала из быстрого поступления/списания';
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/presence.js?v=7.13"></script>
-<script src="js/materials.js?v=6.47"></script>
-<script src="js/orders.js?v=6.47"></script>
-<script src="js/technologies.js?v=1.00"></script>
+<script src="js/materials.js?v=6.48"></script>
+<script src="js/orders.js?v=6.51"></script>
+<script src="js/technologies.js?v=1.12"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -1099,6 +1100,28 @@ function syncQuickOperationUI(){
 }
 function setQuickOperationMode(mode){quickOperationMode=mode==='writeOff'?'writeOff':'add';syncQuickOperationUI();}
 function quickRunOperation(mode){setQuickOperationMode(mode);return quickSubmitStock();}
+// v7.32: раньше, если введённый текст не совпадал с артикулом ТОЧНО и целиком, поле сразу
+// показывало «не найден» — даже когда часть однозначно совпадала с одним или несколькими
+// реальными артикулами (например «K-» или просто «15» для K-NR.15). Теперь при отсутствии
+// точного совпадения ищем частичные (по подстроке в артикуле и в названии) и показываем их
+// кликабельным списком — выбор подсказки подставляет точный артикул и работает как раньше.
+function findMaterialsBySkuPartial(query,limit=8){
+  const q=normalizeSku(query);
+  const nameQ=String(query||'').trim().toLowerCase();
+  if(!q&&!nameQ)return [];
+  return (data.materials||[]).filter(m=>{
+    const sku=normalizeSku(m.sku||'');
+    const name=String(m.name||'').toLowerCase();
+    return (q&&sku.includes(q))||(nameQ&&name.includes(nameQ));
+  }).slice(0,limit);
+}
+function selectQuickSuggestion(sku){
+  const el=document.getElementById('quickSku');
+  if(!el)return;
+  el.value=sku;
+  updateQuickAddInfo();
+  document.getElementById('quickQty')?.focus();
+}
 function updateQuickAddInfo(){
   const box=document.getElementById('quickAddBox');
   const info=document.getElementById('quickInfo');
@@ -1115,7 +1138,13 @@ function updateQuickAddInfo(){
     box.classList.add('found');
     if(unitBox)unitBox.textContent=unitLabel(unit);
     if(qty)qty.step=stockStep(unit);
-    info.innerHTML=`<span><b>${mat.name}</b><br><span class="muted">${t('quantity')}: ${mat.quantity} ${unitLabel(unit)}</span></span><span class="unit-pill">${unitLabel(unit)}</span>`;
+    info.innerHTML=`<span><b>${escapeHtml(mat.name)}</b><br><span class="muted">${t('quantity')}: ${mat.quantity} ${unitLabel(unit)}</span></span><button type="button" class="quick-open-card-btn" onclick="openMaterialDetails('${String(mat.id).replace(/'/g,"\\'")}')">${escapeHtml(t('openWarehouseCard'))}</button><span class="unit-pill">${unitLabel(unit)}</span>`;
+    return;
+  }
+  const candidates=findMaterialsBySkuPartial(sku,8);
+  if(candidates.length){
+    box.classList.add('found');
+    info.innerHTML=`<div class="quick-suggest-wrap"><small class="quick-suggest-hint">${t('quickSuggestHint')}</small><div class="quick-suggest-list">${candidates.map(m=>`<button type="button" class="quick-suggest-item" onclick="selectQuickSuggestion('${String(m.sku||'').replace(/'/g,"\\'")}')"><b>${escapeHtml(m.sku||'')}</b><span>${escapeHtml(materialTitle(m))}</span><em>${escapeHtml(String(m.quantity))} ${escapeHtml(unitLabel(m.unit))}</em></button>`).join('')}</div></div>`;
     return;
   }
   const unit=quickUnitBySku(sku);
@@ -2489,6 +2518,14 @@ async function finishMaterialSaveAndReturn(newSku='', category=''){
     window.pendingTechnologyMaterialOrderId='';
     if(created&&typeof attachCreatedTechnologyMaterial==='function')await attachCreatedTechnologyMaterial(orderId,created);
     else{if(typeof orderWorkflowSelection!=='undefined')orderWorkflowSelection.set(String(orderId),1);if(typeof modalStack!=='undefined')modalStack=[];openOrderProduction(orderId);}
+    toast(t('savedMaterial'));
+    return;
+  }
+  if(window.pendingTechnologyMaterialTechId){
+    const techId=window.pendingTechnologyMaterialTechId;
+    window.pendingTechnologyMaterialTechId='';
+    if(created&&typeof attachCreatedTechnologyMaterialToTech==='function')await attachCreatedTechnologyMaterialToTech(techId,created);
+    else{if(typeof modalStack!=='undefined')modalStack=[];closeModal();if(typeof openTechnologyDetail==='function')openTechnologyDetail(techId);}
     toast(t('savedMaterial'));
     return;
   }
