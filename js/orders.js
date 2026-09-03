@@ -697,7 +697,7 @@ function toggleWorkshopQueueItem(orderId,stepIndex){
 function workshopQueueItemHtml(row,etaMap){
   const o=row.order,op=productionOp(o,row.index);
   if(!op)return '';
-  const key=`${o.id}_${op.stepIndex}`,expanded=expandedWorkshopOps.has(key)||document.body.classList.contains('worker-mode');
+  const key=`${o.id}_${op.stepIndex}`,expanded=expandedWorkshopOps.has(key);
   const pct=productionOpPercent(o,op),status=productionStatusClass(op.status);
   const coverage=productionMaterialCoverage(o,operationMaterials(o,op),productionCompletedQty(o,op));
   const dClass=orderDeadlineClass(o);
@@ -735,11 +735,60 @@ function workshopDetailHtml(name){
     ${stat.warnings.length?`<div class="production-warnings">${stat.warnings.map(w=>`<span>⚠ ${escapeHtml(w)}</span>`).join('')}</div>`:''}
     <div class="workshop-queue-list">${cards||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`}</div>`;
 }
+// v7.43: рабочий режим — вместо обзора цехов/детального экрана (плановые часы, KPI, комментарии,
+// timeline — всё это для мастера/технолога) сотрудник из списка «Упрощённый доступ» видит один
+// плоский список СВОИХ задач сразу при входе в «Цеха», без выбора цеха. Задача — это одна строка
+// очереди (та же, что и в workshopQueueItemHtml), но карточка урезана до необходимого минимума:
+// номер заказа, статус, прогресс и одна главная кнопка. Отметить работу — 2-3 нажатия: «Начать» →
+// (позже) «Готово» → «Подтвердить» в уже существующем модальном окне (шаг с количеством
+// предзаполнен остатком, обычно достаточно просто подтвердить).
+function workerTaskCardHtml(row){
+  const o=row.order,op=productionOp(o,row.index);
+  if(!op)return '';
+  const status=productionStatusClass(op.status),completed=productionCompletedQty(o,op),total=orderProductQty(o),pct=productionOpPercent(o,op);
+  const dClass=orderDeadlineClass(o);
+  const dueNote=dClass==='overdue'?`<span class="worker-task-danger">· ${escapeHtml(t('overdue')).toLowerCase()}</span>`:dClass==='today'?`<span class="worker-task-today">· ${escapeHtml(t('dueTodayNote'))}</span>`:'';
+  const coverage=productionMaterialCoverage(o,operationMaterials(o,op),completed);
+  const matNote=!coverage.ok?`<span class="worker-task-danger">· ⚠ ${escapeHtml(t('missingMaterialsCount')).toLowerCase()}</span>`:'';
+  const showShop=(window.WORKER_WORKSHOPS||[]).length>1;
+  const toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart');
+  const showComplete=op.status==='running'||op.status==='paused';
+  return `<div class="worker-task-card ${status}">
+    <div class="worker-task-top">
+      <div class="worker-task-info"><b>${escapeHtml(o.number||'—')}</b>${o.client?`<span> · ${escapeHtml(o.client)}</span>`:''}
+        <small>${escapeHtml(formatDeadline(o))} ${dueNote} ${matNote}${showShop?` · ${escapeHtml(workshopIcon(row.workshopName))} ${escapeHtml(workshopLabel(row.workshopName))}`:''}</small></div>
+      <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
+    </div>
+    <div class="worker-task-progress"><i><b style="width:${pct}%"></b></i><span>${completed} / ${total}</span></div>
+    <div class="worker-task-actions">
+      <button class="btn worker-task-btn ${showComplete?'ghost':'primary'}" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>${op.status==='running'?'⏸':'▶'} ${escapeHtml(toggleLabel)}</button>
+      ${showComplete?`<button class="btn worker-task-btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">✔ ${escapeHtml(t('prodComplete'))}</button>`:''}
+    </div>
+  </div>`;
+}
+function workerAssignedTaskRows(){
+  const names=window.WORKER_WORKSHOPS||[],rows=[];
+  names.forEach(name=>workshopAnalytics(name).queue.forEach(row=>rows.push({...row,workshopName:name})));
+  rows.sort((a,b)=>String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||'')));
+  return rows;
+}
+function workerWorkshopTasksHtml(){
+  const names=window.WORKER_WORKSHOPS||[];
+  if(!names.length)return `<div class="workshop-empty">Вам пока не назначен цех — обратитесь к администратору.</div>`;
+  const rows=workerAssignedTaskRows();
+  if(!rows.length)return `<div class="workshop-empty">Задач нет — очередь пуста.</div>`;
+  return `<div class="worker-task-list">${rows.map(workerTaskCardHtml).join('')}</div>`;
+}
 function renderWorkshops(){
   const el=document.getElementById('workshopsContent');
   if(!el)return;
-  el.innerHTML=selectedWorkshopName?workshopDetailHtml(selectedWorkshopName):workshopsOverviewHtml();
   const desc=document.getElementById('workshopsTopbarDesc');
+  if(document.body.classList.contains('worker-mode')){
+    el.innerHTML=workerWorkshopTasksHtml();
+    if(desc)desc.textContent='Ваши задачи по цеху';
+    return;
+  }
+  el.innerHTML=selectedWorkshopName?workshopDetailHtml(selectedWorkshopName):workshopsOverviewHtml();
   if(desc)desc.textContent=selectedWorkshopName?`${t('workshopQueueForNamePrefix')} «${selectedWorkshopName}»`:t('workshopQueueAllDesc');
 }
 function productionWarnings(o){

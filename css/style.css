@@ -887,15 +887,26 @@ body.worker-mode #quickAddBox .field label{font-size:14px}
 body.worker-mode #quickAddBox .input{height:56px;font-size:17px}
 body.worker-mode .quick-stock-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weight:600;border-radius:12px}
-body.worker-mode .workshop-queue-row{min-height:64px}
-body.worker-mode .production-status-pill{font-size:13px;padding:6px 12px}
-body.worker-mode .production-op-actions{gap:8px}
-body.worker-mode .production-op-actions .btn{height:48px;font-size:14px;font-weight:600}
-/* v7.42: «Назад ко всем цехам» имеет смысл прятать только когда у рабочего ровно один цех —
-   тогда идти больше некуда. Если цехов несколько, это единственный способ переключиться между
-   ними, поэтому ссылку оставляем (см. .worker-single-workshop в index.html applyWorkerModeForCurrentUser()). */
-body.worker-single-workshop .workshop-back-link,body.worker-single-workshop .workshop-detail-sep{display:none}
-body.worker-single-workshop .production-op-actions button:first-child{display:none}
+
+/* v7.43: «Цеха» у рабочего — не обзор/детальный экран цеха (это для мастера/технолога — плановые
+   часы, KPI, timeline), а плоский список ЕГО задач с одной главной кнопкой на карточку. Отметить
+   работу — 2-3 нажатия: Начать → (позже) Готово → Подтвердить в уже существующем модальном окне
+   (количество там предзаполнено остатком). См. workerWorkshopTasksHtml() в js/orders.js. */
+.worker-task-list{display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
+.worker-task-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
+.worker-task-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.worker-task-info b{font-size:15px}
+.worker-task-info span{color:var(--muted);font-size:13px}
+.worker-task-info small{display:block;margin-top:3px;color:var(--muted);font-size:12px}
+.worker-task-danger{color:var(--redText);font-weight:500}
+.worker-task-today{color:var(--yellowText);font-weight:500}
+.worker-task-progress{display:flex;align-items:center;gap:10px;margin:12px 0}
+.worker-task-progress i{flex:1;height:8px;border-radius:99px;background:#eef0f3;overflow:hidden;display:block}
+.worker-task-progress i b{display:block;height:100%;background:var(--accent);border-radius:99px}
+.worker-task-progress span{font-size:12px;color:var(--muted);white-space:nowrap;font-weight:500}
+.worker-task-actions{display:flex;gap:10px}
+.worker-task-btn{flex:1;height:52px;font-size:15px;font-weight:600;border-radius:12px}
+.worker-task-btn.ghost{background:#fff;border:1.5px solid var(--line);color:#4a515c}
 
 /* v6.42: clean stock section redesign */
 #stock .panel{

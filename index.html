@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=7.42" />
+  <link rel="stylesheet" href="css/style.css?v=7.43" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -201,7 +201,7 @@
 
 
 <script src="js/changelog.js?v=7.39"></script>
-<script src="js/ui.js?v=7.42"></script>
+<script src="js/ui.js?v=7.43"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -221,7 +221,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.52"></script>
-<script src="js/orders.js?v=7.42"></script>
+<script src="js/orders.js?v=7.43"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
@@ -465,16 +465,12 @@ function applyWorkerModeForCurrentUser(){
   document.body.classList.toggle('worker-mode',worker);
   const list=worker?(currentWorkerAssignment().workshops||[]):[];
   window.WORKER_WORKSHOPS=list;
-  window.WORKER_WORKSHOP=list[0]||''; // старое имя переменной — на него ещё ссылаются некоторые места
-  // одному цеху рабочего можно сразу открыть детальный экран и убрать «Назад ко всем цехам» —
-  // при нескольких цехах ему нужен список для выбора, поэтому такая блокировка не подходит.
-  document.body.classList.toggle('worker-single-workshop',worker&&list.length===1);
+  // v7.43: «Цеха» у рабочего — всегда один плоский список его задач (см. workerWorkshopTasksHtml
+  // в js/orders.js), не экран выбора цеха, поэтому selectedWorkshopName и single-vs-multi
+  // блокировка здесь больше не нужны — не важно, назначен ему один цех или несколько.
   const brandP=document.querySelector('.brand p');
   if(brandP)brandP.textContent=worker?(list.length===1?`Цех: ${list[0]}`:list.length?`Цеха: ${list.join(', ')}`:'цех не назначен'):'учёт материалов';
-  if(worker){
-    if(typeof selectedWorkshopName!=='undefined')selectedWorkshopName=list.length===1?list[0]:'';
-    if(typeof switchSection==='function')switchSection('stock');
-  }
+  if(worker&&typeof switchSection==='function')switchSection('stock');
 }
 function applyAccessSyncRow(row){
   workerAccessList=(Array.isArray(row?.attributes?.workers)?row.attributes.workers:[]).map(normalizeWorkerAccessRow);
