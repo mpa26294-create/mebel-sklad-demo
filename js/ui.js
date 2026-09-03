@@ -33,6 +33,11 @@ function placeChangelogNavLast(){
 
 function switchSection(sectionId){
   if(!sectionId)return false;
+  // v7.41: рабочий режим — сотруднику из списка «Упрощённый доступ» (Настройки) доступны только
+  // Склад и Цеха; переход в любой другой раздел (в т.ч. по прямой ссылке или через меню профиля)
+  // молча возвращает на Склад. Это ограничение только в интерфейсе — не замена прав доступа в
+  // самой базе (Supabase RLS), но убирает лишние разделы, которые сотруднику не нужны.
+  if(document.body.classList.contains('worker-mode')&&sectionId!=='stock'&&sectionId!=='workshops')sectionId='stock';
   const section=document.getElementById(sectionId);
   if(!section)return false;
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));
@@ -40,7 +45,10 @@ function switchSection(sectionId){
   if(sectionId==='settings'&&typeof lockTelegramSettings==='function')lockTelegramSettings();
   if(sectionId==='settings'&&typeof loadProfileSettingsForm==='function')loadProfileSettingsForm();
   if(sectionId==='orders'&&typeof renderOrders==='function')renderOrders();
-  if(sectionId==='workshops'&&typeof renderWorkshops==='function')renderWorkshops();
+  if(sectionId==='workshops'&&typeof renderWorkshops==='function'){
+    if(document.body.classList.contains('worker-mode')&&window.WORKER_WORKSHOP&&typeof selectedWorkshopName!=='undefined')selectedWorkshopName=window.WORKER_WORKSHOP;
+    renderWorkshops();
+  }
   if(sectionId==='history'&&typeof renderSiteHistory==='function')renderSiteHistory();
   if(sectionId==='changelog'&&typeof renderChangelog==='function')renderChangelog();
   if(sectionId==='activity'&&typeof renderActivity==='function')renderActivity();

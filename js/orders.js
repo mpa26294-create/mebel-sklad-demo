@@ -690,7 +690,7 @@ function toggleWorkshopQueueItem(orderId,stepIndex){
 function workshopQueueItemHtml(row,etaMap){
   const o=row.order,op=productionOp(o,row.index);
   if(!op)return '';
-  const key=`${o.id}_${op.stepIndex}`,expanded=expandedWorkshopOps.has(key);
+  const key=`${o.id}_${op.stepIndex}`,expanded=expandedWorkshopOps.has(key)||document.body.classList.contains('worker-mode');
   const pct=productionOpPercent(o,op),status=productionStatusClass(op.status);
   const coverage=productionMaterialCoverage(o,operationMaterials(o,op),productionCompletedQty(o,op));
   const dClass=orderDeadlineClass(o);

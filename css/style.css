@@ -868,6 +868,30 @@
 .worker-access-row .select{flex:1;height:40px}
 @media(max-width:640px){.worker-access-row{flex-wrap:wrap}.worker-access-row .input,.worker-access-row .select{flex:1 1 100%}}
 
+/* v7.41: рабочий режим — упрощённый интерфейс для сотрудников из списка «Упрощённый доступ»
+   (Настройки → видно только администратору). Показаны только Склад (быстрый приход/расход) и
+   свой цех, крупные элементы под сенсорный экран/работу в перчатках. См. js/ui.js switchSection()
+   и index.html applyWorkerModeForCurrentUser() — источник роли: Supabase-аккаунт + этот список,
+   а не настройка в самом браузере. */
+body.worker-mode #mainNav button:not([data-section="stock"]):not([data-section="workshops"]){display:none}
+body.worker-mode #stock .topbar .actions .btn.primary{display:none}
+body.worker-mode #stats{display:none}
+body.worker-mode #stockAttentionWrap{display:none}
+body.worker-mode #stock>.panel{display:none}
+body.worker-mode #quickAddBox{max-width:560px;margin:0 auto 18px;padding:26px;grid-template-columns:1fr!important}
+body.worker-mode #quickAddBox .field label{font-size:14px}
+body.worker-mode #quickAddBox .input{height:56px;font-size:17px}
+body.worker-mode .quick-stock-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weight:600;border-radius:12px}
+body.worker-mode .workshop-back-link,body.worker-mode .workshop-detail-sep{display:none}
+body.worker-mode .workshop-queue-row{min-height:64px}
+body.worker-mode .production-status-pill{font-size:13px;padding:6px 12px}
+/* операции своего цеха у рабочего сразу развёрнуты (см. workshopQueueItemHtml в js/orders.js) —
+   первая кнопка блока действий там всегда «Назад ко всем цехам», её прячем и в worker-mode */
+body.worker-mode .production-op-actions button:first-child{display:none}
+body.worker-mode .production-op-actions{gap:8px}
+body.worker-mode .production-op-actions .btn{height:48px;font-size:14px;font-weight:600}
+
 /* v6.42: clean stock section redesign */
 #stock .panel{
   border:1px solid #e7eaf0;

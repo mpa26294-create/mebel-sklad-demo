@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=7.40" />
+  <link rel="stylesheet" href="css/style.css?v=7.41" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -201,7 +201,7 @@
 
 
 <script src="js/changelog.js?v=7.39"></script>
-<script src="js/ui.js?v=6.44"></script>
+<script src="js/ui.js?v=7.41"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -221,7 +221,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.52"></script>
-<script src="js/orders.js?v=6.51"></script>
+<script src="js/orders.js?v=7.41"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
@@ -458,6 +458,8 @@ function applyWorkerModeForCurrentUser(){
   const worker=isWorkerUser();
   document.body.classList.toggle('worker-mode',worker);
   window.WORKER_WORKSHOP=worker?(currentWorkerAssignment().workshop||''):'';
+  const brandP=document.querySelector('.brand p');
+  if(brandP)brandP.textContent=worker?`Цех: ${window.WORKER_WORKSHOP||'—'}`:'учёт материалов';
   if(worker){
     if(typeof selectedWorkshopName!=='undefined')selectedWorkshopName=window.WORKER_WORKSHOP;
     if(typeof switchSection==='function')switchSection('stock');
