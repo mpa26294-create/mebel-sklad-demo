@@ -751,8 +751,15 @@ function workerTaskCardHtml(row){
   const coverage=productionMaterialCoverage(o,operationMaterials(o,op),completed);
   const matNote=!coverage.ok?`<span class="worker-task-danger">· ⚠ ${escapeHtml(t('missingMaterialsCount')).toLowerCase()}</span>`:'';
   const showShop=(window.WORKER_WORKSHOPS||[]).length>1;
-  const toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart');
   const showComplete=op.status==='running'||op.status==='paused';
+  const remaining=Math.max(1,total-completed);
+  // v7.44: количество вводится прямо на карточке (не в отдельном всплывающем окне) — поле уже
+  // предзаполнено остатком, обычно достаточно просто нажать «Готово». См. workerCompleteTask().
+  const actionsHtml=showComplete
+    ?`<button class="btn worker-task-btn ghost worker-task-btn-pause" type="button" aria-label="${escapeHtml(op.status==='running'?t('prodPause'):t('prodContinue'))}" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})">${op.status==='running'?'⏸':'▶'}</button>
+      <input class="input worker-task-qty" type="number" min="1" max="${remaining}" step="1" value="${remaining}" id="workerQty_${o.id}_${op.stepIndex}" inputmode="numeric">
+      <button class="btn worker-task-btn primary" type="button" onclick="workerCompleteTask('${o.id}',${op.stepIndex})">✔ Готово</button>`
+    :`<button class="btn worker-task-btn primary" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>▶ ${escapeHtml(t('prodStart'))}</button>`;
   return `<div class="worker-task-card ${status}">
     <div class="worker-task-top">
       <div class="worker-task-info"><b>${escapeHtml(o.number||'—')}</b>${o.client?`<span> · ${escapeHtml(o.client)}</span>`:''}
@@ -760,11 +767,23 @@ function workerTaskCardHtml(row){
       <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
     </div>
     <div class="worker-task-progress"><i><b style="width:${pct}%"></b></i><span>${completed} / ${total}</span></div>
-    <div class="worker-task-actions">
-      <button class="btn worker-task-btn ${showComplete?'ghost':'primary'}" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>${op.status==='running'?'⏸':'▶'} ${escapeHtml(toggleLabel)}</button>
-      ${showComplete?`<button class="btn worker-task-btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">✔ ${escapeHtml(t('prodComplete'))}</button>`:''}
-    </div>
+    <div class="worker-task-actions">${actionsHtml}</div>
   </div>`;
+}
+// Как «Готово» на карточке задачи: количество уже введено на самой карточке (см. workerTaskCardHtml),
+// поэтому первого модального окна «сколько сделали» (как в completeProductionOperation) не нужно —
+// сразу считаем план списания и, если материалов хватает, показываем то же окно предпросмотра, что
+// и раньше (что именно спишется), одно нажатие «Подтвердить» — и готово.
+function workerCompleteTask(orderId,index){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op||op.status==='done')return;
+  const remaining=orderProductQty(o)-productionCompletedQty(o,op);
+  const input=document.getElementById(`workerQty_${orderId}_${index}`);
+  const qty=Math.trunc(Number(input?.value));
+  if(!Number.isFinite(qty)||qty<1||qty>remaining){toast(t('prodInvalidQty'));return}
+  const plan=productionConsumptionPlan(o,op,qty);
+  const foot=plan.ok?`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="finalizeProductionQuantity('${o.id}',${op.stepIndex},${qty})">${escapeHtml(t('confirm'))}</button>`:`<button class="btn primary" type="button" onclick="closeModal()">${escapeHtml(t('changeQuantity'))}</button>`;
+  openModal(plan.ok?t('confirmWriteOffTitle'):t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),foot);
 }
 function workerAssignedTaskRows(){
   const names=window.WORKER_WORKSHOPS||[],rows=[];

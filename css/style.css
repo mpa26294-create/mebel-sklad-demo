@@ -889,9 +889,8 @@ body.worker-mode .quick-stock-actions{display:grid;grid-template-columns:1fr 1fr
 body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weight:600;border-radius:12px}
 
 /* v7.43: «Цеха» у рабочего — не обзор/детальный экран цеха (это для мастера/технолога — плановые
-   часы, KPI, timeline), а плоский список ЕГО задач с одной главной кнопкой на карточку. Отметить
-   работу — 2-3 нажатия: Начать → (позже) Готово → Подтвердить в уже существующем модальном окне
-   (количество там предзаполнено остатком). См. workerWorkshopTasksHtml() в js/orders.js. */
+   часы, KPI, timeline), а плоский список ЕГО задач с одной главной кнопкой на карточку.
+   См. workerWorkshopTasksHtml() в js/orders.js. */
 .worker-task-list{display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
 .worker-task-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
 .worker-task-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -904,9 +903,13 @@ body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weigh
 .worker-task-progress i{flex:1;height:8px;border-radius:99px;background:#eef0f3;overflow:hidden;display:block}
 .worker-task-progress i b{display:block;height:100%;background:var(--accent);border-radius:99px}
 .worker-task-progress span{font-size:12px;color:var(--muted);white-space:nowrap;font-weight:500}
-.worker-task-actions{display:flex;gap:10px}
+.worker-task-actions{display:flex;gap:8px}
 .worker-task-btn{flex:1;height:52px;font-size:15px;font-weight:600;border-radius:12px}
 .worker-task-btn.ghost{background:#fff;border:1.5px solid var(--line);color:#4a515c}
+/* v7.44: количество, сколько сделано, вводится прямо на карточке — узкое числовое поле между
+   кнопкой паузы и кнопкой «Готово», а не в отдельном всплывающем окне (см. workerCompleteTask()). */
+.worker-task-btn-pause{flex:0 0 52px;font-size:18px;padding:0}
+.worker-task-qty{flex:0 0 76px;height:52px;padding:0;text-align:center;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
 
 /* v6.42: clean stock section redesign */
 #stock .panel{
