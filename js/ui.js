@@ -46,7 +46,9 @@ function switchSection(sectionId){
   if(sectionId==='settings'&&typeof loadProfileSettingsForm==='function')loadProfileSettingsForm();
   if(sectionId==='orders'&&typeof renderOrders==='function')renderOrders();
   if(sectionId==='workshops'&&typeof renderWorkshops==='function'){
-    if(document.body.classList.contains('worker-mode')&&window.WORKER_WORKSHOP&&typeof selectedWorkshopName!=='undefined')selectedWorkshopName=window.WORKER_WORKSHOP;
+    // v7.42: с одним цехом рабочего сразу переносим в его детальный экран; с несколькими — даём
+    // ему самому выбрать из (уже отфильтрованного allWorkshopNames()) списка своих цехов.
+    if(document.body.classList.contains('worker-single-workshop')&&window.WORKER_WORKSHOP&&typeof selectedWorkshopName!=='undefined')selectedWorkshopName=window.WORKER_WORKSHOP;
     renderWorkshops();
   }
   if(sectionId==='history'&&typeof renderSiteHistory==='function')renderSiteHistory();

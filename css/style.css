@@ -861,12 +861,16 @@
 .notif-rule-card .field{margin-top:8px}
 .notif-rule-card textarea.input{min-height:auto;height:auto;padding:8px 12px;resize:vertical}
 
-/* v7.40: панель «Упрощённый доступ (рабочие)» — список email + цех (видна только администратору) */
-.worker-access-list{display:flex;flex-direction:column;gap:8px}
-.worker-access-row{display:flex;gap:8px;align-items:center}
-.worker-access-row .input{flex:1.6;height:40px}
-.worker-access-row .select{flex:1;height:40px}
-@media(max-width:640px){.worker-access-row{flex-wrap:wrap}.worker-access-row .input,.worker-access-row .select{flex:1 1 100%}}
+/* v7.40: панель «Упрощённый доступ (рабочие)» — список email + цеха (видна только администратору) */
+.worker-access-list{display:flex;flex-direction:column;gap:12px}
+.worker-access-row{display:flex;gap:10px;align-items:flex-start}
+.worker-access-row .input{flex:1.3;height:40px}
+/* v7.42: цехов может быть несколько — вместо одиночного select теперь чипы-чекбоксы */
+.worker-access-chips{flex:2;display:flex;flex-wrap:wrap;gap:6px;padding-top:5px}
+.worker-access-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:12px;color:#4a515c;background:#fff;cursor:pointer;user-select:none}
+.worker-access-chip input{width:14px;height:14px;margin:0;accent-color:var(--accent)}
+.worker-access-chip.checked{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);font-weight:500}
+@media(max-width:640px){.worker-access-row{flex-wrap:wrap}.worker-access-row .input{flex:1 1 100%}.worker-access-chips{flex:1 1 100%}}
 
 /* v7.41: рабочий режим — упрощённый интерфейс для сотрудников из списка «Упрощённый доступ»
    (Настройки → видно только администратору). Показаны только Склад (быстрый приход/расход) и
@@ -883,14 +887,15 @@ body.worker-mode #quickAddBox .field label{font-size:14px}
 body.worker-mode #quickAddBox .input{height:56px;font-size:17px}
 body.worker-mode .quick-stock-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weight:600;border-radius:12px}
-body.worker-mode .workshop-back-link,body.worker-mode .workshop-detail-sep{display:none}
 body.worker-mode .workshop-queue-row{min-height:64px}
 body.worker-mode .production-status-pill{font-size:13px;padding:6px 12px}
-/* операции своего цеха у рабочего сразу развёрнуты (см. workshopQueueItemHtml в js/orders.js) —
-   первая кнопка блока действий там всегда «Назад ко всем цехам», её прячем и в worker-mode */
-body.worker-mode .production-op-actions button:first-child{display:none}
 body.worker-mode .production-op-actions{gap:8px}
 body.worker-mode .production-op-actions .btn{height:48px;font-size:14px;font-weight:600}
+/* v7.42: «Назад ко всем цехам» имеет смысл прятать только когда у рабочего ровно один цех —
+   тогда идти больше некуда. Если цехов несколько, это единственный способ переключиться между
+   ними, поэтому ссылку оставляем (см. .worker-single-workshop в index.html applyWorkerModeForCurrentUser()). */
+body.worker-single-workshop .workshop-back-link,body.worker-single-workshop .workshop-detail-sep{display:none}
+body.worker-single-workshop .production-op-actions button:first-child{display:none}
 
 /* v6.42: clean stock section redesign */
 #stock .panel{

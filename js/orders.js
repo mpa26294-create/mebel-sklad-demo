@@ -494,6 +494,13 @@ function allWorkshopNames(){
   const names=[];
   DEFAULT_ORDER_STEPS.forEach(s=>{if(s.name&&!names.includes(s.name))names.push(s.name)});
   (data.orders||[]).forEach(o=>orderSteps(o).forEach(s=>{if(s.name&&!names.includes(s.name))names.push(s.name)}));
+  // v7.42: в рабочем режиме (см. index.html applyWorkerModeForCurrentUser) обзор цехов, «сейчас
+  // выполняется» и т.п. должны показывать только цеха, назначенные этому сотруднику в Настройках —
+  // единая точка фильтрации, а не отдельная правка каждого места, где используется этот список.
+  if(typeof document!=='undefined'&&document.body&&document.body.classList.contains('worker-mode')){
+    const allowed=window.WORKER_WORKSHOPS||[];
+    return names.filter(n=>allowed.includes(n));
+  }
   return names;
 }
 function jsStrArg(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
