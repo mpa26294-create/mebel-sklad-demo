@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=7.09" />
+  <link rel="stylesheet" href="css/style.css?v=7.40" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -156,6 +156,8 @@
       </div>
       <!-- v7.04: панель видна только администратору (по логину), заполняется renderNotificationRulesPanel() -->
       <div class="panel" id="notificationRulesPanel" style="display:none;padding:24px;max-width:720px"></div>
+      <!-- v7.40: панель видна только администратору, заполняется renderWorkerAccessPanel() -->
+      <div class="panel" id="workerAccessPanel" style="display:none;padding:24px;max-width:720px"></div>
       <div class="panel" style="padding:24px;max-width:720px">
         <h3 id="exportImportTitle" style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Экспорт / импорт</h3>
         <p class="muted" id="exportImportHint" style="margin:0 0 20px;font-size:13px;line-height:1.45;color:#6b7280">Можно сохранить данные в JSON и потом загрузить обратно.</p>
@@ -432,6 +434,114 @@ async function applyOrderSyncRow(orderRow,{render=true}={}){
   return true;
 }
 
+// ================== v7.40: упрощённый доступ (рабочие) ==================
+// Список сотрудников с упрощённым интерфейсом ("рабочий режим") хранится не в браузере, как
+// остальные настройки в data.settings (см. save() в js/storage.js — это чистый localStorage),
+// а в отдельной служебной строке таблицы materials — по той же схеме, что заказы
+// (ORDER_SYNC_ARTICLE) и аудит (AUDIT_SYNC_ARTICLE) выше. Иначе список, сохранённый админом на
+// своём компьютере, был бы не виден ни на одном другом устройстве — в том числе на устройстве
+// самого рабочего, чей email в нём указан.
+const ACCESS_SYNC_ARTICLE='__FURNICORE_ACCESS__';
+let accessSyncRowId='';
+let workerAccessList=[]; // [{email:'ivan@example.com', workshop:'Сборка'}, ...]
+function isAccessSyncRow(row){return String(row?.article||'')===ACCESS_SYNC_ARTICLE}
+function currentWorkerAssignment(){
+  if(!currentUser)return null;
+  const email=String(currentUser.email||'').trim().toLowerCase();
+  if(!email)return null;
+  return workerAccessList.find(w=>String(w?.email||'').trim().toLowerCase()===email)||null;
+}
+// Администратор (NOTIFICATION_ADMIN_EMAIL, js/orders.js) никогда не переводится в рабочий режим,
+// даже если случайно окажется в списке — иначе он мог бы сам себя запереть в упрощённом интерфейсе.
+function isWorkerUser(){return !!currentWorkerAssignment()&&!(typeof isNotificationAdmin==='function'&&isNotificationAdmin())}
+function applyWorkerModeForCurrentUser(){
+  const worker=isWorkerUser();
+  document.body.classList.toggle('worker-mode',worker);
+  window.WORKER_WORKSHOP=worker?(currentWorkerAssignment().workshop||''):'';
+  if(worker){
+    if(typeof selectedWorkshopName!=='undefined')selectedWorkshopName=window.WORKER_WORKSHOP;
+    if(typeof switchSection==='function')switchSection('stock');
+  }
+}
+function applyAccessSyncRow(row){
+  workerAccessList=Array.isArray(row?.attributes?.workers)?row.attributes.workers:[];
+  accessSyncRowId=row?.id||accessSyncRowId;
+  applyWorkerModeForCurrentUser();
+  if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();
+}
+async function saveWorkerAccessList(list){
+  if(typeof isNotificationAdmin!=='function'||!isNotificationAdmin())return false;
+  workerAccessList=list;
+  if(!canWriteSupabase()){toast('Локальный режим: сохранение недоступно');return false}
+  try{
+    const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:{workers:list,updatedAt:new Date().toISOString()}};
+    if(accessSyncRowId){
+      const{error}=await supabaseClient.from('materials').update(payload).eq('id',accessSyncRowId);
+      if(error)throw error;
+    }else{
+      const{data:rows,error}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);
+      if(error)throw error;
+      accessSyncRowId=rows?.[0]?.id||'';
+    }
+    if(typeof auditAdd==='function')auditAdd('worker_access_changed','settings','worker_access','Упрощённый доступ',`Список сотрудников с упрощённым доступом обновлён (${list.length})`);
+    toast('Список сохранён');
+    return true;
+  }catch(e){
+    console.error('saveWorkerAccessList failed',e);
+    toast('Ошибка сохранения списка');
+    return false;
+  }
+}
+let workerAccessDraft=null;
+function ensureWorkerAccessDraft(){
+  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({...w}));
+  return workerAccessDraft;
+}
+function updateWorkerAccessDraft(index,field,value){
+  const draft=ensureWorkerAccessDraft();
+  if(!draft[index])return;
+  draft[index][field]=field==='email'?value.trim().toLowerCase():value;
+}
+function removeWorkerAccessDraft(index){
+  ensureWorkerAccessDraft().splice(index,1);
+  renderWorkerAccessPanel();
+}
+function addWorkerAccessDraftRow(){
+  const presets=(typeof ORDER_TECH_WORKSHOP_PRESETS!=='undefined'&&ORDER_TECH_WORKSHOP_PRESETS)||[];
+  ensureWorkerAccessDraft().push({email:'',workshop:presets[0]||''});
+  renderWorkerAccessPanel();
+}
+function workerAccessRowHtml(row,index){
+  const email=escapeHtml(row.email||''),workshop=row.workshop||'';
+  const presets=(typeof ORDER_TECH_WORKSHOP_PRESETS!=='undefined'&&ORDER_TECH_WORKSHOP_PRESETS)||[];
+  const options=presets.map(w=>`<option value="${escapeHtml(w)}" ${w===workshop?'selected':''}>${escapeHtml(w)}</option>`).join('');
+  return `<div class="worker-access-row">
+    <input class="input no-autofill" type="email" autocomplete="new-password" aria-autocomplete="none" placeholder="email@example.com" value="${email}" oninput="updateWorkerAccessDraft(${index},'email',this.value)">
+    <select class="select" onchange="updateWorkerAccessDraft(${index},'workshop',this.value)">${options}</select>
+    <button class="iconbtn" type="button" aria-label="Удалить" onclick="removeWorkerAccessDraft(${index})">×</button>
+  </div>`;
+}
+function renderWorkerAccessPanel(){
+  const panel=document.getElementById('workerAccessPanel');
+  if(!panel)return;
+  if(typeof isNotificationAdmin!=='function'||!isNotificationAdmin()){panel.style.display='none';panel.innerHTML='';workerAccessDraft=null;return}
+  panel.style.display='';
+  const draft=ensureWorkerAccessDraft();
+  panel.innerHTML=`<h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Упрощённый доступ (рабочие)</h3>
+    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. Сотрудник из списка при входе видит не весь сайт, а только «Склад» (быстрый приход/расход по артикулу) и свой цех. Сейчас это только сам список — на что он влияет, включим следующим шагом.</p>
+    <div class="worker-access-list">${draft.map(workerAccessRowHtml).join('')||'<p class="muted" style="margin:0 0 12px">Пока никто не добавлен.</p>'}</div>
+    <div class="actions" style="margin-top:12px">
+      <button class="btn" type="button" onclick="addWorkerAccessDraftRow()">+ Добавить сотрудника</button>
+      <button class="btn primary" type="button" onclick="commitWorkerAccessDraft()">Сохранить</button>
+    </div>`;
+}
+async function commitWorkerAccessDraft(){
+  const draft=ensureWorkerAccessDraft().filter(w=>w.email&&w.email.includes('@'));
+  const ok=await saveWorkerAccessList(draft);
+  workerAccessDraft=null;
+  if(ok)renderWorkerAccessPanel();
+}
+
 async function loadMaterialsFromSupabase(options={}){
   if(!isLoggedIn()){ showLoginRequired(); return; }
   if(isLocalMode()&&!options.localReadOnly&&!options.orderRowOnly&&!options.auditRowOnly){
@@ -472,10 +582,12 @@ async function loadMaterialsFromSupabase(options={}){
 
   const orderRow=(rows||[]).find(isOrderSyncRow);
   const auditRow=(rows||[]).find(row=>typeof isAuditSyncRow==='function'&&isAuditSyncRow(row));
+  const accessRow=(rows||[]).find(isAccessSyncRow);
   orderSyncRowId=orderRow?.id||orderSyncRowId;
   if(orderRow&&!options.skipOrders)await applyOrderSyncRow(orderRow,{render:false});
   if(auditRow&&typeof applyAuditSyncRow==='function')await applyAuditSyncRow(auditRow,{render:false});
-  data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)&&!(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row))).map(dbToMaterial);
+  if(accessRow)applyAccessSyncRow(accessRow);else{workerAccessList=[];applyWorkerModeForCurrentUser();if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel()}
+  data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)&&!(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row))&&!isAccessSyncRow(row)).map(dbToMaterial);
   try{ syncMaterialReservations(); }catch(e){}
   renderAll();
   updateQuickAddInfo();
@@ -566,6 +678,11 @@ function subscribeMaterials(){
           return;
         }
         await loadMaterialsFromSupabase({auditRowOnly:payload.new});
+        return;
+      }
+      if(isAccessSyncRow(row)){
+        if(payload.eventType==='DELETE'){accessSyncRowId='';workerAccessList=[];applyWorkerModeForCurrentUser();if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();return}
+        applyAccessSyncRow(payload.new);
         return;
       }
       await loadMaterialsFromSupabase({skipOrders:true});
@@ -2693,7 +2810,7 @@ calcOrderOverallPercent=function(o){
 /* v5.64: open production with clear button, not by status */
   renderOrderStats();
   renderOrderClientFilter();
-function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings();if(typeof renderNotificationRulesPanel==='function')renderNotificationRulesPanel();if(typeof maybeRunNotificationRuleChecks==='function')maybeRunNotificationRuleChecks();if(typeof protectSearchInputsFromAutofill==='function')protectSearchInputsFromAutofill()}
+function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings();if(typeof renderNotificationRulesPanel==='function')renderNotificationRulesPanel();if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();if(typeof maybeRunNotificationRuleChecks==='function')maybeRunNotificationRuleChecks();if(typeof protectSearchInputsFromAutofill==='function')protectSearchInputsFromAutofill()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
 
 
