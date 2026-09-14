@@ -282,9 +282,63 @@ function cancelMaterialDelivery(materialId,orderId){
   toast(t('featureCancelDeliveryStub'));
 }
 
+// v7.65: кнопка "+ Заказать" была заглушкой (просто toast). Реализовано по просьбе пользователя:
+// у материала указывается email поставщика (поле в форме добавления/редактирования), кнопка
+// открывает окно с полем количества (подсказка — сколько не хватает до мин. остатка, можно
+// поправить) и необязательным комментарием, а по нажатию "Отправить" формируется mailto-ссылка
+// с уже готовым текстом письма и открывается системный почтовый клиент пользователя — само письмо
+// сайт не отправляет (в браузере это невозможно без сервера рассылки), просто подготавливает его.
 function openNewMaterialOrder(materialId){
-  toast(t('featureOrderMaterialStub'));
+  const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
+  if(!m){toast(t('notFoundMaterial'));return}
+  const email=String(m.attributes?.supplierEmail||'').trim();
+  if(!email){
+    toast(t('supplierEmailMissing'));
+    openMaterialEditor(materialId);
+    return;
+  }
+  if(typeof pushModalState==='function')pushModalState();
+  const unit=materialDisplayUnit(m);
+  const min=Number(m.minQuantity||0);
+  const avail=availableQty(m);
+  const suggested=Math.max(0,Number((min-avail).toFixed(3)));
+  const body=`<div class="vault-modal">
+    <p class="muted small">${escapeHtml(t('orderMaterialToLabel'))}: <b>${escapeHtml(email)}</b></p>
+    <div class="field"><label>${escapeHtml(t('orderMaterialQtyLabel'))}, ${escapeHtml(unitLabel(unit))}</label><input id="orderMaterialQtyInput" type="number" min="0" step="any" class="input" value="${suggested>0?suggested:''}"></div>
+    <div class="field"><label>${escapeHtml(t('orderMaterialNoteLabel'))}</label><textarea id="orderMaterialNoteInput" class="input" rows="2" placeholder="${escapeHtml(t('orderMaterialNotePlaceholder'))}"></textarea></div>
+    <div class="auth-error" id="orderMaterialError"></div>
+  </div>`;
+  openModal(t('orderMaterialTitle'),body,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmOrderMaterialEmail('${escapeHtml(materialId)}')">${escapeHtml(t('orderMaterialSendBtn'))}</button>`);
+  setTimeout(()=>document.getElementById('orderMaterialQtyInput')?.focus(),0);
 }
+window.confirmOrderMaterialEmail=function(materialId){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
+  if(!m)return;
+  const email=String(m.attributes?.supplierEmail||'').trim();
+  const err=document.getElementById('orderMaterialError');
+  const qtyRaw=document.getElementById('orderMaterialQtyInput')?.value;
+  const qty=Number(qtyRaw);
+  if(!qtyRaw||!(qty>0)){if(err)err.textContent=t('enterValidQuantity');return}
+  const note=(document.getElementById('orderMaterialNoteInput')?.value||'').trim();
+  const unit=materialDisplayUnit(m);
+  const sku=m.sku||'';
+  const lines=[
+    t('orderMaterialGreeting'),
+    '',
+    `${t('orderMaterialLineName')}: ${m.name||''}`,
+    sku?`${t('orderMaterialLineSku')}: ${sku}`:null,
+    `${t('orderMaterialLineQty')}: ${qty} ${unitLabel(unit)}`,
+    note?`${t('orderMaterialLineNote')}: ${note}`:null,
+    '',
+    t('orderMaterialSignoff'),
+    (currentUser?.email||'')
+  ].filter(x=>x!==null);
+  const subject=`${t('orderMaterialSubjectPrefix')}: ${m.name||''}${sku?` (${sku})`:''}`;
+  const mailto=`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+  window.location.href=mailto;
+  if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`${t('orderMaterialAuditMsg')}: ${qty} ${unitLabel(unit)} → ${email}`);
+  if(typeof goBackModal==='function')goBackModal();else closeModal();
+};
 
 // Quick actions mode switching
 function switchQuickActionMode(mode){
@@ -650,11 +704,13 @@ function materialDetailExtra(m){
   if(typeof isFabricCategory==='function'&&isFabricCategory(m.category)){
     rows.push(detailField(t('manufacturerLabel'),escapeHtml(a.manufacturer||'—')));
     rows.push(detailField(t('supplier'),escapeHtml(a.supplier||'—')));
+    rows.push(detailField(t('supplierEmailLabel'),escapeHtml(a.supplierEmail||'—')));
     rows.push(detailField(t('storageLocationLabel'),escapeHtml(a.storageLocation||'—')));
     rows.push(detailField(t('receiptDateLabel'),escapeHtml(a.receiptDate||'—')));
     rows.push(detailField(t('purchasePriceLabel'),escapeHtml(a.purchasePrice||'—')));
   }else{
     rows.push(detailField(t('supplier'),escapeHtml(a.supplier||'—')));
+    rows.push(detailField(t('supplierEmailLabel'),escapeHtml(a.supplierEmail||'—')));
     rows.push(detailField(t('orderPurchaseLabel'),escapeHtml(a.order||'—')));
   }
   const tags=String(a.tags||'').split(',').map(x=>x.trim()).filter(Boolean);
@@ -1305,6 +1361,7 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
           : `<div class="field"><label>${materialSubtypeLabel(m.category||preset)}</label><select id="mSub" class="select"></select></div>`}
         <div class="field"><label>${t('collection')}</label><input id="mCollection" class="input" value="${escapeHtml(a.collection||'')}" placeholder="${t('collection')}"></div>
         <div class="field"><label>${t('manufacturer')}</label><input id="mManufacturer" class="input" value="${escapeHtml(a.manufacturer||'')}" placeholder="${t('manufacturer')}"></div>
+        <div class="field"><label>${t('supplierEmailLabel')}</label><input id="mSupplierEmail" type="email" class="input" value="${escapeHtml(a.supplierEmail||'')}" placeholder="${t('supplierEmailPlaceholder')}"></div>
       </div>
     </section>
     <section class="wizard-card">
@@ -1360,6 +1417,7 @@ async function saveMaterial(id){
   document.querySelectorAll('.attr').forEach(i=>{if(String(i.value||'').trim()!=='')attrs[i.dataset.key]=i.value==='true'?true:i.value==='false'?false:i.value});
   attrs.collection=(document.getElementById('mCollection')?.value||'').trim();
   attrs.manufacturer=(document.getElementById('mManufacturer')?.value||'').trim();
+  attrs.supplierEmail=(document.getElementById('mSupplierEmail')?.value||'').trim();
   Object.assign(attrs,readMaterialWizardParams(cat,'m',(id?(data.materials||[]).find(x=>String(x.id)===String(id))?.attributes:{} )||{}));
   // v7.54: у «Наполнителей» единица учёта — выбор пользователя (кг / погонные метры), а не жёсткая
   // константа из materialBaseUnit() — читаем выбор из #mFillerUnit (см. materialWizardParamsHtml())

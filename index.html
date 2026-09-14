@@ -222,7 +222,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 </script>
 <script src="js/auth.js?v=6.5"></script>
 <script src="js/presence.js?v=7.13"></script>
-<script src="js/materials.js?v=6.52"></script>
+<script src="js/materials.js?v=6.53"></script>
 <script src="js/orders.js?v=7.44"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
@@ -1524,6 +1524,7 @@ function openFoamModal(id=null){
        <div class="field"><label>${t('minQuantity')}</label><input id="foamMin" type="number" step="${stockStep(found?.unit||foamUnit)}" min="0" class="input" value="${inputQtyValue(stockNumForUnit(found?.minQuantity||0,found?.unit||foamUnit),found?.unit||foamUnit)}" inputmode="decimal"></div>
        ${stockTripleInputs('foam',{ordered:attrs.orderedQty||0,reserved:attrs.reservedQty||0,qty:found?.quantity||0},found?.unit||foamUnit)}
        <div class="field"><label>${t('supplier')}</label><input id="foamSupplier" class="input" value="${attrs.supplier||''}" placeholder="${t('supplierPlaceholder')}"></div>
+       <div class="field"><label>${t('supplierEmailLabel')}</label><input id="foamSupplierEmail" type="email" class="input" value="${escapeHtml(attrs.supplierEmail||'')}" placeholder="${t('supplierEmailPlaceholder')}"></div>
        <div class="field"><label>${t('order')}</label><input id="foamOrder" class="input" value="${attrs.order||''}" placeholder="${t('orderPlaceholder')}"></div>`
     : `<div class="add-material-simple-stock">
         <div class="field"><label>На складе</label><input id="foamQty" type="number" step="${stockStep(foamUnit)}" min="0" class="input" value="0" inputmode="decimal"></div>
@@ -1614,6 +1615,7 @@ async function saveFoamMaterial(id=''){
     reservedQty:foamReserved,
     orderedQty:foamOrdered,
     supplier:safeVal('foamSupplier'),
+    supplierEmail:safeVal('foamSupplierEmail'),
     order:safeVal('foamOrder'),
     pdfName:pdfData.pdfName,
     pdfPath:pdfData.pdfPath,
@@ -2180,6 +2182,7 @@ function openFabricModal(id=null,category='Ткань'){
         <div class="field"><label>${t('sku')}</label><input id="fabricSku" class="input" value="${found?.sku||nextSku(fabricCategory,'',id||'')}"></div>
         <div class="field"><label>${t('collection')}</label><input id="fabricCollection" class="input" value="${escapeHtml(attrs.collection||'')}" placeholder="${t('collectionPlaceholder')}"></div>
         <div class="field"><label>${t('manufacturer')}</label><input id="fabricManufacturer" class="input" value="${escapeHtml(attrs.manufacturer||'')}" placeholder="${t('manufacturer')}"></div>
+        <div class="field"><label>${t('supplierEmailLabel')}</label><input id="fabricSupplierEmail" type="email" class="input" value="${escapeHtml(attrs.supplierEmail||'')}" placeholder="${t('supplierEmailPlaceholder')}"></div>
         ${materialWizardParamsHtml(fabricCategory,attrs,'fabric')}
         ${isLeather?'':`<div class="area-preview hidden" id="fabricParamAreaPreview"></div>`}
       </div>
@@ -2238,6 +2241,7 @@ async function saveFabricMaterial(id=''){
     materialType:category,
     collection:(document.getElementById('fabricCollection')?.value||'').trim(),
     manufacturer:(document.getElementById('fabricManufacturer')?.value||'').trim(),
+    supplierEmail:(document.getElementById('fabricSupplierEmail')?.value||'').trim(),
     rollWidth:isLeather?'':(widthM?Number(widthM.toFixed(3)):''),
     rollWidthMm:isLeather?'':(widthM?Math.round(widthM*1000):''),
     rollLength:isLeather?'':(lengthM||''),
