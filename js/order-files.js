@@ -66,12 +66,20 @@
     const baseKey=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveKey']);
     return crypto.subtle.deriveKey({name:'PBKDF2',salt:saltBytes,iterations:150000,hash:'SHA-256'},baseKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
   }
-  async function vaultSetupWithPassword(password){
+  // v7.63: вынесено из vaultSetupWithPassword — считает новую пару "ключ+конфиг" из пароля, но
+  // НИЧЕГО не сохраняет и не трогает текущий активный пароль. Нужно для смены пароля (см. ниже):
+  // сначала все файлы перешифровываются новым ключом, и только когда это гарантированно удалось,
+  // новый конфиг сохраняется как активный — так старый пароль/файлы не ломаются при сбое на полпути.
+  async function vaultDeriveNewConfig(password){
     const salt=crypto.getRandomValues(new Uint8Array(16));
     const key=await deriveVaultKey(password,salt);
     const iv=crypto.getRandomValues(new Uint8Array(12));
     const cipherBuf=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(VAULT_MAGIC));
-    const ok=await saveVaultConfig({salt:b64FromBuf(salt),verifyIv:b64FromBuf(iv),verifyCipher:b64FromBuf(cipherBuf)});
+    return {key,config:{salt:b64FromBuf(salt),verifyIv:b64FromBuf(iv),verifyCipher:b64FromBuf(cipherBuf)}};
+  }
+  async function vaultSetupWithPassword(password){
+    const {key,config}=await vaultDeriveNewConfig(password);
+    const ok=await saveVaultConfig(config);
     return ok?key:null;
   }
   async function vaultUnlockWithPassword(password){
@@ -166,6 +174,117 @@
     if(!key){if(err)err.textContent=t('vaultWrongPassword');document.getElementById('vaultUnlockPass')?.select();return}
     finishVaultPrompt(key);
   };
+
+  // ---- Настройки: смена пароля хранилища (только администратор) ----
+  // v7.63: пользователь спросил, как сменить пароль, который был создан первым — раньше это было
+  // никак не сделать. Своя смена пароля НЕ похожа на обычный сброс: все уже зашифрованные файлы
+  // понимают только старый ключ, так что просто взять и сохранить новый пароль означало бы навсегда
+  // потерять доступ к ним. Вместо этого performVaultPasswordChange() сначала расшифровывает все
+  // файлы старым паролем, потом зашифровывает их заново новым и только после того, как ВСЕ файлы
+  // успешно переписаны, сохраняет новый пароль как активный — старый пароль и все файлы остаются
+  // рабочими в точности до этого последнего шага, что бы ни случилось раньше (обрыв связи и т.п.).
+  let vaultChangeOldKey=null;
+  window.openVaultChangeModal=function(){
+    if(typeof pushModalState==='function')pushModalState();
+    const body=`<div class="vault-modal"><p class="muted">${escapeHtml(t('vaultChangeCurrentHint'))}</p><input id="vaultChangeOldPass" type="password" class="input" autocomplete="current-password" placeholder="${escapeHtml(t('vaultPasswordPlaceholder'))}"><div class="auth-error" id="vaultChangeError1"></div></div>`;
+    openModal(t('vaultChangeTitle'),body,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmVaultChangeStep1()">${escapeHtml(t('vaultUnlockBtn'))}</button>`);
+  };
+  window.confirmVaultChangeStep1=async function(){
+    const pass=document.getElementById('vaultChangeOldPass')?.value||'';
+    const err=document.getElementById('vaultChangeError1');
+    const btn=document.querySelector('.modal-foot .btn.primary');if(btn)btn.disabled=true;
+    const oldKey=await vaultUnlockWithPassword(pass);
+    if(btn)btn.disabled=false;
+    if(!oldKey){if(err)err.textContent=t('vaultWrongPassword');return}
+    vaultChangeOldKey=oldKey;
+    openVaultChangeStep2Modal();
+  };
+  function openVaultChangeStep2Modal(){
+    const body=`<div class="vault-modal">
+      <p class="danger-text">${escapeHtml(t('vaultSetupWarning'))}</p>
+      <div class="field"><label>${escapeHtml(t('vaultNewPasswordLabel'))}</label><input id="vaultChangeNew1" type="password" class="input" autocomplete="new-password"></div>
+      <div class="field"><label>${escapeHtml(t('vaultConfirmPasswordLabel'))}</label><input id="vaultChangeNew2" type="password" class="input" autocomplete="new-password"></div>
+      <div class="auth-error" id="vaultChangeError2"></div>
+    </div>`;
+    openModal(t('vaultChangeTitle'),body,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmVaultChangeStep2()">${escapeHtml(t('vaultChangeBtn'))}</button>`);
+  }
+  window.confirmVaultChangeStep2=async function(){
+    const p1=document.getElementById('vaultChangeNew1')?.value||'';
+    const p2=document.getElementById('vaultChangeNew2')?.value||'';
+    const err=document.getElementById('vaultChangeError2');
+    const oldKey=vaultChangeOldKey;
+    if(!oldKey){if(err)err.textContent=t('vaultSaveError');return}
+    if(p1.length<8){if(err)err.textContent=t('vaultPasswordTooShort');return}
+    if(p1!==p2){if(err)err.textContent=t('vaultPasswordMismatch');return}
+    const btn=document.querySelector('.modal-foot .btn.primary');if(btn)btn.disabled=true;
+    toast(t('vaultChangeInProgress'));
+    const result=await performVaultPasswordChange(oldKey,p1);
+    if(btn)btn.disabled=false;
+    vaultChangeOldKey=null;
+    if(!result.ok){
+      const msg=(result.reason==='decryptFailed'||result.reason==='uploadFailed')?`${t('vaultChangeFileError')}: ${result.fileName||''}`:t('vaultSaveError');
+      if(err)err.textContent=msg;
+      return;
+    }
+    if(typeof goBackModal==='function')goBackModal();else closeModal();
+    toast(t('vaultChangeDone'));
+    if(typeof renderVaultPasswordPanel==='function')renderVaultPasswordPanel();
+  };
+  // Собирает все зашифрованные файлы всех заказов, расшифровывает старым ключом, зашифровывает
+  // новым и загружает под НОВЫМИ путями (старые не трогает и не удаляет, пока всё не подтверждено
+  // успешным) — так частичный сбой посреди процесса не оставляет файлы в "ни туда ни сюда" виде.
+  async function performVaultPasswordChange(oldKey,newPassword){
+    const targets=[];
+    (data.orders||[]).forEach(o=>{(Array.isArray(o.files)?o.files:[]).forEach(f=>{if(isFileEncrypted(f))targets.push({o,f})})});
+    const decrypted=[];
+    for(const {o,f} of targets){
+      try{
+        const {data:blob,error}=await supabaseClient.storage.from(ORDER_FILES_BUCKET).download(f.path);
+        if(error)throw error;
+        const cipherBuf=await blob.arrayBuffer();
+        const plainBuf=await vaultDecryptBytes(oldKey,f.iv,cipherBuf);
+        decrypted.push({o,f,plainBuf});
+      }catch(e){console.error('vault password change: decrypt failed',f.path,e);return {ok:false,reason:'decryptFailed',fileName:f.name}}
+    }
+    const {key:newKey,config:newConfig}=await vaultDeriveNewConfig(newPassword);
+    const uploaded=[];
+    for(const {o,f,plainBuf} of decrypted){
+      try{
+        const {ivB64,cipherBuf}=await vaultEncryptBytes(newKey,plainBuf);
+        const newPath=`orders/${o.id}/${f.id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}.enc`;
+        const {error}=await supabaseClient.storage.from(ORDER_FILES_BUCKET).upload(newPath,new Blob([cipherBuf]),{cacheControl:'3600',upsert:false,contentType:'application/octet-stream'});
+        if(error)throw error;
+        uploaded.push({f,newPath,ivB64,oldPath:f.path});
+      }catch(e){console.error('vault password change: re-upload failed',f.path,e);return {ok:false,reason:'uploadFailed',fileName:f.name}}
+    }
+    // Точка невозврата: конфиг сохраняется ПЕРВЫМ, до правки записей файлов — если тут вдруг
+    // оборвётся связь, старые файлы по старым путям/iv останутся нетронутыми и их можно будет
+    // перешифровать заново тем же путём, а не потерять half-migrated состояние.
+    const savedCfg=await saveVaultConfig(newConfig);
+    if(!savedCfg)return {ok:false,reason:'saveConfigFailed'};
+    uploaded.forEach(({f,newPath,ivB64})=>{f.path=newPath;f.iv=ivB64});
+    save();
+    if(typeof persistOrdersToSupabase==='function'){
+      try{await persistOrdersToSupabase()}catch(e){console.warn('vault password change: orders sync after rotate failed',e)}
+    }
+    uploaded.forEach(({oldPath})=>{supabaseClient.storage.from(ORDER_FILES_BUCKET).remove([oldPath]).catch(()=>{})});
+    if(typeof auditAdd==='function')auditAdd('vault_password_changed','system','','',t('vaultChangeAuditMsg').replace('{count}',String(uploaded.length)));
+    return {ok:true,count:uploaded.length};
+  }
+
+  // ---- Настройки: панель "Пароль для файлов заказов" (видна только администратору) ----
+  function renderVaultPasswordPanel(){
+    const panel=document.getElementById('vaultPasswordPanel');
+    if(!panel)return;
+    if(typeof isNotificationAdmin!=='function'||!isNotificationAdmin()){panel.style.display='none';panel.innerHTML='';return}
+    panel.style.display='';
+    const isSet=!!vaultConfig;
+    panel.innerHTML=`<h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111">🔒 <span>${escapeHtml(t('vaultPanelTitle'))}</span></h3>
+      <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">${escapeHtml(isSet?t('vaultPanelHintSet'):t('vaultPanelHintNotSet'))}</p>
+      <div class="actions"><button class="btn primary" type="button" onclick="${isSet?'openVaultChangeModal()':'openVaultSetupModal()'}">${escapeHtml(isSet?t('vaultChangeBtn'):t('vaultCreateBtn'))}</button></div>`;
+  }
+  window.renderVaultPasswordPanel=renderVaultPasswordPanel;
+  window.openVaultSetupModal=openVaultSetupModal;
 
   // ---- UI: список файлов заказа ----
   function fileSizeText(bytes){
