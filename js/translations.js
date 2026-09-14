@@ -263,6 +263,12 @@ Object.assign(I18N.lv,{colorBeige:'Bēšs',colorMilk:'Piena',colorGrey:'Pelēks'
 Object.assign(I18N.ru,{catMdf:'МДФ',catFillers:'Наполнители'});
 Object.assign(I18N.en,{catMdf:'MDF',catFillers:'Fillers'});
 Object.assign(I18N.lv,{catMdf:'MDF',catFillers:'Pildmateriāli'});
+// v7.54: раздел «Наполнители» — синтепон и т.п., учёт по весу (кг) или по длине (погонные метры,
+// с шириной рулона). Раньше подсказка категории показывалась как сырой ключ "hintFiller" — перевода
+// не было вообще ни на одном языке.
+Object.assign(I18N.ru,{hintFiller:'синтепон, холлофайбер, пух',fillerUnitByWeight:'По весу (кг)',fillerUnitByLength:'По длине (погонные метры)',fillerTypeLabel:'Тип наполнителя',fillerDensityLabel:'Плотность',fillerPackageWeightLabel:'Вес упаковки, кг'});
+Object.assign(I18N.en,{hintFiller:'batting, hollow fiber, down',fillerUnitByWeight:'By weight (kg)',fillerUnitByLength:'By length (running meters)',fillerTypeLabel:'Filler type',fillerDensityLabel:'Density',fillerPackageWeightLabel:'Package weight, kg'});
+Object.assign(I18N.lv,{hintFiller:'sintepons, holofaibers, dūnas',fillerUnitByWeight:'Pēc svara (kg)',fillerUnitByLength:'Pēc garuma (tekošie metri)',fillerTypeLabel:'Pildmateriāla tips',fillerDensityLabel:'Blīvums',fillerPackageWeightLabel:'Iepakojuma svars, kg'});
 Object.assign(I18N.ru,{unitRunningM:'пог. м',unitSheet:'лист',unitM3:'м³',unitKg:'кг',unitRoll:'рулон',unitSheetsPlural:'листы',areaOfChangeLabel:'Площадь изменения'});
 Object.assign(I18N.en,{unitRunningM:'running m',unitSheet:'sheet',unitM3:'m³',unitKg:'kg',unitRoll:'roll',unitSheetsPlural:'sheets',areaOfChangeLabel:'Change area'});
 Object.assign(I18N.lv,{unitRunningM:'tekošie m',unitSheet:'loksne',unitM3:'m³',unitKg:'kg',unitRoll:'rullis',unitSheetsPlural:'loksnes',areaOfChangeLabel:'Izmaiņu laukums'});

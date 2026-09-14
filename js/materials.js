@@ -1310,7 +1310,16 @@ async function saveMaterial(id){
   attrs.collection=(document.getElementById('mCollection')?.value||'').trim();
   attrs.manufacturer=(document.getElementById('mManufacturer')?.value||'').trim();
   Object.assign(attrs,readMaterialWizardParams(cat,'m',(id?(data.materials||[]).find(x=>String(x.id)===String(id))?.attributes:{} )||{}));
-  const unit=(id?(data.materials||[]).find(x=>String(x.id)===String(id))?.unit:'')||materialBaseUnit(cat);
+  // v7.54: у «Наполнителей» единица учёта — выбор пользователя (кг / погонные метры), а не жёсткая
+  // константа из materialBaseUnit() — читаем выбор из #mFillerUnit (см. materialWizardParamsHtml())
+  // и на всякий случай переносим его же в attrs.fillerUnit, чтобы форма при повторном открытии
+  // на редактирование знала, какая опция была выбрана (сам m.unit сюда не передаётся).
+  const fillerUnitEl=cat==='Наполнители'?document.getElementById('mFillerUnit'):null;
+  if(fillerUnitEl){
+    attrs.fillerUnit=fillerUnitEl.value;
+    if(fillerUnitEl.value!=='пог. м'){attrs.rollWidth='';attrs.rollWidthMm='';}
+  }
+  const unit=fillerUnitEl?fillerUnitEl.value:((id?(data.materials||[]).find(x=>String(x.id)===String(id))?.unit:'')||materialBaseUnit(cat));
   const state=materialCreateState();
   const q=state==='stock'?normalizeStockValue(document.getElementById('mQty')?.value||0,unit,true):0;
   const mn=state==='stock'?normalizeStockValue(document.getElementById('mMinQty')?.value||0,unit,true):normalizeStockValue((id?(data.materials||[]).find(x=>String(x.id)===String(id))?.minQuantity:0)||0,unit,true);
