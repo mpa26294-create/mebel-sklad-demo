@@ -302,10 +302,17 @@ function openNewMaterialOrder(materialId){
   const min=Number(m.minQuantity||0);
   const avail=availableQty(m);
   const suggested=Math.max(0,Number((min-avail).toFixed(3)));
+  // v7.71: у mailto-ссылок нет способа прикрепить файл — это ограничение самого браузера/протокола,
+  // сайт не может это обойти. Ближайший рабочий вариант: если у материала есть чертёж (PDF), сайт сам
+  // скачивает его в момент открытия письма — остаётся перетащить уже скачанный файл в открывшееся
+  // письмо (у большинства почтовых программ это один клик/один drag&drop).
+  const pdfAttrs=m.attributes||{};
+  const hasPdf=!!(pdfAttrs.pdfName||pdfAttrs.pdfPath||pdfAttrs.pdfUrl);
   const body=`<div class="vault-modal">
     <p class="muted small">${escapeHtml(t('orderMaterialToLabel'))}: <b>${escapeHtml(email)}</b></p>
     <div class="field"><label>${escapeHtml(t('orderMaterialQtyLabel'))}, ${escapeHtml(unitLabel(unit))}</label><input id="orderMaterialQtyInput" type="number" min="0" step="any" class="input" value="${suggested>0?suggested:''}"></div>
     <div class="field"><label>${escapeHtml(t('orderMaterialNoteLabel'))}</label><textarea id="orderMaterialNoteInput" class="input" rows="2" placeholder="${escapeHtml(t('orderMaterialNotePlaceholder'))}"></textarea></div>
+    ${hasPdf?`<label class="order-file-encrypt-toggle"><input id="orderMaterialAttachPdfChk" type="checkbox" checked> ${escapeHtml(t('orderMaterialAttachPdfLabel'))}</label><p class="muted small">${escapeHtml(t('orderMaterialAttachPdfHint'))}</p>`:''}
     <div class="auth-error" id="orderMaterialError"></div>
   </div>`;
   openModal(t('orderMaterialTitle'),body,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmOrderMaterialEmail('${escapeHtml(materialId)}')">${escapeHtml(t('orderMaterialSendBtn'))}</button>`);
@@ -327,7 +334,7 @@ function materialOrderDisplayName(m){
   }
   return raw;
 }
-window.confirmOrderMaterialEmail=function(materialId){
+window.confirmOrderMaterialEmail=async function(materialId){
   const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
   if(!m)return;
   const email=String(m.attributes?.supplierEmail||'').trim();
@@ -339,6 +346,13 @@ window.confirmOrderMaterialEmail=function(materialId){
   const unit=materialDisplayUnit(m);
   const sku=m.sku||'';
   const displayName=materialOrderDisplayName(m);
+  const pdfAttrs=m.attributes||{};
+  const pdfName=pdfAttrs.pdfName||'';
+  // v7.71: mailto: не умеет прикладывать файлы — этого не позволяет сам протокол/браузер, ни один
+  // сайт не может это обойти. Если чертёж есть и галочка стоит — сайт сам скачивает PDF в момент
+  // открытия письма, а в текст письма добавляется явное упоминание, что чертёж приложен ОТДЕЛЬНЫМ
+  // скачанным файлом и его нужно перетащить в это же письмо вручную.
+  const attachPdf=!!document.getElementById('orderMaterialAttachPdfChk')?.checked&&!!(pdfAttrs.pdfName||pdfAttrs.pdfPath||pdfAttrs.pdfUrl);
   const lines=[
     t('orderMaterialGreeting'),
     '',
@@ -346,12 +360,17 @@ window.confirmOrderMaterialEmail=function(materialId){
     sku?`${t('orderMaterialLineSku')}: ${sku}`:null,
     `${t('orderMaterialLineQty')}: ${qty} ${unitLabel(unit)}`,
     note?`${t('orderMaterialLineNote')}: ${note}`:null,
+    attachPdf?`${t('orderMaterialLinePdf')}: ${pdfName||t('orderMaterialLinePdfDefault')} (${t('orderMaterialPdfAttachHint')})`:null,
     '',
     t('orderMaterialSignoff'),
     (currentUser?.email||'')
   ].filter(x=>x!==null);
   const subject=`${t('orderMaterialSubjectPrefix')}: ${displayName}${sku?` (${sku})`:''}`;
   const mailto=`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+  if(attachPdf&&typeof downloadMaterialPdf==='function'){
+    await downloadMaterialPdf(m.id);
+    toast(t('orderMaterialPdfDownloaded'));
+  }
   window.location.href=mailto;
   if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`${t('orderMaterialAuditMsg')}: ${qty} ${unitLabel(unit)} → ${email}`);
   if(typeof goBackModal==='function')goBackModal();else closeModal();
