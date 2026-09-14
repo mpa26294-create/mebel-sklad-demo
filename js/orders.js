@@ -1223,6 +1223,13 @@ function openOrderModal(id=''){
   const o=id?data.orders.find(x=>String(x.id)===String(id)):null;
   const number=o?.number||nextOrderNumber();
   const notification=o?.notification||{enabled:true,method:'internal'};
+  // v7.60: по просьбе пользователя файлы можно прикреплять сразу при СОЗДАНИИ заказа, не дожидаясь
+  // первого "Сохранить" — для этого ещё до сохранения генерируем id черновика (см.
+  // startOrderFileDraft() в js/order-files.js), под ним же и загружаются файлы; при нажатии
+  // "Сохранить" saveManagerOrder() ниже использует этот же id для нового заказа и подхватывает
+  // уже загруженные файлы через consumePendingOrderFiles().
+  const draftId=(!id&&typeof startOrderFileDraft==='function')?startOrderFileDraft():'';
+  const filesTargetId=id||draftId||'';
   const body=`<div class="form-grid order-manager-form">
     <div class="field"><label>${escapeHtml(t('orderNumberLabel'))}</label><input id="orderNumber" class="input" value="${escapeHtml(number)}"></div>
     <div class="field"><label>${escapeHtml(t('orderCustomer'))}</label><input id="orderClient" class="input" value="${escapeHtml(o?.client||'')}" placeholder="${escapeHtml(t('orderCustomerPlaceholder'))}"></div>
@@ -1233,8 +1240,8 @@ function openOrderModal(id=''){
     <div class="field full"><label>${escapeHtml(t('orderComment'))}</label><textarea id="orderComment" placeholder="${escapeHtml(t('orderCommentPlaceholder'))}">${escapeHtml(o?.comment||'')}</textarea></div>
   </div>
   <section class="order-notification-box"><h4>${escapeHtml(t('notificationTitle'))}</h4><label class="order-notification-toggle"><input id="notifyTechnologist" type="checkbox" ${notification.enabled!==false?'checked':''}> <span>${escapeHtml(t('notifyTechnologist'))}</span></label><div class="order-notification-methods"><small>${escapeHtml(t('notificationMethod'))}</small>${['internal','telegram','email','whatsapp'].map(method=>`<label><input type="radio" name="notificationMethod" value="${method}" ${notification.method===method?'checked':''}> <span>${escapeHtml(t(`notificationMethod_${method}`))}</span><em>${escapeHtml(t(`notificationMode_${method}`))}</em></label>`).join('')}</div></section>
-  ${typeof orderFilesSectionHtml==='function'?orderFilesSectionHtml(o):''}`;
-  const foot=`<button class="btn" onclick="closeModal()">${u42('cancel')}</button><button class="btn primary" onclick="saveOrder('${id||''}')">${u42('save')}</button>`;
+  ${typeof orderFilesSectionHtml==='function'?orderFilesSectionHtml(o,filesTargetId):''}`;
+  const foot=`<button class="btn" onclick="closeModal()">${u42('cancel')}</button><button class="btn primary" onclick="saveOrder('${id||draftId||''}')">${u42('save')}</button>`;
   openModal(id?u42('editOrder'):u42('addOrder'),body,foot);
 }
 function orderStepRow(s={name:'',minutes:0}){return `<div class="order-row order-step-row"><div class="field"><label>${u42('stage')}</label><input class="input step-name" value="${escapeHtml(s.name||'')}"></div><div class="field"><label>${u42('minutes')}</label><input class="input step-min" type="number" min="0" step="1" value="${Number(s.minutes||0)}" oninput="updateOrderTimeTotal()"></div><button class="btn small danger" onclick="this.closest('.order-step-row').remove();updateOrderTimeTotal()">×</button></div>`}
@@ -1542,7 +1549,11 @@ async function saveManagerOrder(id=''){
   const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
   const isNew=!prev,notifyEnabled=!!document.getElementById('notifyTechnologist')?.checked,method=document.querySelector('input[name="notificationMethod"]:checked')?.value||'internal',now=productionNow();
   const notification={enabled:notifyEnabled,method,recipientRole:'technologist',state:notifyEnabled&&method==='internal'?'sent':'prepared',createdAt:now};
-  let draft={...(prev||{}),id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),product:document.getElementById('orderProduct').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',priority:document.getElementById('orderPriority')?.value||'normal',comment:document.getElementById('orderComment').value.trim(),date:prev?.date||today(),status:isNew?'Ожидает технолога':prev.status,steps:prev?.steps||[],materials:prev?.materials||[],notification};
+  // v7.60: у нового заказа files приходят из pending-списка, накопленного файлами, которые
+  // загрузили ДО этого "Сохранить" (см. openOrderModal/consumePendingOrderFiles в js/order-files.js);
+  // у существующего заказа files уже корректно приходят через spread {...prev} выше.
+  const draftFiles=prev?(prev.files||[]):(typeof consumePendingOrderFiles==='function'?consumePendingOrderFiles(id):[]);
+  let draft={...(prev||{}),id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),product:document.getElementById('orderProduct').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',priority:document.getElementById('orderPriority')?.value||'normal',comment:document.getElementById('orderComment').value.trim(),date:prev?.date||today(),status:isNew?'Ожидает технолога':prev.status,steps:prev?.steps||[],materials:prev?.materials||[],notification,files:draftFiles};
   if(typeof setOrderMetaForSave==='function')draft=setOrderMetaForSave(draft,prev);
   if(id)data.orders=data.orders.map(o=>String(o.id)===String(id)?draft:o);else data.orders.push(draft);
   if(isNew){
@@ -1582,7 +1593,7 @@ function showOrderInfoModal(id){
   // at once (inline in the list and here in the modal).
   if(typeof expandedOrders!=='undefined'&&expandedOrders.has(id)){expandedOrders.delete(id);if(typeof renderOrders==='function')renderOrders();}
   const status=calcOrderAutoStatus(o),fields=[[t('orderNumberLabel'),o.number||'—'],[t('orderCustomer'),o.client||'—'],[t('orderProduct'),o.product||'—'],[t('orderProductCount'),orderProductQty(o)],[t('orderDueDate'),o.dueDate||'—'],[t('orderCreatedDate'),o.date||'—'],[t('orderPriority'),orderPriorityLabel(o.priority)],[t('orderCurrentStatus'),status]];
-  const body=`<div class="order-info-view"><div class="order-info-grid">${fields.map(([label,value])=>`<div><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}<div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div>${orderInfoHistoryHtml(o)}${typeof cancelReviewPending==='function'&&cancelReviewPending(o)&&typeof cancelReviewHtml==='function'?cancelReviewHtml(o):''}</div>`;
+  const body=`<div class="order-info-view"><div class="order-info-grid">${fields.map(([label,value])=>`<div><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}<div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div>${typeof orderFilesSectionHtml==='function'?orderFilesSectionHtml(o):''}${orderInfoHistoryHtml(o)}${typeof cancelReviewPending==='function'&&cancelReviewPending(o)&&typeof cancelReviewHtml==='function'?cancelReviewHtml(o):''}</div>`;
   const technologyLabel=currentLang==='en'?'Technology':currentLang==='lv'?'Tehnoloģija':'Технология';
   openModal(o.number||t('orderStageCreation'),body,`<button class="btn" type="button" onclick="openOrderModal('${o.id}')">${escapeHtml(u42('edit'))}</button><button class="btn primary" type="button" onclick="openOrderTechnologyFromInfo('${o.id}')">${escapeHtml(technologyLabel)}</button><button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('close'))}</button>`);setCleanModalClass('order-clean-modal order-info-modal');
 }

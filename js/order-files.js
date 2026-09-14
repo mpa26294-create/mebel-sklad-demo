@@ -21,8 +21,20 @@
 
   let vaultSyncRowId='';
   let vaultConfig=null; // {salt,verifyIv,verifyCipher} — только соль и проверочный блок, не пароль и не ключ
-  let vaultKey=null; // CryptoKey, только в памяти этой вкладки — исчезает при перезагрузке страницы
   let vaultResolve=null;
+  // v7.60: по просьбе пользователя ключ шифрования НИГДЕ не кэшируется между открытиями файлов —
+  // пароль запрашивается каждый раз заново (раньше он держался в памяти до перезагрузки вкладки).
+  // Также: черновик нового (ещё не сохранённого) заказа — файлы можно прикреплять до первого
+  // "Сохранить" (см. startOrderFileDraft/consumePendingOrderFiles, используются в js/orders.js).
+  let orderDraftId='';
+  let pendingOrderFiles=[];
+  function startOrderFileDraft(){orderDraftId=(typeof uid==='function'?uid():String(Date.now()));pendingOrderFiles=[];return orderDraftId}
+  function consumePendingOrderFiles(matchId){
+    if(matchId&&matchId===orderDraftId){const files=pendingOrderFiles;orderDraftId='';pendingOrderFiles=[];return files}
+    return [];
+  }
+  window.startOrderFileDraft=startOrderFileDraft;
+  window.consumePendingOrderFiles=consumePendingOrderFiles;
 
   function isVaultSyncRow(row){return String(row?.article||'')===VAULT_SYNC_ARTICLE}
   function applyVaultSyncRow(row){vaultConfig=row?.attributes?.vault||null;vaultSyncRowId=row?.id||vaultSyncRowId}
@@ -60,20 +72,18 @@
     const iv=crypto.getRandomValues(new Uint8Array(12));
     const cipherBuf=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(VAULT_MAGIC));
     const ok=await saveVaultConfig({salt:b64FromBuf(salt),verifyIv:b64FromBuf(iv),verifyCipher:b64FromBuf(cipherBuf)});
-    if(ok)vaultKey=key;
-    return ok;
+    return ok?key:null;
   }
   async function vaultUnlockWithPassword(password){
-    if(!vaultConfig)return false;
+    if(!vaultConfig)return null;
     try{
       const salt=new Uint8Array(bufFromB64(vaultConfig.salt));
       const key=await deriveVaultKey(password,salt);
       const iv=new Uint8Array(bufFromB64(vaultConfig.verifyIv));
       const plainBuf=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,bufFromB64(vaultConfig.verifyCipher));
-      if(new TextDecoder().decode(plainBuf)!==VAULT_MAGIC)return false;
-      vaultKey=key;
-      return true;
-    }catch(e){return false} // неверный пароль → AES-GCM не расшифрует (тег не сойдётся) → сюда же
+      if(new TextDecoder().decode(plainBuf)!==VAULT_MAGIC)return null;
+      return key;
+    }catch(e){return null} // неверный пароль → AES-GCM не расшифрует (тег не сойдётся) → сюда же
   }
   async function vaultEncryptBytes(key,arrayBuffer){
     const iv=crypto.getRandomValues(new Uint8Array(12));
@@ -85,18 +95,26 @@
     return crypto.subtle.decrypt({name:'AES-GCM',iv},key,arrayBuffer);
   }
 
-  // ---- UI: запрос/создание пароля хранилища ----
+  // ---- UI: запрос/создание пароля хранилища (без кэширования — см. комментарий выше) ----
   function requireVaultKey(){
-    if(vaultKey)return Promise.resolve(vaultKey);
     return new Promise(resolve=>{
       vaultResolve=resolve;
       if(!vaultConfig)openVaultSetupModal();else openVaultUnlockModal();
     });
   }
-  function finishVaultPrompt(key){closeModal();const resolve=vaultResolve;vaultResolve=null;if(resolve)resolve(key)}
+  // v7.60-fix: окно пароля почти всегда открывается ПОВЕРХ уже открытой формы заказа — у сайта
+  // один общий modalBackdrop, а не стек отдельных окон, так что обычный openModal()/closeModal()
+  // здесь стирал бы форму заказа под собой. pushModalState() перед показом запоминает её, а
+  // goBackModal() (вместо closeModal()) возвращает как было — вместе с уже введёнными в форме
+  // значениями (см. pushModalState() в index.html — он сохраняет их тоже).
+  function finishVaultPrompt(key){
+    if(typeof goBackModal==='function')goBackModal();else closeModal();
+    const resolve=vaultResolve;vaultResolve=null;if(resolve)resolve(key)
+  }
   window.cancelVaultPrompt=function(){finishVaultPrompt(null)};
 
   function openVaultSetupModal(){
+    if(typeof pushModalState==='function')pushModalState();
     const body=`<div class="vault-modal">
       <p class="danger-text">${escapeHtml(t('vaultSetupWarning'))}</p>
       <div class="field"><label>${escapeHtml(t('vaultNewPasswordLabel'))}</label><input id="vaultPass1" type="password" class="input" autocomplete="new-password"></div>
@@ -112,12 +130,13 @@
     if(p1.length<8){if(err)err.textContent=t('vaultPasswordTooShort');return}
     if(p1!==p2){if(err)err.textContent=t('vaultPasswordMismatch');return}
     const btn=document.querySelector('.modal-foot .btn.primary');if(btn)btn.disabled=true;
-    const ok=await vaultSetupWithPassword(p1);
+    const key=await vaultSetupWithPassword(p1);
     if(btn)btn.disabled=false;
-    if(!ok){if(err)err.textContent=t('vaultSaveError');return}
-    finishVaultPrompt(vaultKey);
+    if(!key){if(err)err.textContent=t('vaultSaveError');return}
+    finishVaultPrompt(key);
   };
   function openVaultUnlockModal(){
+    if(typeof pushModalState==='function')pushModalState();
     const body=`<div class="vault-modal"><p class="muted">${escapeHtml(t('vaultUnlockHint'))}</p><input id="vaultUnlockPass" type="password" class="input" autocomplete="current-password" placeholder="${escapeHtml(t('vaultPasswordPlaceholder'))}"><div class="auth-error" id="vaultUnlockError"></div></div>`;
     openModal(t('vaultUnlockTitle'),body,`<button class="btn" type="button" onclick="cancelVaultPrompt()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmVaultUnlock()">${escapeHtml(t('vaultUnlockBtn'))}</button>`);
     setTimeout(()=>{
@@ -130,10 +149,10 @@
     const pass=document.getElementById('vaultUnlockPass')?.value||'';
     const err=document.getElementById('vaultUnlockError');
     const btn=document.querySelector('.modal-foot .btn.primary');if(btn)btn.disabled=true;
-    const ok=await vaultUnlockWithPassword(pass);
+    const key=await vaultUnlockWithPassword(pass);
     if(btn)btn.disabled=false;
-    if(!ok){if(err)err.textContent=t('vaultWrongPassword');document.getElementById('vaultUnlockPass')?.select();return}
-    finishVaultPrompt(vaultKey);
+    if(!key){if(err)err.textContent=t('vaultWrongPassword');document.getElementById('vaultUnlockPass')?.select();return}
+    finishVaultPrompt(key);
   };
 
   // ---- UI: список файлов заказа ----
@@ -151,30 +170,41 @@
     if(m.includes('sheet')||m.includes('excel'))return '📊';
     return '📎';
   }
-  function orderFilesListHtml(o){
-    const files=Array.isArray(o?.files)?o.files:[];
+  // v7.60: files либо у реального заказа (o.files), либо, для ещё не сохранённого — во временном
+  // pendingOrderFiles (id совпадает с orderDraftId). filesFor() — единая точка получения списка для
+  // рендера, без разницы, сохранён заказ уже или нет.
+  function filesFor(id,o){
+    if(o)return Array.isArray(o.files)?o.files:[];
+    if(id&&id===orderDraftId)return pendingOrderFiles;
+    return [];
+  }
+  function orderFilesListHtml(id,o){
+    const files=filesFor(id,o);
     if(!files.length)return `<div class="order-files-empty muted">${escapeHtml(t('orderFilesEmpty'))}</div>`;
     return `<div class="order-file-list">${files.map(f=>`<div class="order-file-row" data-file-id="${escapeHtml(f.id)}">
       <span class="order-file-icon">${orderFileIcon(f.mimeType)}</span>
       <span class="order-file-info"><b>${escapeHtml(f.name)}</b><small>${escapeHtml(fileSizeText(f.size))} · ${escapeHtml(f.uploadedBy||'—')}</small></span>
-      <button class="btn small" type="button" onclick="openOrderFile('${escapeHtml(o.id)}','${escapeHtml(f.id)}')">${escapeHtml(t('orderFilesOpenBtn'))}</button>
-      <button class="btn small danger" type="button" onclick="deleteOrderFile('${escapeHtml(o.id)}','${escapeHtml(f.id)}')">×</button>
+      <button class="btn small" type="button" onclick="openOrderFile('${escapeHtml(id)}','${escapeHtml(f.id)}')">${escapeHtml(t('orderFilesOpenBtn'))}</button>
+      <button class="btn small danger" type="button" onclick="deleteOrderFile('${escapeHtml(id)}','${escapeHtml(f.id)}')">×</button>
     </div>`).join('')}</div>`;
   }
-  function orderFilesSectionHtml(o){
-    if(!o?.id)return `<section class="order-files-box"><h4>📎 ${escapeHtml(t('orderFilesTitle'))}</h4><p class="muted">${escapeHtml(t('orderFilesSaveFirst'))}</p></section>`;
+  // targetId нужен для ещё не сохранённого заказа (o тогда null, но черновик уже имеет id — см.
+  // startOrderFileDraft() в js/orders.js/openOrderModal). Для сохранённого заказа targetId===o.id.
+  function orderFilesSectionHtml(o,targetId){
+    const id=o?.id||targetId||'';
+    if(!id)return `<section class="order-files-box"><h4>📎 ${escapeHtml(t('orderFilesTitle'))}</h4><p class="muted">${escapeHtml(t('orderFilesSaveFirst'))}</p></section>`;
     return `<section class="order-files-box">
       <h4>🔒 ${escapeHtml(t('orderFilesTitle'))}</h4>
       <p class="muted small">${escapeHtml(t('orderFilesHint'))}</p>
-      <div id="orderFilesList">${orderFilesListHtml(o)}</div>
-      <label class="btn small">${escapeHtml(t('orderFilesUploadBtn'))}<input id="orderFileInput" type="file" multiple style="display:none" onchange="handleOrderFileUpload(event,'${escapeHtml(o.id)}')"></label>
+      <div id="orderFilesList">${orderFilesListHtml(id,o)}</div>
+      <label class="btn small">${escapeHtml(t('orderFilesUploadBtn'))}<input id="orderFileInput" type="file" multiple style="display:none" onchange="handleOrderFileUpload(event,'${escapeHtml(id)}')"></label>
     </section>`;
   }
   window.orderFilesSectionHtml=orderFilesSectionHtml;
   function refreshOrderFilesUi(orderId){
-    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId))||null;
     const list=document.getElementById('orderFilesList');
-    if(list&&o)list.innerHTML=orderFilesListHtml(o);
+    if(list)list.innerHTML=orderFilesListHtml(orderId,o);
   }
 
   window.handleOrderFileUpload=async function(event,orderId){
@@ -184,9 +214,12 @@
     if(!files.length)return;
     const key=await requireVaultKey();
     if(!key)return;
-    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
-    if(!o)return;
-    if(!Array.isArray(o.files))o.files=[];
+    // v7.60: заказ мог ещё не быть сохранён — тогда o===null и файлы копятся в pendingOrderFiles
+    // (orderId в этом случае — id черновика, см. startOrderFileDraft()); как только заказ реально
+    // сохранят, saveManagerOrder() заберёт их через consumePendingOrderFiles().
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId))||null;
+    const targetArr=o?(Array.isArray(o.files)?o.files:(o.files=[])):(orderId===orderDraftId?pendingOrderFiles:null);
+    if(!targetArr)return; // ни реального заказа, ни активного черновика с этим id — форма уже закрыта/устарела
     let uploadedAny=false;
     for(const file of files){
       if(file.size>ORDER_FILE_MAX_SIZE){toast(`${file.name}: ${t('orderFileTooBig')}`);continue}
@@ -199,21 +232,26 @@
         const path=`orders/${orderId}/${fileId}_${safeName}.enc`;
         const {error}=await supabaseClient.storage.from(ORDER_FILES_BUCKET).upload(path,new Blob([cipherBuf]),{cacheControl:'3600',upsert:false,contentType:'application/octet-stream'});
         if(error)throw error;
-        o.files.push({id:fileId,name:file.name,mimeType:file.type||'application/octet-stream',size:file.size,path,iv:ivB64,uploadedBy:(currentUser?.email||''),uploadedAt:new Date().toISOString()});
+        targetArr.push({id:fileId,name:file.name,mimeType:file.type||'application/octet-stream',size:file.size,path,iv:ivB64,uploadedBy:(currentUser?.email||''),uploadedAt:new Date().toISOString()});
         uploadedAny=true;
       }catch(e){console.error('order file upload failed',e);toast(`${t('orderFileUploadError')}: ${file.name}`);}
     }
     if(uploadedAny){
-      save();
-      if(typeof auditAdd==='function')auditAdd('order_file_added','order',o.id,o.number,`${t('orderFilesUploaded')}: ${files.map(f=>f.name).join(', ')}`);
+      if(o){
+        save();
+        if(typeof auditAdd==='function')auditAdd('order_file_added','order',o.id,o.number,`${t('orderFilesUploaded')}: ${files.map(f=>f.name).join(', ')}`);
+      }
       toast(t('orderFilesUploaded'));
     }
     refreshOrderFilesUi(orderId);
   };
 
+  // v7.60: пароль спрашивается заново при КАЖДОМ открытии (никакого кэша ключа между файлами — по
+  // просьбе пользователя), и результат всегда СКАЧИВАЕТСЯ файлом, а не открывается предпросмотром
+  // в новой вкладке (раньше картинки/PDF открывались inline — теперь для всех типов одинаково).
   window.openOrderFile=async function(orderId,fileId){
-    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
-    const f=o?.files?.find(x=>String(x.id)===String(fileId));
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId))||null;
+    const f=filesFor(orderId,o).find(x=>String(x.id)===String(fileId));
     if(!f)return;
     const key=await requireVaultKey();
     if(!key)return;
@@ -224,12 +262,8 @@
       const plainBuf=await vaultDecryptBytes(key,f.iv,cipherBuf);
       const outBlob=new Blob([plainBuf],{type:f.mimeType||'application/octet-stream'});
       const url=URL.createObjectURL(outBlob);
-      if(String(f.mimeType||'').startsWith('image/')||f.mimeType==='application/pdf'){
-        window.open(url,'_blank');
-      }else{
-        const a=document.createElement('a');
-        a.href=url;a.download=f.name;document.body.appendChild(a);a.click();a.remove();
-      }
+      const a=document.createElement('a');
+      a.href=url;a.download=f.name;document.body.appendChild(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),60000);
     }catch(e){
       console.error('order file open failed',e);
@@ -238,14 +272,19 @@
   };
 
   window.deleteOrderFile=async function(orderId,fileId){
-    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
-    const f=o?.files?.find(x=>String(x.id)===String(fileId));
-    if(!o||!f)return;
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId))||null;
+    const arr=filesFor(orderId,o);
+    const f=arr.find(x=>String(x.id)===String(fileId));
+    if(!f)return;
     if(!confirm(t('orderFileDeleteConfirm').replace('{name}',f.name)))return;
     try{ await supabaseClient.storage.from(ORDER_FILES_BUCKET).remove([f.path]); }catch(e){console.warn('order file storage remove failed',e)}
-    o.files=(o.files||[]).filter(x=>String(x.id)!==String(fileId));
-    save();
-    if(typeof auditAdd==='function')auditAdd('order_file_deleted','order',o.id,o.number,`${t('orderFileDeleted')}: ${f.name}`);
+    if(o){
+      o.files=(o.files||[]).filter(x=>String(x.id)!==String(fileId));
+      save();
+      if(typeof auditAdd==='function')auditAdd('order_file_deleted','order',o.id,o.number,`${t('orderFileDeleted')}: ${f.name}`);
+    }else if(orderId===orderDraftId){
+      pendingOrderFiles=pendingOrderFiles.filter(x=>String(x.id)!==String(fileId));
+    }
     refreshOrderFilesUi(orderId);
     toast(t('orderFileDeleted'));
   };
