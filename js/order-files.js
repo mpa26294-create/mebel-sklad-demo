@@ -178,15 +178,20 @@
     if(id&&id===orderDraftId)return pendingOrderFiles;
     return [];
   }
+  // v7.61: шифрование файла теперь необязательно (галочка при загрузке) — старые записи без поля
+  // encrypted считаются зашифрованными (они и были зашифрованы, поле просто ещё не существовало).
+  function isFileEncrypted(f){return f?.encrypted!==false}
   function orderFilesListHtml(id,o){
     const files=filesFor(id,o);
     if(!files.length)return `<div class="order-files-empty muted">${escapeHtml(t('orderFilesEmpty'))}</div>`;
-    return `<div class="order-file-list">${files.map(f=>`<div class="order-file-row" data-file-id="${escapeHtml(f.id)}">
-      <span class="order-file-icon">${orderFileIcon(f.mimeType)}</span>
-      <span class="order-file-info"><b>${escapeHtml(f.name)}</b><small>${escapeHtml(fileSizeText(f.size))} · ${escapeHtml(f.uploadedBy||'—')}</small></span>
+    return `<div class="order-file-list">${files.map(f=>{
+      const enc=isFileEncrypted(f);
+      return `<div class="order-file-row" data-file-id="${escapeHtml(f.id)}">
+      <span class="order-file-icon">${orderFileIcon(f.mimeType)}${enc?'🔒':''}</span>
+      <span class="order-file-info"><b>${escapeHtml(f.name)}</b><small>${escapeHtml(fileSizeText(f.size))} · ${escapeHtml(f.uploadedBy||'—')}${enc?'':` · ${escapeHtml(t('orderFileNotEncryptedBadge'))}`}</small></span>
       <button class="btn small" type="button" onclick="openOrderFile('${escapeHtml(id)}','${escapeHtml(f.id)}')">${escapeHtml(t('orderFilesOpenBtn'))}</button>
       <button class="btn small danger" type="button" onclick="deleteOrderFile('${escapeHtml(id)}','${escapeHtml(f.id)}')">×</button>
-    </div>`).join('')}</div>`;
+    </div>`;}).join('')}</div>`;
   }
   // targetId нужен для ещё не сохранённого заказа (o тогда null, но черновик уже имеет id — см.
   // startOrderFileDraft() в js/orders.js/openOrderModal). Для сохранённого заказа targetId===o.id.
@@ -197,7 +202,10 @@
       <h4>🔒 ${escapeHtml(t('orderFilesTitle'))}</h4>
       <p class="muted small">${escapeHtml(t('orderFilesHint'))}</p>
       <div id="orderFilesList">${orderFilesListHtml(id,o)}</div>
-      <label class="btn small">${escapeHtml(t('orderFilesUploadBtn'))}<input id="orderFileInput" type="file" multiple style="display:none" onchange="handleOrderFileUpload(event,'${escapeHtml(id)}')"></label>
+      <div class="order-file-upload-row">
+        <label class="btn small">${escapeHtml(t('orderFilesUploadBtn'))}<input id="orderFileInput" type="file" multiple style="display:none" onchange="handleOrderFileUpload(event,'${escapeHtml(id)}')"></label>
+        <label class="order-file-encrypt-toggle"><input id="orderFileEncryptChk" type="checkbox" checked> ${escapeHtml(t('orderFileEncryptLabel'))}</label>
+      </div>
     </section>`;
   }
   window.orderFilesSectionHtml=orderFilesSectionHtml;
@@ -210,10 +218,17 @@
   window.handleOrderFileUpload=async function(event,orderId){
     const input=event.target;
     const files=Array.from(input.files||[]);
+    // v7.61: галочка "Шифровать" читается один раз на всю пачку файлов из этой загрузки —
+    // не постаили галочку → файл кладётся в приватный bucket как есть, без AES-слоя, и открывается
+    // без пароля; постаили (по умолчанию так) → как раньше, полное шифрование общим паролем хранилища.
+    const wantEncrypt=document.getElementById('orderFileEncryptChk')?.checked!==false;
     input.value='';
     if(!files.length)return;
-    const key=await requireVaultKey();
-    if(!key)return;
+    let key=null;
+    if(wantEncrypt){
+      key=await requireVaultKey();
+      if(!key)return;
+    }
     // v7.60: заказ мог ещё не быть сохранён — тогда o===null и файлы копятся в pendingOrderFiles
     // (orderId в этом случае — id черновика, см. startOrderFileDraft()); как только заказ реально
     // сохранят, saveManagerOrder() заберёт их через consumePendingOrderFiles().
@@ -226,13 +241,17 @@
       try{
         toast(`${t('orderFilesUploading')}: ${file.name}`);
         const buf=await file.arrayBuffer();
-        const {ivB64,cipherBuf}=await vaultEncryptBytes(key,buf);
+        let ivB64='',uploadBuf=buf;
+        if(wantEncrypt){
+          const enc=await vaultEncryptBytes(key,buf);
+          ivB64=enc.ivB64;uploadBuf=enc.cipherBuf;
+        }
         const fileId=(typeof uid==='function'?uid():String(Date.now()+Math.random()));
         const safeName=(typeof cleanStoragePart==='function'?cleanStoragePart(file.name):String(file.name||'file').replace(/[^a-zA-Z0-9._-]+/g,'_'));
-        const path=`orders/${orderId}/${fileId}_${safeName}.enc`;
-        const {error}=await supabaseClient.storage.from(ORDER_FILES_BUCKET).upload(path,new Blob([cipherBuf]),{cacheControl:'3600',upsert:false,contentType:'application/octet-stream'});
+        const path=`orders/${orderId}/${fileId}_${safeName}${wantEncrypt?'.enc':''}`;
+        const {error}=await supabaseClient.storage.from(ORDER_FILES_BUCKET).upload(path,new Blob([uploadBuf]),{cacheControl:'3600',upsert:false,contentType:wantEncrypt?'application/octet-stream':(file.type||'application/octet-stream')});
         if(error)throw error;
-        targetArr.push({id:fileId,name:file.name,mimeType:file.type||'application/octet-stream',size:file.size,path,iv:ivB64,uploadedBy:(currentUser?.email||''),uploadedAt:new Date().toISOString()});
+        targetArr.push({id:fileId,name:file.name,mimeType:file.type||'application/octet-stream',size:file.size,path,iv:ivB64,encrypted:wantEncrypt,uploadedBy:(currentUser?.email||''),uploadedAt:new Date().toISOString()});
         uploadedAny=true;
       }catch(e){console.error('order file upload failed',e);toast(`${t('orderFileUploadError')}: ${file.name}`);}
     }
@@ -253,13 +272,18 @@
     const o=(data.orders||[]).find(x=>String(x.id)===String(orderId))||null;
     const f=filesFor(orderId,o).find(x=>String(x.id)===String(fileId));
     if(!f)return;
-    const key=await requireVaultKey();
-    if(!key)return;
+    // v7.61: незашифрованные файлы скачиваются сразу, без запроса пароля хранилища.
+    const enc=isFileEncrypted(f);
+    let key=null;
+    if(enc){
+      key=await requireVaultKey();
+      if(!key)return;
+    }
     try{
       const {data:blob,error}=await supabaseClient.storage.from(ORDER_FILES_BUCKET).download(f.path);
       if(error)throw error;
       const cipherBuf=await blob.arrayBuffer();
-      const plainBuf=await vaultDecryptBytes(key,f.iv,cipherBuf);
+      const plainBuf=enc?await vaultDecryptBytes(key,f.iv,cipherBuf):cipherBuf;
       const outBlob=new Blob([plainBuf],{type:f.mimeType||'application/octet-stream'});
       const url=URL.createObjectURL(outBlob);
       const a=document.createElement('a');
