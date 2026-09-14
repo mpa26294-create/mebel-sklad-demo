@@ -985,14 +985,23 @@ async function printMaterialPdf(id){const url=await materialPdfUrl(id);if(!url)r
 
 /* v5.57: unified Apple/Notion modal style for all windows */
 .modal-backdrop{background:rgba(20,22,28,.42)!important;backdrop-filter:blur(1px);}
-.modal{border-radius:24px!important;box-shadow:0 34px 100px rgba(16,24,40,.22)!important;border:1px solid rgba(255,255,255,.55)!important;overflow:hidden!important;background:#fff!important;}
-.modal-head{height:68px!important;padding:0 24px!important;border-bottom:1px solid #edf0f4!important;background:#fff!important;position:sticky!important;top:0!important;z-index:5!important;}
+.modal{border-radius:24px!important;box-shadow:0 34px 100px rgba(16,24,40,.22)!important;border:1px solid rgba(255,255,255,.55)!important;overflow:hidden!important;background:#fff!important;display:flex!important;flex-direction:column!important;}
+/* v7.47: раньше .modal-body был обычным блоком без ограничения высоты и своей прокрутки — если
+   контент (поле + подсказки + список) не помещался в max-height:90vh родителя (низкое окно
+   браузера, увеличенный масштаб страницы, более длинный перевод текста), лишнее просто обрезалось
+   overflow:hidden у .modal — включая шапку/кнопки «Подтвердить»/«Отмена» внизу, без возможности
+   прокрутить и увидеть их. Теперь модалка — flex-колонка: шапка и низ с кнопками зафиксированы
+   (flex:0 0 auto), а прокручивается только .modal-body — кнопки всегда видны и доступны, на любой
+   высоте экрана. Тот же приём уже был у мобильной версии (@media max-width:920px) — расширяем его
+   на десктоп.
+*/
+.modal-head{height:68px!important;padding:0 24px!important;border-bottom:1px solid #edf0f4!important;background:#fff!important;position:sticky!important;top:0!important;z-index:5!important;flex:0 0 auto!important;}
 .modal-head h3{font-size:22px!important;font-weight:650!important;letter-spacing:-.035em!important;color:#111!important;}
 .modal-head .btn.small{width:34px!important;height:34px!important;min-height:34px!important;border-radius:10px!important;padding:0!important;background:#fff!important;border:1px solid #e6e9ee!important;color:#111!important;box-shadow:0 1px 2px rgba(16,24,40,.03)!important;}
 .modal-head .btn.small:hover{background:#f7f8fa!important;}
 .modal-back-btn{height:34px!important;min-height:34px!important;border-radius:10px!important;border:1px solid #e6e9ee!important;background:#fff!important;color:#30343b!important;padding:0 12px!important;font-size:13px!important;margin-right:10px!important;}
-.modal-body{background:#fff!important;padding:24px!important;}
-.modal-foot{min-height:72px!important;padding:14px 24px!important;border-top:1px solid #edf0f4!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(10px)!important;position:sticky!important;bottom:0!important;z-index:6!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:10px!important;}
+.modal-body{background:#fff!important;padding:24px!important;flex:1 1 auto!important;overflow-y:auto!important;min-height:0!important;-webkit-overflow-scrolling:touch!important;}
+.modal-foot{min-height:72px!important;padding:14px 24px!important;border-top:1px solid #edf0f4!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(10px)!important;position:sticky!important;bottom:0!important;z-index:6!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:10px!important;flex:0 0 auto!important;}
 .modal-foot .btn{height:44px!important;min-height:44px!important;border-radius:12px!important;padding:0 18px!important;font-weight:550!important;}
 .modal-foot .btn.primary{background:#17181b!important;color:#fff!important;border-color:#17181b!important;box-shadow:0 12px 25px rgba(0,0,0,.10)!important;}
 .modal-foot .btn.danger{background:#fff!important;color:#b42323!important;border-color:#e6e9ee!important;}
