@@ -33,6 +33,11 @@ function placeChangelogNavLast(){
 
 function switchSection(sectionId){
   if(!sectionId)return false;
+  // v7.41: рабочий режим — сотруднику из списка «Упрощённый доступ» (Настройки) доступны только
+  // Склад и Цеха; переход в любой другой раздел (в т.ч. по прямой ссылке или через меню профиля)
+  // молча возвращает на Склад. Это ограничение только в интерфейсе — не замена прав доступа в
+  // самой базе (Supabase RLS), но убирает лишние разделы, которые сотруднику не нужны.
+  if(document.body.classList.contains('worker-mode')&&sectionId!=='stock'&&sectionId!=='workshops')sectionId='stock';
   const section=document.getElementById(sectionId);
   if(!section)return false;
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));
