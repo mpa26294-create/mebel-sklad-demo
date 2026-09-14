@@ -1876,11 +1876,18 @@ function materialWizardParamDefs(cat){
   if(cat==='Древесина')return [['woodSpecies','Порода','text'],['moisture','Влажность, %','number'],['grade','Сорт','text']];
   if(cat==='Фурнитура')return [['type','Тип / описание','text'],['size','Размер / модель','text'],['width','Ширина, мм','number'],['height','Высота, мм','number'],['length','Длина, мм','number'],['color','Цвет','text'],['material','Материал','text']];
   if(cat==='Крепёж')return [['type','Тип','text'],['diameter','Диаметр, мм','number'],['length','Длина, мм','number'],['thread','Резьба','text'],['material','Материал','text']];
-  if(cat==='Наполнители')return [['type','Тип','text'],['density','Плотность','text'],['packageWeight','Вес упаковки, кг','number'],['color','Цвет','text']];
+  if(cat==='Наполнители')return [['type',t('fillerTypeLabel'),'text'],['density',t('fillerDensityLabel'),'text'],['packageWeight',t('fillerPackageWeightLabel'),'number'],['color',t('colorLabel'),'text'],['rollWidth',t('rollWidthMLabel'),'number']];
   return [['color','Цвет','text']];
 }
+// v7.54: у «Наполнителей» единица учёта — не фиксированная константа (как у остальных generic-
+// категорий через materialBaseUnit()), а выбор пользователя: по весу (кг) или по длине (погонные
+// метры, тогда нужна ширина рулона — то же поле rollWidth/rollWidthMm, что и у Ткани/Экокожи, для
+// единообразия). Выбор хранится в attrs.fillerUnit (продублирован из m.unit, т.к. эта функция не
+// получает сам объект материала — только category/attrs/prefix) и читается в saveMaterial().
 function materialWizardParamsHtml(cat,attrs={},prefix='m'){
-  return materialWizardParamDefs(cat).map(([key,label,type])=>{
+  const fillerUnit=attrs.fillerUnit||'кг';
+  const unitBlock=(cat==='Наполнители'&&prefix==='m')?`<div class="field"><label>${escapeHtml(t('accountingUnit'))}</label><select id="mFillerUnit" class="select" onchange="syncFillerUnitFields()"><option value="кг" ${fillerUnit!=='пог. м'?'selected':''}>${escapeHtml(t('fillerUnitByWeight'))}</option><option value="пог. м" ${fillerUnit==='пог. м'?'selected':''}>${escapeHtml(t('fillerUnitByLength'))}</option></select></div>`:'';
+  const rows=materialWizardParamDefs(cat).map(([key,label,type])=>{
     if(type==='color'&&prefix==='fabric')return fabricColorPickerHtml(attrs.color||'');
     if(String(type).startsWith('select:')){
       const opts=String(type).slice(7).split('|');
@@ -1890,8 +1897,20 @@ function materialWizardParamsHtml(cat,attrs={},prefix='m'){
     const step=type==='number'?' step="0.01" min="0"':'';
     const value=key==='rollWidth'&&attrs.rollWidth?attrs.rollWidth:(attrs[key]||'');
     const preview=(prefix==='fabric'&&(key==='rollWidth'||key==='rollLength'))?' oninput="updateFabricAreaPreview()"':(prefix==='m'&&['width','length','thickness'].includes(key)?' oninput="syncGenericMaterialPreview()"':'');
-    return `<div class="field"><label>${escapeHtml(label)}</label><input id="${prefix}Param_${key}" class="input" type="${inputType}"${step}${preview} value="${escapeHtml(value)}"></div>`;
+    const isFillerRollWidth=cat==='Наполнители'&&key==='rollWidth';
+    const wrapAttrs=isFillerRollWidth?` class="field filler-roll-width-field"${fillerUnit!=='пог. м'?' style="display:none"':''}`:' class="field"';
+    return `<div${wrapAttrs}><label>${escapeHtml(label)}</label><input id="${prefix}Param_${key}" class="input" type="${inputType}"${step}${preview} value="${escapeHtml(value)}"></div>`;
   }).join('');
+  return unitBlock+rows;
+}
+function syncFillerUnitFields(){
+  const unit=document.getElementById('mFillerUnit')?.value||'кг';
+  document.querySelectorAll('.filler-roll-width-field').forEach(el=>el.style.display=unit==='пог. м'?'':'none');
+  const label=unitLabel(unit);
+  const orderedLbl=document.getElementById('mOrderedQty')?.closest('.field')?.querySelector('label');
+  if(orderedLbl)orderedLbl.textContent=`${t('ordered')}, ${label}`;
+  const stockLbl=document.getElementById('mQty')?.closest('.field')?.querySelector('label');
+  if(stockLbl)stockLbl.textContent=`${t('inStockLabel')}, ${label}`;
 }
 function readMaterialWizardParams(cat,prefix='m',oldAttrs={}){
   const attrs={};
