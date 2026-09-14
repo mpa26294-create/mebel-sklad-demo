@@ -105,6 +105,14 @@
       .wood-group-copy span{display:block;color:#737b88;font-size:12px;line-height:1.35}
       .wood-group-arrow{font-size:24px;color:#7b8390;font-weight:300;text-align:right}
       .wood-group-note{display:none}
+      /* v7.58: .wood-group-card переиспользован в js/materials.js для карточек выбора типа
+         наполнителя (Синтепон/Холлофайбер/Пух/Другие) — там это не переход на новый экран, а
+         постоянный выбор, поэтому нужно видимое активное состояние (тут у Дерева не нужно —
+         клик сразу открывает новую форму) и 2 колонки вместо 3 (без стрелки «›»). */
+      .wood-group-card.filler-type-card{grid-template-columns:38px 1fr}
+      .wood-group-card.active{background:#111217;border-color:#111217}
+      .wood-group-card.active .wood-group-copy b,.wood-group-card.active .wood-group-copy span{color:#fff}
+      .wood-group-card.active .wood-group-icon{background:rgba(255,255,255,.15);border-color:transparent;color:#fff}
       @media(max-width:760px){.wood-unified .wood-state-cards{grid-template-columns:1fr}.wood-group-list{grid-template-columns:1fr}.wood-group-card{min-height:76px}.modal.wood-group-select .modal-body{padding:22px 16px 24px!important}}
     `;
     document.head.appendChild(style);
