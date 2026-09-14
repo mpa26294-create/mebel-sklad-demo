@@ -3089,6 +3089,20 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 
 /* Manager-only order creation and responsibility handoff. */
 .order-manager-form{margin-bottom:14px}.order-notification-box{padding:14px;border:1px solid #e5e9f0;border-radius:14px;background:#fff}.order-notification-box h4{margin:0 0 12px;color:#101828;font-size:13px}.order-notification-toggle{display:flex;align-items:center;gap:8px;color:#344054;font-size:12px;font-weight:650}.order-notification-methods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.order-notification-methods>small{grid-column:1/-1;color:#8490a3;font-size:9px;text-transform:uppercase}.order-notification-methods label{display:grid;grid-template-columns:18px minmax(0,1fr);gap:2px 6px;align-items:center;padding:9px;border:1px solid #edf0f4;border-radius:10px;background:#fafbfc;color:#344054;font-size:11px}.order-notification-methods em{grid-column:2;color:#8490a3;font-size:9px;font-style:normal}.order-next-responsible{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:10px 12px;border:1px solid #d7e5ff;border-radius:10px;background:#f6f9ff}.order-next-responsible small{color:#667085;font-size:9px;text-transform:uppercase}.order-next-responsible b{color:#175cd3;font-size:12px}.order-next-responsible.active{border-color:#bfe8cc;background:#f4fbf6}.order-next-responsible.active b{color:#287047}@media(max-width:760px){.order-notification-methods{grid-template-columns:1fr}}
+/* v7.59: файлы заказа (фото/PDF/документы) — хранятся зашифрованными, см. js/order-files.js */
+.order-files-box{margin-top:14px;padding:14px;border:1px solid #e5e9f0;border-radius:14px;background:#fff}
+.order-files-box h4{margin:0 0 4px;color:#101828;font-size:13px;display:flex;align-items:center;gap:6px}
+.order-files-box .muted.small{font-size:11px;margin:0 0 10px;color:#8490a3;line-height:1.4}
+.order-files-empty{font-size:12px;margin-bottom:10px}
+.order-file-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.order-file-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #edf0f4;border-radius:10px;background:#fafbfc}
+.order-file-icon{font-size:17px;flex:0 0 auto}
+.order-file-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.order-file-info b{font-size:12px;color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.order-file-info small{color:#8490a3;font-size:10px;margin-top:1px}
+.vault-modal{display:flex;flex-direction:column;gap:12px}
+.vault-modal .input{margin-top:2px}
+.vault-modal p.danger-text{font-size:12px;line-height:1.5;margin:0}
 
 /* Order information view and unclipped action menu. */
 #orders .order-erp-card{overflow:visible}.action-menu.open{z-index:10000}.action-menu-list{z-index:10000!important;max-height:calc(100vh - 16px);overflow-y:auto}.order-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.order-info-grid>div{min-width:0;padding:11px 12px;border:1px solid #edf0f4;border-radius:11px;background:#fafbfc}.order-info-grid .full{grid-column:1/-1}.order-info-grid small{display:block;margin-bottom:5px;color:#8490a3;font-size:9px;font-weight:650;text-transform:uppercase}.order-info-grid b{display:block;color:#1d2939;font-size:12px;line-height:1.45;overflow-wrap:anywhere}.order-info-history{margin-top:14px;padding:14px;border:1px solid #e5e9f0;border-radius:14px;background:#fff}.order-info-history h4{margin:0 0 10px;color:#101828;font-size:13px}.order-info-history>div{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid #edf0f4}.order-info-history span b,.order-info-history span small{display:block}.order-info-history span b{color:#344054;font-size:11px}.order-info-history span small,.order-info-history time,.order-info-history p{color:#8490a3;font-size:10px}.order-info-history time{white-space:nowrap}@media(max-width:760px){.order-info-grid{grid-template-columns:1fr}.order-info-grid .full{grid-column:auto}.order-info-history>div{flex-direction:column;gap:4px}}
