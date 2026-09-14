@@ -1164,6 +1164,12 @@ function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}stockPag
 function clearFilters(){document.getElementById('searchInput').value='';document.getElementById('categoryFilter').value='';const subcategoryFilter=document.getElementById('subcategoryFilter');if(subcategoryFilter)subcategoryFilter.value='';['stockStateFilter','unitFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['supplierFilter','orderFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});activeQuickFilter='all';fabricStockTypeFilter='';activeStockGroup='all';activeStockSub='all';refreshQuickFilterChips();stockPage=1;updateSubFilter();renderAll()}
 
 function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'hintFabric','Экокожа':'hintEcoLeather','Кожа':'hintLeather','Древесина':'hintWood','Фанера':'hintPlywood','МДФ':'hintPlywood','ДСП':'hintChipboard','ДВП':'hintChipboard','OSB':'hintChipboard','Крепёж':'hintFasteners','Фурнитура':'hintHardware','Наполнители':'hintFiller'};return t(map[cat]||'')}
+// v7.55: настоящая причина «не открывается ничего» при клике на Наполнители (и точно так же
+// сломано у Фурнитуры и Крепежа — любая категория, которая идёт через общий openMaterialModal(),
+// а не через свой мастер вроде Ткани/Дерева/Поролона) — materialSubtypeLabel() вызывалась в
+// openMaterialModal(), но нигде в коде не была определена. ReferenceError прерывал построение
+// формы ДО openModal(), поэтому окно вообще не появлялось, без единой видимой ошибки на экране.
+function materialSubtypeLabel(cat){if(cat==='Наполнители')return t('fillerTypeLabel');return t('subcategory')}
 
 function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">${t('noOption')}</option><option value="true" ${attrs[key]?'selected':''}>${t('yesOption')}</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
 function categorySubOptions(cat){
