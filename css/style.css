@@ -3511,12 +3511,19 @@ body{background:#f7f8fb!important}
 .production-op-materials button.material-row-warn span{color:#b54708}
 .production-session-list{margin-top:10px;padding:10px 12px;border:1px solid #edf0f4;border-radius:12px;background:#fafbfc}
 .production-session-list h5{margin:0 0 8px;color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:.035em}
-.production-session-list>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #edf0f4;color:#344054}
+.production-session-list>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #edf0f4;color:#344054}
 .production-session-list>div:first-of-type{border-top:0}
 .production-session-list b{display:block;color:#101828;font-size:12px}
 .production-session-list small{display:block;margin-top:2px;color:#98a2b3;font-size:10px}
 .production-session-list strong{color:#175cd3;font-size:11px;white-space:nowrap}
 .production-session-list em{color:#667085;font-size:10px;font-style:normal;white-space:nowrap}
+/* v7.53: у каждой смены — кнопка «Редактировать» и след правки/отмены (кто и когда), чтобы было
+   видно не только текущее число, но и что оно менялось. */
+.production-session-list .session-edit-trace{margin-top:3px;font-size:10px;color:#b54708}
+.production-session-list .session-edit-trace.danger{color:#b42323}
+.production-session-list>div.session-undone{opacity:.6}
+.production-session-list>div.session-undone b{text-decoration:line-through}
+.session-edit-btn{white-space:nowrap}
 .stat-info-btn{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;margin-left:5px;padding:0;border:none;border-radius:50%;background:var(--soft,#eef1f5);color:var(--muted,#667085);font-size:9px;font-style:normal;font-weight:700;line-height:1;cursor:pointer;vertical-align:middle;flex-shrink:0}
 .stat-info-btn:hover{background:var(--line,#d0d5dd);color:var(--text,#101828)}
 .workshops-stat-bar small .stat-info-btn{transform:translateY(-1px)}
