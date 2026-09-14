@@ -370,7 +370,24 @@ function applyI18n(){
   const scanBtnLabel=document.getElementById('stockScanBtnLabel'); if(scanBtnLabel) scanBtnLabel.textContent=t('scanBtn');
   const labelMap=[['#quickAddBox .field:nth-child(1) label','skuMaterial'],['#quickAddBox .field:nth-child(2) label','qtyWithUnit'],['#quickAddBox .field.full label','foundMaterial']]; labelMap.forEach(([sel,key])=>{const el=qs(sel); if(el) el.textContent=t(key);});
   if(typeof syncQuickOperationUI==='function')syncQuickOperationUI(); const toolBtns=document.querySelectorAll('.toolbar .btn'); if(toolBtns[0]) toolBtns[0].textContent=t('filters'); if(toolBtns[1]) toolBtns[1].textContent=t('reset');
-  const si=document.getElementById('exportImportTitle'); if(si) si.lastChild.textContent=' '+t('exportImport'); const sp=document.getElementById('exportImportHint'); if(sp) sp.textContent=t('jsonHint'); const sb=document.querySelectorAll('#settings .actions .btn'); if(sb[0]) sb[0].textContent=t('downloadJson'); if(sb[1]) sb[1].childNodes[0].textContent=t('uploadJson'); if(sb[2]) sb[2].textContent=t('wipe');
+  const si=document.getElementById('exportImportTitle'); if(si) si.lastChild.textContent=' '+t('exportImport'); const sp=document.getElementById('exportImportHint'); if(sp) sp.textContent=t('jsonHint');
+  // v7.46: раньше подписи этих трёх кнопок находились позиционно через
+  // document.querySelectorAll('#settings .actions .btn')[0/1/2] — начиная с v7.40, когда для
+  // администратора над этим блоком стала рендериться панель «Упрощённый доступ» (тоже с .actions
+  // .btn внутри), её кнопки оказывались в том же списке ПЕРЕД этими тремя и сдвигали индексы —
+  // из-за этого «Скачать JSON» у администратора подписывалась как «Очистить всё» (сама кнопка
+  // при этом продолжала работать как экспорт — ломался только текст). Теперь подписи ищутся по
+  // собственным id, а не по номеру по порядку.
+  const setBtnLabel=(id,text)=>{
+    const el=document.getElementById(id); if(!el)return;
+    for(let i=el.childNodes.length-1;i>=0;i--){ // ищем последний текстовый узел с конца, чтобы не задеть иконку (SVG) или, у «Загрузить JSON», скрытый <input type=file> после текста
+      if(el.childNodes[i].nodeType===Node.TEXT_NODE){ el.childNodes[i].textContent=' '+text; return; }
+    }
+    el.textContent=text;
+  };
+  setBtnLabel('downloadJsonBtn',t('downloadJson'));
+  setBtnLabel('uploadJsonLabel',t('uploadJson'));
+  setBtnLabel('wipeAllBtn',t('wipe'));
   const wdw=document.getElementById('wipeDataWarning'); if(wdw) wdw.textContent=t('wipeDataWarning');
   const langTitle=document.getElementById('settingsLangTitle'); if(langTitle) langTitle.textContent=t('languageLabel'); const langHint=document.getElementById('settingsLangHint'); if(langHint) langHint.textContent=t('languageHint'); const langSwitchBox=document.getElementById('settingsLangSwitch'); if(langSwitchBox&&typeof sideLangButtons==='function') langSwitchBox.innerHTML=sideLangButtons();
   const profTitle=document.getElementById('profileSettingsTitle'); if(profTitle) profTitle.textContent=t('profileSettingsTitle'); const profHint=document.getElementById('profileSettingsHint'); if(profHint) profHint.textContent=t('profileSettingsHint'); const profNameLabel=document.getElementById('profileNameLabel'); if(profNameLabel) profNameLabel.textContent=t('profileNameLabel'); const profRoleLabel=document.getElementById('profileRoleLabel'); if(profRoleLabel) profRoleLabel.textContent=t('profileRoleLabel'); const profNameInput=document.getElementById('profileNameInput'); if(profNameInput) profNameInput.placeholder=t('profileNamePlaceholder'); const profRoleInput=document.getElementById('profileRoleInput'); if(profRoleInput) profRoleInput.placeholder=t('profileRolePlaceholder'); const saveProfBtn=document.getElementById('saveProfileSettingsBtn'); if(saveProfBtn) saveProfBtn.textContent=t('save');
