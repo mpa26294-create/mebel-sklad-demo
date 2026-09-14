@@ -1262,9 +1262,14 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
   const a=m.attributes||{};
   const baseUnit=materialBaseUnit(m.category||preset);
   const currentState=a.purchaseStatus==='ordered'?'ordered':(stockNumForUnit(m.quantity||0,m.unit||baseUnit)>0||!!a.storageLocation?'stock':'card');
-  const body=`<div class="material-wizard" data-step="1">
-    <div class="wizard-steps"><button class="wizard-step-pill active" type="button" onclick="setMaterialWizardStep(1)">1 ${t('materialBasic')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(2)">2 ${t('fabricWizardParams')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(3)">3 ${t('materialStock')}</button></div>
-    <section class="wizard-card material-wizard-step" data-step="1">
+  // v7.56: раньше эта форма (Наполнители/Фурнитура/Крепёж) была разбита на вкладки-шаги
+  // «1 Основное / 2 Параметры / 3 Остаток» с кнопками «Далее»/«Назад» — единственная форма
+  // добавления материала с таким шаговым интерфейсом. У остальных категорий (Ткань/Экокожа/Кожа —
+  // eco-leather-wizard.js, Дерево — wood-wizard.js, Поролон — auth.js) те же самые разделы
+  // показаны сразу все вместе, одной сплошной страницей, без вкладок и «Далее». По просьбе
+  // пользователя убраны вкладки и здесь — теперь одна страница, единая кнопка «Сохранить».
+  const body=`<div class="material-wizard">
+    <section class="wizard-card">
       <h4>${t('fabricWizardBasic')}</h4>
       <div class="form-grid">
         <input id="mCat" type="hidden" value="${escapeHtml(m.category||preset)}">
@@ -1275,11 +1280,11 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
         <div class="field"><label>${t('manufacturer')}</label><input id="mManufacturer" class="input" value="${escapeHtml(a.manufacturer||'')}" placeholder="${t('manufacturer')}"></div>
       </div>
     </section>
-    <section class="wizard-card material-wizard-step hidden" data-step="2">
+    <section class="wizard-card">
       <h4>${t('fabricWizardParams')}</h4>
       <div class="form-grid">${materialWizardParamsHtml(m.category||preset,a,'m')}${typeof isSheetMaterialCategory==='function'&&isSheetMaterialCategory(m.category||preset)?'<div class="area-preview hidden" id="mParamAreaPreview"></div>':''}</div>
     </section>
-    <section class="wizard-card material-wizard-step hidden" data-step="3">
+    <section class="wizard-card">
       <h4>${t('materialStateTitle')}</h4>
       ${materialStateCards(currentState)}
       <div class="fabric-form-grid">
@@ -1298,14 +1303,13 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
       </div>
     </section>
   </div>`;
-  const foot=materialWizardFooter(`saveMaterial('${id||''}')`);
+  const foot=`<button class="btn primary" type="button" onclick="saveMaterial('${id||''}')">${t('save')}</button>`;
   openModal(id?t('edit'):t('addMaterial'),body,foot);
   const catEl=document.getElementById('mCat'),subEl=document.getElementById('mSub'),skuEl=document.getElementById('mSku');
   function refreshSku(){if(autoSku)skuEl.value=nextSku(catEl.value,subEl.value,id||'')}
   function redraw(){const cat=catEl.value;const subs=categorySubOptions(cat);const options=subs.length?subs:[cat];subEl.innerHTML=options.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');refreshSku()}
   subEl.onchange=()=>{refreshSku()};
   redraw();
-  setMaterialWizardStep(1);
   if(typeof syncGenericMaterialPreview==='function')syncGenericMaterialPreview();
 }
 function toggleMaterialStockStep(){document.getElementById('mStockStep')?.classList.toggle('hidden',!document.getElementById('mHasStock')?.checked)}
