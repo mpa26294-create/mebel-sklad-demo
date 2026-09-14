@@ -311,6 +311,22 @@ function openNewMaterialOrder(materialId){
   openModal(t('orderMaterialTitle'),body,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmOrderMaterialEmail('${escapeHtml(materialId)}')">${escapeHtml(t('orderMaterialSendBtn'))}</button>`);
   setTimeout(()=>document.getElementById('orderMaterialQtyInput')?.focus(),0);
 }
+// v7.68: m.name хранит категорию как есть на момент СОЗДАНИЯ материала (например "Поролон · CH
+// 3532") — она не переводится сама по себе при смене языка сайта, потому что это просто сохранённая
+// строка, а не результат t(). Раньше письмо поставщику брало m.name напрямую, из-за чего название
+// категории оставалось русским, даже когда весь остальной текст письма уже был на латышском/
+// английском. materialOrderDisplayName() подменяет только сам префикс-категорию на переведённый
+// (через categoryLabel(), которая уже используется для бейджей категорий в таблице склада), не трогая
+// остальную часть названия (артикул, марку и т.п.).
+function materialOrderDisplayName(m){
+  const raw=String(m?.name||'');
+  const cat=String(m?.category||'');
+  if(cat&&typeof categoryLabel==='function'){
+    const translatedCat=categoryLabel(cat);
+    if(translatedCat&&translatedCat!==cat&&raw.startsWith(cat))return translatedCat+raw.slice(cat.length);
+  }
+  return raw;
+}
 window.confirmOrderMaterialEmail=function(materialId){
   const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
   if(!m)return;
@@ -322,10 +338,11 @@ window.confirmOrderMaterialEmail=function(materialId){
   const note=(document.getElementById('orderMaterialNoteInput')?.value||'').trim();
   const unit=materialDisplayUnit(m);
   const sku=m.sku||'';
+  const displayName=materialOrderDisplayName(m);
   const lines=[
     t('orderMaterialGreeting'),
     '',
-    `${t('orderMaterialLineName')}: ${m.name||''}`,
+    `${t('orderMaterialLineName')}: ${displayName}`,
     sku?`${t('orderMaterialLineSku')}: ${sku}`:null,
     `${t('orderMaterialLineQty')}: ${qty} ${unitLabel(unit)}`,
     note?`${t('orderMaterialLineNote')}: ${note}`:null,
@@ -333,7 +350,7 @@ window.confirmOrderMaterialEmail=function(materialId){
     t('orderMaterialSignoff'),
     (currentUser?.email||'')
   ].filter(x=>x!==null);
-  const subject=`${t('orderMaterialSubjectPrefix')}: ${m.name||''}${sku?` (${sku})`:''}`;
+  const subject=`${t('orderMaterialSubjectPrefix')}: ${displayName}${sku?` (${sku})`:''}`;
   const mailto=`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
   window.location.href=mailto;
   if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`${t('orderMaterialAuditMsg')}: ${qty} ${unitLabel(unit)} → ${email}`);
