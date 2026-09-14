@@ -1170,6 +1170,31 @@ function categoryHint(cat){const map={'Поролон':'hintFoam','Ткань':'
 // openMaterialModal(), но нигде в коде не была определена. ReferenceError прерывал построение
 // формы ДО openModal(), поэтому окно вообще не появлялось, без единой видимой ошибки на экране.
 function materialSubtypeLabel(cat){if(cat==='Наполнители')return t('fillerTypeLabel');return t('subcategory')}
+// v7.58: карточки выбора типа наполнителя — тот же визуальный стиль (.wood-group-card), что у
+// экрана выбора группы материала Дерева (Пиломатериалы/Листовые материалы/Детали), по просьбе
+// пользователя, вместо обычного выпадающего списка. В отличие от Дерева это не переход на новый
+// экран, а постоянный выбор — карточки остаются на месте, выбранная подсвечивается (.active).
+function renderFillerTypeCards(options,current){
+  const list=document.getElementById('mFillerTypeList');
+  const subEl=document.getElementById('mSub');
+  if(!list||!subEl)return;
+  subEl.value=current;
+  const descMap={'Синтепон':t('fillerSyntheticDesc'),'Холлофайбер':t('fillerHollowDesc'),'Пух':t('fillerDownDesc'),'Другие':t('fillerOtherDesc')};
+  const icon='<span class="wood-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="8.5" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1.7" fill="currentColor" stroke="none"/></svg></span>';
+  list.innerHTML=options.map(opt=>`<button class="wood-group-card filler-type-card" type="button" data-filler-type="${escapeHtml(opt)}" onclick="selectFillerType('${escapeHtml(opt)}')">${icon}<span class="wood-group-copy"><b>${escapeHtml(opt)}</b><span>${escapeHtml(descMap[opt]||'')}</span></span></button>`).join('');
+  syncFillerTypeActive();
+}
+function syncFillerTypeActive(){
+  const value=document.getElementById('mSub')?.value;
+  document.querySelectorAll('#mFillerTypeList [data-filler-type]').forEach(btn=>btn.classList.toggle('active',btn.dataset.fillerType===value));
+}
+function selectFillerType(value){
+  const subEl=document.getElementById('mSub');
+  if(!subEl)return;
+  subEl.value=value;
+  syncFillerTypeActive();
+  if(typeof subEl.onchange==='function')subEl.onchange();
+}
 
 function materialFields(cat,sub,attrs={}){let fields=CATEGORIES[cat]?.fieldsBySub?.[sub]||CATEGORIES[cat]?.fields||[];return fields.map(([key,label,type='text'])=>`<div class="field"><label>${label}</label>${type==='checkbox'?`<select class="select attr" data-key="${key}"><option value="false">${t('noOption')}</option><option value="true" ${attrs[key]?'selected':''}>${t('yesOption')}</option></select>`:`<input class="input attr" data-key="${key}" type="${type}" value="${attrs[key]??''}">`}</div>`).join('')}
 function categorySubOptions(cat){
@@ -1275,7 +1300,9 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
         <input id="mCat" type="hidden" value="${escapeHtml(m.category||preset)}">
         <div class="field"><label>${t('name')}</label><input id="mName" class="input" value="${m.name||''}" placeholder="${t('name')}"></div>
         <div class="field"><label>${t('sku')}</label><input id="mSku" class="input" value="${m.sku||nextSku(m.category,m.subcategory,id||'')}"><div class="hint">${t('skuAutoHint')}</div></div>
-        <div class="field"><label>${materialSubtypeLabel(m.category||preset)}</label><select id="mSub" class="select"></select></div>
+        ${(m.category||preset)==='Наполнители'
+          ? `<div class="field full"><label>${materialSubtypeLabel(m.category||preset)}</label><input id="mSub" type="hidden"><div class="wood-group-list" id="mFillerTypeList"></div></div>`
+          : `<div class="field"><label>${materialSubtypeLabel(m.category||preset)}</label><select id="mSub" class="select"></select></div>`}
         <div class="field"><label>${t('collection')}</label><input id="mCollection" class="input" value="${escapeHtml(a.collection||'')}" placeholder="${t('collection')}"></div>
         <div class="field"><label>${t('manufacturer')}</label><input id="mManufacturer" class="input" value="${escapeHtml(a.manufacturer||'')}" placeholder="${t('manufacturer')}"></div>
       </div>
@@ -1307,7 +1334,21 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
   openModal(id?t('edit'):t('addMaterial'),body,foot);
   const catEl=document.getElementById('mCat'),subEl=document.getElementById('mSub'),skuEl=document.getElementById('mSku');
   function refreshSku(){if(autoSku)skuEl.value=nextSku(catEl.value,subEl.value,id||'')}
-  function redraw(){const cat=catEl.value;const subs=categorySubOptions(cat);const options=subs.length?subs:[cat];subEl.innerHTML=options.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');refreshSku()}
+  // v7.58: у Наполнителей «Тип наполнителя» — не обычный <select>, а карточки в стиле
+  // group-picker'а Дерева (Пиломатериалы/Листовые/Детали), по просьбе пользователя — см.
+  // renderFillerTypeCards(). #mSub остаётся тем же скрытым источником значения для
+  // nextSku()/saveMaterial(), просто больше не рисуется как видимый select.
+  function redraw(){
+    const cat=catEl.value;
+    const subs=categorySubOptions(cat);
+    const options=subs.length?subs:[cat];
+    if(cat==='Наполнители'&&typeof renderFillerTypeCards==='function'){
+      renderFillerTypeCards(options,options.includes(m.subcategory)?m.subcategory:options[0]);
+    }else{
+      subEl.innerHTML=options.map(s=>`<option ${m.subcategory===s?'selected':''}>${s}</option>`).join('');
+    }
+    refreshSku();
+  }
   subEl.onchange=()=>{refreshSku()};
   redraw();
   if(typeof syncGenericMaterialPreview==='function')syncGenericMaterialPreview();
