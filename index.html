@@ -158,6 +158,8 @@
       <div class="panel" id="notificationRulesPanel" style="display:none;padding:24px;max-width:720px"></div>
       <!-- v7.40: панель видна только администратору, заполняется renderWorkerAccessPanel() -->
       <div class="panel" id="workerAccessPanel" style="display:none;padding:24px;max-width:720px"></div>
+      <!-- v7.63: панель видна только администратору, заполняется renderVaultPasswordPanel() (js/order-files.js) -->
+      <div class="panel" id="vaultPasswordPanel" style="display:none;padding:24px;max-width:720px"></div>
       <div class="panel" style="padding:24px;max-width:720px">
         <h3 id="exportImportTitle" style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Экспорт / импорт</h3>
         <p class="muted" id="exportImportHint" style="margin:0 0 20px;font-size:13px;line-height:1.45;color:#6b7280">Можно сохранить данные в JSON и потом загрузить обратно.</p>
@@ -222,7 +224,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.52"></script>
 <script src="js/orders.js?v=7.44"></script>
-<script src="js/order-files.js?v=7.62"></script>
+<script src="js/order-files.js?v=7.63"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
@@ -2862,7 +2864,7 @@ calcOrderOverallPercent=function(o){
 /* v5.64: open production with clear button, not by status */
   renderOrderStats();
   renderOrderClientFilter();
-function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings();if(typeof renderNotificationRulesPanel==='function')renderNotificationRulesPanel();if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();if(typeof maybeRunNotificationRuleChecks==='function')maybeRunNotificationRuleChecks();if(typeof protectSearchInputsFromAutofill==='function')protectSearchInputsFromAutofill()}
+function renderAll(){ensureStockRefs();renderStats();refreshQuickFilterChips();renderStock();renderModels();renderOrders();if(typeof renderStockRefsPanel==='function')renderStockRefsPanel();applyI18n();if(typeof renderNotificationSettings==='function')renderNotificationSettings();if(typeof renderNotificationRulesPanel==='function')renderNotificationRulesPanel();if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();if(typeof renderVaultPasswordPanel==='function')renderVaultPasswordPanel();if(typeof maybeRunNotificationRuleChecks==='function')maybeRunNotificationRuleChecks();if(typeof protectSearchInputsFromAutofill==='function')protectSearchInputsFromAutofill()}
 const resetBtn=document.getElementById('resetDemoBtn'); if(resetBtn) resetBtn.onclick=()=>{if(confirm(u42('restoreDemo'))){data=demoData();save();renderAll();toast(u42('demoRestored'))}};
 
 

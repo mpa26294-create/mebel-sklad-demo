@@ -308,7 +308,17 @@ Object.assign(I18N.ru,{
   vaultWrongPassword:'Неверный пароль',
   vaultLocalModeError:'Локальный режим: сохранение недоступно',
   vaultNotConfiguredTitle:'Пароль ещё не задан',
-  vaultNotConfiguredMsg:'Пароль для зашифрованных файлов задаёт администратор. Обратитесь к администратору, чтобы получить пароль.'
+  vaultNotConfiguredMsg:'Пароль для зашифрованных файлов задаёт администратор. Обратитесь к администратору, чтобы получить пароль.',
+  vaultPanelTitle:'Пароль для файлов заказов',
+  vaultPanelHintNotSet:'Пароль ещё не создан. Создайте его — потом сообщите сотрудникам, которым нужен доступ к зашифрованным файлам заказов.',
+  vaultPanelHintSet:'Пароль задан. При смене все уже зашифрованные файлы будут автоматически перешифрованы новым паролем — доступ к ним не потеряется.',
+  vaultChangeBtn:'Сменить пароль',
+  vaultChangeTitle:'Смена пароля хранилища',
+  vaultChangeCurrentHint:'Сначала введите текущий пароль.',
+  vaultChangeInProgress:'Меняем пароль и перешифровываем файлы, подождите...',
+  vaultChangeDone:'Пароль изменён. Все зашифрованные файлы перешифрованы новым паролем.',
+  vaultChangeFileError:'Не удалось перешифровать файл',
+  vaultChangeAuditMsg:'Пароль хранилища файлов изменён администратором, перешифровано файлов: {count}'
 });
 Object.assign(I18N.en,{
   orderFilesTitle:'Order files',
@@ -342,7 +352,17 @@ Object.assign(I18N.en,{
   vaultWrongPassword:'Wrong password',
   vaultLocalModeError:'Local mode: saving is unavailable',
   vaultNotConfiguredTitle:'Password not set yet',
-  vaultNotConfiguredMsg:'The password for encrypted files is set by the administrator. Ask the administrator for the password.'
+  vaultNotConfiguredMsg:'The password for encrypted files is set by the administrator. Ask the administrator for the password.',
+  vaultPanelTitle:'Password for order files',
+  vaultPanelHintNotSet:'The password has not been created yet. Create it, then share it with staff who need access to encrypted order files.',
+  vaultPanelHintSet:'The password is set. Changing it will automatically re-encrypt all already-encrypted files with the new password — access to them is not lost.',
+  vaultChangeBtn:'Change password',
+  vaultChangeTitle:'Change vault password',
+  vaultChangeCurrentHint:'First enter the current password.',
+  vaultChangeInProgress:'Changing password and re-encrypting files, please wait...',
+  vaultChangeDone:'Password changed. All encrypted files were re-encrypted with the new password.',
+  vaultChangeFileError:'Could not re-encrypt file',
+  vaultChangeAuditMsg:'Order files vault password changed by administrator, files re-encrypted: {count}'
 });
 Object.assign(I18N.lv,{
   orderFilesTitle:'Pasūtījuma faili',
@@ -376,7 +396,17 @@ Object.assign(I18N.lv,{
   vaultWrongPassword:'Nepareiza parole',
   vaultLocalModeError:'Lokālais režīms: saglabāšana nav pieejama',
   vaultNotConfiguredTitle:'Parole vēl nav iestatīta',
-  vaultNotConfiguredMsg:'Paroli šifrētiem failiem iestata administrators. Sazinieties ar administratoru, lai saņemtu paroli.'
+  vaultNotConfiguredMsg:'Paroli šifrētiem failiem iestata administrators. Sazinieties ar administratoru, lai saņemtu paroli.',
+  vaultPanelTitle:'Parole pasūtījumu failiem',
+  vaultPanelHintNotSet:'Parole vēl nav izveidota. Izveidojiet to un pēc tam paziņojiet darbiniekiem, kuriem nepieciešama piekļuve šifrētajiem pasūtījumu failiem.',
+  vaultPanelHintSet:'Parole ir iestatīta. Mainot to, visi jau šifrētie faili tiks automātiski pāršifrēti ar jauno paroli — piekļuve tiem netiks zaudēta.',
+  vaultChangeBtn:'Mainīt paroli',
+  vaultChangeTitle:'Glabātuves paroles maiņa',
+  vaultChangeCurrentHint:'Vispirms ievadiet pašreizējo paroli.',
+  vaultChangeInProgress:'Maina paroli un pāršifrē failus, lūdzu, uzgaidiet...',
+  vaultChangeDone:'Parole nomainīta. Visi šifrētie faili pāršifrēti ar jauno paroli.',
+  vaultChangeFileError:'Neizdevās pāršifrēt failu',
+  vaultChangeAuditMsg:'Pasūtījumu failu glabātuves paroli mainīja administrators, pāršifrēti faili: {count}'
 });
 Object.assign(I18N.ru,{unitRunningM:'пог. м',unitSheet:'лист',unitM3:'м³',unitKg:'кг',unitRoll:'рулон',unitSheetsPlural:'листы',areaOfChangeLabel:'Площадь изменения'});
 Object.assign(I18N.en,{unitRunningM:'running m',unitSheet:'sheet',unitM3:'m³',unitKg:'kg',unitRoll:'roll',unitSheetsPlural:'sheets',areaOfChangeLabel:'Change area'});
