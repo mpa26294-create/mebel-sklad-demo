@@ -888,15 +888,26 @@ function productionOperationMaterialStatusHtml(o,op){
   const last=consumption.last?`<small>${escapeHtml(t('lastWriteOffLabel'))}: ${escapeHtml(consumption.last.qty)} ${escapeHtml(t('unitsGenitive'))} · ${escapeHtml(productionDateTimeText(consumption.last.at))}</small>`:`<small>${escapeHtml(t('lastWriteOffLabel'))}: —</small>`;
   return `<div class="production-op-materials ${coverage.ok?'ok':'warn'}"><strong>${coverage.ok?'✓':'⚠'} ${escapeHtml(title)}${infoBtn('materials')}</strong><em>${escapeHtml(t('materialsWrittenOffLabel'))}: ${escapeHtml(consumption.sets)} / ${escapeHtml(total)} ${escapeHtml(t('setsWord'))}</em>${last}${list?`<div>${list}</div>`:''}</div>`;
 }
-function productionSessionHistoryHtml(op){
+function productionSessionHistoryHtml(o,op){
   const sessions=Array.isArray(op.sessions)?op.sessions:[];
   if(!sessions.length)return '';
-  return `<div class="production-session-list"><h5>${escapeHtml(t('sessionsByShiftTitle'))}${infoBtn('sessions')}</h5>${sessions.slice(0,4).map(s=>`<div><span><b>${escapeHtml(s.qty||0)} ${escapeHtml(t('unitPieces'))}</b><small>${escapeHtml(productionDateTimeText(s.startedAt))} → ${escapeHtml(productionDateTimeText(s.endedAt))}</small></span><strong>${escapeHtml(s.minutes||0)} ${escapeHtml(t('minutesShort'))}</strong><em>${escapeHtml(s.by||'—')}</em></div>`).join('')}</div>`;
+  // v7.53: у каждой смены — своя кнопка «Редактировать» (не только у последней) и след правки/
+  // отмены (кто и когда), если смену меняли — см. performQuantityDecrease/Increase().
+  const logs=productionMeta(o).consumptionLogs||[];
+  return `<div class="production-session-list"><h5>${escapeHtml(t('sessionsByShiftTitle'))}${infoBtn('sessions')}</h5>${sessions.slice(0,4).map(s=>{
+    const log=s.consumptionId?logs.find(l=>String(l.id)===String(s.consumptionId)):null;
+    const canEdit=!!(log&&!log.undone);
+    const editBtn=canEdit?`<button class="btn small ghost session-edit-btn" type="button" onclick="openFixQuantityModal('${o.id}',${op.stepIndex},'${log.id}')">${escapeHtml(t('editBtn'))}</button>`:'';
+    const trace=s.undone
+      ?`<div class="session-edit-trace danger">${escapeHtml(t('sessionCancelledTrace'))}: ${escapeHtml(s.undoneBy||'—')} · ${escapeHtml(productionDateTimeText(s.undoneAt))}</div>`
+      :(s.editedBy?`<div class="session-edit-trace">${escapeHtml(t('sessionEditedTrace'))}: ${escapeHtml(s.originalQty??'')}→${escapeHtml(s.qty??'')} · ${escapeHtml(s.editedBy)} · ${escapeHtml(productionDateTimeText(s.editedAt))}</div>`:'');
+    return `<div class="${s.undone?'session-undone':''}"><span><b>${escapeHtml(s.qty||0)} ${escapeHtml(t('unitPieces'))}</b><small>${escapeHtml(productionDateTimeText(s.startedAt))} → ${escapeHtml(productionDateTimeText(s.endedAt))}</small>${trace}</span><strong>${escapeHtml(s.minutes||0)} ${escapeHtml(t('minutesShort'))}</strong><em>${escapeHtml(s.by||'—')}</em>${editBtn}</div>`;
+  }).join('')}</div>`;
 }
 function productionOperationCardHtml(o,op){
   const plan=productionPlanMinutesForStep(o,op.stepIndex),actual=productionActualMinutes(op),diff=actual-plan,pct=productionOpPercent(o,op),completed=productionCompletedQty(o,op),total=orderProductQty(o),state=productionQueueState(o.id,op.stepIndex),status=productionStatusClass(op.status),compact=op.status==='done'&&op.collapsed!==false,comments=Array.isArray(op.comments)?op.comments:[],toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart'),toggleIcon=op.status==='running'?'⏸':'▶';
   const canUndo=!!lastActiveConsumptionLog(o,op.stepIndex);
-  return `<article class="production-operation-card ${status} ${compact?'compact':''}" id="productionOp_${o.id}_${op.stepIndex}"><div class="production-op-strip"></div><div class="production-op-main"><div class="production-op-heading"><div><h4>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}</h4><span>${escapeHtml(t('queue'))}: ${state.position?`${state.position} ${t('of')} ${state.total}`:state.label}</span></div><span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span></div><div class="production-quantity-progress"><small>${escapeHtml(t('prodDone'))}${infoBtn('done')}</small><b>${completed} / ${total}</b></div><div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div><div class="production-op-kpis"><div><span class="op-kpi-icon plan">📅</span><span><small>${escapeHtml(t('plan'))}${infoBtn('plan')}</small><b>${plan} ${escapeHtml(t('minutesShort'))}</b></span></div><div><span class="op-kpi-icon fact">▶</span><span><small>${escapeHtml(t('fact'))}${infoBtn('fact')}</small><b>${actual} ${escapeHtml(t('minutesShort'))}</b></span></div><div><span class="op-kpi-icon diff">📊</span><span><small>${escapeHtml(t('difference'))}${infoBtn('diff')}</small><b class="${diff>0?'danger-text':'ok-text'}">${diff>0?'+':''}${diff} ${escapeHtml(t('minutesShort'))}</b></span></div></div>${productionOperationMaterialStatusHtml(o,op)}${productionSessionHistoryHtml(op)}${diff>0?`<div class="production-delay">⚠ +${escapeHtml(orderTimeText(diff))}</div>`:''}${compact?`<button class="btn small" type="button" onclick="toggleProductionOperationCompact('${o.id}',${op.stepIndex})">${escapeHtml(t('expand'))}</button>`:`<div class="production-comment-box"><textarea class="input" id="prodComment_${o.id}_${op.stepIndex}" placeholder="${escapeHtml(t('prodCommentPlaceholder'))}">${escapeHtml(op.comment||'')}</textarea><button class="btn small" type="button" onclick="saveProductionComment('${o.id}',${op.stepIndex})">${escapeHtml(t('save'))}</button></div><div class="production-comments">${comments.slice(0,3).map(c=>`<div><b>${escapeHtml(c.by||'—')}</b><span>${escapeHtml(productionDateTimeText(c.at))}</span><p>${escapeHtml(c.text||'')}</p></div>`).join('')}</div>`}</div><div class="production-op-actions"><button class="btn small" type="button" onclick="closeWorkshopDetail()">${escapeHtml(t('backToAllWorkshops'))}</button><button class="btn small primary" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='done'||op.status==='cancelled'?'disabled':''}>${toggleIcon} ${escapeHtml(toggleLabel)}</button><button class="btn small" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>✔ ${escapeHtml(t('prodComplete'))}</button><button class="btn small" type="button" onclick="undoLastProductionConsumption('${o.id}',${op.stepIndex})" ${canUndo?'':'disabled'}>${escapeHtml(t('undoWriteOff'))}</button></div></article>`;
+  return `<article class="production-operation-card ${status} ${compact?'compact':''}" id="productionOp_${o.id}_${op.stepIndex}"><div class="production-op-strip"></div><div class="production-op-main"><div class="production-op-heading"><div><h4>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}</h4><span>${escapeHtml(t('queue'))}: ${state.position?`${state.position} ${t('of')} ${state.total}`:state.label}</span></div><span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span></div><div class="production-quantity-progress"><small>${escapeHtml(t('prodDone'))}${infoBtn('done')}</small><b>${completed} / ${total}</b></div><div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div><div class="production-op-kpis"><div><span class="op-kpi-icon plan">📅</span><span><small>${escapeHtml(t('plan'))}${infoBtn('plan')}</small><b>${plan} ${escapeHtml(t('minutesShort'))}</b></span></div><div><span class="op-kpi-icon fact">▶</span><span><small>${escapeHtml(t('fact'))}${infoBtn('fact')}</small><b>${actual} ${escapeHtml(t('minutesShort'))}</b></span></div><div><span class="op-kpi-icon diff">📊</span><span><small>${escapeHtml(t('difference'))}${infoBtn('diff')}</small><b class="${diff>0?'danger-text':'ok-text'}">${diff>0?'+':''}${diff} ${escapeHtml(t('minutesShort'))}</b></span></div></div>${productionOperationMaterialStatusHtml(o,op)}${productionSessionHistoryHtml(o,op)}${diff>0?`<div class="production-delay">⚠ +${escapeHtml(orderTimeText(diff))}</div>`:''}${compact?`<button class="btn small" type="button" onclick="toggleProductionOperationCompact('${o.id}',${op.stepIndex})">${escapeHtml(t('expand'))}</button>`:`<div class="production-comment-box"><textarea class="input" id="prodComment_${o.id}_${op.stepIndex}" placeholder="${escapeHtml(t('prodCommentPlaceholder'))}">${escapeHtml(op.comment||'')}</textarea><button class="btn small" type="button" onclick="saveProductionComment('${o.id}',${op.stepIndex})">${escapeHtml(t('save'))}</button></div><div class="production-comments">${comments.slice(0,3).map(c=>`<div><b>${escapeHtml(c.by||'—')}</b><span>${escapeHtml(productionDateTimeText(c.at))}</span><p>${escapeHtml(c.text||'')}</p></div>`).join('')}</div>`}</div><div class="production-op-actions"><button class="btn small" type="button" onclick="closeWorkshopDetail()">${escapeHtml(t('backToAllWorkshops'))}</button><button class="btn small primary" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='done'||op.status==='cancelled'?'disabled':''}>${toggleIcon} ${escapeHtml(toggleLabel)}</button><button class="btn small" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>✔ ${escapeHtml(t('prodComplete'))}</button><button class="btn small" type="button" onclick="undoLastProductionConsumption('${o.id}',${op.stepIndex})" ${canUndo?'':'disabled'}>${escapeHtml(t('undoWriteOff'))}</button></div></article>`;
 }
 function productionKpiHtml(o){
   const qty=orderProductQty(o),matCount=orderMaterials(o).length,plan=calcOrderMinutes(o),actual=productionOps(o).reduce((s,op)=>s+productionActualMinutes(op),0),pct=calcWorkflowProductionPercent(o),missing=orderMissingItems(o).length;
@@ -941,65 +952,111 @@ async function finalizeProductionQuantity(orderId,index,qty){const o=(data.order
 // место во всём сайте, где так сделано (везде рядом используется своё модальное окно). В части
 // мобильных/встроенных браузеров confirm() может не показываться и молча возвращать «отмена» —
 // нажатие тогда выглядит так, будто вообще ничего не произошло. Функция общая для админской кнопки
-// «Отменить списание» (полный вид цеха) и рабочей «Исправить последнее» (упрощённый режим) —
+// «Исправить списание» (полный вид цеха) и рабочей «Исправить последнее» (упрощённый режим) —
 // правим один раз, работает в обоих местах.
-// v7.52: по просьбе пользователя — вместо жёсткого «всё или ничего» (отменить последнее целиком)
-// теперь можно указать, сколько было выполнено НА САМОМ ДЕЛЕ (например, было отмечено 20, а нужно
-// 15) — лишние материалы по разнице возвращаются на склад пропорционально, а не всё целиком.
-// Уменьшить можно до 0 (это равносильно полной отмене — см. performUndoLastProductionConsumption);
-// увеличить нельзя — если нужно больше, это обычное дополнительное «Готово».
-function undoLastProductionConsumption(orderId,index){
-  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
-  const op=productionOp(o,index);if(!op)return;
-  const log=lastActiveConsumptionLog(o,index);
-  if(!log){toast(t('noWriteOffsToUndo'));return}
-  const body=`<div class="production-quantity-modal"><p>${escapeHtml(t('fixLastQtyHint'))}: <b>${log.qty} ${escapeHtml(t('unitsGenitive'))}</b> · ${escapeHtml(t('operationWord'))} ${escapeHtml(op.stepName)}</p><div class="field"><label>${escapeHtml(t('fixLastQtyLabel'))}</label><input class="input" id="fixLastQtyInput" type="number" min="0" max="${log.qty}" step="1" value="${log.qty}" inputmode="numeric"></div><small class="hint">${escapeHtml(t('fixLastQtyNote'))}</small></div>`;
-  openModal(t('fixLastQtyTitle'),body,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="applyFixLastQuantity('${orderId}',${index})">${escapeHtml(t('save'))}</button>`);
-  setTimeout(()=>document.getElementById('fixLastQtyInput')?.select(),0);
+// v7.52: вместо жёсткого «всё или ничего» — можно указать, сколько было выполнено НА САМОМ ДЕЛЕ.
+// v7.53: по просьбе пользователя — (1) можно не только уменьшать, но и увеличивать (спишутся
+// дополнительные материалы, если хватает на складе; 0 по-прежнему равносильно полной отмене);
+// (2) исправить можно не только последнюю смену, а любую из списка «Выполнено по сменам» — у
+// каждой своя кнопка «Редактировать» (см. productionSessionHistoryHtml()); (3) у смены остаётся
+// след правки — кто и когда исправил/отменил, виден прямо в списке смен.
+function resolveConsumptionLog(o,stepIndex,consumptionId){
+  const logs=productionMeta(o).consumptionLogs||[];
+  if(consumptionId)return logs.find(l=>String(l.id)===String(consumptionId)&&!l.undone)||null;
+  return logs.find(l=>!l.undone&&Number(l.stepIndex)===Number(stepIndex))||null;
 }
-async function applyFixLastQuantity(orderId,index){
+function undoLastProductionConsumption(orderId,index){openFixQuantityModal(orderId,index,'')}
+function openFixQuantityModal(orderId,index,consumptionId=''){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
   const op=productionOp(o,index);if(!op)return;
-  const log=lastActiveConsumptionLog(o,index);
+  const log=resolveConsumptionLog(o,index,consumptionId);
   if(!log){toast(t('noWriteOffsToUndo'));return}
-  const input=document.getElementById('fixLastQtyInput');
+  const oldQty=Number(log.qty||0),maxPossible=Math.max(oldQty,orderProductQty(o)-productionCompletedQty(o,op)+oldQty);
+  const body=`<div class="production-quantity-modal"><p>${escapeHtml(t('fixLastQtyHint'))}: <b>${oldQty} ${escapeHtml(t('unitsGenitive'))}</b> · ${escapeHtml(t('operationWord'))} ${escapeHtml(op.stepName)}</p><div class="field"><label>${escapeHtml(t('fixLastQtyLabel'))}</label><input class="input" id="fixQtyInput" type="number" min="0" max="${maxPossible}" step="1" value="${oldQty}" inputmode="numeric"></div><small class="hint">${escapeHtml(t('fixLastQtyNote'))}</small></div>`;
+  openModal(t('fixLastQtyTitle'),body,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="applyFixQuantity('${orderId}',${index},'${log.id}')">${escapeHtml(t('save'))}</button>`);
+  setTimeout(()=>document.getElementById('fixQtyInput')?.select(),0);
+}
+async function applyFixQuantity(orderId,index,consumptionId){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op)return;
+  const log=resolveConsumptionLog(o,index,consumptionId);
+  if(!log){toast(t('noWriteOffsToUndo'));return}
+  const oldQty=Number(log.qty||0),maxPossible=Math.max(oldQty,orderProductQty(o)-productionCompletedQty(o,op)+oldQty);
+  const input=document.getElementById('fixQtyInput');
   const newQty=Math.trunc(Number(input?.value));
-  if(!Number.isFinite(newQty)||newQty<0||newQty>log.qty){toast(t('prodInvalidQty'));return}
-  if(newQty===Number(log.qty)){closeModal();return}
+  if(!Number.isFinite(newQty)||newQty<0||newQty>maxPossible){toast(t('prodInvalidQty'));return}
+  if(newQty===oldQty){closeModal();return}
+  if(newQty<oldQty){closeModal();await performQuantityDecrease(orderId,index,consumptionId,newQty);return}
+  const delta=newQty-oldQty,plan=productionConsumptionPlan(o,op,delta);
+  if(!plan.ok){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn primary" type="button" onclick="openFixQuantityModal('${orderId}',${index},'${consumptionId}')">${escapeHtml(t('changeQuantity'))}</button>`);return}
   closeModal();
-  if(newQty<=0){await performUndoLastProductionConsumption(orderId,index);return}
-  await performFixLastQuantity(orderId,index,newQty);
+  await performQuantityIncrease(orderId,index,consumptionId,newQty,plan);
 }
-async function performFixLastQuantity(orderId,index,newQty){
+async function performQuantityDecrease(orderId,index,consumptionId,newQty){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
   const op=productionOp(o,index);if(!op)return;
-  const log=lastActiveConsumptionLog(o,index);if(!log)return;
+  const log=resolveConsumptionLog(o,index,consumptionId);if(!log)return;
   const oldQty=Number(log.qty||0),delta=oldQty-newQty;
   if(delta<=0)return;
-  const ratio=delta/oldQty,now=productionNow(),returnedRows=[];
+  const cancelled=newQty<=0,ratio=delta/oldQty,now=productionNow(),who=productionActorName(),returnedRows=[];
   (log.materials||[]).forEach(row=>{
-    const returnQty=Number((Number(row.qty||0)*ratio).toFixed(6));
+    const returnQty=cancelled?Number(row.qty||0):Number((Number(row.qty||0)*ratio).toFixed(6));
     const m=(data.materials||[]).find(x=>String(x.id)===String(row.materialId));
     const items=orderMaterials(o);
     const item=items[Number(row.lineIndex)]&&String(items[Number(row.lineIndex)].materialId)===String(row.materialId)?items[Number(row.lineIndex)]:items.find(i=>String(i.materialId)===String(row.materialId)&&materialWorkshopForItem(i,m)===String(log.stepName||''));
-    if(m){const unit=m.unit||row.materialUnit||row.unit;m.quantity=stockNumForUnit(Number(m.quantity||0)+convertMaterialQty(returnQty,row.unit,unit,m),unit);m.lastUpdated=today();m.attributes=m.attributes||{};m.attributes.stockChangedBy=productionActorName();m.attributes.stockChangedAt=now;}
-    if(item){item.consumedQty=stockNumForUnit(Math.max(0,orderItemConsumedQty(item)-returnQty),item.unit||row.unit);item.consumedForQty=Math.max(0,orderItemConsumedForQty(item)-delta);item.consumptionStatus=orderItemConsumptionStatus(item,o);}
+    if(m){const unit=m.unit||row.materialUnit||row.unit;m.quantity=stockNumForUnit(Number(m.quantity||0)+convertMaterialQty(returnQty,row.unit,unit,m),unit);m.lastUpdated=today();m.attributes=m.attributes||{};m.attributes.stockChangedBy=who;m.attributes.stockChangedAt=now;}
+    if(item){item.consumedQty=stockNumForUnit(Math.max(0,orderItemConsumedQty(item)-returnQty),item.unit||row.unit);item.consumedForQty=Math.max(0,orderItemConsumedForQty(item)-delta);item.consumptionStatus=orderItemConsumptionStatus(item,o);if(cancelled&&Array.isArray(item.consumptionLogs))item.consumptionLogs=item.consumptionLogs.map(x=>String(x.id)===String(log.id)?{...x,undone:true,undoneAt:now,undoneBy:who}:x);}
     row.qty=Number((Number(row.qty||0)-returnQty).toFixed(6));
     returnedRows.push({...row,qty:returnQty});
   });
-  log.qty=newQty;
+  if(cancelled){
+    log.undone=true;log.undoneAt=now;log.undoneBy=who;
+    op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)-Number((op.sessions||[]).find(s=>String(s.consumptionId)===String(log.id))?.minutes||0));
+  }else log.qty=newQty;
   op.completedQty=Math.max(0,productionCompletedQty(o,op)-delta);
-  op.sessions=(op.sessions||[]).map(s=>String(s.consumptionId)===String(log.id)?{...s,qty:newQty}:s);
-  op.status=op.completedQty>0?'paused':'not_started';
-  op.finishedAt='';op.collapsed=false;
-  if(o.status==='Готов')o.status='В работе';
-  productionMeta(o).logs.unshift({id:uid(),stepIndex:Number(index),stepName:op.stepName,qty:-delta,minutes:0,at:now,by:productionActorName(),source:'consumption-fix',consumptionId:log.id});
-  try{if(typeof auditAdd==='function')auditAdd('production_material_fix','order',o.id,o.number,`${tRu('fixedLastWriteOff')}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')}`,{orderId:o.id,orderNumber:o.number,step:op.stepName,oldQty,newQty});}catch(e){}
-  returnedRows.forEach(row=>{try{if(typeof auditAdd==='function')auditAdd('production_material_fix','material',row.materialId,row.materialTitle,`${tRu('writeOffCorrectedForOrder')} ${o.number}: ${op.stepName}, ${tRu('returnedWord')} ${qtyWithUnit(row.qty,row.unit)}`,{orderId:o.id,orderNumber:o.number,step:op.stepName,qty:row.qty,unit:row.unit});}catch(e){}});
-  await persistProductionWorkflow(o,`${tRu('fixedLastWriteOff')}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')}`,'production_material_fix',{step:op.stepName,oldQty,newQty,consumptionId:log.id});
+  // v7.53: правку/отмену прошлой смены не считаем «остановкой» текущей работы — если сейчас
+  // реально идёт (running) или на паузе новая сессия, её статус не трогаем, меняем только когда
+  // операция была полностью завершена (done) и перестала быть такой, или когда выполненных не
+  // осталось совсем.
+  if(op.status==='done'&&op.completedQty<orderProductQty(o)){op.status='paused';op.finishedAt='';op.collapsed=false;if(o.status==='Готов')o.status='В работе';}
+  if(op.completedQty<=0)op.status='not_started';
+  op.sessions=(op.sessions||[]).map(s=>String(s.consumptionId)===String(log.id)?(cancelled?{...s,undone:true,undoneBy:who,undoneAt:now}:{...s,qty:newQty,originalQty:s.originalQty??s.qty,editedBy:who,editedAt:now}):s);
+  const key=cancelled?'production_material_undo':'production_material_fix',label=cancelled?tRu('undoneLastWriteOff'):tRu('fixedLastWriteOff');
+  productionMeta(o).logs.unshift({id:uid(),stepIndex:Number(index),stepName:op.stepName,qty:-delta,minutes:0,at:now,by:who,source:cancelled?'consumption-undo':'consumption-fix',consumptionId:log.id});
+  try{if(typeof auditAdd==='function')auditAdd(key,'order',o.id,o.number,`${label}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')} (${who})`,{orderId:o.id,orderNumber:o.number,step:op.stepName,oldQty,newQty,by:who});}catch(e){}
+  returnedRows.forEach(row=>{try{if(typeof auditAdd==='function')auditAdd(key,'material',row.materialId,row.materialTitle,`${tRu(cancelled?'writeOffCancelledForOrder':'writeOffCorrectedForOrder')} ${o.number}: ${op.stepName}, ${tRu('returnedWord')} ${qtyWithUnit(row.qty,row.unit)} (${who})`,{orderId:o.id,orderNumber:o.number,step:op.stepName,qty:row.qty,unit:row.unit,by:who});}catch(e){}});
+  await persistProductionWorkflow(o,`${label}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')} (${who})`,key,{step:op.stepName,oldQty,newQty,consumptionId:log.id,by:who});
+  toast(t(cancelled?'undoneLastWriteOff':'fixedLastWriteOff'));
+}
+async function performQuantityIncrease(orderId,index,consumptionId,newQty,plan){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op)return;
+  const log=resolveConsumptionLog(o,index,consumptionId);if(!log)return;
+  const oldQty=Number(log.qty||0),now=productionNow(),who=productionActorName();
+  if(!Array.isArray(log.materials))log.materials=[];
+  plan.rows.forEach(r=>{
+    r.m.quantity=stockNumForUnit(Math.max(0,r.materialStockAfter),r.materialUnit);
+    r.m.lastUpdated=today();r.m.attributes=r.m.attributes||{};r.m.attributes.stockChangedBy=who;r.m.attributes.stockChangedAt=now;
+    r.item.consumedForQty=Math.max(orderItemConsumedForQty(r.item),r.targetFor);
+    r.item.consumedQty=stockNumForUnit(orderItemConsumedQty(r.item)+r.qty,r.unit);
+    r.item.consumptionStatus=orderItemConsumptionStatus(r.item,o);
+    if(!Array.isArray(r.item.consumptionLogs))r.item.consumptionLogs=[];
+    r.item.consumptionLogs.unshift({id:log.id,at:now,stepName:op.stepName,qty:r.qty,unit:r.unit,forQty:r.deltaProducts,by:who});
+    const existing=log.materials.find(x=>String(x.materialId)===String(r.m.id)&&Number(x.lineIndex)===Number(r.lineIndex));
+    if(existing){existing.qty=Number((Number(existing.qty||0)+r.qty).toFixed(6));existing.materialQty=Number((Number(existing.materialQty||0)+r.materialQty).toFixed(6));existing.stockAfter=r.materialStockAfter;}
+    else log.materials.push({materialId:r.m.id,lineIndex:r.lineIndex,materialTitle:materialTitle(r.m),sku:r.m.sku||'',qty:r.qty,unit:r.unit,per:r.per,forQty:r.deltaProducts,materialQty:r.materialQty,materialUnit:r.materialUnit,stockBefore:r.materialStockBefore,stockAfter:r.materialStockAfter});
+  });
+  log.qty=newQty;
+  op.completedQty=productionCompletedQty(o,op)+(newQty-oldQty);
+  const fullyDone=op.completedQty>=orderProductQty(o);
+  if(fullyDone){op.status='done';op.pausedAt='';op.finishedAt=now;op.collapsed=true;if(productionDoneCount(o)===productionOps(o).length)o.status='Готов';}
+  else if(op.status==='not_started')op.status='paused';
+  op.sessions=(op.sessions||[]).map(s=>String(s.consumptionId)===String(log.id)?{...s,qty:newQty,originalQty:s.originalQty??oldQty,editedBy:who,editedAt:now}:s);
+  try{if(typeof auditAdd==='function')auditAdd('production_material_fix','order',o.id,o.number,`${tRu('fixedLastWriteOff')}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')} (${who})`,{orderId:o.id,orderNumber:o.number,step:op.stepName,oldQty,newQty,by:who});}catch(e){}
+  plan.rows.forEach(r=>{try{if(typeof auditAdd==='function')auditAdd('production_material_fix','material',r.m.id,materialTitle(r.m),`${tRu('writeOffCorrectedForOrder')} ${o.number}: ${op.stepName}, дополнительно списано ${qtyWithUnit(r.qty,r.unit)} (${who})`,{orderId:o.id,orderNumber:o.number,step:op.stepName,qty:r.qty,unit:r.unit,by:who});}catch(e){}});
+  await persistProductionWorkflow(o,`${tRu('fixedLastWriteOff')}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')} (${who})`,'production_material_fix',{step:op.stepName,oldQty,newQty,consumptionId:log.id,by:who});
   toast(t('fixedLastWriteOff'));
 }
-async function performUndoLastProductionConsumption(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op)return;const log=lastActiveConsumptionLog(o,index);if(!log){toast(t('noWriteOffsToUndo'));return}const now=productionNow();(log.materials||[]).forEach(row=>{const m=(data.materials||[]).find(x=>String(x.id)===String(row.materialId));const items=orderMaterials(o);const item=items[Number(row.lineIndex)]&&String(items[Number(row.lineIndex)].materialId)===String(row.materialId)?items[Number(row.lineIndex)]:items.find(i=>String(i.materialId)===String(row.materialId)&&materialWorkshopForItem(i,m)===String(log.stepName||''));if(m){const unit=m.unit||row.materialUnit||row.unit;m.quantity=stockNumForUnit(Number(m.quantity||0)+convertMaterialQty(Number(row.qty||0),row.unit,unit,m),unit);m.lastUpdated=today();m.attributes=m.attributes||{};m.attributes.stockChangedBy=productionActorName();m.attributes.stockChangedAt=now;}if(item){item.consumedQty=stockNumForUnit(Math.max(0,orderItemConsumedQty(item)-Number(row.qty||0)),item.unit||row.unit);item.consumedForQty=Math.max(0,orderItemConsumedForQty(item)-Number(row.forQty||log.qty||0));item.consumptionStatus=orderItemConsumptionStatus(item,o);if(Array.isArray(item.consumptionLogs))item.consumptionLogs=item.consumptionLogs.map(x=>String(x.id)===String(log.id)?{...x,undone:true,undoneAt:now,undoneBy:productionActorName()}:x);}});log.undone=true;log.undoneAt=now;log.undoneBy=productionActorName();op.completedQty=Math.max(0,productionCompletedQty(o,op)-Number(log.qty||0));op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)-Number((op.sessions||[]).find(s=>String(s.consumptionId)===String(log.id))?.minutes||0));op.sessions=(op.sessions||[]).map(s=>String(s.consumptionId)===String(log.id)?{...s,undone:true,undoneAt:now}:s);productionMeta(o).logs.unshift({id:uid(),stepIndex:Number(index),stepName:op.stepName,qty:-Number(log.qty||0),minutes:0,at:now,by:productionActorName(),source:'consumption-undo',consumptionId:log.id});op.status=op.completedQty>0?'paused':'not_started';op.finishedAt='';op.collapsed=false;if(o.status==='Готов')o.status='В работе';try{if(typeof auditAdd==='function')auditAdd('production_material_undo','order',o.id,o.number,`${tRu('undoneLastWriteOff')}: ${op.stepName}, ${log.qty} ${tRu('unitsGenitive')}`,{orderId:o.id,orderNumber:o.number,step:op.stepName,qty:log.qty,materials:log.materials});}catch(e){}(log.materials||[]).forEach(row=>{try{if(typeof auditAdd==='function')auditAdd('production_material_undo','material',row.materialId,row.materialTitle,`${tRu('writeOffCancelledForOrder')} ${o.number}: ${op.stepName}, ${tRu('returnedWord')} ${qtyWithUnit(row.qty,row.unit)}`,{orderId:o.id,orderNumber:o.number,step:op.stepName,qty:row.qty,unit:row.unit});}catch(e){}});await persistProductionWorkflow(o,`${tRu('materialsWriteOffUndone')}: ${op.stepName}, ${log.qty} ${tRu('unitsGenitive')}`,'production_material_undo',{step:op.stepName,qty:log.qty,consumptionId:log.id});toast(t('undoneLastWriteOff'))}
 async function saveProductionComment(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op)return;const text=document.getElementById(`prodComment_${orderId}_${index}`)?.value.trim()||'';op.comment=text;if(text){if(!Array.isArray(op.comments))op.comments=[];op.comments.unshift({id:uid(),by:productionActorName(),at:productionNow(),text});}await persistProductionWorkflow(o,`${tRu('historyProductionComment')}: ${op.stepName}`,'production_comment',{step:op.stepName,comment:text})}
 function toggleProductionOperationCompact(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op)return;op.collapsed=!op.collapsed;save();refreshOrderWorkflow(orderId)}
 async function transferOrderToCompletion(orderId){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;if(productionDoneCount(o)!==productionOps(o).length){toast(t('productionNotFinished'));return}orderWorkflowSelection.set(String(orderId),3);o.status='Готов';await persistProductionWorkflow(o,tRu('historyTransferredCompletion'),'production_to_completion',{})}
