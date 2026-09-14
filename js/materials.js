@@ -293,7 +293,13 @@ function cancelMaterialDelivery(materialId,orderId){
 // из карточки конкретного заказа ("Материал в заказе") туда передаётся именно НЕХВАТКА этого заказа
 // (st.av.missing) — иначе подсказка в письме не совпадала бы с числом "Нехватка", которое пользователь
 // только что видел на той же карточке, и выглядело бы как будто сайт predложил что-то не то.
-function openNewMaterialOrder(materialId,suggestedQty=null){
+// v7.75: orderId — необязательный контекст заказа. По просьбе пользователя "заказать по email" теперь
+// не только открывает письмо, но и ЗАПИСЫВАЕТ введённое количество на сайте — единообразно в обоих
+// местах, откуда эту кнопку можно нажать: из карточки конкретного заказа (тогда orderId передан —
+// количество уходит в закупку ЭТОГО заказа, как обычная кнопка "Заказано" рядом) и из общей карточки
+// материала на складе (orderId нет — количество прибавляется к общему "Заказано поставщику" у
+// материала, не привязанному ни к одному конкретному заказу). См. confirmOrderMaterialEmail() ниже.
+function openNewMaterialOrder(materialId,suggestedQty=null,orderId=null){
   const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
   if(!m){toast(t('notFoundMaterial'));return}
   const email=String(m.attributes?.supplierEmail||'').trim();
@@ -325,7 +331,7 @@ function openNewMaterialOrder(materialId,suggestedQty=null){
     ${hasPdf?`<label class="order-file-encrypt-toggle"><input id="orderMaterialAttachPdfChk" type="checkbox" checked> ${escapeHtml(t('orderMaterialAttachPdfLabel'))}</label><p class="muted small">${escapeHtml(t('orderMaterialAttachPdfHint'))}</p>`:''}
     <div class="auth-error" id="orderMaterialError"></div>
   </div>`;
-  openModal(t('orderMaterialTitle'),body,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmOrderMaterialEmail('${escapeHtml(materialId)}')">${escapeHtml(t('orderMaterialSendBtn'))}</button>`);
+  openModal(t('orderMaterialTitle'),body,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmOrderMaterialEmail('${escapeHtml(materialId)}',${orderId?`'${escapeHtml(orderId)}'`:'null'})">${escapeHtml(t('orderMaterialSendBtn'))}</button>`);
   setTimeout(()=>document.getElementById('orderMaterialQtyInput')?.focus(),0);
 }
 // v7.68: m.name хранит категорию как есть на момент СОЗДАНИЯ материала (например "Поролон · CH
@@ -344,7 +350,7 @@ function materialOrderDisplayName(m){
   }
   return raw;
 }
-window.confirmOrderMaterialEmail=async function(materialId){
+window.confirmOrderMaterialEmail=async function(materialId,orderId=null){
   const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
   if(!m)return;
   const email=String(m.attributes?.supplierEmail||'').trim();
@@ -383,7 +389,42 @@ window.confirmOrderMaterialEmail=async function(materialId){
   }
   window.location.href=mailto;
   if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`${t('orderMaterialAuditMsg')}: ${qty} ${unitLabel(unit)} → ${email}`);
-  if(typeof goBackModal==='function')goBackModal();else closeModal();
+  // v7.75: раньше отправка письма была чисто "письменным" действием — сайт ничего не запоминал,
+  // и количество, которое вы только что вписали, нигде на сайте не появлялось (нужно было ЕЩЁ РАЗ
+  // вручную отметить "Заказано" — если такая возможность вообще была в этом месте). Теперь запись
+  // происходит автоматически, сразу при отправке письма, и одинаково — что из карточки заказа, что
+  // из карточки склада, — просто в разные места: заказ конкретного заказа vs общее "Заказано" материала.
+  if(orderId){
+    // Из карточки "Материал в заказе" — та же логика, что и у обычной кнопки "Заказано" рядом:
+    // количество (в единицах СТРОКИ заказа, может отличаться от единиц материала) идёт в закупку
+    // именно этой строки, №закупки по умолчанию — email поставщика (если поле ещё не заполнено).
+    const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+    const item=o?orderMaterials(o).find(i=>String(i.materialId)===String(materialId)):null;
+    if(o&&item){
+      const itemUnit=item.unit||unit;
+      const itemQty=typeof convertMaterialQty==='function'?convertMaterialQty(qty,unit,itemUnit,m):qty;
+      item.purchaseStatus='ordered';
+      item.purchaseQty=itemQty;
+      if(!item.purchaseNo)item.purchaseNo=email;
+      if(typeof calcOrderAutoStatus==='function')o.status=calcOrderAutoStatus(o);
+      save();
+      if(typeof renderAll==='function')renderAll();
+    }
+    if(typeof goBackModal==='function')goBackModal();else closeModal();
+    if(o&&item&&typeof openOrderMaterialPurchase==='function')openOrderMaterialPurchase(orderId,materialId);
+  }else{
+    // Из общей карточки материала на складе — не привязано ни к одному заказу, копится в
+    // attributes.orderedQty материала (то же поле, что показывает карточка склада в стате "ЗАКАЗАНО").
+    m.attributes=m.attributes||{};
+    m.attributes.orderedQty=Number((Number(m.attributes.orderedQty||0)+Number(convertMaterialQty?convertMaterialQty(qty,unit,m.unit||unit,m):qty)).toFixed(3));
+    m.attributes.purchaseStatus='ordered';
+    m.lastUpdated=typeof today==='function'?today():m.lastUpdated;
+    if(typeof updateMaterialInSupabase==='function')await updateMaterialInSupabase(m);
+    save();
+    if(typeof renderAll==='function')renderAll();
+    if(typeof goBackModal==='function')goBackModal();else closeModal();
+    if(typeof openMaterialDetails==='function')openMaterialDetails(materialId);
+  }
 };
 
 // Quick actions mode switching
