@@ -2695,6 +2695,13 @@ html:has(body.modal-open){
 .audit-kv{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 0;border-top:1px solid #eef0f4;color:#606977;font-size:12px}
 .audit-kv:first-of-type{border-top:0}
 .audit-kv b{font-weight:650;color:#111;text-align:right;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v7.74: карточка "Профиль материала" — под именем добавившего/последнего движения показывается
+   ещё и email мелким шрифтом (см. actorNameEmailHtml() в js/history.js). Значение теперь в отдельной
+   обёртке .audit-kv-val (а не прямо в <b>, у которого white-space:nowrap не дал бы второй строке
+   показаться), с тем же выравниванием и обрезкой длинного текста, что и раньше у простого <b>. */
+.audit-kv-val{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-width:0}
+.audit-kv-val b{font-weight:650;color:#111;text-align:right;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.audit-kv-val small{display:block;text-transform:none;letter-spacing:normal;color:#8a8f99;font-size:10px;margin:0;text-align:right;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .audit-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;-webkit-overflow-scrolling:touch;padding-right:2px}
 .audit-item{display:grid;grid-template-columns:9px 1fr;gap:10px;align-items:start;border:1px solid #eef0f4;border-radius:13px;background:#fff;padding:10px 11px}
 .audit-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);margin-top:5px}
@@ -2704,7 +2711,7 @@ html:has(body.modal-open){
 .profile-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid #e8ebf0;border-radius:999px;background:#fff;padding:6px 10px;font-size:12px;color:#30343b;font-weight:550}
 .profile-avatar{width:20px;height:20px;border-radius:999px;background:#f0f1f3;display:grid;place-items:center;font-size:11px;color:#111;font-weight:700}
 .order-row-action-buttons{display:flex;align-items:center;gap:8px;justify-content:flex-end;white-space:nowrap}.order-row-action-buttons .btn{height:34px!important;min-height:34px!important;border-radius:10px!important;padding:0 12px!important;font-size:12px!important}.order-row-action-buttons .production-btn{background:linear-gradient(180deg,var(--accent) 0%,var(--accent-dark) 100%)!important;color:#fff!important;border-color:var(--accent-dark)!important}.order-row-action-buttons .open-btn{background:#fff!important;color:#111!important;border-color:#e5e7eb!important}
-@media(max-width:920px){.audit-profile-grid{grid-template-columns:1fr}.audit-kv{grid-template-columns:1fr}.audit-kv b{text-align:left}.order-row-action-buttons{justify-content:flex-start}}
+@media(max-width:920px){.audit-profile-grid{grid-template-columns:1fr}.audit-kv{grid-template-columns:1fr}.audit-kv b{text-align:left}.audit-kv-val{align-items:flex-start}.audit-kv-val b,.audit-kv-val small{text-align:left}.order-row-action-buttons{justify-content:flex-start}}
 
 
 

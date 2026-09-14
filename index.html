@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
-  <link rel="stylesheet" href="css/style.css?v=7.45" />
+  <link rel="stylesheet" href="css/style.css?v=7.46" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -223,7 +223,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=6.6"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.56"></script>
-<script src="js/orders.js?v=7.46"></script>
+<script src="js/orders.js?v=7.47"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
@@ -2902,12 +2902,12 @@ const __deleteMaterialV565=deleteMaterialFromSupabase;
 deleteMaterialFromSupabase=async function(id){const m=(data.materials||[]).find(x=>String(x.id)===String(id));const ok=await __deleteMaterialV565(id);if(ok&&m)auditAdd('material_delete','material',m.id,m.sku||m.name,`Материал ${m.sku||m.name||''} удалён`);return ok;}
 
 const __quickAddStockV565=quickAddStock;
-quickAddStock=async function(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=document.getElementById('quickQty')?.value;await __quickAddStockV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd('stock_in','material',m.id,m.sku,`Поступление на склад: +${qtyWithUnit(Number(qty||0),m.unit)}`);}}
+quickAddStock=async function(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=document.getElementById('quickQty')?.value;await __quickAddStockV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedByEmail=currentUser?.email||'';m.attributes.stockChangedAt=auditNow();auditAdd('stock_in','material',m.id,m.sku,`Поступление на склад: +${qtyWithUnit(Number(qty||0),m.unit)}`);}}
 const __quickWriteOffV565=quickWriteOffStock;
-quickWriteOffStock=async function(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=document.getElementById('quickQty')?.value;await __quickWriteOffV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd('stock_out','material',m.id,m.sku,`Списание со склада: −${qtyWithUnit(Number(qty||0),m.unit)}`);}}
+quickWriteOffStock=async function(){const sku=normalizeSku(document.getElementById('quickSku')?.value);const qty=document.getElementById('quickQty')?.value;await __quickWriteOffV565();const m=findMaterialBySku(sku);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedByEmail=currentUser?.email||'';m.attributes.stockChangedAt=auditNow();auditAdd('stock_out','material',m.id,m.sku,`Списание со склада: −${qtyWithUnit(Number(qty||0),m.unit)}`);}}
 
 const __adjustMaterialQtyV565=adjustMaterialQty;
-adjustMaterialQty=async function(id,dir){const m=(data.materials||[]).find(x=>String(x.id)===String(id));const qty=document.getElementById('detailQtyChange')?.value;const movementUnit=document.getElementById('detailQtyUnit')?.value||m?.unit;await __adjustMaterialQtyV565(id,dir);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedAt=auditNow();auditAdd(dir>0?'stock_in':'stock_out','material',m.id,m.sku||m.name,`${dir>0?'Поступление':'Списание'} через карточку: ${dir>0?'+':'−'}${qtyWithUnit(Number(qty||0),movementUnit||m.unit)}`);}}
+adjustMaterialQty=async function(id,dir){const m=(data.materials||[]).find(x=>String(x.id)===String(id));const qty=document.getElementById('detailQtyChange')?.value;const movementUnit=document.getElementById('detailQtyUnit')?.value||m?.unit;await __adjustMaterialQtyV565(id,dir);if(m){m.attributes=m.attributes||{};m.attributes.stockChangedBy=actorName();m.attributes.stockChangedByEmail=currentUser?.email||'';m.attributes.stockChangedAt=auditNow();auditAdd(dir>0?'stock_in':'stock_out','material',m.id,m.sku||m.name,`${dir>0?'Поступление':'Списание'} через карточку: ${dir>0?'+':'−'}${qtyWithUnit(Number(qty||0),movementUnit||m.unit)}`);}}
 
 const __startOrderWorkV565=startOrderWork;
 startOrderWork=function(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(o)auditAdd('order_status','order',o.id,o.number,`Заказ переведён в работу`);return __startOrderWorkV565(id)}
@@ -3040,6 +3040,7 @@ async function saveCancelReview(orderId){
       m.lastUpdated=today();
       m.attributes=m.attributes||{};
       m.attributes.stockChangedBy=profileUserName();
+      m.attributes.stockChangedByEmail=currentUser?.email||'';
       m.attributes.stockChangedAt=new Date().toISOString();
       try{auditAdd('stock_out','material',m.id,m.sku||m.name,`Списание после отмены заказа ${o.number}: −${qtyWithUnit(it.writeOffQty,m.unit)}`);}catch(e){}
     }
@@ -3187,7 +3188,7 @@ renderAll=function(){__renderAllV565();const av=document.getElementById('appVers
 @media(max-width:1100px){.history-toolbar{grid-template-columns:1fr 1fr}.history-summary{grid-template-columns:repeat(2,1fr)}.history-row{grid-template-columns:120px 1fr 34px}.history-user{display:none}}
 @media(max-width:720px){.history-toolbar,.history-summary{grid-template-columns:1fr}.history-row{grid-template-columns:1fr 34px}.history-time{grid-column:1/-1}.history-main{grid-column:1}.history-go{grid-column:2;grid-row:2}}
 </style>
-<script src="js/history.js?v=6.6"></script>
+<script src="js/history.js?v=6.7"></script>
 <script>installOrderStatusHandlers();</script>
 
 
