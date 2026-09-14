@@ -910,6 +910,12 @@ body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weigh
    кнопкой паузы и кнопкой «Готово», а не в отдельном всплывающем окне (см. workerCompleteTask()). */
 .worker-task-btn-pause{flex:0 0 52px;font-size:18px;padding:0}
 .worker-task-qty{flex:0 0 76px;height:52px;padding:0;text-align:center;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+/* v7.50: «Исправить последнее» — рабочий сам отменяет своё последнее (ошибочное) завершение
+   операции, без участия администратора. Небольшая, не привлекающая лишнего внимания кнопка под
+   основными действиями карточки — видна только когда есть что отменять (см. workerTaskCardHtml()). */
+.worker-task-fix-row{margin-top:8px;display:flex;justify-content:center}
+.worker-task-fix-btn{color:#8a8f99;border-color:transparent;background:transparent}
+.worker-task-fix-btn:hover{color:#4a515c;background:#f5f6f7}
 
 /* v6.42: clean stock section redesign */
 #stock .panel{

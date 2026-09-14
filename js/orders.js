@@ -760,6 +760,12 @@ function workerTaskCardHtml(row){
       <input class="input worker-task-qty" type="number" min="1" max="${remaining}" step="1" value="${remaining}" id="workerQty_${o.id}_${op.stepIndex}" inputmode="numeric">
       <button class="btn worker-task-btn primary" type="button" onclick="workerCompleteTask('${o.id}',${op.stepIndex})">✔ Готово</button>`
     :`<button class="btn worker-task-btn primary" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>▶ ${escapeHtml(t('prodStart'))}</button>`;
+  // v7.50: раньше отменить ошибочно введённое количество (и вернуть списанные материалы) мог
+  // только администратор через полный вид цеха — сам рабочий, ошибившись, не мог ничего исправить
+  // сам. Кнопка вызывает ту же undoLastProductionConsumption(), что и админская «Отменить
+  // списание»: отменяет именно последнее (ещё не отменённое) списание по этой операции.
+  const canFixLast=completed>0&&!!lastActiveConsumptionLog(o,op.stepIndex);
+  const fixLastHtml=canFixLast?`<button class="btn ghost small worker-task-fix-btn" type="button" onclick="undoLastProductionConsumption('${o.id}',${op.stepIndex})">↺ ${escapeHtml(t('fixLastMistakeBtn'))}</button>`:'';
   return `<div class="worker-task-card ${status}">
     <div class="worker-task-top">
       <div class="worker-task-info"><b>${escapeHtml(o.number||'—')}</b>${o.client?`<span> · ${escapeHtml(o.client)}</span>`:''}
@@ -768,6 +774,7 @@ function workerTaskCardHtml(row){
     </div>
     <div class="worker-task-progress"><i><b style="width:${pct}%"></b></i><span>${completed} / ${total}</span></div>
     <div class="worker-task-actions">${actionsHtml}</div>
+    ${fixLastHtml?`<div class="worker-task-fix-row">${fixLastHtml}</div>`:''}
   </div>`;
 }
 // Как «Готово» на карточке задачи: количество уже введено на самой карточке (см. workerTaskCardHtml),
