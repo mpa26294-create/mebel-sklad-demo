@@ -223,7 +223,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=6.6"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.54"></script>
-<script src="js/orders.js?v=7.44"></script>
+<script src="js/orders.js?v=7.45"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
@@ -2489,7 +2489,10 @@ function saveOrderMaterialPurchase(orderId,materialId,opts={}){
   toast(opts.toastText||'Закупка обновлена');
 }
 async function persistReservationMaterials(){syncMaterialReservations();for(const m of data.materials){await updateMaterialInSupabase(m)}}
-async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm('Удалить заказ и освободить резерв материалов?'))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast('Заказ удалён')}
+// v7.69: раньше здесь было ВТОРОЕ (более старое, нелокализованное) определение deleteOrder() —
+// мёртвый код: JS при повторном "function deleteOrder(id){...}" в одной области видимости просто
+// использует последнее объявление (см. ниже, ближе к концу файла), так что это тело никогда не
+// выполнялось. Убрано, чтобы не путать при следующей правке — настоящая реализация ниже.
 function secretExportKey(key){return /(token|chatid|chat_id|pin|password|passwd|secret|apikey|api_key|accesskey|privatekey|auth)/i.test(String(key||''))}
 function cloneForExport(value,allowSecrets=false){
   if(Array.isArray(value))return value.map(x=>cloneForExport(x,allowSecrets));
@@ -2607,7 +2610,16 @@ applyI18n=function(){
   const search=document.getElementById('orderSearchInput'); if(search) search.placeholder=u42('searchOrderPh');
   renderOrderClientFilter();
 };
-async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm(u42('deleteConfirm')))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase();renderAll();toast(u42('orderDeleted'))}
+// v7.69: удалённый заказ иногда "возвращался" обратно после подтверждения удаления (видно в Истории
+// как "Заказ удалён", но сам заказ оставался в списке). Причина — race condition: save() запускает
+// ФОНОВУЮ (debounce 350мс) отправку заказов на сервер, а persistReservationMaterials() ниже обновляет
+// материалы ПОСЛЕДОВАТЕЛЬНО, по одному запросу на материал — на складе с десятками позиций это легко
+// занимает больше 350мс. Пока этот цикл идёт, фоновая отправка заказов успевает завершиться, и
+// следующий следом loadMaterialsFromSupabase() (без skipOrders) заново перечитывал заказы С СЕРВЕРА
+// и подменял ими data.orders (см. applyOrderSyncRow) — есть небольшое окно, когда обратно попадает
+// ещё не обновлённая (то есть с этим заказом) версия. skipOrders:true убирает это окно: функция
+// обновляет только материалы (что и нужно — освободившийся резерв), не трогая заказы вообще.
+async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));if(!confirm(u42('deleteConfirm')))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase({skipOrders:true});renderAll();toast(u42('orderDeleted'))}
 const importDataSecureV641=importData;
 function wipeData(){if(!confirm(u42('wipeConfirm')))return;data={materials:[],models:[],orders:[]};save();renderAll()}
 

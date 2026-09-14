@@ -1561,7 +1561,15 @@ async function saveManagerOrder(id=''){
     if(notifyEnabled&&method==='internal')data.notifications.unshift({id:uid(),type:'order_assigned',channel:'internal',recipientRole:'technologist',orderId:draft.id,orderNumber:draft.number,title:t('notificationNewOrderTitle'),message:`${t('notificationNewOrderMessage')} ${draft.number}`,createdAt:now,read:false});
     if(typeof auditAdd==='function')auditAdd('order_to_technologist','order',draft.id,draft.number,tRu('historyOrderSentTechnologist'),{status:draft.status,notificationMethod:method,notified:notifyEnabled});
   }
-  save();await persistReservationMaterials();closeModal();await loadMaterialsFromSupabase();renderAll();toast(u42('orderSaved'));if(isNew&&notifyEnabled){const notificationResult=await sendOrderNotification(draft,method);draft.notification.state=notificationResult?'sent':'failed';save()}
+  // v7.69: НЕ loadMaterialsFromSupabase() (без skipOrders) — она заново перечитывает синхронизированную
+  // строку заказов и подменяет ей data.orders (см. applyOrderSyncRow). persistReservationMaterials()
+  // ниже последовательно обновляет КАЖДЫЙ материал отдельным запросом — при заметном количестве
+  // материалов это занимает дольше, чем 350мс debounce у save()/scheduleOrdersSync(), так что фоновая
+  // отправка заказов на сервер иногда успевает завершиться (сбросив "грязный" флаг) ДО того, как эта
+  // функция дойдёт до loadMaterialsFromSupabase() — и без skipOrders она в этот момент перечитывала бы
+  // заказы с сервера и рисковала откатить только что сохранённые изменения. С skipOrders:true эта
+  // функция обновляет только материалы (что и нужно — освобождённый/занятый резерв), не трогая заказы.
+  save();await persistReservationMaterials();closeModal();await loadMaterialsFromSupabase({skipOrders:true});renderAll();toast(u42('orderSaved'));if(isNew&&notifyEnabled){const notificationResult=await sendOrderNotification(draft,method);draft.notification.state=notificationResult?'sent':'failed';save()}
 }
 async function saveOrder(id=''){return saveManagerOrder(id)}
 
