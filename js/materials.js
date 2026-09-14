@@ -288,7 +288,12 @@ function cancelMaterialDelivery(materialId,orderId){
 // поправить) и необязательным комментарием, а по нажатию "Отправить" формируется mailto-ссылка
 // с уже готовым текстом письма и открывается системный почтовый клиент пользователя — само письмо
 // сайт не отправляет (в браузере это невозможно без сервера рассылки), просто подготавливает его.
-function openNewMaterialOrder(materialId){
+// v7.73: suggestedQty — необязательный override количества-подсказки. Без него (вызов из карточки
+// склада) подсказка считается по общему складскому недостатку (мин. остаток − доступно). При вызове
+// из карточки конкретного заказа ("Материал в заказе") туда передаётся именно НЕХВАТКА этого заказа
+// (st.av.missing) — иначе подсказка в письме не совпадала бы с числом "Нехватка", которое пользователь
+// только что видел на той же карточке, и выглядело бы как будто сайт predложил что-то не то.
+function openNewMaterialOrder(materialId,suggestedQty=null){
   const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
   if(!m){toast(t('notFoundMaterial'));return}
   const email=String(m.attributes?.supplierEmail||'').trim();
@@ -299,9 +304,14 @@ function openNewMaterialOrder(materialId){
   }
   if(typeof pushModalState==='function')pushModalState();
   const unit=materialDisplayUnit(m);
-  const min=Number(m.minQuantity||0);
-  const avail=availableQty(m);
-  const suggested=Math.max(0,Number((min-avail).toFixed(3)));
+  let suggested;
+  if(suggestedQty!==null&&suggestedQty!==undefined&&Number(suggestedQty)>0){
+    suggested=Number(Number(suggestedQty).toFixed(3));
+  }else{
+    const min=Number(m.minQuantity||0);
+    const avail=availableQty(m);
+    suggested=Math.max(0,Number((min-avail).toFixed(3)));
+  }
   // v7.71: у mailto-ссылок нет способа прикрепить файл — это ограничение самого браузера/протокола,
   // сайт не может это обойти. Ближайший рабочий вариант: если у материала есть чертёж (PDF), сайт сам
   // скачивает его в момент открытия письма — остаётся перетащить уже скачанный файл в открывшееся
