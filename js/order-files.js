@@ -340,7 +340,7 @@
       <div id="orderFilesList">${orderFilesListHtml(id,o)}</div>
       ${canUpload?`<div class="order-file-upload-row">
         <label class="btn small">${escapeHtml(t('orderFilesUploadBtn'))}<input id="orderFileInput" type="file" multiple style="display:none" onchange="handleOrderFileUpload(event,'${escapeHtml(id)}')"></label>
-        <label class="order-file-encrypt-toggle"><input id="orderFileEncryptChk" type="checkbox" checked> ${escapeHtml(t('orderFileEncryptLabel'))}</label>
+        <label class="order-file-encrypt-toggle"><input id="orderFileEncryptChk" type="checkbox"> ${escapeHtml(t('orderFileEncryptLabel'))}</label>
       </div>`:`<p class="muted small">${escapeHtml(t('orderFilesEditToAdd'))}</p>`}
     </section>`;
   }
@@ -354,10 +354,11 @@
   window.handleOrderFileUpload=async function(event,orderId){
     const input=event.target;
     const files=Array.from(input.files||[]);
-    // v7.61: галочка "Шифровать" читается один раз на всю пачку файлов из этой загрузки —
-    // не постаили галочку → файл кладётся в приватный bucket как есть, без AES-слоя, и открывается
-    // без пароля; постаили (по умолчанию так) → как раньше, полное шифрование общим паролем хранилища.
-    const wantEncrypt=document.getElementById('orderFileEncryptChk')?.checked!==false;
+    // v7.64: галочка "Шифровать" по умолчанию ВЫКЛЮЧЕНА (по просьбе пользователя) — читается один
+    // раз на всю пачку файлов из этой загрузки; поставили галочку → полное шифрование общим паролем
+    // хранилища (как раньше), не поставили (по умолчанию) → файл кладётся в приватный bucket как
+    // есть, без AES-слоя, и открывается без пароля.
+    const wantEncrypt=document.getElementById('orderFileEncryptChk')?.checked===true;
     input.value='';
     if(!files.length)return;
     let key=null;
