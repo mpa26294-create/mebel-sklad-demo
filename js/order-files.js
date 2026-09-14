@@ -96,10 +96,17 @@
   }
 
   // ---- UI: запрос/создание пароля хранилища (без кэширования — см. комментарий выше) ----
+  // v7.62: пароль хранилища задаёт ТОЛЬКО администратор (NOTIFICATION_ADMIN_EMAIL, см. js/orders.js),
+  // а не тот, кто первым откроет/загрузит зашифрованный файл — по просьбе пользователя: пароль
+  // должен выдавать он сам, а не создаваться случайно кем-то из сотрудников. Если пароль ещё не
+  // задан и это не админ — показываем сообщение "обратитесь к администратору" вместо формы создания.
   function requireVaultKey(){
     return new Promise(resolve=>{
       vaultResolve=resolve;
-      if(!vaultConfig)openVaultSetupModal();else openVaultUnlockModal();
+      if(!vaultConfig){
+        const isAdmin=typeof isNotificationAdmin==='function'&&isNotificationAdmin();
+        if(isAdmin)openVaultSetupModal();else openVaultNotConfiguredModal();
+      }else openVaultUnlockModal();
     });
   }
   // v7.60-fix: окно пароля почти всегда открывается ПОВЕРХ уже открытой формы заказа — у сайта
@@ -122,6 +129,11 @@
       <div class="auth-error" id="vaultSetupError"></div>
     </div>`;
     openModal(t('vaultSetupTitle'),body,`<button class="btn" type="button" onclick="cancelVaultPrompt()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmVaultSetup()">${escapeHtml(t('vaultCreateBtn'))}</button>`);
+  }
+  function openVaultNotConfiguredModal(){
+    if(typeof pushModalState==='function')pushModalState();
+    const body=`<div class="vault-modal"><p class="muted">${escapeHtml(t('vaultNotConfiguredMsg'))}</p></div>`;
+    openModal(t('vaultNotConfiguredTitle'),body,`<button class="btn primary" type="button" onclick="cancelVaultPrompt()">${escapeHtml(t('gotIt'))}</button>`);
   }
   window.confirmVaultSetup=async function(){
     const p1=document.getElementById('vaultPass1')?.value||'';
@@ -195,17 +207,22 @@
   }
   // targetId нужен для ещё не сохранённого заказа (o тогда null, но черновик уже имеет id — см.
   // startOrderFileDraft() в js/orders.js/openOrderModal). Для сохранённого заказа targetId===o.id.
-  function orderFilesSectionHtml(o,targetId){
+  // v7.62: canUpload — загружать файлы можно только из формы добавления/редактирования заказа;
+  // в карточке просмотра заказа (showOrderInfoModal) секция теперь только показывает список файлов
+  // (открыть/скачать), без поля загрузки — по просьбе пользователя, чтобы не путать "посмотреть" и
+  // "изменить заказ".
+  function orderFilesSectionHtml(o,targetId,canUpload){
+    if(canUpload===undefined)canUpload=true;
     const id=o?.id||targetId||'';
     if(!id)return `<section class="order-files-box"><h4>📎 ${escapeHtml(t('orderFilesTitle'))}</h4><p class="muted">${escapeHtml(t('orderFilesSaveFirst'))}</p></section>`;
     return `<section class="order-files-box">
       <h4>🔒 ${escapeHtml(t('orderFilesTitle'))}</h4>
       <p class="muted small">${escapeHtml(t('orderFilesHint'))}</p>
       <div id="orderFilesList">${orderFilesListHtml(id,o)}</div>
-      <div class="order-file-upload-row">
+      ${canUpload?`<div class="order-file-upload-row">
         <label class="btn small">${escapeHtml(t('orderFilesUploadBtn'))}<input id="orderFileInput" type="file" multiple style="display:none" onchange="handleOrderFileUpload(event,'${escapeHtml(id)}')"></label>
         <label class="order-file-encrypt-toggle"><input id="orderFileEncryptChk" type="checkbox" checked> ${escapeHtml(t('orderFileEncryptLabel'))}</label>
-      </div>
+      </div>`:`<p class="muted small">${escapeHtml(t('orderFilesEditToAdd'))}</p>`}
     </section>`;
   }
   window.orderFilesSectionHtml=orderFilesSectionHtml;

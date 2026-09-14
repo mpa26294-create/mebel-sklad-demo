@@ -292,6 +292,7 @@ Object.assign(I18N.ru,{
   orderFileDeleted:'Файл удалён',
   orderFileEncryptLabel:'🔒 Шифровать (нужен пароль хранилища)',
   orderFileNotEncryptedBadge:'без шифрования',
+  orderFilesEditToAdd:'Чтобы добавить файл, откройте заказ на редактирование.',
   vaultSetupTitle:'Пароль для файлов заказов',
   vaultSetupWarning:'Этот пароль отдельный от входа на сайт и нигде не хранится в открытом виде — так и работает защита. Если вы его забудете, все прикреплённые файлы будет невозможно открыть НАВСЕГДА, без исключений. Запишите его в надёжном месте.',
   vaultNewPasswordLabel:'Новый пароль',
@@ -305,7 +306,9 @@ Object.assign(I18N.ru,{
   vaultPasswordPlaceholder:'Пароль',
   vaultUnlockBtn:'Открыть',
   vaultWrongPassword:'Неверный пароль',
-  vaultLocalModeError:'Локальный режим: сохранение недоступно'
+  vaultLocalModeError:'Локальный режим: сохранение недоступно',
+  vaultNotConfiguredTitle:'Пароль ещё не задан',
+  vaultNotConfiguredMsg:'Пароль для зашифрованных файлов задаёт администратор. Обратитесь к администратору, чтобы получить пароль.'
 });
 Object.assign(I18N.en,{
   orderFilesTitle:'Order files',
@@ -323,6 +326,7 @@ Object.assign(I18N.en,{
   orderFileDeleted:'File deleted',
   orderFileEncryptLabel:'🔒 Encrypt (needs vault password)',
   orderFileNotEncryptedBadge:'not encrypted',
+  orderFilesEditToAdd:'To add a file, open the order for editing.',
   vaultSetupTitle:'Password for order files',
   vaultSetupWarning:'This password is separate from your site login and is never stored anywhere in readable form — that is how the protection works. If you forget it, every attached file becomes permanently unrecoverable, no exceptions. Write it down somewhere safe.',
   vaultNewPasswordLabel:'New password',
@@ -336,7 +340,9 @@ Object.assign(I18N.en,{
   vaultPasswordPlaceholder:'Password',
   vaultUnlockBtn:'Unlock',
   vaultWrongPassword:'Wrong password',
-  vaultLocalModeError:'Local mode: saving is unavailable'
+  vaultLocalModeError:'Local mode: saving is unavailable',
+  vaultNotConfiguredTitle:'Password not set yet',
+  vaultNotConfiguredMsg:'The password for encrypted files is set by the administrator. Ask the administrator for the password.'
 });
 Object.assign(I18N.lv,{
   orderFilesTitle:'Pasūtījuma faili',
@@ -354,6 +360,7 @@ Object.assign(I18N.lv,{
   orderFileDeleted:'Fails dzēsts',
   orderFileEncryptLabel:'🔒 Šifrēt (vajadzīga glabātuves parole)',
   orderFileNotEncryptedBadge:'nešifrēts',
+  orderFilesEditToAdd:'Lai pievienotu failu, atveriet pasūtījumu rediģēšanai.',
   vaultSetupTitle:'Parole pasūtījumu failiem',
   vaultSetupWarning:'Šī parole ir atsevišķa no ieejas sistēmā un nekur netiek glabāta salasāmā veidā — tā darbojas aizsardzība. Ja to aizmirsīsiet, visi pievienotie faili būs neatgriezeniski zaudēti, bez izņēmumiem. Pierakstiet to drošā vietā.',
   vaultNewPasswordLabel:'Jauna parole',
@@ -367,7 +374,9 @@ Object.assign(I18N.lv,{
   vaultPasswordPlaceholder:'Parole',
   vaultUnlockBtn:'Atvērt',
   vaultWrongPassword:'Nepareiza parole',
-  vaultLocalModeError:'Lokālais režīms: saglabāšana nav pieejama'
+  vaultLocalModeError:'Lokālais režīms: saglabāšana nav pieejama',
+  vaultNotConfiguredTitle:'Parole vēl nav iestatīta',
+  vaultNotConfiguredMsg:'Paroli šifrētiem failiem iestata administrators. Sazinieties ar administratoru, lai saņemtu paroli.'
 });
 Object.assign(I18N.ru,{unitRunningM:'пог. м',unitSheet:'лист',unitM3:'м³',unitKg:'кг',unitRoll:'рулон',unitSheetsPlural:'листы',areaOfChangeLabel:'Площадь изменения'});
 Object.assign(I18N.en,{unitRunningM:'running m',unitSheet:'sheet',unitM3:'m³',unitKg:'kg',unitRoll:'roll',unitSheetsPlural:'sheets',areaOfChangeLabel:'Change area'});
