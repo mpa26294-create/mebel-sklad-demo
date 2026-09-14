@@ -1876,7 +1876,11 @@ function materialWizardParamDefs(cat){
   if(cat==='Древесина')return [['woodSpecies','Порода','text'],['moisture','Влажность, %','number'],['grade','Сорт','text']];
   if(cat==='Фурнитура')return [['type','Тип / описание','text'],['size','Размер / модель','text'],['width','Ширина, мм','number'],['height','Высота, мм','number'],['length','Длина, мм','number'],['color','Цвет','text'],['material','Материал','text']];
   if(cat==='Крепёж')return [['type','Тип','text'],['diameter','Диаметр, мм','number'],['length','Длина, мм','number'],['thread','Резьба','text'],['material','Материал','text']];
-  if(cat==='Наполнители')return [['type',t('fillerTypeLabel'),'text'],['density',t('fillerDensityLabel'),'text'],['packageWeight',t('fillerPackageWeightLabel'),'number'],['color',t('colorLabel'),'text'],['rollWidth',t('rollWidthMLabel'),'number']];
+  // v7.57: по просьбе пользователя убраны лишние поля («Тип наполнителя» тут дублировал уже
+  // существующий выбор подкатегории на шаге «Основное» — Синтепон/Холлофайбер/Пух/Другие; «Плотность»,
+  // «Цвет», «Вес упаковки» тоже убраны как ненужные) — остаётся только то, что реально нужно для
+  // учёта: единица (см. unitBlock в materialWizardParamsHtml) и ширина рулона, когда единица — пог. м.
+  if(cat==='Наполнители')return [['rollWidth',t('rollWidthMLabel'),'number']];
   return [['color','Цвет','text']];
 }
 // v7.54: у «Наполнителей» единица учёта — не фиксированная константа (как у остальных generic-
