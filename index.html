@@ -208,7 +208,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=6.29"></script>
+<script src="js/translations.js?v=6.30"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -1529,6 +1529,7 @@ function openFoamModal(id=null){
     : `<div class="add-material-simple-stock">
         <div class="field"><label>На складе</label><input id="foamQty" type="number" step="${stockStep(foamUnit)}" min="0" class="input" value="0" inputmode="decimal"></div>
         <div class="field"><label>${t('minQuantity')}</label><input id="foamMin" type="number" step="${stockStep(foamUnit)}" min="0" class="input" value="0" inputmode="decimal"></div>
+        <div class="field"><label>${t('supplierEmailLabel')}</label><input id="foamSupplierEmail" type="email" class="input" value="" placeholder="${t('supplierEmailPlaceholder')}"></div>
        </div>`;
   const body=`<div class="material-wizard" data-step="1">
     <div class="wizard-steps"><button class="wizard-step-pill active" type="button" onclick="setMaterialWizardStep(1)">1 ${t('materialBasic')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(2)">2 ${t('fabricWizardParams')}</button><button class="wizard-step-pill" type="button" onclick="setMaterialWizardStep(3)">3 ${t('materialStock')}</button></div>
