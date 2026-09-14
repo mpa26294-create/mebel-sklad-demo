@@ -550,9 +550,17 @@ function detailField(label,value,full=false){return `<div class="detail-field ${
 function woodMm(value){return value?`${escapeHtml(value)} мм`:'—'}
 function woodSectionText(a){const parts=[a.thickness&&`${a.thickness} мм`,a.width&&`${a.width} мм`].filter(Boolean);return parts.length?parts.join(' × '):'—'}
 function isWoodSheetMaterial(m){
+  if(m?.category!=='Древесина')return false;
   const a=m?.attributes||{};
+  // v7.30 «Детали»: названия типов (Фанера, Мебельный щит и т.д.) пересекаются с Листовыми
+  // материалами, поэтому группу нужно в первую очередь читать из attributes.materialKind (его
+  // пишет wood-wizard.js при сохранении) — иначе «деталь из фанеры» (учёт в шт.) здесь ошибочно
+  // считалась бы «листом» (учёт в м²). У материалов, сохранённых до v7.30, materialKind нет —
+  // для них группа по-прежнему определяется старой эвристикой по названию типа.
+  if(a.materialKind==='part'||a.materialKind==='lumber')return false;
+  if(a.materialKind==='sheet')return true;
   const type=String(a.materialType||m?.subcategory||'');
-  return m?.category==='Древесина' && (!!a.sheetArea || ['Мебельный щит','Фанера','MDF','HDF','МДФ','ДСП','ДВП','OSB'].includes(type));
+  return !!a.sheetArea || ['Мебельный щит','Фанера','MDF','HDF','МДФ','ДСП','ДВП','OSB'].includes(type);
 }
 function woodSheetArea(m){
   const a=m?.attributes||{};
