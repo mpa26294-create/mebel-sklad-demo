@@ -342,7 +342,10 @@ if(typeof document!=='undefined')document.addEventListener('click',(e)=>{
     const minStockQty=status==='stock'?readNonNegative('foamMin',true):0;
     const purchasePrice=status==='stock'?readNonNegative('foamPurchasePrice'):undefined;
     if([width,length,thickness,stockQty,orderedQty,minStockQty,purchasePrice].some(v=>v===null)){
-      toast('Значения не могут быть отрицательными. Количество должно быть целым числом.');
+      // v7.48: раньше текст был зашит на русском — на латышском/английском интерфейсе пользователь
+      // получал непонятное русское сообщение и мог решить, что кнопка «Сохранить» вообще не работает.
+      // Те же переводы уже существуют (используются в wood-wizard.js) — переиспользуем через t().
+      toast(`${t('valuesCannotBeNegative')} ${t('quantityMustBeInteger')}`);
       return;
     }
     const oldMaterial=id?data.materials.find(x=>String(x.id)===String(id)):null;
