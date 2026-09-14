@@ -162,7 +162,7 @@ function orderCreationDataHtml(o,{includeOperational=false}={}){
 }
 function orderTechnologySummaryHtml(o){
   const steps=orderSteps(o),items=orderMaterials(o),missing=orderMissingItems(o),total=calcOrderMinutes(o);
-  const missingList=!items.length?`<div class="order-tech-unknown">${escapeHtml(t('materialsNotSpecifiedYet'))}</div>`:missing.length?`<ul>${missing.map(({item,state})=>{const m=state.av.mat,unit=state.av.unit||item.unit||'',ordered=orderItemPurchaseStatus(item)==='ordered';return `<li><b>${escapeHtml(m?materialTitle(m):t('deletedMaterial'))}</b><span class="${ordered?'ordered-text':''}">— ${escapeHtml(ordered?`${t('ordered')}: ${qtyWithUnit(orderItemPurchaseQty(item,state.av.missing),unit)}`:qtyWithUnit(state.av.missing,unit))}</span></li>`}).join('')}</ul>`:`<div class="order-tech-ok">✓ ${escapeHtml(t('nothingToOrder'))}</div>`;
+  const missingList=!items.length?`<div class="order-tech-unknown">${escapeHtml(t('materialsNotSpecifiedYet'))}</div>`:missing.length?`<ul>${missing.map(({item,state})=>{const m=state.av.mat,unit=state.av.unit||item.unit||'',ordered=orderItemPurchaseStatus(item)==='ordered';return `<li><b>${escapeHtml(m?materialTitle(m):t('deletedMaterialWord'))}</b><span class="${ordered?'ordered-text':''}">— ${escapeHtml(ordered?`${t('ordered')}: ${qtyWithUnit(orderItemPurchaseQty(item,state.av.missing),unit)}`:qtyWithUnit(state.av.missing,unit))}</span></li>`}).join('')}</ul>`:`<div class="order-tech-ok">✓ ${escapeHtml(t('nothingToOrder'))}</div>`;
   return `<div class="order-tech-bottom"><section class="order-tech-card order-purchase-summary"><h4>${escapeHtml(t('whatToOrder'))}</h4>${missingList}</section><section class="order-tech-card"><h4>${escapeHtml(t('technologyTotals'))}</h4><div class="order-tech-totals"><div><small>${escapeHtml(t('totalOperations'))}</small><b>${steps.length}</b></div><div><small>${escapeHtml(t('totalTime'))}</small><b>${escapeHtml(orderTimeText(total))}</b></div><div><small>${escapeHtml(t('materialsCount'))}</small><b>${items.length}</b></div><div><small>${escapeHtml(t('missingMaterialsCount'))}</small><b class="${missing.length?'danger-text':''}">${missing.length}</b></div></div></section></div>`;
 }
 function technologyMaterialStatus(o,item){const per=orderItemPerUnitQty(item,o),state=orderMaterialLineState(item,o.id),need=Number(item.qty||0),available=Number(state.av.available||0),reserved=Number(state.av.mat?reservedQty(state.av.mat):0),ordered=orderItemPurchaseQty(item,state.av.missing);if(per<=0||need<=0)return {tone:'idle',label:t('materialUsageNotSpecified'),state};if(orderItemPurchaseStatus(item)==='ordered')return {tone:'blue',label:`${t('ordered')}: ${qtyWithUnit(ordered,state.av.unit||item.unit)}`,state};if(available<=0)return {tone:'bad',label:t('needToPurchase'),state};if(available<need)return {tone:'warn',label:t('partiallyAvailable'),state};if(reserved>=need)return {tone:'ok',label:t('reservedDone'),state};return {tone:'ok',label:t('materialsAvailableStatus'),state}}
@@ -728,18 +728,214 @@ function workshopQueueItemHtml(row,etaMap){
     </div>`:''}
   </div>`;
 }
-function workshopDetailHtml(name){
+// v7.77: раздел "Цеха" переработан в рабочее место мастера (по ТЗ пользователя) — раньше детальный
+// экран цеха показывал сразу всё: большую сводку с "Загрузка 2296%" (непонятно сотруднику), плановое/
+// фактическое время, полную очередь с развёрнутыми карточками операций (списания, комментарии,
+// история смен) и повторяющиеся предупреждения по материалам — на то, чтобы понять "что делать
+// сейчас", уходило слишком много времени. Новый экран отвечает на 4 вопроса сразу: что делаю сейчас,
+// сколько сделано/осталось, что мешает, что дальше. Все данные — те же существующие функции
+// (workshopAnalytics/productionOp/productionMaterialCoverage/finalizeProductionQuantity и т.д.),
+// новых источников данных не добавлено. Старый подробный вид (полная карточка операции: план/факт,
+// история смен, комментарии, ручное списание) никуда не делся — он доступен по ссылке "Открыть
+// полную очередь" (см. openWorkshopFullQueue()) и остаётся рабочим как раньше.
+
+// Строка очереди, которая сейчас "в работе" (или, если ничего не запущено, следующая по очереди —
+// сотруднику всё равно нужно с чего-то начать).
+function workshopCurrentRow(stat){
+  return stat.queue.find(row=>productionOp(row.order,row.index)?.status==='running')
+    ||stat.queue.find(row=>productionOp(row.order,row.index)?.status==='paused')
+    ||stat.queue[0]||null;
+}
+// Все отметки выпуска ИМЕННО этого цеха за сегодня (across все заказы) — источник для "Сделано за
+// смену" и "Темп". Использует уже существующий productionMeta(o).logs, ничего нового не считает.
+function workshopLogsToday(name){
+  const todayStr=today(),target=String(name||'').trim(),rows=[];
+  (data.orders||[]).forEach(o=>{
+    (productionMeta(o).logs||[]).forEach(l=>{
+      if(String(l.stepName||'').trim()===target&&String(l.at||'').slice(0,10)===todayStr)rows.push(l);
+    });
+  });
+  rows.sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+  return rows;
+}
+function workshopDoneToday(name){return workshopLogsToday(name).reduce((s,l)=>s+Number(l.qty||0),0)}
+// Темп по факту потраченного времени за сегодня (а не по разнице часов между первой и последней
+// отметкой — так пауза/обед не занижает результат). Возвращает null, если данных ещё мало (нечего
+// делить) — тогда карточка честно показывает "—" вместо выдуманного числа.
+function workshopRateToday(name){
+  const logs=workshopLogsToday(name);
+  const qty=logs.reduce((s,l)=>s+Number(l.qty||0),0),minutes=logs.reduce((s,l)=>s+Number(l.minutes||0),0);
+  if(qty<=0||minutes<1)return null;
+  return Math.max(1,Math.round(qty/(minutes/60)));
+}
+// Что мешает работе прямо сейчас/по этой строке очереди — один короткий текстовый статус, а не
+// набор повторяющихся предупреждений. Порядок важен: просрочка важнее риска, риск важнее нехватки.
+function workshopRowRisk(row,etaMap){
+  const o=row.order,op=productionOp(o,row.index);
+  // v7.77: по ТЗ пользователя риски показываются РОВНО тремя текстами ("риск срока" / "нет материала"
+  // / "ожидание закупки") — уже просроченный заказ и заказ, который рискует не успеть к сроку,
+  // технически разные условия, но текст один и тот же ("риск срока"), различается только цвет
+  // (просрочка — красный/danger, риск — оранжевый/warn).
+  if(orderDeadlineClass(o)==='overdue')return {cls:'danger',text:t('workshopRiskDeadline')};
+  const eta=etaMap?etaMap.get(`${o.id}_${row.index}`):null;
+  if(eta&&o.dueDate&&eta>o.dueDate)return {cls:'warn',text:t('workshopRiskDeadline')};
+  if(op){
+    const coverage=productionMaterialCoverage(o,operationMaterials(o,op),productionCompletedQty(o,op));
+    if(!coverage.ok){
+      const waiting=coverage.missing.some(({item})=>orderItemPurchaseStatus(item)==='ordered');
+      return waiting?{cls:'warn',text:t('workshopRiskWaitingPurchase')}:{cls:'danger',text:t('workshopRiskNoMaterial')};
+    }
+  }
+  return null;
+}
+// Какой ИМЕННО материал ограничивает выполнение текущей операции и на сколько комплектов ещё хватит —
+// не список повторяющихся предупреждений, а один понятный ответ. Переиспользует orderMaterialEnoughQty
+// (уже существует, используется в productionMaterialCoverage) для каждой позиции по отдельности, чтобы
+// найти именно ту, что ограничивает раньше других.
+function workshopLimitingMaterial(o,op){
+  if(!o||!op)return null;
+  const assigned=operationMaterials(o,op).filter(item=>Number(item.qty||0)>0);
+  if(!assigned.length)return null;
+  const total=Math.max(0,orderProductQty(o)-productionCompletedQty(o,op));
+  if(total<=0)return null;
+  let limiting=null,minEnough=Infinity;
+  assigned.forEach(item=>{
+    const state=orderMaterialLineState(item,o.id),enough=orderMaterialEnoughQty(o,item,state);
+    if(enough<minEnough){minEnough=enough;limiting={item,state};}
+  });
+  if(!limiting||minEnough>=total)return null;
+  return {...limiting,enough:minEnough,total};
+}
+function workshopMaterialAlertHtml(o,op){
+  const limiting=workshopLimitingMaterial(o,op);
+  if(!limiting)return `<div class="workshop-material-alert ok"><span class="workshop-material-alert-icon">✓</span><span>${escapeHtml(t('workshopMaterialsOkText'))}</span></div>`;
+  const {item,state,enough,total}=limiting,m=state.av.mat,name=m?materialTitle(m):t('deletedMaterialWord');
+  const text=t('workshopMaterialLimitText').replace('{material}',name).replace('{enough}',enough).replace('{total}',total);
+  const action=m?`<button class="btn primary" type="button" onclick="openProductionMaterialPurchase('${o.id}','${item.materialId}')">${escapeHtml(t('openPurchaseBtn'))}</button>`:'';
+  return `<div class="workshop-material-alert warn"><span class="workshop-material-alert-icon">⚠</span><span>${escapeHtml(text)}</span>${action}</div>`;
+}
+function workshopShiftSummaryHtml(name,stat,currentRow){
+  const o=currentRow?currentRow.order:null;
+  const doneToday=workshopDoneToday(name),lastMark=workshopLogsToday(name)[0]||null,rate=workshopRateToday(name);
+  const problemCount=stat.queue.filter(row=>!!workshopRowRisk(row,stat.etaMap)).length;
+  const currentBlock=o?`<b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · ${escapeHtml(t('orderDueDate'))} ${escapeHtml(formatDeadline(o))}</small>`:`<b>—</b><small>${escapeHtml(t('workshopNoCurrentOrder'))}</small>`;
+  return `<div class="workshop-shift-summary">
+    <div class="workshop-shift-card"><small>${escapeHtml(t('workshopCurrentOrderLabel'))}</small>${currentBlock}</div>
+    <div class="workshop-shift-card"><small>${escapeHtml(t('workshopDoneShiftLabel'))}</small><b>${doneToday} ${escapeHtml(t('unitPieces'))}</b><small class="workshop-shift-sub">${lastMark?`${escapeHtml(t('workshopLastMarkLabel'))} ${lastMark.qty} ${escapeHtml(t('unitPieces'))}`:'—'}</small></div>
+    <div class="workshop-shift-card"><small>${escapeHtml(t('workshopRateLabel'))}</small><b>${rate?`${rate} ${escapeHtml(t('unitsPerHourShort'))}`:'—'}</b><small class="workshop-shift-sub">${escapeHtml(t('workshopRateHint'))}</small></div>
+    <div class="workshop-shift-card"><small>${escapeHtml(t('queue'))}</small><b>${stat.queue.length} ${escapeHtml(stat.queue.length===1?t('orderWordOne'):t('orderWordMany'))}</b><small class="workshop-shift-sub ${problemCount>0?'danger-text':''}">${problemCount>0?`${problemCount} ${escapeHtml(t('workshopNeedAttention'))}`:escapeHtml(t('workshopAllOk'))}</small></div>
+  </div>`;
+}
+function workshopCurrentCardHtml(row){
+  if(!row)return `<div class="workshop-current-card empty"><div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div></div>`;
+  const o=row.order,op=productionOp(o,row.index);
+  if(!op)return '';
+  const completed=productionCompletedQty(o,op),total=orderProductQty(o),pct=productionOpPercent(o,op),remaining=Math.max(0,total-completed);
+  const status=productionStatusClass(op.status);
+  const allSteps=orderSteps(o),activeSteps=allSteps.filter(s=>Number(s.minutes||0)>0);
+  const curIdx=activeSteps.findIndex(s=>s===allSteps[op.stepIndex]);
+  const nextStep=curIdx>=0?activeSteps[curIdx+1]:null;
+  const posText=`${t('operationWord')} ${curIdx+1} ${t('of')} ${activeSteps.length}${nextStep?` · ${t('nextStageLabel')}: ${escapeHtml(workshopLabel(nextStep.name))}`:''}`;
+  const lastLog=(productionMeta(o).logs||[]).find(l=>Number(l.stepIndex)===Number(op.stepIndex));
+  const canRecord=op.status!=='done'&&op.status!=='cancelled'&&remaining>0;
+  const chips=[1,5,10,20].map(n=>`<button class="btn workshop-qty-chip" type="button" ${!canRecord||n>remaining?'disabled':''} onclick="recordWorkshopQuickQty('${o.id}',${op.stepIndex},${n})">+${n}</button>`).join('');
+  return `<div class="workshop-current-card">
+    <div class="workshop-current-head">
+      <div><small>${escapeHtml(t('workshopNowWorkingLabel'))}</small><h3>${escapeHtml(o.number||'—')}</h3><p>${escapeHtml(o.client||'—')} · ${total} ${escapeHtml(t('unitPieces'))} · ${escapeHtml(t('orderDueDate'))}: ${escapeHtml(formatDeadline(o))}</p></div>
+      <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
+    </div>
+    <div class="workshop-current-op"><b>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}</b><span>${escapeHtml(posText)}</span></div>
+    ${workshopMaterialAlertHtml(o,op)}
+    <div class="workshop-current-progress">
+      <div class="workshop-current-progress-num"><b>${completed}</b><span> / ${total}</span></div>
+      <div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div>
+      <span class="workshop-current-remaining">${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}</span>
+    </div>
+    <div class="workshop-record-actions">
+      <button class="btn primary workshop-record-btn" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">✔ ${escapeHtml(t('recordOutputBtn'))}</button>
+      <div class="workshop-qty-chips">${chips}<button class="btn workshop-qty-chip" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('otherQtyBtn'))}</button></div>
+    </div>
+    <div class="workshop-last-mark">${lastLog?`${escapeHtml(t('lastWriteOffLabel'))}: <b>${lastLog.qty} ${escapeHtml(t('unitPieces'))}</b> · ${escapeHtml(productionDateTimeText(lastLog.at))} · ${escapeHtml(lastLog.by||'—')}`:escapeHtml(t('workshopNoMarksYet'))}</div>
+    <button type="button" class="workshop-more-link" onclick="goToOrderFromMaterial(event,'${o.id}')">${escapeHtml(t('openOrderCard'))} ↗</button>
+  </div>`;
+}
+function workshopQueueMiniRowHtml(row,isCurrent,etaMap){
+  const o=row.order,op=productionOp(o,row.index),risk=isCurrent?null:workshopRowRisk(row,etaMap);
+  const remaining=op?Math.max(0,orderProductQty(o)-productionCompletedQty(o,op)):orderProductQty(o);
+  const tagCls=isCurrent?'current':risk?risk.cls:'';
+  const tagText=isCurrent?t('workshopNowTag'):risk?risk.text:(op&&op.status!=='not_started'?productionStatusLabel(op.status):t('workshopNotStartedTag'));
+  return `<button type="button" class="workshop-queue-mini-row ${isCurrent?'current':''}" onclick="goToOrderFromMaterial(event,'${o.id}')">
+    <span class="workshop-queue-mini-dot ${tagCls||'ok'}"></span>
+    <span class="workshop-queue-mini-info"><b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · ${isCurrent?`${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}`:escapeHtml(formatDeadline(o))}</small></span>
+    <span class="workshop-queue-mini-tag ${tagCls}">${escapeHtml(tagText)}</span>
+  </button>`;
+}
+function workshopQueueSidebarHtml(name,stat,currentRow){
+  const others=stat.queue.filter(row=>!(currentRow&&row.order.id===currentRow.order.id&&row.index===currentRow.index));
+  const rows=[currentRow?workshopQueueMiniRowHtml(currentRow,true,stat.etaMap):'',...others.slice(0,6).map(row=>workshopQueueMiniRowHtml(row,false,stat.etaMap))].join('');
+  return `<div class="workshop-queue-panel">
+    <div class="workshop-queue-panel-head"><h4>${escapeHtml(t('workshopQueueTitlePrefix'))} ${escapeHtml(workshopLabel(name))}</h4><small>${escapeHtml(t('workshopQueueSortHint'))}</small></div>
+    <div class="workshop-queue-mini-list">${rows||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`}</div>
+    <button type="button" class="workshop-more-link" onclick="openWorkshopFullQueue('${jsStrArg(name)}')">${escapeHtml(t('openFullQueueBtn'))} →</button>
+  </div>`;
+}
+function workshopCurrentMaterialsHtml(o,op){
+  if(!o||!op)return '';
+  const assigned=operationMaterials(o,op).filter(item=>Number(item.qty||0)>0);
+  const seen=new Set(),rows=[];
+  assigned.forEach(item=>{
+    const state=orderMaterialLineState(item,o.id);
+    if(Number(state.av.missing||0)<=0)return;
+    const key=state.av.mat?.id||item.materialId;
+    if(seen.has(key))return;
+    seen.add(key);rows.push({item,state});
+  });
+  const body=rows.length?rows.slice(0,4).map(({item,state})=>{
+    const m=state.av.mat,unit=state.av.unit||item.unit||'',ordered=orderItemPurchaseStatus(item)==='ordered';
+    const statusText=ordered?t('ordered'):`${t('workshopMissingLabel')} ${qtyWithUnit(state.av.missing,unit)} · ${t('needToPurchase')}`;
+    return `<button type="button" class="workshop-current-material-row" onclick="openProductionMaterialPurchase('${o.id}','${item.materialId}')"><b>${escapeHtml(m?materialTitle(m):t('deletedMaterialWord'))}</b><span class="${ordered?'ok-text':'danger-text'}">${escapeHtml(statusText)}</span></button>`;
+  }).join(''):`<div class="workshop-material-alert ok small"><span class="workshop-material-alert-icon">✓</span><span>${escapeHtml(t('workshopMaterialsOkText'))}</span></div>`;
+  return `<div class="workshop-current-materials"><h4>${escapeHtml(t('workshopCurrentOrderMaterialsTitle'))}</h4>${body}<button type="button" class="workshop-more-link" onclick="openProductionMaterialsControlModal('${o.id}')">${escapeHtml(t('showAllOrderMaterialsBtn'))} →</button></div>`;
+}
+function openProductionMaterialsControlModal(orderId){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  if(typeof pushModalState==='function')pushModalState();
+  openModal(t('productionMaterialsControl'),productionMaterialsControlHtml(o),`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('closeBtn'))}</button>`);
+}
+function openWorkshopFullQueue(name){
   const stat=workshopAnalytics(name);
-  const cards=stat.queue.map(row=>workshopQueueItemHtml(row,stat.etaMap)).join('');
+  const cards=stat.queue.map(row=>workshopQueueItemHtml(row,stat.etaMap)).join('')||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`;
+  if(typeof pushModalState==='function')pushModalState();
+  openModal(`${t('workshopQueueTitlePrefix')} ${workshopLabel(name)}`,`<div class="workshop-queue-list">${cards}</div>`,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('closeBtn'))}</button>`);
+}
+// Быстрая отметка выпуска (+1/+5/+10/+20) — тот же самый finalizeProductionQuantity(), что и обычное
+// "Завершить"/подтверждение количества, просто без промежуточного окна ради "макс. 2 клика". Нехватка
+// материалов по-прежнему обрабатывается штатно: finalizeProductionQuantity сама откроет окно с тем,
+// чего не хватает, вместо того чтобы списать по факту.
+async function recordWorkshopQuickQty(orderId,index,qty){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op||op.status==='done')return;
+  const remaining=orderProductQty(o)-productionCompletedQty(o,op);
+  if(remaining<=0)return;
+  await finalizeProductionQuantity(orderId,index,Math.max(1,Math.min(Number(qty)||1,remaining)));
+}
+function workshopDetailHtml(name){
+  const stat=workshopAnalytics(name),currentRow=workshopCurrentRow(stat);
+  const currentOp=currentRow?productionOp(currentRow.order,currentRow.index):null;
   return `<div class="workshop-detail-head">
       <button type="button" class="workshop-back-link" onclick="closeWorkshopDetail()">${escapeHtml(t('backToWorkshops'))}</button>
       <span class="workshop-detail-sep"></span>
       <h3>${workshopIcon(name)} ${escapeHtml(workshopLabel(name))}</h3>
       ${workshopStatusBadgeHtml(stat.queue)}
     </div>
-    ${workshopsStatBarHtml({queue:stat.queue.length,active:stat.active,plan:stat.plan,actual:stat.actual,overdue:stat.overdue,load:stat.load})}
-    ${stat.warnings.length?`<div class="production-warnings">${stat.warnings.map(w=>`<span>⚠ ${escapeHtml(w)}</span>`).join('')}</div>`:''}
-    <div class="workshop-queue-list">${cards||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`}</div>`;
+    ${workshopShiftSummaryHtml(name,stat,currentRow)}
+    <div class="workshop-work-layout">
+      <div class="workshop-work-main">${workshopCurrentCardHtml(currentRow)}</div>
+      <div class="workshop-work-side">
+        ${workshopQueueSidebarHtml(name,stat,currentRow)}
+        ${currentRow?workshopCurrentMaterialsHtml(currentRow.order,currentOp):''}
+      </div>
+    </div>`;
 }
 // v7.43: рабочий режим — вместо обзора цехов/детального экрана (плановые часы, KPI, комментарии,
 // timeline — всё это для мастера/технолога) сотрудник из списка «Упрощённый доступ» видит один
@@ -821,7 +1017,9 @@ function renderWorkshops(){
     return;
   }
   el.innerHTML=selectedWorkshopName?workshopDetailHtml(selectedWorkshopName):workshopsOverviewHtml();
-  if(desc)desc.textContent=selectedWorkshopName?`${t('workshopQueueForNamePrefix')} «${selectedWorkshopName}»`:t('workshopQueueAllDesc');
+  // v7.77: у детального экрана цеха теперь свой подзаголовок ("рабочее место мастера") — раньше
+  // здесь просто повторялось название цеха ещё раз, хотя оно уже видно в хлебной крошке.
+  if(desc)desc.textContent=selectedWorkshopName?t('workshopMasterSubtitle'):t('workshopQueueAllDesc');
 }
 function productionWarnings(o){
   const names=[...new Set(orderSteps(o).filter(s=>Number(s.minutes||0)>0).map(s=>s.name).filter(Boolean))],list=[];
@@ -842,7 +1040,7 @@ function productionTimelineHtml(o){
 function openProductionMaterialPurchase(orderId,materialId){if(typeof pushModalState==='function')pushModalState();openOrderMaterialPurchase(orderId,materialId)}
 function openProductionMaterialDetails(materialId){if(typeof pushModalState==='function')pushModalState();openMaterialDetails(materialId)}
 function productionMaterialLinkHtml(m,item){
-  if(!m)return `<b>${escapeHtml(t('deletedMaterial'))}</b>`;
+  if(!m)return `<b>${escapeHtml(t('deletedMaterialWord'))}</b>`;
   return `<button class="production-material-link" type="button" onclick="openProductionMaterialDetails('${item.materialId}')"><b>${escapeHtml(materialTitle(m))}</b>${m.sku?`<small>${escapeHtml(m.sku)}</small>`:''}</button>`;
 }
 function productionMaterialsControlHtml(o){const items=orderMaterials(o);if(!items.length)return `<section class="production-workflow-card"><h4>${escapeHtml(t('productionMaterialsControl'))}</h4><div class="order-tech-empty">${escapeHtml(t('noTechnologyMaterials'))}</div></section>`;return `<section class="production-workflow-card production-material-control"><h4>${escapeHtml(t('productionMaterialsControl'))}</h4><div class="production-material-table-wrap"><table class="production-material-table"><thead><tr><th>${escapeHtml(t('material'))}</th><th>Операция</th><th>На изделие</th><th>Требуется</th><th>Уже списано</th><th>Осталось списать</th><th>Остаток склада</th><th>${escapeHtml(t('status'))}</th></tr></thead><tbody>${items.map(i=>{const st=orderMaterialLineState(i,o.id),m=st.av.mat,unit=st.av.unit||i.unit||'',per=orderItemPerUnitQty(i,o),used=orderItemConsumedQty(i),left=Math.max(0,stockNumForUnit(Number(i.qty||0)-used,unit)),stock=m?convertMaterialQty(Number(m.quantity||0),m.unit||unit,unit,m):0,ordered=orderItemPurchaseStatus(i)==='ordered',status=left<=0?'✓ полностью списано':st.av.ok?'✓ '+t('availableStatus'):ordered?`${t('ordered')}: ${qtyWithUnit(orderItemPurchaseQty(i,st.av.missing),unit)}`:'⚠ '+t('needToPurchase'),cls=left<=0||st.av.ok?'ok':ordered?'ordered':'warn',cell=st.av.ok||left<=0?`<span class="production-material-status ${cls}">${escapeHtml(status)}</span>`:`<button class="production-material-status ${cls} action" type="button" onclick="openProductionMaterialPurchase('${o.id}','${i.materialId}')">${escapeHtml(status)}</button>`;return `<tr><td>${productionMaterialLinkHtml(m,i)}</td><td>${escapeHtml(materialWorkshopForItem(i,m)||'—')}</td><td>${escapeHtml(qtyWithUnit(per,unit))}</td><td>${escapeHtml(qtyWithUnit(i.qty,unit))}</td><td>${escapeHtml(qtyWithUnit(used,unit))}</td><td>${escapeHtml(qtyWithUnit(left,unit))}</td><td>${escapeHtml(qtyWithUnit(stock,unit))}</td><td>${cell}</td></tr>`}).join('')}</tbody></table></div></section>`}
@@ -889,7 +1087,7 @@ function productionOperationMaterialStatusHtml(o,op){
     const m=state.av.mat,unit=state.av.unit||item.unit||'',missingQty=Number(state.av.missing||0),rowOk=missingQty<=0;
     const statusText=rowOk?rowOkLabel:`⚠ ${missingLabel} ${escapeHtml(qtyWithUnit(missingQty,unit))}`;
     const detailText=`${needLabel} ${escapeHtml(qtyWithUnit(item.qty,unit))} · ${availableLabel} ${escapeHtml(qtyWithUnit(state.av.available,unit))}`;
-    return `<button type="button" class="${rowOk?'material-row-ok':'material-row-warn'}" onclick="openProductionMaterialDetails('${item.materialId}')"><b>${escapeHtml(m?materialTitle(m):t('deletedMaterial'))}</b><span>${statusText} · ${detailText}</span></button>`;
+    return `<button type="button" class="${rowOk?'material-row-ok':'material-row-warn'}" onclick="openProductionMaterialDetails('${item.materialId}')"><b>${escapeHtml(m?materialTitle(m):t('deletedMaterialWord'))}</b><span>${statusText} · ${detailText}</span></button>`;
   }).join('');
   const last=consumption.last?`<small>${escapeHtml(t('lastWriteOffLabel'))}: ${escapeHtml(consumption.last.qty)} ${escapeHtml(t('unitsGenitive'))} · ${escapeHtml(productionDateTimeText(consumption.last.at))}</small>`:`<small>${escapeHtml(t('lastWriteOffLabel'))}: —</small>`;
   return `<div class="production-op-materials ${coverage.ok?'ok':'warn'}"><strong>${coverage.ok?'✓':'⚠'} ${escapeHtml(title)}${infoBtn('materials')}</strong><em>${escapeHtml(t('materialsWrittenOffLabel'))}: ${escapeHtml(consumption.sets)} / ${escapeHtml(total)} ${escapeHtml(t('setsWord'))}</em>${last}${list?`<div>${list}</div>`:''}</div>`;
@@ -1113,7 +1311,7 @@ function completionAnalyticsHtml(o){
 function completionPassportHtml(o){
   const plan=calcOrderMinutes(o),actual=completionActualMinutes(o),diff=actual-plan,c=orderCompletionData(o),ops=productionOps(o),timeline=completionTimelineRows(o).rows;
   const tech=orderSteps(o).map(s=>`<div><span>${escapeHtml(s.name||'—')}</span><b>${Number(s.minutes||0)} ${escapeHtml(t('minutesShort'))}</b></div>`).join('');
-  const mats=orderMaterials(o).map(i=>{const st=orderMaterialLineState(i,o.id),m=st.av.mat,unit=st.av.unit||i.unit||'';return `<div><span>${escapeHtml(m?materialTitle(m):t('deletedMaterial'))}</span><b>${escapeHtml(qtyWithUnit(i.qty,unit))}</b></div>`}).join('')||`<em>${escapeHtml(t('noTechnologyMaterials'))}</em>`;
+  const mats=orderMaterials(o).map(i=>{const st=orderMaterialLineState(i,o.id),m=st.av.mat,unit=st.av.unit||i.unit||'';return `<div><span>${escapeHtml(m?materialTitle(m):t('deletedMaterialWord'))}</span><b>${escapeHtml(qtyWithUnit(i.qty,unit))}</b></div>`}).join('')||`<em>${escapeHtml(t('noTechnologyMaterials'))}</em>`;
   const people=[...new Set(ops.map(op=>op.responsible).concat([o.meta?.createdBy,o.meta?.technologyBy,o.updatedBy]).filter(Boolean))].join(', ')||'—';
   return `<div class="passport-modal"><section><h4>${escapeHtml(t('passportBasic'))}</h4><div class="passport-grid"><div><small>${escapeHtml(t('orderNumberLabel'))}</small><b>${escapeHtml(o.number||'—')}</b></div><div><small>${escapeHtml(u42('orderClient'))}</small><b>${escapeHtml(o.client||'—')}</b></div><div><small>${escapeHtml(t('orderProductCount'))}</small><b>${orderProductQty(o)}</b></div><div><small>${escapeHtml(t('orderCurrentStatus'))}</small><b>${escapeHtml(calcOrderAutoStatus(o))}</b></div></div></section><section><h4>${escapeHtml(t('passportTechnology'))}</h4><div class="passport-lines">${tech}</div></section><section><h4>${escapeHtml(t('passportMaterials'))}</h4><div class="passport-lines">${mats}</div></section><section><h4>${escapeHtml(t('passportExecutors'))}</h4><p>${escapeHtml(people)}</p></section><section><h4>${escapeHtml(t('passportPlanFact'))}</h4><div class="passport-grid"><div><small>${escapeHtml(t('plannedTime'))}</small><b>${escapeHtml(orderTimeText(plan))}</b></div><div><small>${escapeHtml(t('actualTime'))}</small><b>${escapeHtml(orderTimeText(actual))}</b></div><div><small>${escapeHtml(t('difference'))}</small><b class="${diff>0?'danger-text':'ok-text'}">${escapeHtml(orderTimeTextSigned(diff))}</b></div></div></section><section><h4>${escapeHtml(t('finalComment'))}</h4><p>${escapeHtml(c.comment||'—')}</p></section><section><h4>${escapeHtml(t('productionTimeline'))}</h4><div class="passport-timeline">${timeline.map(r=>`<div><i></i><span>${escapeHtml(r.text)}</span></div>`).join('')}</div></section></div>`;
 }
