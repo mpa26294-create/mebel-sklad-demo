@@ -1601,7 +1601,12 @@ function showOrderInfoModal(id){
   // at once (inline in the list and here in the modal).
   if(typeof expandedOrders!=='undefined'&&expandedOrders.has(id)){expandedOrders.delete(id);if(typeof renderOrders==='function')renderOrders();}
   const status=calcOrderAutoStatus(o),fields=[[t('orderNumberLabel'),o.number||'—'],[t('orderCustomer'),o.client||'—'],[t('orderProduct'),o.product||'—'],[t('orderProductCount'),orderProductQty(o)],[t('orderDueDate'),o.dueDate||'—'],[t('orderCreatedDate'),o.date||'—'],[t('orderPriority'),orderPriorityLabel(o.priority)],[t('orderCurrentStatus'),status]];
-  const body=`<div class="order-info-view"><div class="order-info-grid">${fields.map(([label,value])=>`<div><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}<div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div>${typeof orderFilesSectionHtml==='function'?orderFilesSectionHtml(o,'',false):''}${orderInfoHistoryHtml(o)}${typeof cancelReviewPending==='function'&&cancelReviewPending(o)&&typeof cancelReviewHtml==='function'?cancelReviewHtml(o):''}</div>`;
+  // v7.72: по просьбе пользователя — в карточке просмотра заказа теперь видно и материалы (те же
+  // строки "нужно/на складе/резерв/доступно/статус", что и в развёрнутой строке списка заказов и во
+  // вкладке "Технология"), а не только номер/заказчик/сроки. orderMaterialsDetailHtml() уже
+  // существовала и переиспользуется как есть — стили для неё вне #orders продублированы в css/style.css
+  // под .order-clean-modal.
+  const body=`<div class="order-info-view"><div class="order-info-grid">${fields.map(([label,value])=>`<div><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}<div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div>${orderMaterialsDetailHtml(o)}${typeof orderFilesSectionHtml==='function'?orderFilesSectionHtml(o,'',false):''}${orderInfoHistoryHtml(o)}${typeof cancelReviewPending==='function'&&cancelReviewPending(o)&&typeof cancelReviewHtml==='function'?cancelReviewHtml(o):''}</div>`;
   const technologyLabel=currentLang==='en'?'Technology':currentLang==='lv'?'Tehnoloģija':'Технология';
   openModal(o.number||t('orderStageCreation'),body,`<button class="btn" type="button" onclick="openOrderModal('${o.id}')">${escapeHtml(u42('edit'))}</button><button class="btn primary" type="button" onclick="openOrderTechnologyFromInfo('${o.id}')">${escapeHtml(technologyLabel)}</button><button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('close'))}</button>`);setCleanModalClass('order-clean-modal order-info-modal');
 }

@@ -3106,6 +3106,29 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .vault-modal{display:flex;flex-direction:column;gap:12px}
 .vault-modal .input{margin-top:2px}
 .vault-modal p.danger-text{font-size:12px;line-height:1.5;margin:0}
+/* v7.72: orderMaterialsDetailHtml() уже используется в списке заказов (стили #orders .order-materials-clean...
+   в другом месте этого файла), но там же и объявлена — с ancestor-селектором #orders. В карточке
+   просмотра заказа (модалка) такого предка нет, поэтому те стили бы не сработали — те же классы
+   продублированы здесь под .order-clean-modal (класс, который эта модалка получает всегда). */
+.order-clean-modal .order-materials-clean{overflow:hidden;border:1px solid #e5e9f0;border-radius:14px;background:#fff;margin-top:14px}
+.order-clean-modal .order-materials-clean-head{display:flex;align-items:center;gap:8px;padding:13px 15px;border-bottom:1px solid #edf0f4;color:#1d2939;font-size:12px;font-weight:700}
+.order-clean-modal .order-materials-clean-head span{padding:3px 7px;border-radius:999px;background:#f2f4f7;color:#667085;font-size:9px}
+.order-clean-modal .order-materials-scroll{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.order-clean-modal .order-materials-clean table{width:100%;min-width:640px;border-collapse:collapse}
+.order-clean-modal .order-materials-clean th{padding:10px 13px;background:#fafbfc;color:#667085;font-size:9px;font-weight:650;text-align:left;text-transform:uppercase;letter-spacing:.035em}
+.order-clean-modal .order-materials-clean td{padding:11px 13px;border-top:1px solid #edf0f4;color:#344054;font-size:11px;vertical-align:middle}
+.order-clean-modal .order-material-link{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:#1d2939;font-weight:650;text-decoration:none}
+.order-clean-modal .order-material-link:hover{text-decoration:underline}
+.order-clean-modal .order-material-link:disabled{cursor:default;color:#98a2b3}
+.order-clean-modal .deleted-material-row{background:#fcfcfd}
+.order-clean-modal .deleted-material-row td,.order-clean-modal .deleted-material-row .order-material-link{color:#98a2b3}
+.order-clean-modal .material-chip-ok,.order-clean-modal .material-chip-warn,.order-clean-modal .material-chip-blue,.order-clean-modal .material-chip-bad,.order-clean-modal .material-chip-written{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:9px;font-weight:650;white-space:nowrap}
+.order-clean-modal .material-chip-ok{background:#e8f8ed;color:#15803d}
+.order-clean-modal .material-chip-warn{background:#fff2dd;color:#c96608}
+.order-clean-modal .material-chip-blue{background:#e8f1ff;color:#1769e0}
+.order-clean-modal .material-chip-bad{background:#ffebee;color:#d92d20}
+.order-clean-modal .material-chip-written{background:#f0f2f5;color:#667085}
+.order-clean-modal .material-action-btn{min-height:30px;padding:0 10px;border:1px solid #dfe4ec;border-radius:8px;background:#fff;color:#344054;font-size:10px}
 
 /* Order information view and unclipped action menu. */
 #orders .order-erp-card{overflow:visible}.action-menu.open{z-index:10000}.action-menu-list{z-index:10000!important;max-height:calc(100vh - 16px);overflow-y:auto}.order-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.order-info-grid>div{min-width:0;padding:11px 12px;border:1px solid #edf0f4;border-radius:11px;background:#fafbfc}.order-info-grid .full{grid-column:1/-1}.order-info-grid small{display:block;margin-bottom:5px;color:#8490a3;font-size:9px;font-weight:650;text-transform:uppercase}.order-info-grid b{display:block;color:#1d2939;font-size:12px;line-height:1.45;overflow-wrap:anywhere}.order-info-history{margin-top:14px;padding:14px;border:1px solid #e5e9f0;border-radius:14px;background:#fff}.order-info-history h4{margin:0 0 10px;color:#101828;font-size:13px}.order-info-history>div{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid #edf0f4}.order-info-history span b,.order-info-history span small{display:block}.order-info-history span b{color:#344054;font-size:11px}.order-info-history span small,.order-info-history time,.order-info-history p{color:#8490a3;font-size:10px}.order-info-history time{white-space:nowrap}@media(max-width:760px){.order-info-grid{grid-template-columns:1fr}.order-info-grid .full{grid-column:auto}.order-info-history>div{flex-direction:column;gap:4px}}
