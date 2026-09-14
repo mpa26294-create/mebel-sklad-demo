@@ -137,7 +137,18 @@ function ensureMeta(obj){if(!obj.meta||typeof obj.meta!=='object')obj.meta={};re
 function hasOrderTechnology(steps){return (steps||[]).some(s=>Number(s&&s.minutes||0)>0)}
 function auditListHtmlOrder(o){let rows=auditFor('order',o.id);if(!hasOrderTechnology(o.steps))rows=rows.filter(r=>r.type!=='technology');if(!rows.length)return `<div class="audit-empty">${t('historyEmpty')}.</div>`;return `<div class="audit-list">${rows.map(r=>`<div class="audit-item"><span class="audit-dot"></span><div><b>${escapeHtml(r.text)}</b><span>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</span></div></div>`).join('')}</div>`}
 function orderProfileHtml(o){const m=ensureMeta(o);const hasTech=hasOrderTechnology(o.steps);return `<div class="audit-profile-grid"><div class="audit-card"><h5>${t('orderProfile')}</h5><div class="audit-kv"><span>${t('createdOrder')}</span><b>${escapeHtml(metaVal(m,'createdBy'))}</b></div><div class="audit-kv"><span>${t('creationDate')}</span><b>${escapeHtml(m.createdAt?auditTime(m.createdAt):(o.date||'—'))}</b></div><div class="audit-kv"><span>${t('technologyBy')}</span><b>${escapeHtml(hasTech?metaVal(m,'technologyBy'):'—')}</b></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(metaVal(m,'updatedBy'))}</b></div></div><div class="audit-card"><h5>${t('orderHistory')}</h5>${auditListHtmlOrder(o)}</div></div>`}
-function materialProfileHtml(m){const a=m.attributes||{};return `<div class="audit-profile-grid"><div class="audit-card"><h5>${t('materialProfile')}</h5><div class="audit-kv"><span>${t('addedMaterial')}</span><b>${escapeHtml(a.createdBy||'—')}</b></div><div class="audit-kv"><span>${t('additionDate')}</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>${t('lastMovement')}</span><b>${escapeHtml(a.stockChangedBy||a.updatedBy||'—')}</b></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>${t('materialHistory')}</h5>${auditListHtml('material',m.id)}</div></div>`}
+// v7.74: по просьбе пользователя — рядом с именем добавившего/последним движением показываем ещё и
+// email мелким шрифтом (когда он известен и отличается от самого имени — если имя и есть email,
+// как у тех, кто не задал отображаемое имя в Настройках, повторять его дважды смысла нет).
+// Возвращает <b>Имя</b> + отдельную строку <small>email</small> — оборачивать в свой собственный
+// <b> на месте вызова уже не нужно (и не нужно, иначе email оказался бы внутри однострочного
+// nowrap-обрезаемого <b> и никогда не показался бы, см. .audit-kv b в css/style.css).
+function actorNameEmailHtml(name,email){
+  const n=`<b>${escapeHtml(name||'—')}</b>`;
+  if(email&&String(email).trim()&&String(email).trim()!==String(name||'').trim())return `${n}<small class="muted">${escapeHtml(email)}</small>`;
+  return n;
+}
+function materialProfileHtml(m){const a=m.attributes||{};return `<div class="audit-profile-grid"><div class="audit-card"><h5>${t('materialProfile')}</h5><div class="audit-kv"><span>${t('addedMaterial')}</span><div class="audit-kv-val">${actorNameEmailHtml(a.createdBy,a.createdByEmail)}</div></div><div class="audit-kv"><span>${t('additionDate')}</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>${t('lastMovement')}</span><div class="audit-kv-val">${actorNameEmailHtml(a.stockChangedBy||a.updatedBy,a.stockChangedBy?a.stockChangedByEmail:a.updatedByEmail)}</div></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>${t('materialHistory')}</h5>${auditListHtml('material',m.id)}</div></div>`}
 function appendModalAudit(html){const body=document.getElementById('modalBody');if(body && !body.querySelector('.audit-profile-grid')) body.insertAdjacentHTML('beforeend',html)}
 function stepsSignature(steps){return JSON.stringify((steps||[]).map(s=>({name:String(s.name||''),minutes:Number(s.minutes||0)})))}
 function setOrderMetaForSave(draft,prev){const now=auditNow();const meta=Object.assign({},prev&&prev.meta?prev.meta:{});if(!prev){meta.createdBy=actorName();meta.createdAt=now;}meta.updatedBy=actorName();meta.updatedAt=now;const techChanged=!prev || stepsSignature(prev.steps)!==stepsSignature(draft.steps);if(hasOrderTechnology(draft.steps) && techChanged){meta.technologyBy=actorName();meta.technologyAt=now;}if(!hasOrderTechnology(draft.steps)){delete meta.technologyBy;delete meta.technologyAt;}draft.meta=meta;return draft;}
@@ -576,27 +587,33 @@ function auditMaterialFallbackFromHistoryV573(m){
   };
 }
 
+// v7.74: раньше сюда попадал actorName() ТЕКУЩЕГО зрителя как запасной вариант, если у материала
+// ещё не было записано, кто его создал/изменил (старые материалы, заведённые до того, как это поле
+// вообще стали писать). Из-за этого простое ОТКРЫТИЕ карточки материала (без единого изменения)
+// тут же подставляло и СОХРАНЯЛО текущего зрителя как автора последнего изменения — пользователь
+// заметил это на своей карточке ("я только открывал, а там мой email"). Теперь при отсутствии данных
+// поле просто остаётся пустым (в интерфейсе показывается "—"), а не выдумывается из того, кто сейчас
+// смотрит — угадывать разрешено только из уже имеющихся на материале полей (см. ниже).
 function ensureMaterialAuditMetaV573(m, options = {}){
   if(!m) return m;
   m.attributes = m.attributes || {};
   const a = m.attributes;
   const hist = auditMaterialFallbackFromHistoryV573(m);
   const now = (typeof auditNow === 'function') ? auditNow() : new Date().toISOString();
-  const actor = (typeof actorName === 'function') ? actorName() : ((currentUser && currentUser.email) || 'Неизвестный пользователь');
 
   let changed = false;
 
   if(!a.createdBy){
-    a.createdBy = hist.by || a.updatedBy || a.stockChangedBy || actor;
-    changed = true;
+    const guess=hist.by||a.updatedBy||a.stockChangedBy;
+    if(guess){a.createdBy=guess;changed=true}
   }
   if(!a.createdAt){
     a.createdAt = hist.at || a.updatedAt || a.stockChangedAt || m.createdAt || m.lastUpdated || now;
     changed = true;
   }
   if(!a.updatedBy){
-    a.updatedBy = a.stockChangedBy || a.createdBy || actor;
-    changed = true;
+    const guess=a.stockChangedBy||a.createdBy;
+    if(guess){a.updatedBy=guess;changed=true}
   }
   if(!a.updatedAt){
     a.updatedAt = a.stockChangedAt || a.createdAt || now;
@@ -638,10 +655,13 @@ if(typeof insertMaterialToSupabase === 'function'){
   insertMaterialToSupabase = async function(m){
     const now = (typeof auditNow === 'function') ? auditNow() : new Date().toISOString();
     const actor = (typeof actorName === 'function') ? actorName() : ((currentUser && currentUser.email) || 'Неизвестный пользователь');
+    const actorEmail = (typeof currentUser!=='undefined'&&currentUser&&currentUser.email)||'';
     m.attributes = m.attributes || {};
     m.attributes.createdBy = m.attributes.createdBy || actor;
+    m.attributes.createdByEmail = m.attributes.createdByEmail || actorEmail;
     m.attributes.createdAt = m.attributes.createdAt || now;
     m.attributes.updatedBy = actor;
+    m.attributes.updatedByEmail = actorEmail;
     m.attributes.updatedAt = now;
     return await __insertMaterialV573(m);
   };
@@ -651,10 +671,12 @@ if(typeof updateMaterialInSupabase === 'function'){
   const __updateMaterialV573 = updateMaterialInSupabase;
   updateMaterialInSupabase = async function(m){
     const actor = (typeof actorName === 'function') ? actorName() : ((currentUser && currentUser.email) || 'Неизвестный пользователь');
+    const actorEmail = (typeof currentUser!=='undefined'&&currentUser&&currentUser.email)||'';
     const now = (typeof auditNow === 'function') ? auditNow() : new Date().toISOString();
     m.attributes = m.attributes || {};
     ensureMaterialAuditMetaV573(m);
     m.attributes.updatedBy = actor;
+    m.attributes.updatedByEmail = actorEmail;
     m.attributes.updatedAt = now;
     return await __updateMaterialV573(m);
   };
@@ -664,7 +686,7 @@ if(typeof materialProfileHtml === 'function'){
   materialProfileHtml = function(m){
     ensureMaterialAuditMetaV573(m, {persist:true});
     const a=m.attributes||{};
-    return `<div class="audit-profile-grid"><div class="audit-card"><h5>${t('materialProfile')}</h5><div class="audit-kv"><span>${t('addedMaterial')}</span><b>${escapeHtml(a.createdBy||'—')}</b></div><div class="audit-kv"><span>${t('additionDate')}</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>${t('lastMovement')}</span><b>${escapeHtml(a.stockChangedBy||a.updatedBy||'—')}</b></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>${t('materialHistory')}</h5>${auditListHtml('material',m.id)}</div></div>`;
+    return `<div class="audit-profile-grid"><div class="audit-card"><h5>${t('materialProfile')}</h5><div class="audit-kv"><span>${t('addedMaterial')}</span><div class="audit-kv-val">${actorNameEmailHtml(a.createdBy,a.createdByEmail)}</div></div><div class="audit-kv"><span>${t('additionDate')}</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>${t('lastMovement')}</span><div class="audit-kv-val">${actorNameEmailHtml(a.stockChangedBy||a.updatedBy,a.stockChangedBy?a.stockChangedByEmail:a.updatedByEmail)}</div></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div><div class="audit-card"><h5>${t('materialHistory')}</h5>${auditListHtml('material',m.id)}</div></div>`;
   };
 }
 
