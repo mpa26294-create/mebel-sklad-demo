@@ -647,7 +647,7 @@
 
 
 /* v5.0: production orders */
-.orders-toolbar{grid-template-columns:1.25fr .65fr .65fr .55fr .7fr auto!important}
+.orders-toolbar{grid-template-columns:1.15fr .6fr .6fr .5fr .65fr .85fr auto!important}
 .order-table-wrap{overflow:auto}
 .order-table{min-width:980px}
 .order-table th,.order-table td{white-space:nowrap}
