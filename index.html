@@ -98,6 +98,7 @@
           <select class="select" id="orderClientFilter" onchange="renderOrders()"><option value="">Все заказчики</option></select>
           <input class="input" type="date" id="orderDateFilter" onchange="renderOrders()"/>
           <select class="select" id="orderProblemFilter" onchange="renderOrders()"><option value="">Материалы: все</option><option value="ok">Материалы доступны</option><option value="problem">Есть нехватка</option></select>
+          <select class="select" id="orderSortFilter" onchange="renderOrders()"><option value="deadline">Сортировка: по сроку (срочные сверху)</option><option value="numberDesc">Сортировка: по номеру (новые сверху)</option><option value="numberAsc">Сортировка: по номеру (старые сверху)</option><option value="createdDesc">Сортировка: по дате создания (новые сверху)</option></select>
           <button class="btn" onclick="clearOrderFilters()">Сбросить</button>
         </div>
         <div id="ordersTable"></div>
@@ -208,7 +209,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=6.32"></script>
+<script src="js/translations.js?v=7.81"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -223,7 +224,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=6.6"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=7.80"></script>
+<script src="js/orders.js?v=7.81"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
