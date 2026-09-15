@@ -223,7 +223,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=6.6"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=7.49"></script>
+<script src="js/orders.js?v=7.50"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
@@ -2619,7 +2619,12 @@ applyI18n=function(){
 // и подменял ими data.orders (см. applyOrderSyncRow) — есть небольшое окно, когда обратно попадает
 // ещё не обновлённая (то есть с этим заказом) версия. skipOrders:true убирает это окно: функция
 // обновляет только материалы (что и нужно — освободившийся резерв), не трогая заказы вообще.
-async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));const orderLabel=order?(order.number||'—')+(order.client?' · '+order.client:''):'';if(!confirm(u42('deleteConfirm').replace('{order}',orderLabel)))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();await persistReservationMaterials();await loadMaterialsFromSupabase({skipOrders:true});renderAll();toast(u42('orderDeleted'))}
+async function deleteOrder(id){const order=(data.orders||[]).find(x=>String(x.id)===String(id));const orderLabel=order?(order.number||'—')+(order.client?' · '+order.client:''):'';if(!confirm(u42('deleteConfirm').replace('{order}',orderLabel)))return;if(order&&typeof auditAdd==='function'){auditAdd('order_deleted','order',order.id,order.number||'Заказ','Заказ удалён: '+(order.number||'—')+(order.client?' · '+order.client:''),{orderNumber:order.number||'',client:order.client||'',status:order.status||'',materials:(order.materials||[]).length})}data.orders=data.orders.filter(x=>String(x.id)!==String(id));save();
+  // v7.78: та же гонка, что и при создании/сохранении заказа (см. saveManagerOrder в js/orders.js) —
+  // явно ждём отправку удаления на сервер здесь, а не полагаемся только на фоновый debounce, иначе
+  // при перезагрузке/другом устройстве раньше срабатывания таймера удаление могло не долететь.
+  await persistOrdersToSupabase();
+  await persistReservationMaterials();await loadMaterialsFromSupabase({skipOrders:true});renderAll();toast(u42('orderDeleted'))}
 const importDataSecureV641=importData;
 function wipeData(){if(!confirm(u42('wipeConfirm')))return;data={materials:[],models:[],orders:[]};save();renderAll()}
 

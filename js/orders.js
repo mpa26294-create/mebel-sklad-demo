@@ -1143,6 +1143,13 @@ function orderProductionWorkflowHtml(o){
 async function persistProductionWorkflow(o,message,type='production_update',meta={}){
   o.updatedAt=productionNow();o.updatedBy=productionActorName();
   save();try{if(typeof auditAdd==='function')auditAdd(type,'order',o.id,o.number,message,meta)}catch(e){}
+  // v7.78: та же гонка, что и при создании/удалении заказа (см. saveManagerOrder/deleteOrder) —
+  // раньше запись прогресса производства уходила на сервер только фоново (debounce внутри save()),
+  // а эта функция вызывается на КАЖДУЮ отметку выпуска (в т.ч. новыми кнопками +1/+5/+10/+20 в
+  // "Цехах") — чем чаще сохранения, тем больше шанс, что перезагрузка/другая вкладка успеет
+  // прочитать заказы раньше, чем долетит только что записанный прогресс, и он потеряется. Явно
+  // ждём здесь, прежде чем переходить к (более медленному) обновлению остатков материалов.
+  try{await persistOrdersToSupabase()}catch(e){}
   try{syncMaterialReservations();await persistReservationMaterials()}catch(e){}
   refreshOrderWorkflow(o.id);
 }
@@ -1773,7 +1780,17 @@ async function saveManagerOrder(id=''){
   // функция дойдёт до loadMaterialsFromSupabase() — и без skipOrders она в этот момент перечитывала бы
   // заказы с сервера и рисковала откатить только что сохранённые изменения. С skipOrders:true эта
   // функция обновляет только материалы (что и нужно — освобождённый/занятый резерв), не трогая заказы.
-  save();await persistReservationMaterials();closeModal();await loadMaterialsFromSupabase({skipOrders:true});renderAll();toast(u42('orderSaved'));if(isNew&&notifyEnabled){const notificationResult=await sendOrderNotification(draft,method);draft.notification.state=notificationResult?'sent':'failed';save()}
+  save();
+  // v7.78: раньше отправка заказа на сервер шла только фоново (debounce 350мс внутри save()/
+  // scheduleOrdersSync()) — если между сохранением здесь и срабатыванием этого таймера кто-то ещё
+  // (перезагрузка этой же страницы, другое устройство/вкладка) успевал прочитать и заново записать
+  // заказы, свежесозданный заказ ещё не долетевший до Supabase навсегда пропадал — при этом запись
+  // в Истории всё равно появлялась, так как аудит синхронизируется отдельным, независимым каналом.
+  // Явное ожидание persistOrdersToSupabase() здесь закрывает это окно гонки: заказ гарантированно
+  // долетает до сервера (или пользователь увидит "Ошибка синхронизации... Повторяем", как и раньше)
+  // ДО того, как форма закроется и можно будет уйти со страницы/перезагрузить её.
+  await persistOrdersToSupabase();
+  await persistReservationMaterials();closeModal();await loadMaterialsFromSupabase({skipOrders:true});renderAll();toast(u42('orderSaved'));if(isNew&&notifyEnabled){const notificationResult=await sendOrderNotification(draft,method);draft.notification.state=notificationResult?'sent':'failed';save()}
 }
 async function saveOrder(id=''){return saveManagerOrder(id)}
 
