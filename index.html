@@ -357,6 +357,19 @@ function retryOrdersSync(){
   const delay=Math.min(10000,1000*Math.pow(2,orderSyncRetryCount));
   orderSyncRetryTimer=setTimeout(()=>{orderSyncRetryTimer=null;persistOrdersToSupabase({retry:true});},delay);
 }
+// v7.79: найдена настоящая причина потери заказов (Z-0009, Z-test, Z-test2 и т.п.) — это НЕ гонка
+// внутри одной вкладки (та была исправлена в v7.69/v7.78), а гонка между ДВУМЯ ПАРАЛЛЕЛЬНЫМИ
+// писателями (два человека одновременно на сайте, или две вкладки/устройства одного человека).
+// Раньше запись всегда была "прочитать текущее состояние → слить со своим → перезаписать целиком",
+// без всякой проверки, что состояние на сервере за время между чтением и записью не изменилось.
+// Если ДВА писателя успевали прочитать один и тот же "старый" снимок и оба потом писали — тот, кто
+// записал ВТОРЫМ, полностью стирал изменения первого (в т.ч. только что созданный им заказ), даже
+// не подозревая об этом: ошибки не было, просто чужие данные потерялись молча.
+// Теперь запись — оптимистичная: UPDATE идёт с условием "…и attributes->>updatedAt всё ещё то самое,
+// что мы только что прочитали". Если за это время кто-то другой уже записал (условие не совпало —
+// PostgREST обновит 0 строк), мы это ловим (data пустой) и повторяем весь цикл заново (свежее чтение
+// → слияние с уже АКТУАЛЬНЫМ данными → повторная попытка записи с тем же условием), вместо того чтобы
+// один раз вслепую перезаписать всё как есть.
 async function persistOrdersToSupabase(options={}){
   if(!canWriteSupabase()){
     if(isLocalMode())showOrderSyncToast('Локальный режим: отправка заказов в Supabase отключена',true);
@@ -364,44 +377,60 @@ async function persistOrdersToSupabase(options={}){
   }
   clearTimeout(orderSyncTimer);
   orderSyncTimer=null;
-  const updatedAt=orderSyncLocalUpdatedAt||new Date().toISOString();
   orderSyncInFlight=true;
-  try{
-    const {data:rows,error:selectError}=await supabaseClient.from('materials').select('id,article,attributes').eq('article',ORDER_SYNC_ARTICLE).limit(1);
-    if(selectError)throw selectError;
-    const remoteRow=rows?.[0]||null;
-    orderSyncRowId=remoteRow?.id||orderSyncRowId;
-    const remoteOrders=remoteRow?orderSyncOrdersFromRow(remoteRow):[];
-    const mergedOrders=mergeOrdersForSync(data.orders||[],remoteOrders);
-    const payload={article:ORDER_SYNC_ARTICLE,name:'MOLM Orders Sync',category:'__system__',subcategory:'orders',quantity:0,unit:'',min_quantity:0,attributes:{orders:mergedOrders,updatedAt}};
-    if(orderSyncRowId){
-      const {error}=await supabaseClient.from('materials').update(payload).eq('id',orderSyncRowId);
-      if(error)throw error;
-    }else{
-      const {data:rows,error}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);
-      if(error)throw error;
-      orderSyncRowId=rows?.[0]?.id||'';
+  const maxAttempts=6;
+  for(let attempt=0;attempt<maxAttempts;attempt++){
+    const updatedAt=new Date().toISOString();
+    try{
+      const {data:rows,error:selectError}=await supabaseClient.from('materials').select('id,article,attributes').eq('article',ORDER_SYNC_ARTICLE).limit(1);
+      if(selectError)throw selectError;
+      const remoteRow=rows?.[0]||null;
+      orderSyncRowId=remoteRow?.id||orderSyncRowId;
+      const remoteOrders=remoteRow?orderSyncOrdersFromRow(remoteRow):[];
+      const seenUpdatedAt=remoteRow?.attributes?.updatedAt||null;
+      const mergedOrders=mergeOrdersForSync(data.orders||[],remoteOrders);
+      const payload={article:ORDER_SYNC_ARTICLE,name:'MOLM Orders Sync',category:'__system__',subcategory:'orders',quantity:0,unit:'',min_quantity:0,attributes:{orders:mergedOrders,updatedAt}};
+      let conflict=false;
+      if(orderSyncRowId){
+        let query=supabaseClient.from('materials').update(payload).eq('id',orderSyncRowId);
+        if(seenUpdatedAt)query=query.eq('attributes->>updatedAt',seenUpdatedAt);
+        const {data:updatedRows,error}=await query.select('id');
+        if(error)throw error;
+        // seenUpdatedAt был задан, но ни одна строка не подошла под условие → строку успел
+        // обновить кто-то другой между нашим select и этим update. Не перезаписываем вслепую.
+        if(seenUpdatedAt&&(!updatedRows||!updatedRows.length))conflict=true;
+      }else{
+        const {data:insertedRows,error}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);
+        if(error)throw error;
+        orderSyncRowId=insertedRows?.[0]?.id||'';
+      }
+      if(conflict){
+        if(attempt<maxAttempts-1)continue; // читаем заново со свежим состоянием и пробуем ещё раз
+        throw new Error('orders sync conflict: exhausted retries');
+      }
+      orderSyncDirty=false;
+      orderSyncInFlight=false;
+      orderSyncRetryCount=0;
+      orderSyncLastPersistedAt=updatedAt;
+      orderSyncLastRemoteUpdatedAt=updatedAt;
+      data.orders=mergedOrders;
+      updateKnownRemoteOrderIds(mergedOrders);
+      orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
+      if(typeof __saveLocalOnly==='function')__saveLocalOnly();
+      if(!options.silent)showOrderSyncToast('Заказы синхронизированы');
+      return true;
+    }catch(e){
+      if(attempt<maxAttempts-1)continue;
+      orderSyncInFlight=false;
+      orderSyncDirty=true;
+      orderSyncRetryCount+=1;
+      console.warn('Orders sync failed',e);
+      showOrderSyncToast('Ошибка синхронизации заказов. Повторяем...',true);
+      if(options.retry!==false)retryOrdersSync();
+      return false;
     }
-    orderSyncDirty=false;
-    orderSyncInFlight=false;
-    orderSyncRetryCount=0;
-    orderSyncLastPersistedAt=updatedAt;
-    orderSyncLastRemoteUpdatedAt=updatedAt;
-    data.orders=mergedOrders;
-    updateKnownRemoteOrderIds(mergedOrders);
-    orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
-    if(typeof __saveLocalOnly==='function')__saveLocalOnly();
-    if(!options.silent)showOrderSyncToast('Заказы синхронизированы');
-    return true;
-  }catch(e){
-    orderSyncInFlight=false;
-    orderSyncDirty=true;
-    orderSyncRetryCount+=1;
-    console.warn('Orders sync failed',e);
-    showOrderSyncToast('Ошибка синхронизации заказов. Повторяем...',true);
-    if(options.retry!==false)retryOrdersSync();
-    return false;
   }
+  return false;
 }
 const __saveLocalOnly=save;
 let orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders([]));
