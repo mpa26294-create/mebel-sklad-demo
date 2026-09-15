@@ -1766,7 +1766,19 @@ async function saveManagerOrder(id=''){
   const draftFiles=prev?(prev.files||[]):(typeof consumePendingOrderFiles==='function'?consumePendingOrderFiles(id):[]);
   let draft={...(prev||{}),id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),product:document.getElementById('orderProduct').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',priority:document.getElementById('orderPriority')?.value||'normal',comment:document.getElementById('orderComment').value.trim(),date:prev?.date||today(),status:isNew?'Ожидает технолога':prev.status,steps:prev?.steps||[],materials:prev?.materials||[],notification,files:draftFiles};
   if(typeof setOrderMetaForSave==='function')draft=setOrderMetaForSave(draft,prev);
-  if(id)data.orders=data.orders.map(o=>String(o.id)===String(id)?draft:o);else data.orders.push(draft);
+  // v7.80: КРИТИЧЕСКИЙ ФИКС — новые заказы молча пропадали (не появлялись в списке, хотя запись в
+  // Истории "Заказ передан технологу" создавалась). Причина: openOrderModal() для НОВОГО заказа
+  // передаёт сюда не пустую строку, а draftId — временный id из startOrderFileDraft()
+  // (js/order-files.js), нужный, чтобы можно было прикреплять файлы ДО первого "Сохранить" (см.
+  // consumePendingOrderFiles выше и путь файла orders/${orderId}/... в js/order-files.js — поэтому
+  // draftId сознательно становится постоянным id заказа через `id||uid()` выше, чтобы пути к уже
+  // загруженным файлам не разъезжались). Проблема была в строке ниже: она проверяла "id непустой" и
+  // из-за этого принимала НОВЫЙ заказ с непустым draftId за РЕДАКТИРОВАНИЕ существующего — пыталась
+  // найти-и-заменить в data.orders заказ с таким id (никогда не существовавший, это id черновика
+  // файлов, а не заказа), .map() ничего не находил и не менял, а push() не вызывался вовсе — заказ
+  // терялся навсегда. Правильный признак "это правда существующий заказ" — наличие prev, а не сам
+  // факт, что id непустой.
+  if(prev)data.orders=data.orders.map(o=>String(o.id)===String(id)?draft:o);else data.orders.push(draft);
   if(isNew){
     if(!Array.isArray(data.notifications))data.notifications=[];
     if(notifyEnabled&&method==='internal')data.notifications.unshift({id:uid(),type:'order_assigned',channel:'internal',recipientRole:'technologist',orderId:draft.id,orderNumber:draft.number,title:t('notificationNewOrderTitle'),message:`${t('notificationNewOrderMessage')} ${draft.number}`,createdAt:now,read:false});
