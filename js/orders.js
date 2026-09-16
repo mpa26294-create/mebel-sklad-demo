@@ -456,6 +456,32 @@ function todayShiftWindow(schedule){
   const [eh,em]=(schedule.endTime||DEFAULT_SHIFT_SCHEDULE.endTime).split(':').map(Number);
   return {startMs:zonedWallTimeToInstant(now.y,now.mo,now.d,sh,sm,tz),endMs:zonedWallTimeToInstant(now.y,now.mo,now.d,eh,em,tz)};
 }
+// v7.87: во сколько начинается СЛЕДУЮЩАЯ по графику смена после указанного момента (epoch ms) — нужно,
+// чтобы сверхурочная сессия не переспрашивалась и не останавливалась повторно каждые 30 секунд весь
+// вечер, а держалась до начала следующей смены (например, до 8 утра следующего рабочего дня), и только
+// тогда останавливалась автоматически. Перебираем календарные дни в часовом поясе смены (до 8 дней
+// вперёд — достаточно с запасом даже при графике "только одна рабочая суббота в месяц" и т.п.).
+function nextShiftStartMs(schedule,afterMs){
+  const tz=schedule.timezone||DEFAULT_SHIFT_SCHEDULE.timezone;
+  const workDays=schedule.workDays||DEFAULT_SHIFT_SCHEDULE.workDays;
+  const [sh,sm]=(schedule.startTime||DEFAULT_SHIFT_SCHEDULE.startTime).split(':').map(Number);
+  const weekdayMap={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+  const wdFmt=new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short'});
+  const dateFmt=new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'});
+  let parts=Object.fromEntries(dateFmt.formatToParts(new Date(afterMs)).map(p=>[p.type,p.value]));
+  let y=Number(parts.year),mo=Number(parts.month),d=Number(parts.day);
+  for(let i=0;i<8;i++){
+    const noonInstant=zonedWallTimeToInstant(y,mo,d,12,0,tz);
+    const weekday=weekdayMap[wdFmt.format(new Date(noonInstant))];
+    if(workDays.includes(weekday)){
+      const startMs=zonedWallTimeToInstant(y,mo,d,sh,sm,tz);
+      if(startMs>afterMs)return startMs;
+    }
+    parts=Object.fromEntries(dateFmt.formatToParts(new Date(noonInstant+24*3600*1000)).map(p=>[p.type,p.value]));
+    y=Number(parts.year);mo=Number(parts.month);d=Number(parts.day);
+  }
+  return afterMs+24*3600*1000; // защита от неверного графика (например, ни одного рабочего дня) — не зависаем
+}
 
 // ---- Рабочие сессии (отдельная сущность, добавляется к производственным данным заказа) ----
 // Каждая сессия: {id, orderId, workshop, stepIndex, userEmail, startedAt, endedAt, stopReason, overtime}.
@@ -509,6 +535,12 @@ function opWorkedMinutesToday(o,stepIndex){return opWorkSessionsToday(o,stepInde
 // это единственный способ достичь близкого к реальному времени результата без сервера. Собственную,
 // ДРУГУЮ сессию (не текущего пользователя) автостоп всегда просто останавливает — спросить "работать
 // сверхурочно?" можно только у того, кто сейчас физически за экраном.
+// v7.87: раньше, once сотрудник соглашался на сверхурочную работу (session.overtime=true), на СЛЕДУЮЩЕЙ
+// же проверке (через 30 сек) условие "спросить" (!session.overtime) переставало выполняться — и код
+// молча проваливался в код ОСТАНОВКИ сессии, которая была написана для случая "не спросили/отказались".
+// Сверхурочная сессия останавливалась почти сразу после того, как её только что разрешили. Теперь пока
+// session.overtime===true, сессия НЕ переспрашивается и не останавливается, пока не наступит начало
+// СЛЕДУЮЩЕЙ смены по графику (например, 8:00 следующего рабочего дня) — вот тогда уже автостоп.
 function applyShiftAutoStops(){
   if(!(typeof currentUser!=='undefined'&&currentUser))return [];
   const touched=[];
@@ -518,12 +550,21 @@ function applyShiftAutoStops(){
       ensureRunningOpHasWorkSession(o,op);
       const schedule=shiftScheduleFor(op.stepName);
       if(!schedule.autoEndAtShiftEnd)return;
-      const win=todayShiftWindow(schedule),isOverdue=win?Date.now()>win.endMs:true; // сегодня выходной — тоже пора остановить
-      if(!isOverdue)return;
       const session=currentWorkSession(o,op.stepIndex);
       if(!session)return;
+      if(session.overtime){
+        const nextStart=nextShiftStartMs(schedule,Date.now());
+        if(Date.now()<nextStart)return; // сверхурочная сессия ещё идёт — не трогаем и не переспрашиваем
+        const endedAt=new Date(nextStart).toISOString();
+        endWorkSession(o,op.stepIndex,'overtime_end',{endedAt});
+        op.status='paused';op.pausedAt=endedAt;
+        touched.push({o,op,kind:'stopped'});
+        return;
+      }
+      const win=todayShiftWindow(schedule),isOverdue=win?Date.now()>win.endMs:true; // сегодня выходной — тоже пора остановить
+      if(!isOverdue)return;
       const isOwn=String(session.userEmail||'').toLowerCase()===String(currentUser.email||'').toLowerCase();
-      if(isOwn&&schedule.allowOvertime&&!session.overtime){
+      if(isOwn&&schedule.allowOvertime){
         const confirmText=win?String(t('shiftOvertimeConfirm')).replace('{time}',schedule.endTime):t('shiftOvertimeConfirmNonWorkDay');
         const ok=confirm(confirmText);
         if(ok){session.overtime=true;touched.push({o,op,kind:'overtime'});return}
