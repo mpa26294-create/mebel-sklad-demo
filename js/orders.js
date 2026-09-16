@@ -921,7 +921,12 @@ function workshopQueueSidebarHtml(name,stat,activeRows){
     <button type="button" class="workshop-more-link" onclick="openWorkshopFullQueue('${jsStrArg(name)}')">${escapeHtml(t('openFullQueueBtn'))} →</button>
   </div>`;
 }
-function workshopCurrentMaterialsHtml(o,op){
+// v7.83: пользователь справедливо спросил "материалы КАКОГО заказа", когда в работе одновременно два
+// заказа — раньше заголовок был общий ("Материалы текущего заказа"), а показывался всегда только
+// первый по дедлайну активный заказ, даже если реально сейчас крутится другой. Теперь: 1) заголовок
+// явно называет заказ, если активных заказов больше одного; 2) при нескольких активных показывается
+// СВОЙ блок материалов под каждый, а не только под один "главный".
+function workshopCurrentMaterialsHtml(o,op,label){
   if(!o||!op)return '';
   const assigned=operationMaterials(o,op).filter(item=>Number(item.qty||0)>0);
   const seen=new Set(),rows=[];
@@ -937,7 +942,8 @@ function workshopCurrentMaterialsHtml(o,op){
     const statusText=ordered?t('ordered'):`${t('workshopMissingLabel')} ${qtyWithUnit(state.av.missing,unit)} · ${t('needToPurchase')}`;
     return `<button type="button" class="workshop-current-material-row" onclick="openProductionMaterialPurchase('${o.id}','${item.materialId}')"><b>${escapeHtml(m?materialTitle(m):t('deletedMaterialWord'))}</b><span class="${ordered?'ok-text':'danger-text'}">${escapeHtml(statusText)}</span></button>`;
   }).join(''):`<div class="workshop-material-alert ok small"><span class="workshop-material-alert-icon">✓</span><span>${escapeHtml(t('workshopMaterialsOkText'))}</span></div>`;
-  return `<div class="workshop-current-materials"><h4>${escapeHtml(t('workshopCurrentOrderMaterialsTitle'))}</h4>${body}<button type="button" class="workshop-more-link" onclick="openProductionMaterialsControlModal('${o.id}')">${escapeHtml(t('showAllOrderMaterialsBtn'))} →</button></div>`;
+  const titleLabel=label?` <span class="workshop-current-materials-label">· ${escapeHtml(label)}</span>`:'';
+  return `<div class="workshop-current-materials"><h4>${escapeHtml(t('workshopCurrentOrderMaterialsTitle'))}${titleLabel}</h4>${body}<button type="button" class="workshop-more-link" onclick="openProductionMaterialsControlModal('${o.id}')">${escapeHtml(t('showAllOrderMaterialsBtn'))} →</button></div>`;
 }
 function openProductionMaterialsControlModal(orderId){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
@@ -962,11 +968,18 @@ async function recordWorkshopQuickQty(orderId,index,qty){
   await finalizeProductionQuantity(orderId,index,Math.max(1,Math.min(Number(qty)||1,remaining)));
 }
 function workshopDetailHtml(name){
-  const stat=workshopAnalytics(name),activeRows=workshopActiveRows(stat),primaryRow=activeRows[0]||null;
-  const primaryOp=primaryRow?productionOp(primaryRow.order,primaryRow.index):null;
+  const stat=workshopAnalytics(name),activeRows=workshopActiveRows(stat);
   // v7.82: если в работе больше одного заказа — карточки складываются в столбик (см. .workshop-current-list
   // в css/style.css), каждая с собственной паузой/продолжением и своей "Записать выпуск".
   const currentCards=activeRows.length?activeRows.map(row=>workshopCurrentCardHtml(row)).join(''):workshopCurrentCardHtml(null);
+  // v7.83: свой блок материалов под КАЖДЫЙ активный заказ, а не только под первый по дедлайну —
+  // иначе при двух заказах в работе было не разобрать, к какому именно относится список материалов.
+  // Заголовок называет заказ по номеру, только если активных заказов больше одного (иначе и так
+  // очевидно, о каком заказе речь).
+  const materialsHtml=activeRows.map(row=>{
+    const op=productionOp(row.order,row.index);
+    return op?workshopCurrentMaterialsHtml(row.order,op,activeRows.length>1?row.order.number:''):'';
+  }).join('');
   return `<div class="workshop-detail-head">
       <button type="button" class="workshop-back-link" onclick="closeWorkshopDetail()">${escapeHtml(t('backToWorkshops'))}</button>
       <span class="workshop-detail-sep"></span>
@@ -978,7 +991,7 @@ function workshopDetailHtml(name){
       <div class="workshop-work-main"><div class="workshop-current-list">${currentCards}</div></div>
       <div class="workshop-work-side">
         ${workshopQueueSidebarHtml(name,stat,activeRows)}
-        ${primaryRow?workshopCurrentMaterialsHtml(primaryRow.order,primaryOp):''}
+        ${materialsHtml}
       </div>
     </div>`;
 }

@@ -3319,6 +3319,7 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-queue-mini-start:hover{background:#eff6ff}
 .workshop-current-materials{padding:16px;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
 .workshop-current-materials h4{margin:0 0 2px;color:#101828;font-size:14px;font-weight:700}
+.workshop-current-materials-label{color:#8490a3;font-weight:600;font-size:12px}
 .workshop-current-material-row{display:flex;flex-direction:column;gap:2px;padding:9px 0;border-top:1px solid #edf0f4;border:0;background:none;text-align:left;cursor:pointer}
 .workshop-current-material-row b{color:#101828;font-size:12.5px;font-weight:650}
 .workshop-current-material-row span{font-size:11.5px}
