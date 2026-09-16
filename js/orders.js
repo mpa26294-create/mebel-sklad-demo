@@ -715,7 +715,6 @@ function workshopAnalytics(stepName){
 // по цеху, а не по заказу — рабочему цеха не нужно открывать заказы по одному, чтобы увидеть
 // свою очередь. Переиспользует productionOperationCardHtml/workshopAnalytics без дублирования логики.
 let selectedWorkshopName='';
-let workshopsStatusFilter='all';
 function allWorkshopNames(){
   const names=[];
   DEFAULT_ORDER_STEPS.forEach(s=>{if(s.name&&!names.includes(s.name))names.push(s.name)});
@@ -776,44 +775,6 @@ function showProductionInfo(key){
   openModal(escapeHtml(t(keys[0])),`<div class="stat-info-text">${escapeHtml(t(keys[1]))}</div>`,`<button class="btn primary" type="button" onclick="closeModal()">${escapeHtml(t('gotIt'))}</button>`);
 }
 function infoBtn(key){return `<button type="button" class="stat-info-btn" onclick="event.stopPropagation();showProductionInfo('${key}')" aria-label="${escapeHtml(t('explanation'))}" title="${escapeHtml(t('explanation'))}">i</button>`}
-function workshopsStatBarHtml(stat){
-  return `<div class="workshops-stat-bar">
-    <div><span>📋</span><div><small>${escapeHtml(t('queue'))}${infoBtn('queue')}</small><b>${stat.queue}</b></div></div>
-    <div><span>▶</span><div><small>${escapeHtml(t('prodInProgress'))}${infoBtn('active')}</small><b>${stat.active}</b></div></div>
-    <div><span>⏱</span><div><small>${escapeHtml(t('plannedTime'))}${infoBtn('plannedTime')}</small><b>${escapeHtml(orderTimeText(stat.plan))}</b></div></div>
-    <div><span>⏱</span><div><small>${escapeHtml(t('actualTime'))}${infoBtn('actualTime')}</small><b>${escapeHtml(orderTimeText(stat.actual))}</b></div></div>
-    <div><span>⚠</span><div><small>${escapeHtml(t('overdue'))}${infoBtn('overdue')}</small><b class="${stat.overdue?'danger-text':''}">${stat.overdue}</b></div></div>
-    <div><span>📈</span><div><small>${escapeHtml(t('prodLoad'))}${infoBtn('load')}</small><b>${stat.load}%</b></div></div>
-  </div>`;
-}
-function workshopsSummaryBarHtml(names){
-  const stats=names.map(n=>workshopAnalytics(n));
-  const queue=stats.reduce((s,x)=>s+x.queue.length,0);
-  const active=stats.reduce((s,x)=>s+x.active,0);
-  const plan=stats.reduce((s,x)=>s+x.plan,0);
-  const actual=stats.reduce((s,x)=>s+x.actual,0);
-  const overdue=stats.reduce((s,x)=>s+x.overdue,0);
-  const load=stats.length?Math.round(stats.reduce((s,x)=>s+x.load,0)/stats.length):0;
-  return workshopsStatBarHtml({queue,active,plan,actual,overdue,load});
-}
-function workshopOverviewRowHtml(name){
-  const stat=workshopAnalytics(name);
-  const overdue=stat.overdue>0;
-  const overCapacity=!overdue&&stat.load>=100;
-  const atRisk=!overdue&&!overCapacity&&stat.atRisk>0;
-  const nearCapacity=!overdue&&!overCapacity&&!atRisk&&stat.load>=80;
-  const cls=overdue||overCapacity?'danger':atRisk||nearCapacity?'warn':'';
-  const note=overdue?`⚠ ${stat.overdue} ${escapeHtml(t('overdue')).toLowerCase()}`:overCapacity?`⚠ ${escapeHtml(t('prodWarnOverloaded'))} (${stat.load}%)`:atRisk?`⚠ ${escapeHtml(t('workshopRiskShort'))} — ${stat.atRisk}`:nearCapacity?`⚠ ${stat.load}% ${escapeHtml(t('prodLoad')).toLowerCase()}`:'';
-  return `<button type="button" class="workshop-list-row ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
-    <span class="workshop-list-row-icon">${workshopIcon(name)}</span>
-    <span class="workshop-list-row-name"><b>${escapeHtml(workshopLabel(name))}</b></span>
-    <span class="workshop-list-row-badge">${workshopStatusBadgeHtml(stat.queue)}</span>
-    <span class="workshop-list-row-stat">${stat.queue.length}</span>
-    <span class="workshop-list-row-stat">${stat.active}</span>
-    <span class="workshop-list-row-note">${note}</span>
-    <span class="workshop-list-row-arrow">›</span>
-  </button>`;
-}
 function currentlyActiveOperations(){
   const rows=[];
   allWorkshopNames().forEach(name=>{
@@ -829,102 +790,288 @@ function currentlyActiveOperations(){
   });
   return rows;
 }
-function todayCompletedUnitsCount(){
-  const todayStr=today();
-  let sum=0;
-  (data.orders||[]).forEach(o=>{
-    const logs=ensureWorkflowProduction(o).consumptionLogs||[];
-    logs.forEach(l=>{if(!l.undone&&String(l.at||'').slice(0,10)===todayStr)sum+=Number(l.qty||0)});
-  });
-  return sum;
-}
-function activeElapsedElId(orderId,stepIndex){return `activeElapsed_${orderId}_${stepIndex}`}
-function workshopsActiveNowHtml(){
-  const rows=currentlyActiveOperations();
-  const doneToday=todayCompletedUnitsCount();
-  const list=rows.length?rows.map(r=>{
-    const total=orderProductQty(r.order),completed=productionCompletedQty(r.order,r.op),pct=productionOpPercent(r.order,r.op);
-    const running=r.op.status==='running';
-    return `<button type="button" class="workshops-active-row ${running?'running':'paused'}" onclick="openWorkshopDetail('${jsStrArg(r.workshopName)}')">
-      <span class="workshops-active-icon">${workshopIcon(r.workshopName)}</span>
-      <span class="workshops-active-name"><b>${escapeHtml(workshopLabel(r.workshopName))}</b><small>${escapeHtml(r.order.number||'—')}${r.order.client?` · ${escapeHtml(r.order.client)}`:''}</small></span>
-      <span class="workshops-active-status"><span class="workshops-active-dot ${running?'running':'paused'}"></span>${running?escapeHtml(t('prodStatusRunning')):escapeHtml(t('prodStatusPaused'))}</span>
-      <span class="workshops-active-time"><small>${escapeHtml(t('startedAtPrefix'))} ${escapeHtml(productionStartedAtText(r.op.startedAt))}</small><b id="${activeElapsedElId(r.order.id,r.op.stepIndex)}">${escapeHtml(orderTimeText(productionActualMinutes(r.op,r.order)))}</b></span>
-      <span class="workshops-active-progress"><i><b style="width:${pct}%"></b></i></span>
-      <span class="workshops-active-qty">${completed} / ${total}</span>
-    </button>`;
-  }).join(''):`<div class="workshop-empty">${escapeHtml(t('nothingActiveNow'))}</div>`;
-  return `<div class="workshops-active-panel">
-    <div class="workshops-active-head"><h4>⏱ ${escapeHtml(t('activeNowHeading'))}</h4><span class="workshops-active-today">${escapeHtml(t('doneTodayLabel'))}: <b>${doneToday} ${escapeHtml(t('unitPieces'))}</b></span></div>
-    <div class="workshops-active-list">${list}</div>
-  </div>`;
-}
+// v7.89: главный обзор "Цеха" переработан — старый экран называл любой заказ "в работе" по статусу
+// ЗАКАЗА и показывал загрузку в процентах, доходящих до 1000-2500%, что никому ничего не говорило.
+// Принцип нового обзора: заказ и рабочая сессия — разные вещи. Ничего не помечается "в работе", если
+// у него нет реально запущенной сессии (op.status==='running'); "остановлено" не путается с "ждёт
+// материал"; проценты загрузки заменены на прогноз в днях по фактическому графику смены. Экран
+// конкретного цеха (workshopDetailHtml и всё вокруг) не тронут — использует ту же workshopAnalytics
+// и те же рабочие сессии, что были и раньше.
 function refreshActiveElapsedTimers(){
   const workshopsSection=document.getElementById('workshops');
   if(!workshopsSection||!workshopsSection.classList.contains('active'))return;
-  if(selectedWorkshopName){
-    // в детальном экране цеха несколько полей завязаны на "сейчас" (отработано за смену, до конца
-    // смены) — проще перерисовать блок целиком, чем адресно обновлять каждое поле по отдельности;
-    // renderWorkshops() сама делает ленивую проверку автостопа (см. её начало), поэтому здесь она
-    // не дублируется.
-    if(typeof renderWorkshops==='function')renderWorkshops();
-    return;
-  }
-  // Обзорная страница (без выбранного цеха) обновляется адресно, без полной перерисовки — поэтому
-  // проверку автостопа приходится делать здесь отдельно (renderWorkshops() тут не вызывается).
-  if(typeof applyShiftAutoStops==='function'){
-    const touched=applyShiftAutoStops();
-    if(touched.length&&typeof persistShiftAutoStops==='function')persistShiftAutoStops(touched);
-  }
-  currentlyActiveOperations().forEach(r=>{
-    if(r.op.status!=='running')return;
-    const el=document.getElementById(activeElapsedElId(r.order.id,r.op.stepIndex));
-    if(el)el.textContent=orderTimeText(productionActualMinutes(r.op,r.order));
-  });
+  // И обзор, и детальный экран цеха теперь целиком зависят от "живых" данных (активные сессии,
+  // отработано сегодня, до конца смены) — проще перерисовать целиком (renderWorkshops() сама делает
+  // ленивую проверку автостопа в начале), чем адресно обновлять отдельные числа.
+  if(typeof renderWorkshops==='function')renderWorkshops();
 }
 if(typeof window!=='undefined')setInterval(()=>{if(typeof refreshActiveElapsedTimers==='function')refreshActiveElapsedTimers()},30000);
-function workshopMatchesStatusFilter(name,filter){
-  if(!filter||filter==='all')return true;
-  const stat=workshopAnalytics(name);
-  if(filter==='overdue')return stat.overdue>0;
-  if(filter==='atrisk')return stat.atRisk>0;
-  const {running,paused}=workshopOpStatusCounts(stat.queue);
-  if(filter==='running')return running>0;
-  if(filter==='paused')return paused>0;
-  if(filter==='idle')return running===0&&paused===0;
-  return true;
+
+let workshopsOverviewPeriod='today'; // 'today' | '7days' | 'all'
+function setWorkshopsOverviewPeriod(period){workshopsOverviewPeriod=period;renderWorkshops()}
+function timeStrToMinutes(hhmm){const [h,m]=String(hhmm||'0:0').split(':').map(Number);return (Number(h)||0)*60+(Number(m)||0)}
+// Нижняя граница периода (включительно) в формате YYYY-MM-DD; пустая строка — без ограничения ('all').
+function workshopsPeriodSinceDate(period){
+  if(period==='7days'){const d=new Date();d.setDate(d.getDate()-6);return d.toISOString().slice(0,10)}
+  if(period==='all')return '';
+  return today();
 }
-function setWorkshopsStatusFilter(key){workshopsStatusFilter=key;renderWorkshops()}
-function workshopsFilterChipsHtml(){
-  const items=[['all',t('all')],['running',t('prodStatusRunning')],['paused',t('prodStatusPaused')],['idle',t('prodQueueWaiting')],['overdue',t('overdue')],['atrisk',t('filterAtRisk')]];
-  return `<div class="quick-filter-row" id="workshopsFilterRow">${items.map(([key,label])=>`<button type="button" class="filter-chip${workshopsStatusFilter===key?' active':''}" data-filter="${key}" onclick="setWorkshopsStatusFilter('${key}')">${escapeHtml(label)}</button>`).join('')}</div>`;
+// Выпуск за период — сумма реально списанных количеств (те же consumptionLogs, что и раньше в
+// todayCompletedUnitsCount), плюс число РАЗНЫХ операций (заказ+этап), по которым он был.
+function periodOutputStats(period){
+  const since=workshopsPeriodSinceDate(period);
+  let qty=0;const ops=new Set();
+  (data.orders||[]).forEach(o=>{
+    (ensureWorkflowProduction(o).consumptionLogs||[]).forEach(l=>{
+      if(l.undone)return;
+      const d=String(l.at||'').slice(0,10);
+      if(since&&d<since)return;
+      qty+=Number(l.qty||0);
+      ops.add(`${o.id}_${l.stepIndex}`);
+    });
+  });
+  return {qty,opsCount:ops.size};
 }
-function workshopLoadRowHtml(name){
-  const stat=workshopAnalytics(name);
-  const overCapacity=stat.load>=100,nearCapacity=!overCapacity&&stat.load>=80;
-  const cls=overCapacity?'danger':nearCapacity?'warn':'';
-  return `<button type="button" class="workshops-load-row ${cls}" onclick="openWorkshopDetail('${jsStrArg(name)}')">
-    <span class="workshops-load-icon">${workshopIcon(name)}</span>
-    <span class="workshops-load-name">${escapeHtml(workshopLabel(name))}</span>
-    <span class="workshops-load-bar"><i style="width:${Math.min(100,stat.load)}%"></i></span>
-    <span class="workshops-load-pct">${stat.load}%</span>
-    <span class="workshops-load-qty">${stat.remainingQty} ${escapeHtml(t('unitPieces'))}</span>
+function workshopsPeriodToggleHtml(){
+  const items=[['today',t('periodToday')],['7days',t('period7Days')],['all',t('periodAll')]];
+  const dateStr=new Date().toLocaleDateString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB',{day:'numeric',month:'long'});
+  const periodLabel=workshopsOverviewPeriod==='today'?String(t('periodTodayLabel')).replace('{date}',dateStr):workshopsOverviewPeriod==='7days'?t('period7DaysLabel'):t('periodAllLabel');
+  return `<div class="workshops-period-row">
+    <div class="workshops-period-toggle">${items.map(([key,label])=>`<button type="button" class="workshops-period-btn${workshopsOverviewPeriod===key?' active':''}" onclick="setWorkshopsOverviewPeriod('${key}')">${escapeHtml(label)}</button>`).join('')}</div>
+    <span class="workshops-period-label">${escapeHtml(t('periodLabelPrefix'))} ${escapeHtml(periodLabel)}</span>
+  </div>`;
+}
+// Реально запущенные сейчас сессии (across все цеха) — не "заказы в работе", а именно сессии.
+function activeSessionsInfo(){
+  const rows=currentlyActiveOperations().filter(r=>r.op.status==='running');
+  if(rows.length)return {count:rows.length,note:''};
+  const schedule=shiftScheduleFor('');
+  const win=todayShiftWindow(schedule);
+  let note;
+  if(!schedule.autoEndAtShiftEnd)note=t('activeSessionsNoneGeneric');
+  else if(!win)note=t('activeSessionsNonWorkDayNote');
+  else if(Date.now()>win.endMs)note=String(t('activeSessionsShiftEndedNote')).replace('{time}',schedule.endTime);
+  else note=t('activeSessionsNoneGeneric');
+  return {count:0,note};
+}
+// Все строки очереди (по всем цехам), у которых операция сейчас "на паузе" — то есть была рабочая
+// сессия, и она сейчас не идёт (закрыта вручную, по концу смены, или из-за нехватки материала).
+// Именно эти строки показываются в правой колонке "Требуют продолжения" — не путать с "заказ вообще
+// в статусе В работе, но по нему сегодня никто ничего не делал".
+function workshopsPausedRows(){
+  const rows=[];
+  allWorkshopNames().forEach(name=>{
+    productionQueueForWorkshop(name).forEach(row=>{
+      const op=productionOp(row.order,row.index);
+      if(op&&op.status==='paused')rows.push({...row,workshopName:name,op});
+    });
+  });
+  return rows;
+}
+// Материал реально ограничивает эту строку (не просто "риск", а "нельзя сделать больше ни одного").
+function workshopsRowIsMaterialBlocked(row){
+  const limiting=workshopLimitingMaterial(row.order,row.op||productionOp(row.order,row.index));
+  return limiting&&limiting.enough<=0?limiting:null;
+}
+function workshopsTopStatsHtml(){
+  const period=workshopsOverviewPeriod;
+  const output=periodOutputStats(period);
+  const outputLabel=period==='today'?t('outputTodayLabel'):period==='7days'?t('output7DaysLabel'):t('outputAllLabel');
+  const active=activeSessionsInfo();
+  const pausedRows=workshopsPausedRows();
+  const materialBlockedCount=pausedRows.filter(workshopsRowIsMaterialBlocked).length;
+  const manualPauseCount=pausedRows.length-materialBlockedCount;
+  let decisions=0;
+  allWorkshopNames().forEach(name=>{
+    const queue=productionQueueForWorkshop(name);
+    const etaMap=workshopQueueEtaMap(queue);
+    const current=queue.find(r=>productionOp(r.order,r.index)?.status==='running')||queue.find(r=>productionOp(r.order,r.index)?.status==='paused')||queue[0]||null;
+    if((!queue.length)||(current&&workshopRowRisk(current,etaMap)))decisions++;
+  });
+  return `<div class="workshops-top-stats">
+    <div class="workshops-top-stat"><small>${escapeHtml(outputLabel)}</small><b>${output.qty} ${escapeHtml(t('unitPieces'))}</b><span>${escapeHtml(String(t('byOperationsCountSuffix')).replace('{n}',output.opsCount))}</span></div>
+    <div class="workshops-top-stat"><small>${escapeHtml(t('activeSessionsLabel'))}</small><b>${active.count}</b><span>${escapeHtml(active.note)}</span></div>
+    <div class="workshops-top-stat"><small>${escapeHtml(t('onPauseLabel'))}</small><b>${pausedRows.length} ${escapeHtml(pausedRows.length===1?t('orderWordOne'):t('orderWordMany'))}</b><span>${manualPauseCount>0?escapeHtml(String(t('pendingContinueNote')).replace('{n}',manualPauseCount)):''}</span></div>
+    <div class="workshops-top-stat"><small>${escapeHtml(t('needsDecisionLabel'))}</small><b>${decisions} ${escapeHtml(decisions===1?t('workshopWordOne'):t('workshopWordMany'))}</b><span>${escapeHtml(t('needsDecisionHint'))}</span></div>
+  </div>`;
+}
+// Единственный самый срочный алерт — не список повторяющихся предупреждений по каждому цеху, а
+// ОДНА проблема, которая реально блокирует работу прямо сейчас (материала не хватит даже на 1 ед.).
+// Среди нескольких таких проблем выбирается заказ с ближайшим сроком сдачи.
+function workshopsMostUrgentIssue(){
+  let best=null;
+  allWorkshopNames().forEach(name=>{
+    productionQueueForWorkshop(name).forEach(row=>{
+      const op=productionOp(row.order,row.index);
+      if(!op||op.status==='done'||op.status==='cancelled')return;
+      const limiting=workshopLimitingMaterial(row.order,op);
+      if(!limiting||limiting.enough>0)return;
+      if(!best||String(row.order.dueDate||'9999')<String(best.row.order.dueDate||'9999'))best={row,op,limiting,workshopName:name};
+    });
+  });
+  return best;
+}
+function workshopsMainAlertHtml(){
+  const issue=workshopsMostUrgentIssue();
+  if(!issue)return '';
+  const {row,op,limiting,workshopName}=issue,o=row.order,m=limiting.state.av.mat,matName=m?materialTitle(m):t('deletedMaterialWord');
+  const title=String(t('workshopMainAlertTitle')).replace('{workshop}',workshopLabel(workshopName)).replace('{material}',matName).replace('{order}',o.number||'—');
+  const body=String(t('workshopMainAlertBody')).replace('{enough}',limiting.enough).replace('{total}',limiting.total);
+  const sessionNote=op.status==='paused'?` ${escapeHtml(t('workshopMainAlertSessionClosed'))}`:'';
+  const action=m?`<button class="btn primary" type="button" onclick="openProductionMaterialPurchase('${o.id}','${limiting.item.materialId}')">${escapeHtml(t('openPurchaseBtn'))}</button>`:'';
+  return `<div class="workshop-main-alert">
+    <span class="workshop-main-alert-icon">!</span>
+    <div class="workshop-main-alert-body"><b>${escapeHtml(title)}</b><p>${escapeHtml(body)}${sessionNote}</p></div>
+    ${action}
+  </div>`;
+}
+// Одна строка на цех: статус учитывает ТОЛЬКО реальное состояние сессии (running/paused), а не
+// статус заказа — заказ может числиться "в производстве" сколько угодно дней подряд.
+function workshopMasterRowHtml(name){
+  const queue=productionQueueForWorkshop(name),etaMap=workshopQueueEtaMap(queue);
+  const runningRow=queue.find(row=>productionOp(row.order,row.index)?.status==='running');
+  const pausedRow=queue.find(row=>productionOp(row.order,row.index)?.status==='paused');
+  const current=runningRow||pausedRow||queue[0]||null;
+  const risk=current?workshopRowRisk(current,etaMap):null;
+  const materialBlocked=!!(risk&&risk.text===t('workshopRiskNoMaterial'));
+  let statusText,pillCls;
+  if(runningRow){statusText=t('prodStatusRunning');pillCls='running';}
+  else if(pausedRow){statusText=t('workshopShiftClosedTag');pillCls='paused';}
+  else if(!queue.length){statusText=t('workshopFreeTag');pillCls='free';}
+  else if(materialBlocked){statusText=t('workshopRiskNoMaterial');pillCls='danger';}
+  else{statusText=t('prodQueueWaiting');pillCls='';}
+  const lineText=current?`${escapeHtml(current.order.number||'—')} · ${escapeHtml(current.order.client||'—')}`:escapeHtml(t('workshopFreeLine'));
+  let subText='';
+  if(!queue.length)subText=t('workshopCanPlanText');
+  else if(materialBlocked)subText=t('workshopContinueAfterPurchase');
+  else if(risk)subText=risk.text;
+  else if(current&&!runningRow&&!pausedRow){
+    const curOp=productionCurrentOp(current.order);
+    if(curOp&&Number(curOp.stepIndex)<Number(current.index))subText=`${t('nextOrderPrefix')} ${current.order.number} ${t('afterWorkshopWord')} ${workshopLabel(curOp.stepName)}`;
+  }
+  return `<button type="button" class="workshop-master-row" onclick="openWorkshopDetail('${jsStrArg(name)}')">
+    <span class="workshop-master-row-icon">${workshopIcon(name)}</span>
+    <span class="workshop-master-row-main"><b>${escapeHtml(workshopLabel(name))}</b><small>${lineText}</small></span>
+    <span class="production-status-pill ${pillCls}">${escapeHtml(statusText)}</span>
+    <span class="workshop-master-row-queue">${queue.length} ${escapeHtml(t('inQueueShort'))}</span>
+    <span class="workshop-master-row-note ${pillCls==='danger'?'danger-text':''}">${escapeHtml(subText)}</span>
+    <span class="workshop-list-row-arrow">›</span>
   </button>`;
 }
-function workshopsLoadPanelHtml(names){
+function workshopsMasterListHtml(names){
+  if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('noWorkshopsYet'))}</div>`;
+  return `<div class="panel workshops-master-panel">
+    <div class="workshops-master-head"><h3>${escapeHtml(t('workshopStateTitle'))}</h3><small>${escapeHtml(t('workshopStateHint'))}</small></div>
+    <div class="workshops-master-list">${names.map(workshopMasterRowHtml).join('')}</div>
+  </div>`;
+}
+// Правая колонка: карточка на каждую строку "на паузе" — явно объясняет, заказ это без сессии сегодня
+// или сессия, которую реально приостановили и можно продолжить.
+function workshopContinuationCardHtml(row){
+  const o=row.order,op=row.op,workshopName=row.workshopName;
+  const limiting=workshopsRowIsMaterialBlocked(row);
+  const workedToday=opWorkedMinutesToday(o,op.stepIndex);
+  let bodyText,tagHtml='',actionHtml;
+  if(limiting){
+    bodyText=t('continuationOrderNoSessionText');
+    tagHtml=`<span class="continuation-tag danger">${escapeHtml(t('workshopRiskNoMaterial'))}</span>`;
+    const m=limiting.state.av.mat;
+    actionHtml=m?`<button class="btn small primary" type="button" onclick="openProductionMaterialPurchase('${o.id}','${limiting.item.materialId}')">${escapeHtml(t('openPurchaseBtn'))}</button>`:`<button class="btn small" type="button" onclick="openWorkshopDetail('${jsStrArg(workshopName)}')">${escapeHtml(t('openBtn'))}</button>`;
+  }else if(workedToday>0){
+    // "0 минут сегодня" не показываем как будто это ошибка/активность — только реально отработанное.
+    bodyText=String(t('continuationManualPauseText')).replace('{time}',op.pausedAt?productionStartedAtText(op.pausedAt):'—').replace('{minutes}',workedToday);
+    actionHtml=`<button class="btn small" type="button" onclick="openWorkshopDetail('${jsStrArg(workshopName)}')">${escapeHtml(t('openBtn'))}</button>`;
+  }else{
+    bodyText=t('continuationOrderNoSessionText');
+    actionHtml=`<button class="btn small" type="button" onclick="openWorkshopDetail('${jsStrArg(workshopName)}')">${escapeHtml(t('openBtn'))}</button>`;
+  }
+  return `<div class="continuation-card">
+    <div class="continuation-card-head"><b>${escapeHtml(workshopLabel(workshopName))} · ${escapeHtml(o.number||'—')}</b>${tagHtml}</div>
+    <p class="continuation-card-text">${escapeHtml(bodyText)}</p>
+    <div class="continuation-card-actions">${actionHtml}</div>
+  </div>`;
+}
+function workshopsContinuationPanelHtml(){
+  const rows=workshopsPausedRows();
+  const body=rows.length?rows.map(workshopContinuationCardHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('noContinuationNeeded'))}</div>`;
+  return `<div class="panel continuation-panel">
+    <div class="continuation-panel-head"><h3>${escapeHtml(t('continuationTitle'))}</h3><small>${escapeHtml(t('continuationSubtitle'))}</small></div>
+    <div class="continuation-list">${body}</div>
+  </div>`;
+}
+// Компактный список из максимум 5 конкретных действий: материалы к заказу, риск срока, свободный цех.
+function workshopsUpcomingDecisionsHtml(){
+  const items=[];
+  const seenMaterials=new Set();
+  allWorkshopNames().forEach(name=>{
+    productionQueueForWorkshop(name).forEach(row=>{
+      const op=productionOp(row.order,row.index);
+      if(!op||op.status==='done'||op.status==='cancelled')return;
+      const limiting=workshopLimitingMaterial(row.order,op);
+      if(!limiting)return;
+      if(seenMaterials.has(limiting.item.materialId))return;
+      seenMaterials.add(limiting.item.materialId);
+      const m=limiting.state.av.mat;
+      items.push({cls:'danger',text:`${t('orderMaterialPrefix')} ${m?materialTitle(m):t('deletedMaterialWord')}`,sub:`${t('shortageForLabel')} ${row.order.number} · ${workshopLabel(name)}`,actionLabel:t('toOrderBtn'),action:m?`openProductionMaterialPurchase('${row.order.id}','${limiting.item.materialId}')`:`openWorkshopDetail('${jsStrArg(name)}')`});
+    });
+  });
+  allWorkshopNames().forEach(name=>{
+    const queue=productionQueueForWorkshop(name),etaMap=workshopQueueEtaMap(queue);
+    queue.forEach(row=>{
+      const risk=workshopRowRisk(row,etaMap);
+      if(risk&&risk.text===t('workshopRiskDeadline'))items.push({cls:'warn',text:`${t('checkOrderPrefix')} ${row.order.number}`,sub:`${row.order.client||''} · ${risk.text}`,actionLabel:t('openBtn'),action:`goToOrderFromMaterial(event,'${row.order.id}')`});
+    });
+  });
+  allWorkshopNames().forEach(name=>{
+    if(!productionQueueForWorkshop(name).length)items.push({cls:'',text:`${t('assignWorkPrefix')} ${workshopLabel(name)}`,sub:t('workshopFreeLine'),actionLabel:t('planBtn'),action:`switchSection('orders')`});
+  });
+  const top=items.slice(0,5);
+  const body=top.length?top.map(it=>`<div class="upcoming-decision-row"><span class="upcoming-decision-dot ${it.cls}"></span><div class="upcoming-decision-text"><b>${escapeHtml(it.text)}</b><small>${escapeHtml(it.sub)}</small></div><button class="btn small" type="button" onclick="${it.action}">${escapeHtml(it.actionLabel)}</button></div>`).join(''):`<div class="workshop-empty">${escapeHtml(t('noDecisionsNeeded'))}</div>`;
+  return `<div class="panel upcoming-decisions-panel">
+    <div class="continuation-panel-head"><h3>${escapeHtml(t('upcomingDecisionsTitle'))}</h3><small>${escapeHtml(t('upcomingDecisionsHint'))}</small></div>
+    <div class="upcoming-decisions-list">${body}</div>
+  </div>`;
+}
+// Прогноз очереди на 7 дней по фактическому графику смены (а не проценты загрузки 1000%+, которые
+// никому ничего не говорили). Фонд считается из реальных настроек: (конец-начало)×число рабочих дней.
+function workshopsBacklogForecastHtml(names){
   if(!names.length)return '';
-  const sorted=[...names].sort((a,b)=>workshopAnalytics(b).load-workshopAnalytics(a).load);
-  return `<div class="workshops-load-panel">
-    <div class="workshops-load-head"><h4>${escapeHtml(t('loadByWorkshopTitle'))}</h4><span class="workshops-load-hint">${escapeHtml(t('loadCapacityHintPrefix'))} ${Math.round(WORKSHOP_WEEKLY_CAPACITY_MINUTES/60)} ${escapeHtml(t('loadCapacityHintSuffix'))}</span></div>
-    <div class="workshops-load-list">${sorted.map(workshopLoadRowHtml).join('')}</div>
+  const rows=names.map(name=>{
+    const stat=workshopAnalytics(name); // те же план/очередь, что и раньше — без изменений
+    const schedule=shiftScheduleFor(name);
+    const dailyMinutes=Math.max(0,timeStrToMinutes(schedule.endTime)-timeStrToMinutes(schedule.startTime));
+    const weeklyCapacity=dailyMinutes*(schedule.workDays||DEFAULT_SHIFT_SCHEDULE.workDays).length;
+    let text,cls;
+    if(!stat.queue.length){text=t('workshopFreeTag');cls='';}
+    else if(!weeklyCapacity){text=`${stat.queue.length} ${t('inQueueShort')} · ${orderTimeText(stat.plan)} · ${t('noForecastDataText')}`;cls='';}
+    else{
+      const overrunMinutes=Math.max(0,stat.plan-weeklyCapacity);
+      if(overrunMinutes>0){
+        const overDays=overrunMinutes/dailyMinutes;
+        const daysText=overDays.toFixed(1).replace('.',currentLang==='en'?'.':',');
+        text=`+${daysText} ${t('daysOverCapacitySuffix')}`;cls='danger';
+      }else{
+        const ratio=stat.plan/weeklyCapacity;
+        if(ratio>=0.85){text=t('nearlyFullText');cls='warn';}
+        else{text=t('freeCapacityText');cls='';}
+      }
+    }
+    return {name,text,cls};
+  });
+  return `<div class="panel workshops-backlog-panel">
+    <div class="workshops-backlog-head"><h3>${escapeHtml(t('backlog7DaysTitle'))}</h3><small>${escapeHtml(t('backlog7DaysHint'))}</small></div>
+    <div class="workshops-backlog-list">${rows.map(r=>`<button type="button" class="workshops-backlog-row ${r.cls}" onclick="openWorkshopDetail('${jsStrArg(r.name)}')"><span class="workshops-backlog-icon">${workshopIcon(r.name)}</span><span class="workshops-backlog-name">${escapeHtml(workshopLabel(r.name))}</span><span class="workshops-backlog-note">${escapeHtml(r.text)}</span></button>`).join('')}</div>
   </div>`;
 }
 function workshopsOverviewHtml(){
   const names=allWorkshopNames();
   if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('noWorkshopsYet'))}</div>`;
-  const filtered=names.filter(n=>workshopMatchesStatusFilter(n,workshopsStatusFilter));
-  const list=filtered.length?filtered.map(workshopOverviewRowHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('noWorkshopsForFilter'))}</div>`;
-  return `${workshopsSummaryBarHtml(names)}${workshopsFilterChipsHtml()}<div class="workshops-list-head"><span></span><span>${escapeHtml(t('workshopColumnHeader'))}</span><span></span><span>${escapeHtml(t('queue'))}</span><span>${escapeHtml(t('prodInProgress'))}</span><span></span><span></span></div><div class="workshops-list">${list}</div>${workshopsLoadPanelHtml(names)}${workshopsActiveNowHtml()}`;
+  return `${workshopsPeriodToggleHtml()}${workshopsTopStatsHtml()}${workshopsMainAlertHtml()}
+    <div class="workshops-overview-layout">
+      <div class="workshops-overview-main">${workshopsMasterListHtml(names)}</div>
+      <div class="workshops-overview-side">${workshopsContinuationPanelHtml()}${workshopsUpcomingDecisionsHtml()}</div>
+    </div>
+    ${workshopsBacklogForecastHtml(names)}`;
 }
 function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
