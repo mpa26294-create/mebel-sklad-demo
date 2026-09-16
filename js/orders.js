@@ -1420,62 +1420,68 @@ function workshopDetailHtml(name){
       </div>
     </div>`;
 }
-// v7.43: рабочий режим — вместо обзора цехов/детального экрана (плановые часы, KPI, комментарии,
-// timeline — всё это для мастера/технолога) сотрудник из списка «Упрощённый доступ» видит один
-// плоский список СВОИХ задач сразу при входе в «Цеха», без выбора цеха. Задача — это одна строка
-// очереди (та же, что и в workshopQueueItemHtml), но карточка урезана до необходимого минимума:
-// номер заказа, статус, прогресс и одна главная кнопка. Отметить работу — 2-3 нажатия: «Начать» →
-// (позже) «Готово» → «Подтвердить» в уже существующем модальном окне (шаг с количеством
-// предзаполнен остатком, обычно достаточно просто подтвердить).
-function workerTaskCardHtml(row){
-  const o=row.order,op=productionOp(o,row.index);
-  if(!op)return '';
-  const status=productionStatusClass(op.status),completed=productionCompletedQty(o,op),total=orderProductQty(o),pct=productionOpPercent(o,op);
-  const dClass=orderDeadlineClass(o);
-  const dueNote=dClass==='overdue'?`<span class="worker-task-danger">· ${escapeHtml(t('overdue')).toLowerCase()}</span>`:dClass==='today'?`<span class="worker-task-today">· ${escapeHtml(t('dueTodayNote'))}</span>`:'';
-  const coverage=productionMaterialCoverage(o,operationMaterials(o,op),completed);
-  const matNote=!coverage.ok?`<span class="worker-task-danger">· ⚠ ${escapeHtml(t('missingMaterialsCount')).toLowerCase()}</span>`:'';
-  const showShop=(window.WORKER_WORKSHOPS||[]).length>1;
-  const showComplete=op.status==='running'||op.status==='paused';
-  const remaining=Math.max(1,total-completed);
-  // v7.44: количество вводится прямо на карточке (не в отдельном всплывающем окне) — поле уже
-  // предзаполнено остатком, обычно достаточно просто нажать «Готово». См. workerCompleteTask().
-  const actionsHtml=showComplete
-    ?`<button class="btn worker-task-btn ghost worker-task-btn-pause" type="button" aria-label="${escapeHtml(op.status==='running'?t('prodPause'):t('prodContinue'))}" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})">${op.status==='running'?'⏸':'▶'}</button>
-      <input class="input worker-task-qty" type="number" min="1" max="${remaining}" step="1" value="${remaining}" id="workerQty_${o.id}_${op.stepIndex}" inputmode="numeric">
-      <button class="btn worker-task-btn primary" type="button" onclick="workerCompleteTask('${o.id}',${op.stepIndex})">✔ Готово</button>`
-    :`<button class="btn worker-task-btn primary" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>▶ ${escapeHtml(t('prodStart'))}</button>`;
-  // v7.50: раньше отменить ошибочно введённое количество (и вернуть списанные материалы) мог
-  // только администратор через полный вид цеха — сам рабочий, ошибившись, не мог ничего исправить
-  // сам. Кнопка вызывает ту же undoLastProductionConsumption(), что и админская «Отменить
-  // списание»: отменяет именно последнее (ещё не отменённое) списание по этой операции.
-  const canFixLast=completed>0&&!!lastActiveConsumptionLog(o,op.stepIndex);
-  const fixLastHtml=canFixLast?`<button class="btn ghost small worker-task-fix-btn" type="button" onclick="undoLastProductionConsumption('${o.id}',${op.stepIndex})">↺ ${escapeHtml(t('fixLastMistakeBtn'))}</button>`:'';
-  return `<div class="worker-task-card ${status}">
-    <div class="worker-task-top">
-      <div class="worker-task-info"><b>${escapeHtml(o.number||'—')}</b>${o.client?`<span> · ${escapeHtml(o.client)}</span>`:''}
-        <small>${escapeHtml(formatDeadline(o))} ${dueNote} ${matNote}${showShop?` · ${escapeHtml(workshopIcon(row.workshopName))} ${escapeHtml(workshopLabel(row.workshopName))}`:''}</small></div>
-      <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
-    </div>
-    <div class="worker-task-progress"><i><b style="width:${pct}%"></b></i><span>${completed} / ${total}</span></div>
-    <div class="worker-task-actions">${actionsHtml}</div>
-    ${fixLastHtml?`<div class="worker-task-fix-row">${fixLastHtml}</div>`:''}
-  </div>`;
+// v7.90: рабочий режим переработан по утверждённому макету — вместо одного плоского списка карточек
+// со всем сразу (v7.43/44) теперь два экрана: A) "Очередь задач" (список) и B) "Активная задача"
+// (IDLE/ACTIVE/DONE), под сценарий "начал → закончил" в 2-3 нажатия. Один и тот же источник данных
+// на всех размерах экрана (workerAssignedTaskRows/productionOp — уже существовали) — раскладка
+// (полноэкранный переход на телефоне vs список+панель на планшете/десктопе) переключается только
+// CSS-медиазапросом по классу .has-selected, без дублирования логики под каждый брейкпоинт.
+// Выбранная задача — в query-параметре ?task=orderId_stepIndex: одновременно и "текущий экран" на
+// телефоне (кнопка "назад" браузера= popstate = вернуться к списку), и выбор строки на
+// планшете/десктопе, и прямая ссылка на конкретную задачу.
+function simpleTaskKey(orderId,index){return `${orderId}_${index}`}
+function getSimpleSelectedTaskKey(){try{return new URLSearchParams(location.search).get('task')||''}catch(e){return ''}}
+function setSimpleSelectedTaskKey(key){
+  try{
+    const url=new URL(location.href);
+    if(key)url.searchParams.set('task',key);else url.searchParams.delete('task');
+    history.pushState({},'',url);
+  }catch(e){}
 }
-// Как «Готово» на карточке задачи: количество уже введено на самой карточке (см. workerTaskCardHtml),
-// поэтому первого модального окна «сколько сделали» (как в completeProductionOperation) не нужно —
-// сразу считаем план списания и, если материалов хватает, показываем то же окно предпросмотра, что
-// и раньше (что именно спишется), одно нажатие «Подтвердить» — и готово.
-function workerCompleteTask(orderId,index){
+// Разрешаем открыть только задачу из цехов, назначенных этому сотруднику — даже если параметр в URL
+// подделан или устарел (задача уже переехала в другой цех/готова).
+function findSimpleTaskByKey(key){
+  if(!key)return null;
+  const sep=key.lastIndexOf('_');if(sep<0)return null;
+  const orderId=key.slice(0,sep),index=Number(key.slice(sep+1));
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return null;
+  const op=productionOp(o,index);if(!op)return null;
+  if(!(window.WORKER_WORKSHOPS||[]).includes(op.stepName))return null;
+  return {order:o,op,index};
+}
+function openSimpleTask(orderId,index){simpleShowDoneConfirmFor='';setSimpleSelectedTaskKey(simpleTaskKey(orderId,index));renderWorkshops()}
+function closeSimpleTask(){simpleShowDoneConfirmFor='';setSimpleSelectedTaskKey('');renderWorkshops()}
+if(typeof window!=='undefined')window.addEventListener('popstate',()=>{if(document.body.classList.contains('worker-mode')&&typeof renderWorkshops==='function')renderWorkshops()});
+// Признак "показать подтверждение DONE" — состояние ЭКРАНА, не данные заказа: нажатие "Готово"
+// показывает зелёный экран даже когда работа лишь поставлена на паузу (сделано меньше плана), а не
+// только когда план выполнен полностью и операция сама перешла в статус done.
+let simpleShowDoneConfirmFor='';
+async function simpleStartTask(orderId,index){await startProductionOperation(orderId,index)}
+async function simplePauseTask(orderId,index){await pauseProductionOperation(orderId,index)}
+async function simpleFinishForNow(orderId,index){
+  simpleShowDoneConfirmFor=simpleTaskKey(orderId,index);
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);
+  if(op&&op.status==='running')await pauseProductionOperation(orderId,index);
+  else if(typeof renderWorkshops==='function')renderWorkshops();
+}
+// +1/+10/+50 — то же самое немедленное списание через finalizeProductionQuantity(), что и быстрые
+// чипы в полном виде "Цехов" (v7.82) — не отдельный "черновой" счётчик: ничего не теряется, если
+// страницу закрыть между нажатиями, и не нужно новое поле в данных заказа.
+async function simpleQuickAdd(orderId,index,qty){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
   const op=productionOp(o,index);if(!op||op.status==='done')return;
   const remaining=orderProductQty(o)-productionCompletedQty(o,op);
-  const input=document.getElementById(`workerQty_${orderId}_${index}`);
-  const qty=Math.trunc(Number(input?.value));
-  if(!Number.isFinite(qty)||qty<1||qty>remaining){toast(t('prodInvalidQty'));return}
-  const plan=productionConsumptionPlan(o,op,qty);
-  const foot=plan.ok?`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="finalizeProductionQuantity('${o.id}',${op.stepIndex},${qty})">${escapeHtml(t('confirm'))}</button>`:`<button class="btn primary" type="button" onclick="closeModal()">${escapeHtml(t('changeQuantity'))}</button>`;
-  openModal(plan.ok?t('confirmWriteOffTitle'):t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),foot);
+  if(remaining<=0)return;
+  await finalizeProductionQuantity(orderId,index,Math.max(1,Math.min(qty,remaining)));
+}
+// "−1" — реальная отмена последней (ещё не отменённой) единицы выпуска: тот же performQuantityDecrease,
+// что и админская "Исправить последнее" (см. openFixQuantityModal), просто без модального окна.
+async function simpleQuickRemove(orderId,index){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const log=lastActiveConsumptionLog(o,index);
+  if(!log){toast(t('noWriteOffsToUndo'));return}
+  await performQuantityDecrease(orderId,index,log.id,Math.max(0,Number(log.qty||0)-1));
 }
 function workerAssignedTaskRows(){
   const names=window.WORKER_WORKSHOPS||[],rows=[];
@@ -1483,12 +1489,99 @@ function workerAssignedTaskRows(){
   rows.sort((a,b)=>String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||'')));
   return rows;
 }
-function workerWorkshopTasksHtml(){
+function simpleTaskBadgeHtml(op,limiting){
+  if(limiting)return `<span class="simple-badge blocked">${escapeHtml(t('simpleNoMaterialBadge'))}</span>`;
+  if(op.status==='running')return `<span class="simple-badge running">${escapeHtml(t('prodStatusRunning'))}</span>`;
+  if(op.status==='paused')return `<span class="simple-badge paused">${escapeHtml(t('simplePausedBadge'))}</span>`;
+  return `<span class="simple-badge idle">${escapeHtml(t('simpleNotStartedBadge'))}</span>`;
+}
+// Экран A) — карточка очереди. Заблокированная материалом карточка — не кнопка (не открывает
+// задачу), приглушена и с пунктирной зоной "Ожидает материал", как в макете.
+function simpleTaskCardHtml(row){
+  const o=row.order,op=productionOp(o,row.index);
+  if(!op)return '';
+  const total=orderProductQty(o),completed=productionCompletedQty(o,op),pct=productionOpPercent(o,op);
+  const limiting=workshopLimitingMaterial(o,op),blocked=!!(limiting&&limiting.enough<=0);
+  const subtitle=`${escapeHtml(o.client||'—')}${o.product?` · ${escapeHtml(o.product)}`:''}`;
+  const zoneHtml=blocked
+    ?`<div class="simple-task-zone blocked">${escapeHtml(t('simpleWaitingMaterialBtn'))}</div>`
+    :(op.status==='running'||op.status==='paused')
+      ?`<div class="simple-task-zone continue">${escapeHtml(t('prodContinue'))}</div>`
+      :`<div class="simple-task-zone start">▶ ${escapeHtml(t('simpleStartBtn'))}</div>`;
+  const inner=`<div class="simple-task-top">
+      <span class="simple-task-icon">${workshopIcon(row.workshopName)}</span>
+      <span class="simple-task-info"><b>${escapeHtml(o.number||'—')} · ${escapeHtml(workshopLabel(row.workshopName))}</b><small>${subtitle}</small></span>
+      ${simpleTaskBadgeHtml(op,blocked)}
+    </div>
+    <div class="simple-task-progress"><i><b class="${blocked?'blocked':''}" style="width:${pct}%"></b></i><span>${completed} / ${total}</span></div>
+    ${zoneHtml}`;
+  return blocked
+    ?`<div class="simple-task-card blocked">${inner}</div>`
+    :`<button type="button" class="simple-task-card" onclick="openSimpleTask('${o.id}',${op.stepIndex})">${inner}</button>`;
+}
+function simpleTaskListHtml(){
   const names=window.WORKER_WORKSHOPS||[];
-  if(!names.length)return `<div class="workshop-empty">Вам пока не назначен цех — обратитесь к администратору.</div>`;
+  if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('simpleNoWorkshopAssigned'))}</div>`;
   const rows=workerAssignedTaskRows();
-  if(!rows.length)return `<div class="workshop-empty">Задач нет — очередь пуста.</div>`;
-  return `<div class="worker-task-list">${rows.map(workerTaskCardHtml).join('')}</div>`;
+  const body=rows.length?rows.map(simpleTaskCardHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('simpleNoTasks'))}</div>`;
+  return `<div class="simple-task-list">${body}</div>`;
+}
+// Экран B, состояние IDLE — та же карточка и для "ещё не начато", и для "на паузе" (только подпись
+// кнопки меняется на "Продолжить") — startProductionOperation() сам решает start/resume.
+function simpleTaskDetailIdleHtml(task){
+  const {order:o,op}=task,total=orderProductQty(o),completed=productionCompletedQty(o,op);
+  const btnLabel=op.status==='paused'?t('prodContinue'):t('simpleStartWorkBtn');
+  return `<div class="simple-detail-idle">
+    <div class="simple-detail-icon">${workshopIcon(op.stepName)}</div>
+    <h2>${escapeHtml(workshopLabel(op.stepName))}</h2>
+    <p>${escapeHtml(o.number||'—')}</p>
+    <span class="simple-badge idle">${escapeHtml(String(t('simpleDoneOfLabel')).replace('{completed}',completed).replace('{total}',total))}</span>
+    <button type="button" class="simple-btn-main" onclick="simpleStartTask('${o.id}',${op.stepIndex})">${escapeHtml(btnLabel)}</button>
+  </div>`;
+}
+function simpleTaskDetailActiveHtml(task){
+  const {order:o,op}=task,total=orderProductQty(o),completed=productionCompletedQty(o,op),pct=productionOpPercent(o,op),remaining=Math.max(0,total-completed);
+  return `<div class="simple-detail-active">
+    <div class="simple-detail-active-head">
+      <span class="simple-detail-active-label">${escapeHtml(o.number||'—')} · ${escapeHtml(workshopLabel(op.stepName))}</span>
+      <button type="button" class="simple-pause-btn" aria-label="${escapeHtml(t('prodPause'))}" title="${escapeHtml(t('prodPause'))}" onclick="simplePauseTask('${o.id}',${op.stepIndex})">⏸</button>
+    </div>
+    <div class="simple-counter-row">
+      <button type="button" class="simple-round-btn" aria-label="−1" onclick="simpleQuickRemove('${o.id}',${op.stepIndex})">−1</button>
+      <div class="simple-counter"><b>${completed}</b><span>${escapeHtml(String(t('simpleOfTargetSuffix')).replace('{total}',total))}</span></div>
+      <button type="button" class="simple-round-btn" aria-label="+1" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},1)">+1</button>
+    </div>
+    <div class="simple-task-progress wide"><i><b style="width:${pct}%"></b></i></div>
+    <div class="simple-batch-row">
+      <button type="button" class="simple-batch-chip" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},10)">+10</button>
+      <button type="button" class="simple-batch-chip" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},50)">+50</button>
+    </div>
+    <button type="button" class="simple-btn-main" onclick="simpleFinishForNow('${o.id}',${op.stepIndex})">${escapeHtml(t('simpleDoneBtn'))}</button>
+  </div>`;
+}
+function simpleTaskDetailDoneHtml(task){
+  const {order:o,op}=task,completed=productionCompletedQty(o,op);
+  return `<div class="simple-detail-done">
+    <div class="simple-done-icon">✓</div>
+    <b>${escapeHtml(String(t('simpleDeliveredLabel')).replace('{qty}',completed))}</b>
+    <p>${escapeHtml(t('simpleDataSavedText'))}</p>
+    <button type="button" class="simple-back-link" onclick="closeSimpleTask()">${escapeHtml(t('simpleBackToListLink'))}</button>
+  </div>`;
+}
+function simpleTaskDetailHtml(){
+  const key=getSimpleSelectedTaskKey(),task=findSimpleTaskByKey(key);
+  if(!task)return `<div class="simple-detail-placeholder">${escapeHtml(t('simpleChooseTaskHint'))}</div>`;
+  const {op}=task;
+  if(op.status==='done'||simpleShowDoneConfirmFor===key)return simpleTaskDetailDoneHtml(task);
+  if(op.status==='running')return simpleTaskDetailActiveHtml(task);
+  return simpleTaskDetailIdleHtml(task);
+}
+function workerWorkshopTasksHtml(){
+  const hasSelected=!!findSimpleTaskByKey(getSimpleSelectedTaskKey());
+  return `<div class="simple-workshop-wrap ${hasSelected?'has-selected':''}">
+    <div class="simple-task-list-pane">${simpleTaskListHtml()}</div>
+    <div class="simple-task-detail-pane">${simpleTaskDetailHtml()}</div>
+  </div>`;
 }
 function renderWorkshops(){
   const el=document.getElementById('workshopsContent');

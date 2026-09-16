@@ -888,34 +888,80 @@ body.worker-mode #quickAddBox .input{height:56px;font-size:17px}
 body.worker-mode .quick-stock-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weight:600;border-radius:12px}
 
-/* v7.43: «Цеха» у рабочего — не обзор/детальный экран цеха (это для мастера/технолога — плановые
-   часы, KPI, timeline), а плоский список ЕГО задач с одной главной кнопкой на карточку.
-   См. workerWorkshopTasksHtml() в js/orders.js. */
-.worker-task-list{display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
-.worker-task-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
-.worker-task-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.worker-task-info b{font-size:15px}
-.worker-task-info span{color:var(--muted);font-size:13px}
-.worker-task-info small{display:block;margin-top:3px;color:var(--muted);font-size:12px}
-.worker-task-danger{color:var(--redText);font-weight:500}
-.worker-task-today{color:var(--yellowText);font-weight:500}
-.worker-task-progress{display:flex;align-items:center;gap:10px;margin:12px 0}
-.worker-task-progress i{flex:1;height:8px;border-radius:99px;background:#eef0f3;overflow:hidden;display:block}
-.worker-task-progress i b{display:block;height:100%;background:var(--accent);border-radius:99px}
-.worker-task-progress span{font-size:12px;color:var(--muted);white-space:nowrap;font-weight:500}
-.worker-task-actions{display:flex;gap:8px}
-.worker-task-btn{flex:1;height:52px;font-size:15px;font-weight:600;border-radius:12px}
-.worker-task-btn.ghost{background:#fff;border:1.5px solid var(--line);color:#4a515c}
-/* v7.44: количество, сколько сделано, вводится прямо на карточке — узкое числовое поле между
-   кнопкой паузы и кнопкой «Готово», а не в отдельном всплывающем окне (см. workerCompleteTask()). */
-.worker-task-btn-pause{flex:0 0 52px;font-size:18px;padding:0}
-.worker-task-qty{flex:0 0 76px;height:52px;padding:0;text-align:center;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
-/* v7.50: «Исправить последнее» — рабочий сам отменяет своё последнее (ошибочное) завершение
-   операции, без участия администратора. Небольшая, не привлекающая лишнего внимания кнопка под
-   основными действиями карточки — видна только когда есть что отменять (см. workerTaskCardHtml()). */
-.worker-task-fix-row{margin-top:8px;display:flex;justify-content:center}
-.worker-task-fix-btn{color:#8a8f99;border-color:transparent;background:transparent}
-.worker-task-fix-btn:hover{color:#4a515c;background:#f5f6f7}
+/* v7.90: «Цеха» у рабочего — два экрана по утверждённому макету: A) очередь задач (список карточек)
+   и B) активная задача (IDLE/ACTIVE/DONE). Раскладка переключается ТОЛЬКО этим CSS по ширине экрана —
+   один и тот же HTML на телефоне/планшете/десктопе (класс .has-selected решает, что видно на
+   телефоне; на планшете/десктопе видно всегда обе колонки). См. workerWorkshopTasksHtml() и вокруг
+   неё в js/orders.js. Старые классы .worker-task-* (плоский список без экрана задачи) удалены —
+   были нужны только предыдущей версии этого экрана.
+   Мобильный (по умолчанию, <768px): экраны A и B — друг за другом, не два блока на странице. */
+.simple-workshop-wrap{display:block}
+.simple-task-list-pane{display:block}
+.simple-task-detail-pane{display:none}
+.simple-workshop-wrap.has-selected .simple-task-list-pane{display:none}
+.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:flex}
+.simple-task-list{display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
+/* Экран A) — карточка задачи. */
+.simple-task-card{display:block;width:100%;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);text-align:left;cursor:pointer}
+.simple-task-card.blocked{cursor:default;opacity:.6}
+.simple-task-top{display:flex;align-items:center;gap:10px}
+.simple-task-icon{flex:0 0 34px;width:34px;height:34px;border-radius:9px;background:#f4f0ea;display:grid;place-items:center;font-size:16px}
+.simple-task-info{flex:1;min-width:0}
+.simple-task-info b{display:block;font-size:15px;font-weight:700;color:#15171a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simple-task-info small{display:block;margin-top:2px;font-size:12.5px;color:#8a8f99;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simple-badge{flex:0 0 auto;display:inline-flex;align-items:center;min-height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;background:#f0f1f3;color:#575d68}
+.simple-badge.blocked{background:#fdecec;color:#c23b2e}
+.simple-badge.paused{background:#fff7ed;color:#b54708}
+.simple-badge.running{background:#eff6ff;color:#1d4ed8}
+.simple-task-progress{display:flex;align-items:center;gap:10px;margin:11px 0}
+.simple-task-progress i{flex:1;height:7px;border-radius:99px;background:#f0f0f0;overflow:hidden;display:block}
+.simple-task-progress i b{display:block;height:100%;border-radius:99px;background:#e86a2b}
+.simple-task-progress i b.blocked{background:#c9c9c9}
+.simple-task-progress span{font-size:12px;color:#8a8f99;white-space:nowrap;font-weight:500;font-variant-numeric:tabular-nums}
+.simple-task-progress.wide{margin:14px 0;width:100%}
+.simple-task-zone{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:12px;font-size:15px;font-weight:650}
+.simple-task-zone.start{background:linear-gradient(180deg,#f0793a 0%,#dd5e1f 100%);color:#fff;box-shadow:0 8px 18px rgba(221,94,31,.22)}
+.simple-task-zone.continue{border:1px solid #e2e2e2;color:#15171a}
+.simple-task-zone.blocked{border:1.5px dashed #cfd3d9;color:#8a8f99}
+/* Экран B) — активная задача. Плейсхолдер виден только когда обе колонки на экране одновременно
+   (планшет/десктоп, см. медиазапрос ниже) — на телефоне без выбранной задачи вся панель B) скрыта
+   правилом выше, так что этот текст там просто не рендерится видимым. */
+.simple-detail-placeholder{display:flex;align-items:center;justify-content:center;width:100%;min-height:320px;color:#8a8f99;font-size:14px;text-align:center;padding:24px}
+.simple-detail-idle,.simple-detail-active,.simple-detail-done{display:flex;flex-direction:column;align-items:center;text-align:center;width:100%;max-width:420px;margin:0 auto;padding:32px 20px calc(20px + env(safe-area-inset-bottom))}
+.simple-detail-icon{width:88px;height:88px;border-radius:24px;background:#f4f0ea;display:grid;place-items:center;font-size:38px;margin-bottom:18px}
+.simple-detail-idle h2{margin:0 0 4px;font-size:26px;font-weight:700;color:#15171a}
+.simple-detail-idle p{margin:0 0 14px;font-size:14px;color:#8a8f99}
+.simple-detail-idle .simple-badge{margin-bottom:28px}
+.simple-btn-main{width:100%;min-height:64px;border-radius:16px;background:linear-gradient(180deg,#f0793a 0%,#dd5e1f 100%);color:#fff;font-size:16px;font-weight:700;box-shadow:0 10px 22px rgba(221,94,31,.25);margin-top:auto}
+.simple-detail-active-head{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:22px}
+.simple-detail-active-label{font-size:12.5px;color:#8a8f99;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simple-pause-btn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:16px;display:grid;place-items:center;flex-shrink:0}
+.simple-counter-row{display:flex;align-items:center;justify-content:center;gap:22px;width:100%}
+.simple-round-btn{flex-shrink:0;width:56px;height:56px;border-radius:50%;border:1.5px solid #e2e2e2;background:#fff;font-size:18px;font-weight:700;color:#15171a;display:grid;place-items:center}
+.simple-round-btn:disabled{opacity:.4}
+.simple-counter{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:96px}
+.simple-counter b{font-size:76px;font-weight:700;line-height:1;color:#15171a;font-variant-numeric:tabular-nums}
+.simple-counter span{font-size:14px;color:#8a8f99}
+.simple-batch-row{display:flex;gap:10px;margin:6px 0 26px}
+.simple-batch-chip{min-height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#15171a;font-size:14px;font-weight:650}
+.simple-batch-chip:disabled{opacity:.4}
+.simple-done-icon{width:88px;height:88px;border-radius:50%;background:#e9f7ee;color:#1f9d4c;display:grid;place-items:center;font-size:40px;font-weight:700;margin-bottom:18px}
+.simple-detail-done b{font-size:22px;font-weight:700;color:#15171a}
+.simple-detail-done p{margin:6px 0 22px;font-size:14px;color:#8a8f99}
+.simple-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:14px;font-weight:650}
+/* Планшет (768–1279px) и десктоп (≥1280px): список слева (своя прокрутка) + панель задачи справа,
+   всегда обе видны — .has-selected здесь не действует. Кнопки/шрифты панели B) намеренно НЕ
+   уменьшаются — планшет в цеху обычно закреплён у станка, пользуются на расстоянии руки. */
+@media(min-width:768px){
+  .simple-workshop-wrap,.simple-workshop-wrap.has-selected{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);gap:0;align-items:stretch;min-height:calc(100vh - 220px)}
+  .simple-workshop-wrap .simple-task-list-pane,.simple-workshop-wrap.has-selected .simple-task-list-pane{display:block;border-right:1px solid var(--line);padding-right:20px;overflow-y:auto;max-height:calc(100vh - 220px)}
+  .simple-workshop-wrap .simple-task-detail-pane,.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:flex;align-items:center;justify-content:center;padding-left:32px;overflow-y:auto}
+  .simple-task-list{max-width:none;margin:0}
+  .simple-detail-idle,.simple-detail-active,.simple-detail-done{padding:32px 20px}
+}
+@media(min-width:1280px){
+  .simple-workshop-wrap{max-width:1280px;margin:0 auto}
+}
 
 /* v6.42: clean stock section redesign */
 #stock .panel{
