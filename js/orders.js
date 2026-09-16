@@ -1038,6 +1038,15 @@ function workshopShiftInfoHtml(o,op){
   const workedToday=opWorkedMinutesToday(o,op.stepIndex);
   const session=currentWorkSession(o,op.stepIndex);
   const overtime=!!(session&&session.overtime);
+  // v7.85: пользователь попросил показывать не только "сколько отработано", но и конкретное время —
+  // во сколько сотрудник начал и во сколько закончил (или ещё работает). workSessions хранится
+  // новыми-в-начале (unshift), поэтому самая ранняя сегодняшняя сессия — последний элемент массива,
+  // а самая свежая (в т.ч. текущая открытая, если есть) — первый.
+  const sessionsToday=opWorkSessionsToday(o,op.stepIndex);
+  const firstSession=sessionsToday[sessionsToday.length-1]||null;
+  const lastSession=sessionsToday[0]||null;
+  const startedAtText=firstSession?productionStartedAtText(firstSession.startedAt):'—';
+  const endedAtText=lastSession?(lastSession.endedAt?productionStartedAtText(lastSession.endedAt):t('shiftStillGoingText')):'—';
   let statusLabel,statusValue;
   if(overtime){statusLabel=t('shiftStatusLabel');statusValue=t('shiftOvertimeLabel');}
   else if(win&&win.endMs>Date.now()){statusLabel=t('shiftUntilEndLabel');statusValue=orderTimeText(Math.max(0,Math.round((win.endMs-Date.now())/60000)));}
@@ -1047,6 +1056,8 @@ function workshopShiftInfoHtml(o,op){
   return `<div class="workshop-shift-info">
     <div class="workshop-shift-info-row"><span>${escapeHtml(t('shiftHoursLabel'))}</span><b>${escapeHtml(schedule.startTime)}–${escapeHtml(schedule.endTime)}</b></div>
     <div class="workshop-shift-info-row"><span>${escapeHtml(t('shiftWorkedTodayLabel'))}</span><b>${escapeHtml(orderTimeText(workedToday))}</b></div>
+    <div class="workshop-shift-info-row"><span>${escapeHtml(t('shiftStartedAtLabel'))}</span><b>${escapeHtml(startedAtText)}</b></div>
+    <div class="workshop-shift-info-row"><span>${escapeHtml(t('shiftEndedAtLabel'))}</span><b>${escapeHtml(endedAtText)}</b></div>
     <div class="workshop-shift-info-row ${overtime?'overtime':''}"><span>${escapeHtml(statusLabel)}</span><b>${escapeHtml(statusValue)}</b></div>
     <div class="workshop-shift-actions">
       <button class="btn small" type="button" ${canAct?'':'disabled'} onclick="toggleProductionOperation('${o.id}',${op.stepIndex})">⏸ ${escapeHtml(t('prodPause'))}</button>
