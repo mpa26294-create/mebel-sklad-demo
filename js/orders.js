@@ -355,7 +355,7 @@ function addProductionConsumptionAudit(o,op,log){
     try{if(typeof auditAdd==='function')auditAdd('production_material_consumed','material',r.materialId,r.materialTitle,`Заказ: ${o.number}. Операция: ${op.stepName}. Расход на изделие: ${qtyWithUnit(r.per,r.unit)}. Выполнено изделий: ${log.qty}. Списано: ${qtyWithUnit(r.qty,r.unit)}. Остаток до: ${qtyWithUnit(r.stockBefore,r.materialUnit)}. Остаток после: ${qtyWithUnit(r.stockAfter,r.materialUnit)}.`,{orderId:o.id,orderNumber:o.number,step:op.stepName,per:r.per,qty:r.qty,unit:r.unit,doneQty:log.qty,stockBefore:r.stockBefore,stockAfter:r.stockAfter});}catch(e){}
   });
 }
-function productionMeta(o){if(!o.production||typeof o.production!=='object')o.production={logs:[]};if(!Array.isArray(o.production.logs))o.production.logs=[];if(!Array.isArray(o.production.operations))o.production.operations=[];return o.production}
+function productionMeta(o){if(!o.production||typeof o.production!=='object')o.production={logs:[]};if(!Array.isArray(o.production.logs))o.production.logs=[];if(!Array.isArray(o.production.operations))o.production.operations=[];if(!Array.isArray(o.production.workSessions))o.production.workSessions=[];return o.production}
 function applyProductionConsumptionPlan(o,op,plan,sessionId){
   normalizeOrderConsumptionFields(o);
   const log={id:uid(),sessionId,stepIndex:Number(op.stepIndex),stepName:op.stepName,qty:plan.qty,at:productionNow(),by:productionActorName(),materials:[]};
@@ -395,6 +395,155 @@ function productionActorName(){try{if(typeof profileDisplayName==='function')ret
 function productionNow(){return new Date().toISOString()}
 function productionDateValue(iso){const d=new Date(iso||'');return Number.isNaN(d.getTime())?0:d.getTime()}
 function productionMinutesBetween(start,end){const a=productionDateValue(start),b=productionDateValue(end||productionNow());return a&&b?Math.max(0,Math.round((b-a)/60000)):0}
+
+// ================== v7.84: рабочее время цехов — учёт по сменам ==================
+// Раньше "фактическое время" операции считалось как "сейчас минус самый первый запуск, минус сумма
+// пауз" (см. старую productionActualMinutes ниже) — если сотрудник забывал нажать паузу вечером,
+// время натекало всю ночь, потому что статус заказа/операции и реальное отработанное время были
+// одной и той же цифрой. Пользователь явно попросил их разделить: статус может жить сколько угодно
+// (заказ днями остаётся "В работе"), а время считается только по реальным рабочим сессиям.
+//
+// Настройки смены — общие на все цеха (первый этап; per-workshop переопределения зарезервированы в
+// shiftSettings().perWorkshop на будущее, но экрана для них пока нет). Хранится в data.settings —
+// как и notificationRules() рядом — то есть, как и они, это НАСТРОЙКА ЭТОГО БРАУЗЕРА, а не общая
+// для всех устройств строка синхронизации (см. ORDER_SYNC_ARTICLE/ACCESS_SYNC_ARTICLE в index.html).
+// Рабочие сессии (кто когда реально работал) — часть данных ЗАКАЗА и потому синхронизируются со всеми
+// устройствами как обычно; не синхронизируется только сама настройка "с какого до какого часа смена".
+const DEFAULT_SHIFT_SCHEDULE={workDays:[1,2,3,4,5],startTime:'08:00',endTime:'17:00',timezone:'Europe/Riga',autoEndAtShiftEnd:true,allowOvertime:true};
+function shiftSettings(){
+  if(!data.settings||typeof data.settings!=='object')data.settings={};
+  if(!data.settings.shiftSchedule||typeof data.settings.shiftSchedule!=='object')data.settings.shiftSchedule={};
+  const s=data.settings.shiftSchedule;
+  if(!s.default||typeof s.default!=='object')s.default={};
+  const d=s.default;
+  if(!Array.isArray(d.workDays)||!d.workDays.length)d.workDays=[...DEFAULT_SHIFT_SCHEDULE.workDays];
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.startTime||''))d.startTime=DEFAULT_SHIFT_SCHEDULE.startTime;
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.endTime||''))d.endTime=DEFAULT_SHIFT_SCHEDULE.endTime;
+  if(!d.timezone)d.timezone=DEFAULT_SHIFT_SCHEDULE.timezone;
+  if(d.autoEndAtShiftEnd==null)d.autoEndAtShiftEnd=true;
+  if(d.allowOvertime==null)d.allowOvertime=true;
+  if(!s.perWorkshop||typeof s.perWorkshop!=='object')s.perWorkshop={};
+  return s;
+}
+// workshopName зарезервирован под будущий персональный график цеха — пока всегда возвращает общий.
+function shiftScheduleFor(workshopName){
+  const s=shiftSettings(),override=s.perWorkshop[workshopName];
+  return override&&typeof override==='object'?{...s.default,...override}:s.default;
+}
+// Перевод "часы:минуты в конкретном часовом поясе, в конкретный день" в реальный момент времени
+// (epoch ms) — без библиотек, через Intl.DateTimeFormat: смотрим, как один и тот же (угаданный)
+// момент читается в целевой зоне, и подправляем разницу. Работает и на переходах летнее/зимнее время,
+// потому что использует встроенную в браузер базу IANA, а не фиксированное смещение.
+function zonedWallTimeToInstant(y,mo,d,h,mi,tz){
+  const guess=Date.UTC(y,mo-1,d,h,mi,0);
+  const fmt=new Intl.DateTimeFormat('en-US',{timeZone:tz,hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const parts=Object.fromEntries(fmt.formatToParts(new Date(guess)).map(p=>[p.type,p.value]));
+  const readAsUtc=Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day),parts.hour==='24'?0:Number(parts.hour),Number(parts.minute),Number(parts.second));
+  return guess+(guess-readAsUtc);
+}
+function tzNowParts(tz){
+  const fmt=new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false});
+  const parts=Object.fromEntries(fmt.formatToParts(new Date()).map(p=>[p.type,p.value]));
+  const weekdayMap={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+  return {y:Number(parts.year),mo:Number(parts.month),d:Number(parts.day),weekday:weekdayMap[parts.weekday],hour:parts.hour==='24'?0:Number(parts.hour),minute:Number(parts.minute)};
+}
+// Границы СЕГОДНЯШНЕЙ смены в реальном времени (epoch ms) по графику; null, если сегодня по графику
+// не рабочий день (в первой версии — просто "не входит в workDays", без праздников/переносов).
+function todayShiftWindow(schedule){
+  const tz=schedule.timezone||DEFAULT_SHIFT_SCHEDULE.timezone,now=tzNowParts(tz);
+  if(!(schedule.workDays||DEFAULT_SHIFT_SCHEDULE.workDays).includes(now.weekday))return null;
+  const [sh,sm]=(schedule.startTime||DEFAULT_SHIFT_SCHEDULE.startTime).split(':').map(Number);
+  const [eh,em]=(schedule.endTime||DEFAULT_SHIFT_SCHEDULE.endTime).split(':').map(Number);
+  return {startMs:zonedWallTimeToInstant(now.y,now.mo,now.d,sh,sm,tz),endMs:zonedWallTimeToInstant(now.y,now.mo,now.d,eh,em,tz)};
+}
+
+// ---- Рабочие сессии (отдельная сущность, добавляется к производственным данным заказа) ----
+// Каждая сессия: {id, orderId, workshop, stepIndex, userEmail, startedAt, endedAt, stopReason, overtime}.
+// stopReason: manual_pause | end_of_shift | switch_order | order_completed | material_shortage | overtime_end.
+function currentWorkSession(o,stepIndex){return (productionMeta(o).workSessions||[]).find(s=>Number(s.stepIndex)===Number(stepIndex)&&!s.endedAt)||null}
+function findOpenWorkSessionForUser(email){
+  if(!email)return null;
+  for(const o of (data.orders||[])){
+    const s=(productionMeta(o).workSessions||[]).find(s=>!s.endedAt&&String(s.userEmail||'').toLowerCase()===String(email).toLowerCase());
+    if(s)return {order:o,session:s};
+  }
+  return null;
+}
+function startWorkSession(o,op){
+  if(currentWorkSession(o,op.stepIndex))return; // уже есть открытая сессия на эту операцию
+  productionMeta(o).workSessions.unshift({id:uid(),orderId:o.id,workshop:op.stepName,stepIndex:op.stepIndex,userEmail:currentUser?.email||'',startedAt:productionNow(),endedAt:'',stopReason:'',overtime:false});
+}
+function endWorkSession(o,stepIndex,stopReason,options={}){
+  const session=currentWorkSession(o,stepIndex);
+  if(!session)return null;
+  session.endedAt=options.endedAt||productionNow();
+  // Сессия, которая шла сверхурочно, закрывается как overtime_end, а не обычной причиной — иначе из
+  // истории потерялось бы, что это было именно окончание переработки, а не обычная пауза/смена.
+  session.stopReason=(session.overtime&&(stopReason==='manual_pause'||stopReason==='end_of_shift'))?'overtime_end':stopReason;
+  return session;
+}
+function workSessionMinutes(session,capMs){
+  const start=productionDateValue(session.startedAt);
+  const end=session.endedAt?productionDateValue(session.endedAt):(capMs||Date.now());
+  return start&&end?Math.max(0,Math.round((end-start)/60000)):0;
+}
+// Операция была запущена ДО того, как в проекте появились рабочие сессии (или сессия потерялась
+// иначе) — восстанавливаем её начало по имеющимся полям, чтобы не терять контроль над временем.
+function ensureRunningOpHasWorkSession(o,op){
+  if(op.status!=='running'||currentWorkSession(o,op.stepIndex))return;
+  const startedAt=op.currentSessionStartedAt||op.startedAt||productionNow();
+  productionMeta(o).workSessions.unshift({id:uid(),orderId:o.id,workshop:op.stepName,stepIndex:op.stepIndex,userEmail:currentUser?.email||'',startedAt,endedAt:'',stopReason:'',overtime:false});
+}
+// Сегодняшние рабочие сессии конкретной операции заказа — источник "Сегодня отработано" в блоке
+// смены на активной карточке заказа (см. workshopShiftInfoHtml). Смены по графику не переходят через
+// полночь (ночные смены — вне первой версии, см. настройки смены), поэтому сессии всегда начинаются
+// и заканчиваются в один календарный день — достаточно сравнить дату старта.
+function opWorkSessionsToday(o,stepIndex){
+  const todayStr=today();
+  return (productionMeta(o).workSessions||[]).filter(s=>Number(s.stepIndex)===Number(stepIndex)&&String(s.startedAt||'').slice(0,10)===todayStr);
+}
+function opWorkedMinutesToday(o,stepIndex){return opWorkSessionsToday(o,stepIndex).reduce((sum,s)=>sum+workSessionMinutes(s),0)}
+// v7.84: ленивая проверка автостопа — сайт статический (без бэкенда/крона), поэтому "автоматически
+// в конце смены" здесь означает "при первом же обращении к данным после конца смены", а не ровно
+// в 17:00:00. Вызывается при каждом рендере "Цехов" и по интервалу, пока экран открыт (см. ниже) —
+// это единственный способ достичь близкого к реальному времени результата без сервера. Собственную,
+// ДРУГУЮ сессию (не текущего пользователя) автостоп всегда просто останавливает — спросить "работать
+// сверхурочно?" можно только у того, кто сейчас физически за экраном.
+function applyShiftAutoStops(){
+  if(!(typeof currentUser!=='undefined'&&currentUser))return [];
+  const touched=[];
+  (data.orders||[]).forEach(o=>{
+    productionOps(o).forEach(op=>{
+      if(op.status!=='running')return;
+      ensureRunningOpHasWorkSession(o,op);
+      const schedule=shiftScheduleFor(op.stepName);
+      if(!schedule.autoEndAtShiftEnd)return;
+      const win=todayShiftWindow(schedule),isOverdue=win?Date.now()>win.endMs:true; // сегодня выходной — тоже пора остановить
+      if(!isOverdue)return;
+      const session=currentWorkSession(o,op.stepIndex);
+      if(!session)return;
+      const isOwn=String(session.userEmail||'').toLowerCase()===String(currentUser.email||'').toLowerCase();
+      if(isOwn&&schedule.allowOvertime&&!session.overtime){
+        const confirmText=win?String(t('shiftOvertimeConfirm')).replace('{time}',schedule.endTime):t('shiftOvertimeConfirmNonWorkDay');
+        const ok=confirm(confirmText);
+        if(ok){session.overtime=true;touched.push({o,op,kind:'overtime'});return}
+      }
+      const endedAt=win?new Date(win.endMs).toISOString():productionNow();
+      endWorkSession(o,op.stepIndex,'end_of_shift',{endedAt});
+      op.status='paused';op.pausedAt=endedAt;
+      touched.push({o,op,kind:'stopped'});
+    });
+  });
+  return touched;
+}
+// Сохраняет результат applyShiftAutoStops() — отдельно от самой проверки, чтобы её можно было
+// безопасно звать из синхронного рендера (см. renderWorkshops), не блокируя его сетевым запросом.
+function persistShiftAutoStops(touched){
+  if(!touched||!touched.length)return;
+  save();
+  touched.filter(x=>x.kind==='stopped').forEach(({o,op})=>{if(typeof auditAdd==='function')auditAdd('production_operation_shift_ended','order',o.id,o.number,`${t('shiftAutoEndedAudit')}: ${workshopLabel(op.stepName)}`,{step:op.stepName})});
+  Promise.resolve().then(()=>{if(typeof persistOrdersToSupabase==='function')return persistOrdersToSupabase()}).catch(()=>{});
+}
 function ensureWorkflowProduction(o){
   if(!o.production||typeof o.production!=='object')o.production={logs:[]};
   if(!Array.isArray(o.production.logs))o.production.logs=[];
@@ -411,14 +560,28 @@ function ensureWorkflowProduction(o){
 function productionOps(o){return ensureWorkflowProduction(o).operations.filter(op=>Number(orderSteps(o)[op.stepIndex]?.minutes||0)>0)}
 function productionOp(o,index){return ensureWorkflowProduction(o).operations.find(op=>Number(op.stepIndex)===Number(index))}
 function productionPlanMinutesForStep(o,index){const step=orderSteps(o)[Number(index)]||{};return Math.max(0,Math.round(Number(step.minutes||0)*orderProductQty(o)))}
-function productionActualMinutes(op){if(!op)return 0;if(op.status==='running')return Math.max(Number(op.actualMinutes||0),productionMinutesBetween(op.startedAt)-Number(op.pauseMinutes||0));return Math.max(0,Math.round(Number(op.actualMinutes||0)))}
+// v7.84: раньше, пока операция "running", факт считался как "сейчас минус самый первый запуск,
+// минус накопленные паузы" — если сотрудник забывал нажать паузу, время натекало сколько угодно
+// (в т.ч. всю ночь). Теперь, если у операции уже есть рабочие сессии (см. o.production.workSessions),
+// факт — это их сумма: каждая закрытая сессия даёт свою длительность как есть, а открытая (сейчас
+// идёт работа) считается только до текущего момента — но к моменту, когда это читается, applyShiftAutoStops()
+// уже должен был закрыть любую сессию, просроченную по концу смены, так что "открытых" сессий,
+// тянущихся много часов сверх графика, в норме быть не должно. Второй параметр (o) опционален только
+// для мест, где заказ временно недоступен — там остаётся старое поведение как запасной вариант.
+function productionActualMinutes(op,o){
+  if(!op)return 0;
+  if(!o)return op.status==='running'?Math.max(Number(op.actualMinutes||0),productionMinutesBetween(op.startedAt)-Number(op.pauseMinutes||0)):Math.max(0,Math.round(Number(op.actualMinutes||0)));
+  const sessions=(productionMeta(o).workSessions||[]).filter(s=>Number(s.stepIndex)===Number(op.stepIndex));
+  if(!sessions.length)return op.status==='running'?Math.max(Number(op.actualMinutes||0),productionMinutesBetween(op.startedAt)-Number(op.pauseMinutes||0)):Math.max(0,Math.round(Number(op.actualMinutes||0)));
+  return sessions.reduce((sum,s)=>sum+workSessionMinutes(s),0);
+}
 function productionCompletedQty(o,op){if(!op)return 0;const total=orderProductQty(o);if(op.status==='done'&&op.completedQty==null)return total;return Math.max(0,Math.min(total,Math.trunc(Number(op.completedQty||0))))}
 function productionOpPercent(o,op){if(!op||op.status==='cancelled')return 0;return Math.round(productionCompletedQty(o,op)/orderProductQty(o)*100)}
 function calcWorkflowProductionPercent(o){const ops=productionOps(o).filter(op=>op.status!=='cancelled');if(!ops.length)return 0;const total=orderProductQty(o)*ops.length,done=ops.reduce((sum,op)=>sum+productionCompletedQty(o,op),0);return Math.max(0,Math.min(100,Math.round(done/total*100)))}
 function productionDoneCount(o){return productionOps(o).filter(op=>op.status==='done').length}
 function productionRunningCount(o){return productionOps(o).filter(op=>op.status==='running'||op.status==='paused').length}
 function productionCurrentOp(o){return productionOps(o).find(op=>op.status==='running')||productionOps(o).find(op=>op.status==='paused')||productionOps(o).find(op=>op.status==='not_started')||null}
-function productionLeftMinutes(o){return productionOps(o).reduce((sum,op)=>op.status==='done'||op.status==='cancelled'?sum:sum+Math.max(0,productionPlanMinutesForStep(o,op.stepIndex)-productionActualMinutes(op)),0)}
+function productionLeftMinutes(o){return productionOps(o).reduce((sum,op)=>op.status==='done'||op.status==='cancelled'?sum:sum+Math.max(0,productionPlanMinutesForStep(o,op.stepIndex)-productionActualMinutes(op,o)),0)}
 function productionEtaText(o){const min=productionLeftMinutes(o);if(!min)return t('prodQueueDone');const d=new Date(Date.now()+min*60000);return d.toLocaleString(currentLang==='ru'?'ru-RU':currentLang==='lv'?'lv-LV':'en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
 function productionStatusLabel(status){return t(PRODUCTION_STATUS_META[status]?.label||'prodStatusNotStarted')}
 function productionStatusClass(status){return PRODUCTION_STATUS_META[status]?.tone||'idle'}
@@ -496,7 +659,7 @@ function workshopAnalytics(stepName){
     return !!eta&&eta>row.order.dueDate;
   }).length;
   const plan=queue.reduce((s,row)=>s+productionPlanMinutesForStep(row.order,row.index),0);
-  const actual=queue.reduce((s,row)=>s+productionActualMinutes(productionOp(row.order,row.index)),0);
+  const actual=queue.reduce((s,row)=>s+productionActualMinutes(productionOp(row.order,row.index),row.order),0);
   const remainingQty=queue.reduce((s,row)=>{const op=productionOp(row.order,row.index);return s+Math.max(0,orderProductQty(row.order)-productionCompletedQty(row.order,op))},0);
   const load=Math.max(0,Math.round(plan/WORKSHOP_WEEKLY_CAPACITY_MINUTES*100));
   const warnings=[];
@@ -645,7 +808,7 @@ function workshopsActiveNowHtml(){
       <span class="workshops-active-icon">${workshopIcon(r.workshopName)}</span>
       <span class="workshops-active-name"><b>${escapeHtml(workshopLabel(r.workshopName))}</b><small>${escapeHtml(r.order.number||'—')}${r.order.client?` · ${escapeHtml(r.order.client)}`:''}</small></span>
       <span class="workshops-active-status"><span class="workshops-active-dot ${running?'running':'paused'}"></span>${running?escapeHtml(t('prodStatusRunning')):escapeHtml(t('prodStatusPaused'))}</span>
-      <span class="workshops-active-time"><small>${escapeHtml(t('startedAtPrefix'))} ${escapeHtml(productionStartedAtText(r.op.startedAt))}</small><b id="${activeElapsedElId(r.order.id,r.op.stepIndex)}">${escapeHtml(orderTimeText(productionActualMinutes(r.op)))}</b></span>
+      <span class="workshops-active-time"><small>${escapeHtml(t('startedAtPrefix'))} ${escapeHtml(productionStartedAtText(r.op.startedAt))}</small><b id="${activeElapsedElId(r.order.id,r.op.stepIndex)}">${escapeHtml(orderTimeText(productionActualMinutes(r.op,r.order)))}</b></span>
       <span class="workshops-active-progress"><i><b style="width:${pct}%"></b></i></span>
       <span class="workshops-active-qty">${completed} / ${total}</span>
     </button>`;
@@ -657,11 +820,25 @@ function workshopsActiveNowHtml(){
 }
 function refreshActiveElapsedTimers(){
   const workshopsSection=document.getElementById('workshops');
-  if(!workshopsSection||!workshopsSection.classList.contains('active')||selectedWorkshopName)return;
+  if(!workshopsSection||!workshopsSection.classList.contains('active'))return;
+  if(selectedWorkshopName){
+    // в детальном экране цеха несколько полей завязаны на "сейчас" (отработано за смену, до конца
+    // смены) — проще перерисовать блок целиком, чем адресно обновлять каждое поле по отдельности;
+    // renderWorkshops() сама делает ленивую проверку автостопа (см. её начало), поэтому здесь она
+    // не дублируется.
+    if(typeof renderWorkshops==='function')renderWorkshops();
+    return;
+  }
+  // Обзорная страница (без выбранного цеха) обновляется адресно, без полной перерисовки — поэтому
+  // проверку автостопа приходится делать здесь отдельно (renderWorkshops() тут не вызывается).
+  if(typeof applyShiftAutoStops==='function'){
+    const touched=applyShiftAutoStops();
+    if(touched.length&&typeof persistShiftAutoStops==='function')persistShiftAutoStops(touched);
+  }
   currentlyActiveOperations().forEach(r=>{
     if(r.op.status!=='running')return;
     const el=document.getElementById(activeElapsedElId(r.order.id,r.op.stepIndex));
-    if(el)el.textContent=orderTimeText(productionActualMinutes(r.op));
+    if(el)el.textContent=orderTimeText(productionActualMinutes(r.op,r.order));
   });
 }
 if(typeof window!=='undefined')setInterval(()=>{if(typeof refreshActiveElapsedTimers==='function')refreshActiveElapsedTimers()},30000);
@@ -850,6 +1027,44 @@ function workshopShiftSummaryHtml(name,stat,activeRows){
     <div class="workshop-shift-card"><small>${escapeHtml(t('queue'))}</small><b>${stat.queue.length} ${escapeHtml(stat.queue.length===1?t('orderWordOne'):t('orderWordMany'))}</b><small class="workshop-shift-sub ${problemCount>0?'danger-text':''}">${problemCount>0?`${problemCount} ${escapeHtml(t('workshopNeedAttention'))}`:escapeHtml(t('workshopAllOk'))}</small></div>
   </div>`;
 }
+// v7.84: компактный блок учёта рабочего времени по смене — на активной карточке заказа. Показывает
+// часы смены, СКОЛЬКО РЕАЛЬНО ОТРАБОТАНО СЕГОДНЯ по этой операции (сумма рабочих сессий, а не
+// "сейчас минус старт заказа") и сколько осталось до конца смены, плюс явные "Пауза" и "Завершить
+// смену" (обе кнопки видны и в шапке карточки — toggleProductionOperation — здесь они продублированы
+// рядом со временем, как в макете пользователя, для наглядности).
+function workshopShiftInfoHtml(o,op){
+  const schedule=shiftScheduleFor(op.stepName);
+  const win=todayShiftWindow(schedule);
+  const workedToday=opWorkedMinutesToday(o,op.stepIndex);
+  const session=currentWorkSession(o,op.stepIndex);
+  const overtime=!!(session&&session.overtime);
+  let statusLabel,statusValue;
+  if(overtime){statusLabel=t('shiftStatusLabel');statusValue=t('shiftOvertimeLabel');}
+  else if(win&&win.endMs>Date.now()){statusLabel=t('shiftUntilEndLabel');statusValue=orderTimeText(Math.max(0,Math.round((win.endMs-Date.now())/60000)));}
+  else if(win){statusLabel=t('shiftStatusLabel');statusValue=t('shiftOverText');}
+  else{statusLabel=t('shiftStatusLabel');statusValue=t('shiftNotWorkDayText');}
+  const canAct=op.status==='running';
+  return `<div class="workshop-shift-info">
+    <div class="workshop-shift-info-row"><span>${escapeHtml(t('shiftHoursLabel'))}</span><b>${escapeHtml(schedule.startTime)}–${escapeHtml(schedule.endTime)}</b></div>
+    <div class="workshop-shift-info-row"><span>${escapeHtml(t('shiftWorkedTodayLabel'))}</span><b>${escapeHtml(orderTimeText(workedToday))}</b></div>
+    <div class="workshop-shift-info-row ${overtime?'overtime':''}"><span>${escapeHtml(statusLabel)}</span><b>${escapeHtml(statusValue)}</b></div>
+    <div class="workshop-shift-actions">
+      <button class="btn small" type="button" ${canAct?'':'disabled'} onclick="toggleProductionOperation('${o.id}',${op.stepIndex})">⏸ ${escapeHtml(t('prodPause'))}</button>
+      <button class="btn small" type="button" ${canAct?'':'disabled'} onclick="endShiftManually('${o.id}',${op.stepIndex})">${escapeHtml(t('endShiftBtn'))}</button>
+    </div>
+    ${schedule.autoEndAtShiftEnd?`<div class="workshop-shift-auto-note">${escapeHtml(String(t('shiftAutoEndNote')).replace('{time}',schedule.endTime))}</div>`:''}
+  </div>`;
+}
+// «Завершить смену» — сотрудник сам говорит "на сегодня всё" ДО конца рабочего дня по графику;
+// по смыслу это то же самое, что и автостоп в конце смены (та же причина end_of_shift), просто
+// инициировано человеком, а не обнаружено при следующем заходе на экран.
+async function endShiftManually(orderId,index){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op||op.status!=='running')return;
+  endWorkSession(o,index,'end_of_shift');
+  op.status='paused';op.pausedAt=productionNow();
+  await persistProductionWorkflow(o,`${tRu('historyProductionPaused')}: ${op.stepName} — ${t('endShiftBtn')}`,'production_operation_paused',{step:op.stepName});
+}
 function workshopCurrentCardHtml(row){
   if(!row)return `<div class="workshop-current-card empty"><div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div></div>`;
   const o=row.order,op=productionOp(o,row.index);
@@ -883,6 +1098,7 @@ function workshopCurrentCardHtml(row){
       <div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div>
       <span class="workshop-current-remaining">${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}</span>
     </div>
+    ${workshopShiftInfoHtml(o,op)}
     <div class="workshop-record-actions">
       <button class="btn primary workshop-record-btn" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">✔ ${escapeHtml(t('recordOutputBtn'))}</button>
       <div class="workshop-qty-chips">${chips}<button class="btn workshop-qty-chip" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('otherQtyBtn'))}</button></div>
@@ -1068,6 +1284,13 @@ function workerWorkshopTasksHtml(){
 function renderWorkshops(){
   const el=document.getElementById('workshopsContent');
   if(!el)return;
+  // v7.84: ленивая проверка автостопа по концу смены — при каждом заходе на "Цеха" (плюс по
+  // интервалу, пока экран открыт, см. refreshActiveElapsedTimers), а не только тут, чтобы просроченная
+  // с вечера сессия не висела "в работе", пока кто-то не откроет этот экран снова.
+  if(typeof applyShiftAutoStops==='function'){
+    const touched=applyShiftAutoStops();
+    if(touched.length&&typeof persistShiftAutoStops==='function')persistShiftAutoStops(touched);
+  }
   const desc=document.getElementById('workshopsTopbarDesc');
   if(document.body.classList.contains('worker-mode')){
     el.innerHTML=workerWorkshopTasksHtml();
@@ -1082,7 +1305,7 @@ function renderWorkshops(){
 function productionWarnings(o){
   const names=[...new Set(orderSteps(o).filter(s=>Number(s.minutes||0)>0).map(s=>s.name).filter(Boolean))],list=[];
   names.forEach(name=>list.push(...workshopAnalytics(name).warnings));
-  productionOps(o).forEach(op=>{const plan=productionPlanMinutesForStep(o,op.stepIndex),actual=productionActualMinutes(op);if(op.status==='running'&&actual>plan&&plan>0)list.push(`${op.stepName} ${t('prodWarnDelayed')} +${orderTimeText(actual-plan)}`);if(op.status==='running'&&productionMinutesBetween(op.startedAt)>1440)list.push(`${op.stepName} ${t('prodWarnDayOpen')}`)});
+  productionOps(o).forEach(op=>{const plan=productionPlanMinutesForStep(o,op.stepIndex),actual=productionActualMinutes(op,o);if(op.status==='running'&&actual>plan&&plan>0)list.push(`${op.stepName} ${t('prodWarnDelayed')} +${orderTimeText(actual-plan)}`);if(op.status==='running'&&productionMinutesBetween(op.startedAt)>1440)list.push(`${op.stepName} ${t('prodWarnDayOpen')}`)});
   return [...new Set(list)].slice(0,4);
 }
 function productionTimelineHtml(o){
@@ -1167,12 +1390,12 @@ function productionSessionHistoryHtml(o,op){
   }).join('')}</div>`;
 }
 function productionOperationCardHtml(o,op){
-  const plan=productionPlanMinutesForStep(o,op.stepIndex),actual=productionActualMinutes(op),diff=actual-plan,pct=productionOpPercent(o,op),completed=productionCompletedQty(o,op),total=orderProductQty(o),state=productionQueueState(o.id,op.stepIndex),status=productionStatusClass(op.status),compact=op.status==='done'&&op.collapsed!==false,comments=Array.isArray(op.comments)?op.comments:[],toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart'),toggleIcon=op.status==='running'?'⏸':'▶';
+  const plan=productionPlanMinutesForStep(o,op.stepIndex),actual=productionActualMinutes(op,o),diff=actual-plan,pct=productionOpPercent(o,op),completed=productionCompletedQty(o,op),total=orderProductQty(o),state=productionQueueState(o.id,op.stepIndex),status=productionStatusClass(op.status),compact=op.status==='done'&&op.collapsed!==false,comments=Array.isArray(op.comments)?op.comments:[],toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart'),toggleIcon=op.status==='running'?'⏸':'▶';
   const canUndo=!!lastActiveConsumptionLog(o,op.stepIndex);
   return `<article class="production-operation-card ${status} ${compact?'compact':''}" id="productionOp_${o.id}_${op.stepIndex}"><div class="production-op-strip"></div><div class="production-op-main"><div class="production-op-heading"><div><h4>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}</h4><span>${escapeHtml(t('queue'))}: ${state.position?`${state.position} ${t('of')} ${state.total}`:state.label}</span></div><span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span></div><div class="production-quantity-progress"><small>${escapeHtml(t('prodDone'))}${infoBtn('done')}</small><b>${completed} / ${total}</b></div><div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div><div class="production-op-kpis"><div><span class="op-kpi-icon plan">📅</span><span><small>${escapeHtml(t('plan'))}${infoBtn('plan')}</small><b>${escapeHtml(orderTimeText(plan))}</b></span></div><div><span class="op-kpi-icon fact">▶</span><span><small>${escapeHtml(t('fact'))}${infoBtn('fact')}</small><b>${escapeHtml(orderTimeText(actual))}</b></span></div><div><span class="op-kpi-icon diff">📊</span><span><small>${escapeHtml(t('difference'))}${infoBtn('diff')}</small><b class="${diff>0?'danger-text':'ok-text'}">${escapeHtml(orderTimeTextSigned(diff))}</b></span></div></div>${productionOperationMaterialStatusHtml(o,op)}${productionSessionHistoryHtml(o,op)}${diff>0?`<div class="production-delay">⚠ +${escapeHtml(orderTimeText(diff))}</div>`:''}${compact?`<button class="btn small" type="button" onclick="toggleProductionOperationCompact('${o.id}',${op.stepIndex})">${escapeHtml(t('expand'))}</button>`:`<div class="production-comment-box"><textarea class="input" id="prodComment_${o.id}_${op.stepIndex}" placeholder="${escapeHtml(t('prodCommentPlaceholder'))}">${escapeHtml(op.comment||'')}</textarea><button class="btn small" type="button" onclick="saveProductionComment('${o.id}',${op.stepIndex})">${escapeHtml(t('save'))}</button></div><div class="production-comments">${comments.slice(0,3).map(c=>`<div><b>${escapeHtml(c.by||'—')}</b><span>${escapeHtml(productionDateTimeText(c.at))}</span><p>${escapeHtml(c.text||'')}</p></div>`).join('')}</div>`}</div><div class="production-op-actions"><button class="btn small" type="button" onclick="closeWorkshopDetail()">${escapeHtml(t('backToAllWorkshops'))}</button><button class="btn small primary" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='done'||op.status==='cancelled'?'disabled':''}>${toggleIcon} ${escapeHtml(toggleLabel)}</button><button class="btn small" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})" ${op.status==='cancelled'?'disabled':''}>✔ ${escapeHtml(t('prodComplete'))}</button><button class="btn small" type="button" onclick="undoLastProductionConsumption('${o.id}',${op.stepIndex})" ${canUndo?'':'disabled'}>${escapeHtml(t('undoWriteOff'))}</button></div></article>`;
 }
 function productionKpiHtml(o){
-  const qty=orderProductQty(o),matCount=orderMaterials(o).length,plan=calcOrderMinutes(o),actual=productionOps(o).reduce((s,op)=>s+productionActualMinutes(op),0),pct=calcWorkflowProductionPercent(o),missing=orderMissingItems(o).length;
+  const qty=orderProductQty(o),matCount=orderMaterials(o).length,plan=calcOrderMinutes(o),actual=productionOps(o).reduce((s,op)=>s+productionActualMinutes(op,o),0),pct=calcWorkflowProductionPercent(o),missing=orderMissingItems(o).length;
   const cards=[['📦',t('orderProductCount'),qty],['🧱',t('materialsCount'),matCount],['⏱',t('plannedTime'),orderTimeText(plan)],['⏱',t('actualTime'),orderTimeText(actual)],['📈',t('readiness'),`${pct}%`],['⚠',t('missingMaterialsCount'),missing]];
   return `<div class="production-kpi-grid">${cards.map(([icon,label,value])=>`<div class="production-kpi"><span>${icon}</span><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}</div>`;
 }
@@ -1211,12 +1434,52 @@ async function persistProductionWorkflow(o,message,type='production_update',meta
   try{syncMaterialReservations();await persistReservationMaterials()}catch(e){}
   refreshOrderWorkflow(o.id);
 }
-async function startProductionOperation(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;const now=productionNow();if(!op.startedAt)op.startedAt=now;if(op.status==='paused'&&op.pausedAt){const paused=productionMinutesBetween(op.pausedAt,now);op.pauseMinutes=Number(op.pauseMinutes||0)+paused;if(op.currentSessionStartedAt)op.currentSessionPauseMinutes=Number(op.currentSessionPauseMinutes||0)+paused;}if(!op.currentSessionStartedAt){op.currentSessionStartedAt=now;op.currentSessionPauseMinutes=0;}op.pausedAt='';op.status='running';o.status='В работе';await persistProductionWorkflow(o,`${tRu('historyProductionOperationStarted')}: ${op.stepName}`,'production_operation_started',{step:op.stepName})}
-async function pauseProductionOperation(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status!=='running')return;op.status='paused';op.pausedAt=productionNow();await persistProductionWorkflow(o,`${tRu('historyProductionPaused')}: ${op.stepName}`,'production_operation_paused',{step:op.stepName})}
+async function startProductionOperation(orderId,index){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op||op.status==='done')return;
+  const now=productionNow();
+  // v7.84: один сотрудник физически не может одновременно вести две операции — если у него уже
+  // открыта рабочая сессия на ДРУГОМ заказе/операции, сначала закрываем её как switch_order (чужие
+  // сессии не трогаем: другой мастер/цех может законно работать параллельно, см. v7.82 — "работать
+  // сразу с двумя").
+  const myEmail=currentUser?.email||'',openElsewhere=findOpenWorkSessionForUser(myEmail);
+  if(openElsewhere&&!(String(openElsewhere.order.id)===String(o.id)&&Number(openElsewhere.session.stepIndex)===Number(index))){
+    const otherOp=productionOp(openElsewhere.order,openElsewhere.session.stepIndex);
+    if(otherOp){
+      endWorkSession(openElsewhere.order,otherOp.stepIndex,'switch_order');
+      otherOp.status='paused';otherOp.pausedAt=now;
+      await persistProductionWorkflow(openElsewhere.order,`${tRu('historyProductionPaused')}: ${otherOp.stepName}`,'production_operation_paused',{step:otherOp.stepName});
+    }
+  }
+  // productionOp() перестраивает весь operations-массив заказа при каждом вызове (см.
+  // ensureWorkflowProduction) — если строкой выше только что переключали операцию ЭТОГО ЖЕ заказа
+  // (другой stepIndex), старая ссылка `op` осталась бы от предыдущей версии массива и её мутации
+  // ниже потерялись бы при следующей перестройке. Перечитываем на всякий случай.
+  const freshOp=productionOp(o,index);if(!freshOp||freshOp.status==='done')return;
+  if(!freshOp.startedAt)freshOp.startedAt=now;
+  if(freshOp.status==='paused'&&freshOp.pausedAt){const paused=productionMinutesBetween(freshOp.pausedAt,now);freshOp.pauseMinutes=Number(freshOp.pauseMinutes||0)+paused;if(freshOp.currentSessionStartedAt)freshOp.currentSessionPauseMinutes=Number(freshOp.currentSessionPauseMinutes||0)+paused;}
+  if(!freshOp.currentSessionStartedAt){freshOp.currentSessionStartedAt=now;freshOp.currentSessionPauseMinutes=0;}
+  freshOp.pausedAt='';freshOp.status='running';o.status='В работе';
+  startWorkSession(o,freshOp);
+  await persistProductionWorkflow(o,`${tRu('historyProductionOperationStarted')}: ${freshOp.stepName}`,'production_operation_started',{step:freshOp.stepName});
+}
+async function pauseProductionOperation(orderId,index){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op||op.status!=='running')return;
+  op.status='paused';op.pausedAt=productionNow();
+  endWorkSession(o,index,'manual_pause');
+  await persistProductionWorkflow(o,`${tRu('historyProductionPaused')}: ${op.stepName}`,'production_operation_paused',{step:op.stepName});
+}
 async function toggleProductionOperation(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(op?.status==='running')return pauseProductionOperation(orderId,index);return startProductionOperation(orderId,index)}
 function completeProductionOperation(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;const remaining=orderProductQty(o)-productionCompletedQty(o,op);openModal(t('prodComplete'),`<div class="production-quantity-modal"><p>${escapeHtml(t('prodEnterCompletedQty'))}</p><input class="input" id="productionCompletedQty" type="number" min="1" max="${remaining}" step="1" value="${remaining}"><small>${escapeHtml(t('prodRemainingQty'))}: ${remaining}</small><div class="hint">${escapeHtml(t('partialCompleteHintPrefix'))} ${remaining} ${escapeHtml(t('unitsGenitive'))}.</div></div>`,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmProductionQuantity('${o.id}',${op.stepIndex})">${escapeHtml(t('confirm'))}</button>`);setTimeout(()=>document.getElementById('productionCompletedQty')?.select(),0)}
 function confirmProductionQuantity(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;const input=document.getElementById('productionCompletedQty'),remaining=orderProductQty(o)-productionCompletedQty(o,op),qty=Math.trunc(Number(input?.value||0));if(!Number.isFinite(qty)||qty<1||qty>remaining){toast(t('prodInvalidQty'));return}const plan=productionConsumptionPlan(o,op,qty);const foot=plan.ok?`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="finalizeProductionQuantity('${o.id}',${op.stepIndex},${qty})">${escapeHtml(t('confirm'))}</button>`:`<button class="btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('changeQuantity'))}</button>`;openModal(t('confirmWriteOffTitle'),productionConsumptionPreviewHtml(plan),foot)}
-async function finalizeProductionQuantity(orderId,index,qty){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;const remaining=orderProductQty(o)-productionCompletedQty(o,op);qty=Math.trunc(Number(qty||0));if(!Number.isFinite(qty)||qty<1||qty>remaining){toast(t('prodInvalidQty'));return}const plan=productionConsumptionPlan(o,op,qty);if(!plan.ok){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('changeQuantity'))}</button>`);return}const now=productionNow();if(!op.startedAt)op.startedAt=now;if(!op.currentSessionStartedAt)op.currentSessionStartedAt=now;if(op.status==='paused'&&op.pausedAt){const paused=productionMinutesBetween(op.pausedAt,now);op.pauseMinutes=Number(op.pauseMinutes||0)+paused;op.currentSessionPauseMinutes=Number(op.currentSessionPauseMinutes||0)+paused;}const sessionStartedAt=op.currentSessionStartedAt,sessionMinutes=Math.max(0,productionMinutesBetween(sessionStartedAt,now)-Number(op.currentSessionPauseMinutes||0)),sessionId=uid();if(!Array.isArray(op.sessions))op.sessions=[];op.sessions.unshift({id:sessionId,startedAt:sessionStartedAt,endedAt:now,minutes:sessionMinutes,qty,by:productionActorName()});const log=applyProductionConsumptionPlan(o,op,plan,sessionId);op.sessions[0].consumptionId=log.id;op.completedQty=productionCompletedQty(o,op)+qty;op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)+sessionMinutes);const fullyDone=op.completedQty>=orderProductQty(o);op.status=fullyDone?'done':'paused';op.pausedAt=fullyDone?'':now;op.finishedAt=fullyDone?now:'';op.currentSessionStartedAt='';op.currentSessionPauseMinutes=0;op.collapsed=fullyDone;productionMeta(o).logs.unshift({id:uid(),stepIndex:Number(index),stepName:op.stepName,qty,minutes:sessionMinutes,at:now,by:productionActorName(),source:fullyDone?'workflow-complete':'workflow-partial',consumptionId:log.id});if(fullyDone&&productionDoneCount(o)===productionOps(o).length)o.status='Готов';closeModal();const message=`${op.stepName}: ${tRu('completedMsgDone')} ${qty} ${tRu('unitsGenitive')}, ${tRu('materialsAutoWrittenOff')} (${log.materials.length} ${tRu('positionsWord')})`;await persistProductionWorkflow(o,message,fullyDone?'production_operation_completed':'production_operation_partial',{step:op.stepName,qty,minutes:sessionMinutes,completedQty:op.completedQty,totalQty:orderProductQty(o),fullyDone,consumptionId:log.id,materials:log.materials})}
+async function finalizeProductionQuantity(orderId,index,qty){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;const remaining=orderProductQty(o)-productionCompletedQty(o,op);qty=Math.trunc(Number(qty||0));if(!Number.isFinite(qty)||qty<1||qty>remaining){toast(t('prodInvalidQty'));return}const plan=productionConsumptionPlan(o,op,qty);if(!plan.ok){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('changeQuantity'))}</button>`);return}const now=productionNow();if(!op.startedAt)op.startedAt=now;if(!op.currentSessionStartedAt)op.currentSessionStartedAt=now;if(op.status==='paused'&&op.pausedAt){const paused=productionMinutesBetween(op.pausedAt,now);op.pauseMinutes=Number(op.pauseMinutes||0)+paused;op.currentSessionPauseMinutes=Number(op.currentSessionPauseMinutes||0)+paused;}const sessionStartedAt=op.currentSessionStartedAt,sessionMinutes=Math.max(0,productionMinutesBetween(sessionStartedAt,now)-Number(op.currentSessionPauseMinutes||0)),sessionId=uid();if(!Array.isArray(op.sessions))op.sessions=[];op.sessions.unshift({id:sessionId,startedAt:sessionStartedAt,endedAt:now,minutes:sessionMinutes,qty,by:productionActorName()});const log=applyProductionConsumptionPlan(o,op,plan,sessionId);op.sessions[0].consumptionId=log.id;op.completedQty=productionCompletedQty(o,op)+qty;op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)+sessionMinutes);const fullyDone=op.completedQty>=orderProductQty(o);
+// v7.84: запись выпуска — тоже точка, где активная рабочая сессия (см. workSessions) заканчивается:
+// либо операция полностью выполнена (order_completed), либо это осознанная пауза после того, как
+// часть партии записали (ближе всего по смыслу к manual_pause — отдельной причины "записан частичный
+// выпуск" в списке нет, а это тоже добровольное действие сотрудника, а не что-то автоматическое).
+endWorkSession(o,index,fullyDone?'order_completed':'manual_pause',{endedAt:now});
+op.status=fullyDone?'done':'paused';op.pausedAt=fullyDone?'':now;op.finishedAt=fullyDone?now:'';op.currentSessionStartedAt='';op.currentSessionPauseMinutes=0;op.collapsed=fullyDone;productionMeta(o).logs.unshift({id:uid(),stepIndex:Number(index),stepName:op.stepName,qty,minutes:sessionMinutes,at:now,by:productionActorName(),source:fullyDone?'workflow-complete':'workflow-partial',consumptionId:log.id});if(fullyDone&&productionDoneCount(o)===productionOps(o).length)o.status='Готов';closeModal();const message=`${op.stepName}: ${tRu('completedMsgDone')} ${qty} ${tRu('unitsGenitive')}, ${tRu('materialsAutoWrittenOff')} (${log.materials.length} ${tRu('positionsWord')})`;await persistProductionWorkflow(o,message,fullyDone?'production_operation_completed':'production_operation_partial',{step:op.stepName,qty,minutes:sessionMinutes,completedQty:op.completedQty,totalQty:orderProductQty(o),fullyDone,consumptionId:log.id,materials:log.materials})}
 // v7.51: раньше подтверждение отмены списания шло через системное window.confirm() — единственное
 // место во всём сайте, где так сделано (везде рядом используется своё модальное окно). В части
 // мобильных/встроенных браузеров confirm() может не показываться и молча возвращать «отмена» —
@@ -1331,7 +1594,7 @@ function toggleProductionOperationCompact(orderId,index){const o=(data.orders||[
 async function transferOrderToCompletion(orderId){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;if(productionDoneCount(o)!==productionOps(o).length){toast(t('productionNotFinished'));return}orderWorkflowSelection.set(String(orderId),3);o.status='Готов';await persistProductionWorkflow(o,tRu('historyTransferredCompletion'),'production_to_completion',{})}
 const COMPLETION_CHECKS=['master','technologist','quality','warehouse','client'];
 const COMPLETION_DELAY_REASONS=['no_material','equipment','client_wait','rework','other'];
-function completionActualMinutes(o){return productionOps(o).reduce((s,op)=>s+productionActualMinutes(op),0)}
+function completionActualMinutes(o){return productionOps(o).reduce((s,op)=>s+productionActualMinutes(op,o),0)}
 function completionDiffMinutes(o){return completionActualMinutes(o)-calcOrderMinutes(o)}
 function completionChecklistLabel(key){return t({master:'completionCheckMaster',technologist:'completionCheckTechnologist',quality:'completionCheckQuality',warehouse:'completionCheckWarehouse',client:'completionCheckClient'}[key]||key)}
 function completionReasonLabel(key){return t({no_material:'delayNoMaterial',equipment:'delayEquipment',client_wait:'delayClientWait',rework:'delayRework',other:'delayOther'}[key]||'delayOther')}
@@ -1370,7 +1633,7 @@ function completionDelayReasonHtml(o){
   return `<section class="completion-card delay"><h4>${escapeHtml(t('delayReason'))}</h4><p>${escapeHtml(t('delayReasonHint'))}: <b>+${escapeHtml(orderTimeText(diff))}</b></p><select class="select" id="completionDelay_${o.id}" onchange="saveCompletionDelayReason('${o.id}',this.value)" ${closed?'disabled':''}><option value="">${escapeHtml(t('notSpecified'))}</option>${COMPLETION_DELAY_REASONS.map(key=>`<option value="${key}" ${c.delayReason===key?'selected':''}>${escapeHtml(completionReasonLabel(key))}</option>`).join('')}</select></section>`;
 }
 function completionAnalyticsHtml(o){
-  const ops=productionOps(o),longest=ops.slice().sort((a,b)=>productionActualMinutes(b)-productionActualMinutes(a))[0],diff=completionDiffMinutes(o),c=orderCompletionData(o),result=orderCompletionClosed(o)?t('resultClosed'):productionDoneCount(o)===ops.length?t('resultReadyToClose'):t('resultInProgress');
+  const ops=productionOps(o),longest=ops.slice().sort((a,b)=>productionActualMinutes(b,o)-productionActualMinutes(a,o))[0],diff=completionDiffMinutes(o),c=orderCompletionData(o),result=orderCompletionClosed(o)?t('resultClosed'):productionDoneCount(o)===ops.length?t('resultReadyToClose'):t('resultInProgress');
   return `<section class="completion-card completion-analytics"><h4>${escapeHtml(t('completionAnalytics'))}</h4><div><span>${escapeHtml(t('longestStage'))}</span><b>${escapeHtml(longest?.stepName||'—')}</b></div><div><span>${escapeHtml(t('delayWhere'))}</span><b>${escapeHtml(diff>0?(c.delayReason?completionReasonLabel(c.delayReason):t('notSpecified')):t('noDelay'))}</b></div><div><span>${escapeHtml(t('timeEconomyOverrun'))}</span><b class="${diff>0?'danger-text':'ok-text'}">${escapeHtml(orderTimeTextSigned(diff))}</b></div><div><span>${escapeHtml(t('overallResult'))}</span><b>${escapeHtml(result)}</b></div></section>`;
 }
 function completionPassportHtml(o){
@@ -1452,7 +1715,7 @@ function orderResponsibleCompactHtml(o){
 function orderAdditionalMinutesForCard(o){
   try{
     if(typeof productionOps!=='function'||typeof productionActualMinutes!=='function')return 0;
-    const actual=productionOps(o).reduce((sum,op)=>sum+productionActualMinutes(op),0);
+    const actual=productionOps(o).reduce((sum,op)=>sum+productionActualMinutes(op,o),0);
     return Math.max(0,Math.round(actual-calcOrderMinutes(o)));
   }catch(e){return 0}
 }
@@ -1799,6 +2062,53 @@ function saveNotificationRules(){
   toast(t('notificationRulesSaved'));
   if(typeof auditAdd==='function')auditAdd('notification_rules_changed','settings','notification_rules',t('notificationRulesTitle'),tRu('historyNotificationRulesChanged'));
   renderNotificationRulesPanel();
+}
+
+// v7.84: панель настроек смены — тот же паттерн, что и notificationRulesPanel/workerAccessPanel
+// (видна только администратору, заполняется здесь, сохраняется по кнопке). Как и notificationRules,
+// это настройка ЭТОГО БРАУЗЕРА (data.settings, только localStorage) — сами рабочие сессии при этом
+// синхронизируются как обычные данные заказа (см. shiftSettings() выше).
+function shiftWeekdayLabel(v){
+  const labels={ru:['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],en:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],lv:['Sv','Pr','Ot','Tr','Ce','Pk','Se']};
+  return (labels[currentLang]||labels.ru)[v]||'';
+}
+function shiftScheduleFieldsHtml(){
+  const s=shiftSettings(),d=s.default;
+  const days=[1,2,3,4,5,6,0].map(v=>`<label class="shift-day-chip"><input type="checkbox" id="shiftDay_${v}" ${d.workDays.includes(v)?'checked':''}><span>${escapeHtml(shiftWeekdayLabel(v))}</span></label>`).join('');
+  return `<div class="field full"><label>${escapeHtml(t('shiftWorkDaysLabel'))}</label><div class="shift-days-row">${days}</div></div>
+    <div class="form-grid">
+      <div class="field"><label>${escapeHtml(t('shiftStartTimeLabel'))}</label><input class="input" type="time" id="shiftStartTime" value="${escapeHtml(d.startTime)}"></div>
+      <div class="field"><label>${escapeHtml(t('shiftEndTimeLabel'))}</label><input class="input" type="time" id="shiftEndTime" value="${escapeHtml(d.endTime)}"></div>
+      <div class="field"><label>${escapeHtml(t('shiftTimezoneLabel'))}</label><input class="input" id="shiftTimezone" value="${escapeHtml(d.timezone)}" placeholder="Europe/Riga"></div>
+    </div>
+    <label class="shift-toggle-row"><input type="checkbox" id="shiftAutoEnd" ${d.autoEndAtShiftEnd?'checked':''}> <span>${escapeHtml(t('shiftAutoEndToggleLabel'))}</span></label>
+    <label class="shift-toggle-row"><input type="checkbox" id="shiftAllowOvertime" ${d.allowOvertime?'checked':''}> <span>${escapeHtml(t('shiftAllowOvertimeToggleLabel'))}</span></label>`;
+}
+function renderShiftSchedulePanel(){
+  const panel=document.getElementById('shiftSchedulePanel');
+  if(!panel)return;
+  if(!isNotificationAdmin()){panel.style.display='none';panel.innerHTML='';return}
+  panel.style.display='';
+  panel.innerHTML=`<h3 id="shiftScheduleTitleEl">${escapeHtml(t('shiftScheduleTitle'))}</h3><p class="muted">${escapeHtml(t('shiftScheduleHint'))}</p>${shiftScheduleFieldsHtml()}<div class="actions" style="margin-top:16px"><button class="btn primary" type="button" onclick="saveShiftScheduleSettings()">${escapeHtml(t('save'))}</button></div>`;
+}
+function saveShiftScheduleSettings(){
+  if(!isNotificationAdmin())return;
+  const s=shiftSettings(),d=s.default;
+  const days=[0,1,2,3,4,5,6].filter(v=>document.getElementById(`shiftDay_${v}`)?.checked);
+  d.workDays=days.length?days:[...DEFAULT_SHIFT_SCHEDULE.workDays];
+  const start=document.getElementById('shiftStartTime')?.value||d.startTime,end=document.getElementById('shiftEndTime')?.value||d.endTime;
+  d.startTime=/^([01]\d|2[0-3]):[0-5]\d$/.test(start)?start:DEFAULT_SHIFT_SCHEDULE.startTime;
+  d.endTime=/^([01]\d|2[0-3]):[0-5]\d$/.test(end)?end:DEFAULT_SHIFT_SCHEDULE.endTime;
+  const tzInput=String(document.getElementById('shiftTimezone')?.value||'').trim();
+  try{new Intl.DateTimeFormat('en-US',{timeZone:tzInput||d.timezone});d.timezone=tzInput||DEFAULT_SHIFT_SCHEDULE.timezone;}
+  catch(e){toast(t('shiftInvalidTimezone'));return}
+  d.autoEndAtShiftEnd=!!document.getElementById('shiftAutoEnd')?.checked;
+  d.allowOvertime=!!document.getElementById('shiftAllowOvertime')?.checked;
+  save();
+  toast(t('shiftScheduleSaved'));
+  if(typeof auditAdd==='function')auditAdd('shift_schedule_changed','settings','shift_schedule',t('shiftScheduleTitle'),t('shiftScheduleSaved'));
+  renderShiftSchedulePanel();
+  if(typeof renderWorkshops==='function')renderWorkshops();
 }
 
 async function sendOrderNotification(o,method){
