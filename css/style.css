@@ -3267,12 +3267,16 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-material-alert.small{margin-bottom:0;padding:9px 12px;font-size:11px;font-weight:600}
 .workshop-work-layout{display:grid;grid-template-columns:minmax(0,1.45fr) 330px;gap:14px;align-items:start}
 .workshop-work-side{display:flex;flex-direction:column;gap:14px}
+.workshop-current-list{display:flex;flex-direction:column;gap:14px}
 .workshop-current-card{padding:18px;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
 .workshop-current-card.empty{align-items:center;justify-content:center}
 .workshop-current-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .workshop-current-head small{display:block;color:#8490a3;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
 .workshop-current-head h3{margin:0;color:#101828;font-size:24px;font-weight:700}
 .workshop-current-head p{margin:4px 0 0;color:#667085;font-size:12.5px}
+.workshop-current-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.workshop-toggle-btn{min-height:32px;padding:0 12px;font-size:12px;font-weight:600;border-radius:8px}
+.workshop-current-extra{display:inline-block;font-size:11px;font-weight:700;color:#1677e8;background:#eff6ff;border-radius:999px;padding:1px 7px;margin-left:5px;vertical-align:middle}
 .workshop-current-op{display:flex;flex-direction:column;gap:2px;padding-top:2px}
 .workshop-current-op b{color:#101828;font-size:15px;font-weight:650}
 .workshop-current-op span{color:#8490a3;font-size:12px}
@@ -3294,11 +3298,13 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-queue-panel-head h4{margin:0;color:#101828;font-size:14px;font-weight:700}
 .workshop-queue-panel-head small{color:#8490a3;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
 .workshop-queue-mini-list{display:flex;flex-direction:column;gap:6px}
-.workshop-queue-mini-row{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;padding:9px 8px;border:0;border-radius:10px;background:#fff;text-align:left;cursor:pointer}
+.workshop-queue-mini-row{display:flex;align-items:center;gap:2px;width:100%;border-radius:10px}
 .workshop-queue-mini-row:hover{background:#fafbfc}
 .workshop-queue-mini-row.current{background:#eff6ff}
+.workshop-queue-mini-info-btn{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:10px;align-items:center;flex:1 1 auto;min-width:0;padding:9px 8px;border:0;border-radius:10px;background:none;text-align:left;cursor:pointer}
 .workshop-queue-mini-dot{width:8px;height:8px;border-radius:50%;background:#c5ccd6}
 .workshop-queue-mini-dot.current{background:#1677e8}
+.workshop-queue-mini-dot.paused{background:#f2ac2e}
 .workshop-queue-mini-dot.warn{background:#f47a00}
 .workshop-queue-mini-dot.danger{background:#c73535}
 .workshop-queue-mini-info{min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -3306,8 +3312,11 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-queue-mini-info small{color:#8490a3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .workshop-queue-mini-tag{font-size:10.5px;font-weight:700;white-space:nowrap}
 .workshop-queue-mini-tag.current{color:#1677e8}
+.workshop-queue-mini-tag.paused{color:#b7791f}
 .workshop-queue-mini-tag.warn{color:#b54708}
 .workshop-queue-mini-tag.danger{color:#c73535}
+.workshop-queue-mini-start{flex:0 0 auto;width:30px;min-height:30px;padding:0;margin-right:6px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#1677e8;border-color:#cfe0f7}
+.workshop-queue-mini-start:hover{background:#eff6ff}
 .workshop-current-materials{padding:16px;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
 .workshop-current-materials h4{margin:0 0 2px;color:#101828;font-size:14px;font-weight:700}
 .workshop-current-material-row{display:flex;flex-direction:column;gap:2px;padding:9px 0;border-top:1px solid #edf0f4;border:0;background:none;text-align:left;cursor:pointer}

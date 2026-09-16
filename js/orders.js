@@ -755,13 +755,21 @@ function workshopQueueItemHtml(row,etaMap){
 // история смен, комментарии, ручное списание) никуда не делся — он доступен по ссылке "Открыть
 // полную очередь" (см. openWorkshopFullQueue()) и остаётся рабочим как раньше.
 
-// Строка очереди, которая сейчас "в работе" (или, если ничего не запущено, следующая по очереди —
-// сотруднику всё равно нужно с чего-то начать).
-function workshopCurrentRow(stat){
-  return stat.queue.find(row=>productionOp(row.order,row.index)?.status==='running')
-    ||stat.queue.find(row=>productionOp(row.order,row.index)?.status==='paused')
-    ||stat.queue[0]||null;
+// v7.82: раньше "в работе" считалась ровно ОДНА строка очереди — мастер не мог явно приостановить
+// текущий заказ и начать другой без захода в полную карточку заказа, и тем более не мог держать
+// в работе два заказа одновременно (например, пока один ждёт материал). Данные это уже поддерживали
+// (у каждой операции своей независимый статус running/paused — см. startProductionOperation/
+// pauseProductionOperation), не хватало только интерфейса. Теперь "в работе" — это ВСЕ строки со
+// статусом running или paused (сколько бы их ни было), и на экране цеха под каждую рисуется своя
+// карточка с кнопкой паузы/продолжения и своей "Записать выпуск". Если ничего ещё не запущено —
+// по-прежнему показывается первая по очереди, чтобы было с чего начать.
+function workshopActiveRows(stat){
+  const active=stat.queue.filter(row=>{const s=productionOp(row.order,row.index)?.status;return s==='running'||s==='paused'});
+  if(active.length)return active;
+  return stat.queue[0]?[stat.queue[0]]:[];
 }
+// Сохранено для мест, которым нужна ровно одна "главная" строка (сводка смены и т.п.).
+function workshopCurrentRow(stat){return workshopActiveRows(stat)[0]||null}
 // Все отметки выпуска ИМЕННО этого цеха за сегодня (across все заказы) — источник для "Сделано за
 // смену" и "Темп". Использует уже существующий productionMeta(o).logs, ничего нового не считает.
 function workshopLogsToday(name){
@@ -830,11 +838,11 @@ function workshopMaterialAlertHtml(o,op){
   const action=m?`<button class="btn primary" type="button" onclick="openProductionMaterialPurchase('${o.id}','${item.materialId}')">${escapeHtml(t('openPurchaseBtn'))}</button>`:'';
   return `<div class="workshop-material-alert warn"><span class="workshop-material-alert-icon">⚠</span><span>${escapeHtml(text)}</span>${action}</div>`;
 }
-function workshopShiftSummaryHtml(name,stat,currentRow){
-  const o=currentRow?currentRow.order:null;
+function workshopShiftSummaryHtml(name,stat,activeRows){
+  const o=activeRows[0]?activeRows[0].order:null,extra=Math.max(0,activeRows.length-1);
   const doneToday=workshopDoneToday(name),lastMark=workshopLogsToday(name)[0]||null,rate=workshopRateToday(name);
   const problemCount=stat.queue.filter(row=>!!workshopRowRisk(row,stat.etaMap)).length;
-  const currentBlock=o?`<b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · ${escapeHtml(t('orderDueDate'))} ${escapeHtml(formatDeadline(o))}</small>`:`<b>—</b><small>${escapeHtml(t('workshopNoCurrentOrder'))}</small>`;
+  const currentBlock=o?`<b>${escapeHtml(o.number||'—')}${extra?` <span class="workshop-current-extra">+${extra}</span>`:''}</b><small>${escapeHtml(o.client||'—')} · ${escapeHtml(t('orderDueDate'))} ${escapeHtml(formatDeadline(o))}</small>`:`<b>—</b><small>${escapeHtml(t('workshopNoCurrentOrder'))}</small>`;
   return `<div class="workshop-shift-summary">
     <div class="workshop-shift-card"><small>${escapeHtml(t('workshopCurrentOrderLabel'))}</small>${currentBlock}</div>
     <div class="workshop-shift-card"><small>${escapeHtml(t('workshopDoneShiftLabel'))}</small><b>${doneToday} ${escapeHtml(t('unitPieces'))}</b><small class="workshop-shift-sub">${lastMark?`${escapeHtml(t('workshopLastMarkLabel'))} ${lastMark.qty} ${escapeHtml(t('unitPieces'))}`:'—'}</small></div>
@@ -855,10 +863,18 @@ function workshopCurrentCardHtml(row){
   const lastLog=(productionMeta(o).logs||[]).find(l=>Number(l.stepIndex)===Number(op.stepIndex));
   const canRecord=op.status!=='done'&&op.status!=='cancelled'&&remaining>0;
   const chips=[1,5,10,20].map(n=>`<button class="btn workshop-qty-chip" type="button" ${!canRecord||n>remaining?'disabled':''} onclick="recordWorkshopQuickQty('${o.id}',${op.stepIndex},${n})">+${n}</button>`).join('');
+  // v7.82: явная пауза/продолжение прямо на карточке — раньше единственным действием было "Записать
+  // выпуск", а чтобы поставить заказ на паузу (не записывая выпуск) и переключиться на другой, нужно
+  // было заходить в полную карточку заказа. toggleProductionOperation уже существует (используется в
+  // рабочем режиме) — сам решает start/pause по текущему статусу.
+  const canToggle=op.status==='running'||op.status==='paused'||op.status==='not_started';
+  const toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart');
+  const toggleIcon=op.status==='running'?'⏸':'▶';
+  const toggleBtn=canToggle?`<button class="btn workshop-toggle-btn" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})">${toggleIcon} ${escapeHtml(toggleLabel)}</button>`:'';
   return `<div class="workshop-current-card">
     <div class="workshop-current-head">
       <div><small>${escapeHtml(t('workshopNowWorkingLabel'))}</small><h3>${escapeHtml(o.number||'—')}</h3><p>${escapeHtml(o.client||'—')} · ${total} ${escapeHtml(t('unitPieces'))} · ${escapeHtml(t('orderDueDate'))}: ${escapeHtml(formatDeadline(o))}</p></div>
-      <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
+      <div class="workshop-current-head-actions"><span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>${toggleBtn}</div>
     </div>
     <div class="workshop-current-op"><b>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}</b><span>${escapeHtml(posText)}</span></div>
     ${workshopMaterialAlertHtml(o,op)}
@@ -875,20 +891,30 @@ function workshopCurrentCardHtml(row){
     <button type="button" class="workshop-more-link" onclick="goToOrderFromMaterial(event,'${o.id}')">${escapeHtml(t('openOrderCard'))} ↗</button>
   </div>`;
 }
+// v7.82: строка очереди сама по себе была одной большой кнопкой (переход в карточку заказа) — чтобы
+// добавить кнопку "▶ Начать" (переключиться на этот заказ, не уходя с экрана цеха), вложенную кнопку
+// в кнопку вставить нельзя, поэтому строка теперь div с двумя отдельными кнопками внутри: переход в
+// карточку (как и раньше) и, для ещё не активных заказов, старт.
 function workshopQueueMiniRowHtml(row,isCurrent,etaMap){
   const o=row.order,op=productionOp(o,row.index),risk=isCurrent?null:workshopRowRisk(row,etaMap);
   const remaining=op?Math.max(0,orderProductQty(o)-productionCompletedQty(o,op)):orderProductQty(o);
-  const tagCls=isCurrent?'current':risk?risk.cls:'';
-  const tagText=isCurrent?t('workshopNowTag'):risk?risk.text:(op&&op.status!=='not_started'?productionStatusLabel(op.status):t('workshopNotStartedTag'));
-  return `<button type="button" class="workshop-queue-mini-row ${isCurrent?'current':''}" onclick="goToOrderFromMaterial(event,'${o.id}')">
-    <span class="workshop-queue-mini-dot ${tagCls||'ok'}"></span>
-    <span class="workshop-queue-mini-info"><b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · ${isCurrent?`${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}`:escapeHtml(formatDeadline(o))}</small></span>
-    <span class="workshop-queue-mini-tag ${tagCls}">${escapeHtml(tagText)}</span>
-  </button>`;
+  const paused=isCurrent&&op?.status==='paused';
+  const tagCls=isCurrent?(paused?'paused':'current'):risk?risk.cls:'';
+  const tagText=isCurrent?(paused?t('prodStatusPaused'):t('workshopNowTag')):risk?risk.text:(op&&op.status!=='not_started'?productionStatusLabel(op.status):t('workshopNotStartedTag'));
+  const startBtn=!isCurrent?`<button type="button" class="btn small workshop-queue-mini-start" aria-label="${escapeHtml(t('prodStart'))}" title="${escapeHtml(t('prodStart'))}" onclick="event.stopPropagation();startProductionOperation('${o.id}',${row.index})">▶</button>`:'';
+  return `<div class="workshop-queue-mini-row ${isCurrent?'current':''}">
+    <button type="button" class="workshop-queue-mini-info-btn" onclick="goToOrderFromMaterial(event,'${o.id}')">
+      <span class="workshop-queue-mini-dot ${tagCls||'ok'}"></span>
+      <span class="workshop-queue-mini-info"><b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · ${isCurrent?`${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}`:escapeHtml(formatDeadline(o))}</small></span>
+      <span class="workshop-queue-mini-tag ${tagCls}">${escapeHtml(tagText)}</span>
+    </button>
+    ${startBtn}
+  </div>`;
 }
-function workshopQueueSidebarHtml(name,stat,currentRow){
-  const others=stat.queue.filter(row=>!(currentRow&&row.order.id===currentRow.order.id&&row.index===currentRow.index));
-  const rows=[currentRow?workshopQueueMiniRowHtml(currentRow,true,stat.etaMap):'',...others.slice(0,6).map(row=>workshopQueueMiniRowHtml(row,false,stat.etaMap))].join('');
+function workshopQueueSidebarHtml(name,stat,activeRows){
+  const isActive=row=>activeRows.some(a=>String(a.order.id)===String(row.order.id)&&a.index===row.index);
+  const others=stat.queue.filter(row=>!isActive(row));
+  const rows=[...activeRows.map(row=>workshopQueueMiniRowHtml(row,true,stat.etaMap)),...others.slice(0,6).map(row=>workshopQueueMiniRowHtml(row,false,stat.etaMap))].join('');
   return `<div class="workshop-queue-panel">
     <div class="workshop-queue-panel-head"><h4>${escapeHtml(t('workshopQueueTitlePrefix'))} ${escapeHtml(workshopLabel(name))}</h4><small>${escapeHtml(t('workshopQueueSortHint'))}</small></div>
     <div class="workshop-queue-mini-list">${rows||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`}</div>
@@ -936,20 +962,23 @@ async function recordWorkshopQuickQty(orderId,index,qty){
   await finalizeProductionQuantity(orderId,index,Math.max(1,Math.min(Number(qty)||1,remaining)));
 }
 function workshopDetailHtml(name){
-  const stat=workshopAnalytics(name),currentRow=workshopCurrentRow(stat);
-  const currentOp=currentRow?productionOp(currentRow.order,currentRow.index):null;
+  const stat=workshopAnalytics(name),activeRows=workshopActiveRows(stat),primaryRow=activeRows[0]||null;
+  const primaryOp=primaryRow?productionOp(primaryRow.order,primaryRow.index):null;
+  // v7.82: если в работе больше одного заказа — карточки складываются в столбик (см. .workshop-current-list
+  // в css/style.css), каждая с собственной паузой/продолжением и своей "Записать выпуск".
+  const currentCards=activeRows.length?activeRows.map(row=>workshopCurrentCardHtml(row)).join(''):workshopCurrentCardHtml(null);
   return `<div class="workshop-detail-head">
       <button type="button" class="workshop-back-link" onclick="closeWorkshopDetail()">${escapeHtml(t('backToWorkshops'))}</button>
       <span class="workshop-detail-sep"></span>
       <h3>${workshopIcon(name)} ${escapeHtml(workshopLabel(name))}</h3>
       ${workshopStatusBadgeHtml(stat.queue)}
     </div>
-    ${workshopShiftSummaryHtml(name,stat,currentRow)}
+    ${workshopShiftSummaryHtml(name,stat,activeRows)}
     <div class="workshop-work-layout">
-      <div class="workshop-work-main">${workshopCurrentCardHtml(currentRow)}</div>
+      <div class="workshop-work-main"><div class="workshop-current-list">${currentCards}</div></div>
       <div class="workshop-work-side">
-        ${workshopQueueSidebarHtml(name,stat,currentRow)}
-        ${currentRow?workshopCurrentMaterialsHtml(currentRow.order,currentOp):''}
+        ${workshopQueueSidebarHtml(name,stat,activeRows)}
+        ${primaryRow?workshopCurrentMaterialsHtml(primaryRow.order,primaryOp):''}
       </div>
     </div>`;
 }
