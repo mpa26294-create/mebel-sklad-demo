@@ -3290,8 +3290,15 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-record-btn{min-height:46px;font-size:14px;font-weight:650;background:linear-gradient(180deg,#1677e8 0%,#0f5fc4 100%)!important;border-color:#0f5fc4!important;color:#fff!important;box-shadow:0 8px 18px rgba(22,119,232,.22)!important}
 .workshop-qty-chips{display:flex;flex-wrap:wrap;gap:8px}
 .workshop-qty-chip{min-height:38px;padding:0 14px;font-weight:650}
-.workshop-last-mark{color:#8490a3;font-size:11.5px;padding-top:4px;border-top:1px solid #edf0f4}
-.workshop-last-mark b{color:#344054}
+/* v7.88: список всех отметок выпуска за сегодня (заменил единственную "последнее списание"). */
+.workshop-marks-today{padding-top:4px;border-top:1px solid #edf0f4;display:flex;flex-direction:column;gap:2px}
+.workshop-marks-today-head{color:#8490a3;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
+.workshop-marks-today-list{display:flex;flex-direction:column;gap:2px;max-height:160px;overflow-y:auto}
+.workshop-mark-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#8490a3;padding:3px 0}
+.workshop-mark-row b{color:#344054;font-weight:650;min-width:52px}
+.workshop-mark-row span{flex:0 0 auto}
+.workshop-mark-row em{margin-left:auto;font-style:normal;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.workshop-marks-empty{color:#8490a3;font-size:11.5px;padding-top:4px}
 .workshop-more-link{align-self:flex-start;padding:0;border:0;background:none;color:#175cd3;font-size:12px;font-weight:650;cursor:pointer}
 .workshop-queue-panel{padding:16px;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
 .workshop-queue-panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}

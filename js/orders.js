@@ -1117,6 +1117,17 @@ async function endShiftManually(orderId,index){
   op.status='paused';op.pausedAt=productionNow();
   await persistProductionWorkflow(o,`${tRu('historyProductionPaused')}: ${op.stepName} — ${t('endShiftBtn')}`,'production_operation_paused',{step:op.stepName});
 }
+// v7.88: раньше показывалась только ОДНА последняя отметка выпуска — пользователь попросил видеть
+// ВСЕ отметки за сегодня по этой операции (сколько, во сколько, кто) — например, чтобы сверить, что
+// все, кто работал за смену, записали свой выпуск. Переиспользует те же productionMeta(o).logs, что
+// и раньше (та же запись создаётся в finalizeProductionQuantity), просто не обрезает до одной штуки.
+function workshopMarksTodayHtml(o,op){
+  const todayStr=today();
+  const marks=(productionMeta(o).logs||[]).filter(l=>Number(l.stepIndex)===Number(op.stepIndex)&&String(l.at||'').slice(0,10)===todayStr);
+  if(!marks.length)return `<div class="workshop-marks-today"><div class="workshop-marks-empty">${escapeHtml(t('workshopNoMarksYet'))}</div></div>`;
+  const rows=marks.map(l=>`<div class="workshop-mark-row"><b class="${Number(l.qty)<0?'danger-text':''}">${Number(l.qty)>=0?'+':''}${Number(l.qty)} ${escapeHtml(t('unitPieces'))}</b><span>${escapeHtml(productionStartedAtText(l.at))}</span><em>${escapeHtml(l.by||'—')}</em></div>`).join('');
+  return `<div class="workshop-marks-today"><div class="workshop-marks-today-head">${escapeHtml(t('workshopMarksTodayLabel'))}</div><div class="workshop-marks-today-list">${rows}</div></div>`;
+}
 function workshopCurrentCardHtml(row){
   if(!row)return `<div class="workshop-current-card empty"><div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div></div>`;
   const o=row.order,op=productionOp(o,row.index);
@@ -1127,7 +1138,6 @@ function workshopCurrentCardHtml(row){
   const curIdx=activeSteps.findIndex(s=>s===allSteps[op.stepIndex]);
   const nextStep=curIdx>=0?activeSteps[curIdx+1]:null;
   const posText=`${t('operationWord')} ${curIdx+1} ${t('of')} ${activeSteps.length}${nextStep?` · ${t('nextStageLabel')}: ${escapeHtml(workshopLabel(nextStep.name))}`:''}`;
-  const lastLog=(productionMeta(o).logs||[]).find(l=>Number(l.stepIndex)===Number(op.stepIndex));
   const canRecord=op.status!=='done'&&op.status!=='cancelled'&&remaining>0;
   const chips=[1,5,10,20].map(n=>`<button class="btn workshop-qty-chip" type="button" ${!canRecord||n>remaining?'disabled':''} onclick="recordWorkshopQuickQty('${o.id}',${op.stepIndex},${n})">+${n}</button>`).join('');
   // v7.82: явная пауза/продолжение прямо на карточке — раньше единственным действием было "Записать
@@ -1155,7 +1165,7 @@ function workshopCurrentCardHtml(row){
       <button class="btn primary workshop-record-btn" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">✔ ${escapeHtml(t('recordOutputBtn'))}</button>
       <div class="workshop-qty-chips">${chips}<button class="btn workshop-qty-chip" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('otherQtyBtn'))}</button></div>
     </div>
-    <div class="workshop-last-mark">${lastLog?`${escapeHtml(t('lastWriteOffLabel'))}: <b>${lastLog.qty} ${escapeHtml(t('unitPieces'))}</b> · ${escapeHtml(productionDateTimeText(lastLog.at))} · ${escapeHtml(lastLog.by||'—')}`:escapeHtml(t('workshopNoMarksYet'))}</div>
+    ${workshopMarksTodayHtml(o,op)}
     <button type="button" class="workshop-more-link" onclick="goToOrderFromMaterial(event,'${o.id}')">${escapeHtml(t('openOrderCard'))} ↗</button>
   </div>`;
 }
