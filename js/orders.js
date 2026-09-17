@@ -1544,6 +1544,9 @@ function simpleTaskDetailIdleHtml(task){
     <button type="button" class="simple-btn-main" onclick="simpleStartTask('${o.id}',${op.stepIndex})">${escapeHtml(btnLabel)}</button>
   </div>`;
 }
+// v7.92: сотрудник видит сегодняшние отметки и может сам исправить, если ошибся при вводе количества
+// (кнопка "Редактировать" у каждой строки) — тот же workshopMarksTodayHtml/productionSessionRowHtml,
+// что и в полной карточке цеха для мастера, без отдельной логики специально для рабочего режима.
 function simpleTaskDetailActiveHtml(task){
   const {order:o,op}=task,total=orderProductQty(o),completed=productionCompletedQty(o,op),pct=productionOpPercent(o,op),remaining=Math.max(0,total-completed);
   return `<div class="simple-detail-active">
@@ -1562,6 +1565,7 @@ function simpleTaskDetailActiveHtml(task){
       <button type="button" class="simple-batch-chip" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},50)">+50</button>
     </div>
     <button type="button" class="simple-btn-main" onclick="simpleFinishForNow('${o.id}',${op.stepIndex})">${escapeHtml(t('simpleDoneBtn'))}</button>
+    ${workshopMarksTodayHtml(o,op)}
   </div>`;
 }
 function simpleTaskDetailDoneHtml(task){
@@ -1571,6 +1575,7 @@ function simpleTaskDetailDoneHtml(task){
     <b>${escapeHtml(String(t('simpleDeliveredLabel')).replace('{qty}',completed))}</b>
     <p>${escapeHtml(t('simpleDataSavedText'))}</p>
     <button type="button" class="simple-back-link" onclick="closeSimpleTask()">${escapeHtml(t('simpleBackToListLink'))}</button>
+    ${workshopMarksTodayHtml(o,op)}
   </div>`;
 }
 function simpleTaskDetailHtml(){

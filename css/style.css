@@ -949,6 +949,10 @@ body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weigh
 .simple-detail-done b{font-size:22px;font-weight:700;color:#15171a}
 .simple-detail-done p{margin:6px 0 22px;font-size:14px;color:#8a8f99}
 .simple-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:14px;font-weight:650}
+/* v7.92: "Отметки за сегодня" (workshopMarksTodayHtml) внутри центрированной колонки экрана
+   ACTIVE/DONE рабочего режима — растягиваем на всю ширину и выравниваем текст по левому краю,
+   иначе унаследованные align-items:center/text-align:center сплющили бы список строк по центру. */
+.simple-detail-active .workshop-marks-today,.simple-detail-done .workshop-marks-today{align-self:stretch;width:100%;text-align:left;margin-top:24px}
 /* Планшет (768–1279px) и десктоп (≥1280px): список слева (своя прокрутка) + панель задачи справа,
    всегда обе видны — .has-selected здесь не действует. Кнопки/шрифты панели B) намеренно НЕ
    уменьшаются — планшет в цеху обычно закреплён у станка, пользуются на расстоянии руки. */
