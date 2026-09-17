@@ -971,7 +971,11 @@ body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weigh
 @media(min-width:768px){
   .simple-workshop-wrap,.simple-workshop-wrap.has-selected{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);gap:0;align-items:stretch;min-height:calc(100vh - 220px)}
   .simple-workshop-wrap .simple-task-list-pane,.simple-workshop-wrap.has-selected .simple-task-list-pane{display:block;border-right:1px solid var(--line);padding-right:20px;overflow-y:auto;max-height:calc(100vh - 220px)}
-  .simple-workshop-wrap .simple-task-detail-pane,.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:flex;align-items:center;justify-content:center;padding-left:32px;overflow-y:auto}
+  /* v7.97: было display:flex;align-items:center;justify-content:center — в Safari на iPad эта
+     карточка вместо центра прижималась к левому краю панели (известная нестыковка flex-центрирования
+     с overflow:auto на прокручиваемом контейнере в WebKit). Блочный контейнер + margin:auto у самой
+     карточки (уже был) центрирует её надёжно в любом браузере, без флекс-раскладки на этом уровне. */
+  .simple-workshop-wrap .simple-task-detail-pane,.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:block;padding:40px 32px;overflow-y:auto}
   .simple-task-list{max-width:none;margin:0}
   .simple-detail-idle,.simple-detail-active,.simple-detail-done{padding:28px 24px;margin-top:0}
   /* v7.95: кнопка "назад" нужна только на телефоне (там задача открывается на весь экран вместо
