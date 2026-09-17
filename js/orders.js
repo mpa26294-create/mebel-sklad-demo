@@ -1753,7 +1753,7 @@ async function persistProductionWorkflow(o,message,type='production_update',meta
   refreshOrderWorkflow(o.id);
 }
 async function startProductionOperation(orderId,index){
-  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  let o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
   const op=productionOp(o,index);if(!op||op.status==='done')return;
   const now=productionNow();
   // v7.84: один сотрудник физически не может одновременно вести две операции — если у него уже
@@ -1769,6 +1769,12 @@ async function startProductionOperation(orderId,index){
       await persistProductionWorkflow(openElsewhere.order,`${tRu('historyProductionPaused')}: ${otherOp.stepName}`,'production_operation_paused',{step:otherOp.stepName});
     }
   }
+  // v7.94: пока ждали persistProductionWorkflow() выше (закрытие сессии на другом заказе), могло
+  // прилететь realtime-обновление заказов и заменить объекты в data.orders на новые (см.
+  // mergeIncomingOrderRow в index.html) — старая ссылка `o` рисковала остаться "осиротевшей"
+  // (больше не частью data.orders), и все мутации ниже применялись бы к ней вникуда, теряясь
+  // молча. Перечитываем `o` из АКТУАЛЬНОГО data.orders, прежде чем продолжать.
+  o=(data.orders||[]).find(x=>String(x.id)===String(orderId))||o;
   // productionOp() перестраивает весь operations-массив заказа при каждом вызове (см.
   // ensureWorkflowProduction) — если строкой выше только что переключали операцию ЭТОГО ЖЕ заказа
   // (другой stepIndex), старая ссылка `op` осталась бы от предыдущей версии массива и её мутации

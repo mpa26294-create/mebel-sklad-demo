@@ -237,7 +237,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=6.6"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=7.93"></script>
+<script src="js/orders.js?v=7.94"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script>
@@ -319,6 +319,15 @@ function materialToDb(m){
 
 const ORDER_SYNC_ARTICLE='__FURNICORE_ORDERS__';
 let orderSyncRowId='',orderSyncTimer=null,orderSyncLoading=false,orderSyncDirty=false,orderSyncInFlight=false,orderSyncRetryTimer=null,orderSyncRetryCount=0,orderSyncLocalUpdatedAt='',orderSyncLastPersistedAt='',orderSyncLastRemoteUpdatedAt='',orderSyncToastAt=0,orderSyncKnownRemoteIds=new Set();
+// v7.94: снимок содержимого КАЖДОГО заказа на момент, когда мы последний раз точно знали, что
+// именно это содержимое уже подтверждено (либо мы сами это записали, либо приняли как есть от
+// сервера) — см. mergeIncomingOrderRow ниже. В отличие от orderSyncDirty/orderSyncTimer (один
+// флаг на весь сайт, помечающий лишь узкое окно вокруг сетевого запроса), это позволяет решать
+// вопрос "можно ли перезаписать этот заказ входящими данными" по каждому заказу отдельно и не
+// зависеть от точного тайминга — если реальное содержимое заказа в data.orders отличается от
+// этого снимка, значит по нему есть локальная правка, которая ещё не долетела до сервера, и её
+// нельзя терять, независимо от того, что показывает общий флаг в этот момент.
+let orderSyncPersistedSnapshots=new Map();
 function isOrderSyncRow(row){return String(row?.article||'')===ORDER_SYNC_ARTICLE}
 function orderSyncOrdersFromRow(row){return cleanStoredOrders(Array.isArray(row?.attributes?.orders)?row.attributes.orders:[])}
 function orderSyncUpdatedAt(row){return String(row?.attributes?.updatedAt||'')}
@@ -349,6 +358,44 @@ function mergeOrdersForSync(localOrders,remoteOrders){
     merged.push(order);
   });
   local.forEach(order=>merged.push(order));
+  return merged;
+}
+// v7.94: раньше входящее realtime-обновление заказов (см. applyOrderSyncRow) просто целиком
+// заменяло data.orders новым массивом, распарсенным из JSON строки — ни один старый объект-заказ
+// не переиспользовался. Если в этот момент где-то в коде ещё шла локальная правка конкретного
+// заказа (мутация объекта, захваченного ДО этой замены, или мутация уже после того, как флаг
+// orderSyncDirty был снят — например, пока persistReservationMaterials() ещё не завершился) —
+// эта правка молча терялась: она применялась к объекту, который уже не входил в data.orders.
+// Теперь входящие данные сливаются ПО ID заказа, а не заменяют массив целиком: если реальное
+// содержимое заказа в data.orders совпадает с тем, что мы сами последний раз подтвердили как
+// сохранённое (orderSyncPersistedSnapshots), значит локальных правок по нему нет — берём входящую
+// версию. Если не совпадает — по этому заказу есть ещё не отправленная правка, оставляем локальную
+// версию как есть (следующее событие синхронизации разрешит это, когда правка дойдёт до сервера).
+function mergeIncomingOrderRow(remoteOrders){
+  const remoteById=new Map((remoteOrders||[]).map(o=>[String(o?.id||''),o]).filter(([id])=>id));
+  const local=cleanStoredOrders(data.orders||[]);
+  const merged=[];
+  local.forEach(order=>{
+    const id=String(order?.id||'');
+    const remote=id?remoteById.get(id):null;
+    if(!remote){
+      if(id&&orderSyncKnownRemoteIds.has(id))return; // был на сервере, теперь удалён — удаляем и у себя
+      merged.push(order); // ещё не синхронизированный локальный заказ — не теряем
+      return;
+    }
+    remoteById.delete(id);
+    const lastPersisted=orderSyncPersistedSnapshots.get(id);
+    if(lastPersisted!==undefined&&lastPersisted===JSON.stringify(order)){
+      merged.push(remote);
+      orderSyncPersistedSnapshots.set(id,JSON.stringify(remote));
+    }else{
+      merged.push(order); // локальная правка по этому заказу ещё не подтверждена — не перезаписываем
+    }
+  });
+  remoteById.forEach((order,id)=>{
+    merged.push(order); // заказ появился на сервере, которого нет локально
+    orderSyncPersistedSnapshots.set(id,JSON.stringify(order));
+  });
   return merged;
 }
 function renderOrdersFromSync(){
@@ -429,6 +476,10 @@ async function persistOrdersToSupabase(options={}){
       orderSyncLastRemoteUpdatedAt=updatedAt;
       data.orders=mergedOrders;
       updateKnownRemoteOrderIds(mergedOrders);
+      // v7.94: то, что мы только что записали, — точно подтверждённое состояние каждого заказа.
+      // Полностью пересобираем снимки (а не дополняем) — заказы, которых больше нет в mergedOrders
+      // (удалённые), не должны оставлять в карте устаревшую запись.
+      orderSyncPersistedSnapshots=new Map(mergedOrders.map(ord=>[String(ord?.id||''),JSON.stringify(ord)]));
       orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
       if(typeof __saveLocalOnly==='function')__saveLocalOnly();
       if(!options.silent)showOrderSyncToast('Заказы синхронизированы');
@@ -470,8 +521,12 @@ async function applyOrderSyncRow(orderRow,{render=true}={}){
   }
   if(remoteUpdatedAt&&orderSyncTime(remoteUpdatedAt)<orderSyncTime(orderSyncLastRemoteUpdatedAt))return false;
   orderSyncLoading=true;
-  data.orders=orderSyncOrdersFromRow(orderRow);
-  updateKnownRemoteOrderIds(data.orders);
+  const remoteOrders=orderSyncOrdersFromRow(orderRow);
+  // v7.94: раньше здесь было "data.orders=remoteOrders" — полная замена массива, которая теряла
+  // любую локальную правку конкретного заказа, если ровно в этот момент она ещё не долетела до
+  // сервера (см. mergeIncomingOrderRow). Теперь сливаем по id заказа вместо замены целиком.
+  data.orders=mergeIncomingOrderRow(remoteOrders);
+  updateKnownRemoteOrderIds(remoteOrders);
   orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
   orderSyncLastRemoteUpdatedAt=remoteUpdatedAt||orderSyncLastRemoteUpdatedAt;
   if(typeof __saveLocalOnly==='function')__saveLocalOnly();
