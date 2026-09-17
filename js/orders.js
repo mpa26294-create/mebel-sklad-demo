@@ -1531,12 +1531,27 @@ function simpleTaskListHtml(){
   const body=rows.length?rows.map(simpleTaskCardHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('simpleNoTasks'))}</div>`;
   return `<div class="simple-task-list">${body}</div>`;
 }
+// v7.95: и IDLE, и DONE раньше открывались без единой кнопки "назад" наверху (у DONE была только
+// скромная текстовая ссылка внизу, у IDLE — вообще никакой) — на телефоне, тем более в режиме PWA
+// "на весь экран" без адресной строки браузера, это тупик: попал в задачу — назад пути нет, кроме
+// физической кнопки "назад" телефона, которая не отображается ни как элемент интерфейса, ни всегда
+// работает надёжно из истории браузера. Общий верхний бар с кнопкой "назад" — на всех трёх экранах
+// (IDLE/ACTIVE/DONE), единообразно; на планшете/десктопе он скрыт (см. css) — там список задач
+// слева виден постоянно, отдельная кнопка "назад" там не нужна.
+function simpleDetailBackBarHtml(task){
+  const {op}=task;
+  return `<div class="simple-detail-head">
+    <button type="button" class="simple-back-btn" onclick="closeSimpleTask()" aria-label="${escapeHtml(t('simpleBackToListLink'))}">‹</button>
+    <span class="simple-detail-head-label">${escapeHtml(workshopLabel(op.stepName))}</span>
+  </div>`;
+}
 // Экран B, состояние IDLE — та же карточка и для "ещё не начато", и для "на паузе" (только подпись
 // кнопки меняется на "Продолжить") — startProductionOperation() сам решает start/resume.
 function simpleTaskDetailIdleHtml(task){
   const {order:o,op}=task,total=orderProductQty(o),completed=productionCompletedQty(o,op);
   const btnLabel=op.status==='paused'?t('prodContinue'):t('simpleStartWorkBtn');
   return `<div class="simple-detail-idle">
+    ${simpleDetailBackBarHtml(task)}
     <div class="simple-detail-icon">${workshopIcon(op.stepName)}</div>
     <h2>${escapeHtml(workshopLabel(op.stepName))}</h2>
     <p>${escapeHtml(o.number||'—')}</p>
@@ -1551,6 +1566,7 @@ function simpleTaskDetailActiveHtml(task){
   const {order:o,op}=task,total=orderProductQty(o),completed=productionCompletedQty(o,op),pct=productionOpPercent(o,op),remaining=Math.max(0,total-completed);
   return `<div class="simple-detail-active">
     <div class="simple-detail-active-head">
+      <button type="button" class="simple-back-btn" onclick="closeSimpleTask()" aria-label="${escapeHtml(t('simpleBackToListLink'))}">‹</button>
       <span class="simple-detail-active-label">${escapeHtml(o.number||'—')} · ${escapeHtml(workshopLabel(op.stepName))}</span>
       <button type="button" class="simple-pause-btn" aria-label="${escapeHtml(t('prodPause'))}" title="${escapeHtml(t('prodPause'))}" onclick="simplePauseTask('${o.id}',${op.stepIndex})">⏸</button>
     </div>
@@ -1571,6 +1587,7 @@ function simpleTaskDetailActiveHtml(task){
 function simpleTaskDetailDoneHtml(task){
   const {order:o,op}=task,completed=productionCompletedQty(o,op);
   return `<div class="simple-detail-done">
+    ${simpleDetailBackBarHtml(task)}
     <div class="simple-done-icon">✓</div>
     <b>${escapeHtml(String(t('simpleDeliveredLabel')).replace('{qty}',completed))}</b>
     <p>${escapeHtml(t('simpleDataSavedText'))}</p>

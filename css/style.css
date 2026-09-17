@@ -928,13 +928,19 @@ body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weigh
    правилом выше, так что этот текст там просто не рендерится видимым. */
 .simple-detail-placeholder{display:flex;align-items:center;justify-content:center;width:100%;min-height:320px;color:#8a8f99;font-size:14px;text-align:center;padding:24px}
 .simple-detail-idle,.simple-detail-active,.simple-detail-done{display:flex;flex-direction:column;align-items:center;text-align:center;width:100%;max-width:420px;margin:0 auto;padding:32px 20px calc(20px + env(safe-area-inset-bottom))}
+/* v7.95: единая шапка "назад" для IDLE/DONE (у ACTIVE своя, .simple-detail-active-head — та же
+   кнопка .simple-back-btn просто встроена в неё рядом с паузой). ≥44px — как и все остальные
+   интерактивные зоны в упрощённом режиме. */
+.simple-detail-head{display:flex;align-items:center;gap:10px;width:100%;margin-bottom:18px}
+.simple-back-btn{flex-shrink:0;width:44px;height:44px;border-radius:12px;border:1px solid #e2e2e2;background:#fff;font-size:24px;font-weight:700;color:#15171a;display:grid;place-items:center;line-height:1}
+.simple-detail-head-label{flex:1;min-width:0;font-size:15px;font-weight:700;color:#15171a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .simple-detail-icon{width:88px;height:88px;border-radius:24px;background:#f4f0ea;display:grid;place-items:center;font-size:38px;margin-bottom:18px}
 .simple-detail-idle h2{margin:0 0 4px;font-size:26px;font-weight:700;color:#15171a}
 .simple-detail-idle p{margin:0 0 14px;font-size:14px;color:#8a8f99}
 .simple-detail-idle .simple-badge{margin-bottom:28px}
 .simple-btn-main{width:100%;min-height:64px;border-radius:16px;background:linear-gradient(180deg,#f0793a 0%,#dd5e1f 100%);color:#fff;font-size:16px;font-weight:700;box-shadow:0 10px 22px rgba(221,94,31,.25);margin-top:auto}
-.simple-detail-active-head{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:22px}
-.simple-detail-active-label{font-size:12.5px;color:#8a8f99;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simple-detail-active-head{display:flex;align-items:center;gap:10px;width:100%;margin-bottom:22px}
+.simple-detail-active-label{flex:1;min-width:0;text-align:center;font-size:12.5px;color:#8a8f99;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .simple-pause-btn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:16px;display:grid;place-items:center;flex-shrink:0}
 .simple-counter-row{display:flex;align-items:center;justify-content:center;gap:22px;width:100%}
 .simple-round-btn{flex-shrink:0;width:56px;height:56px;border-radius:50%;border:1.5px solid #e2e2e2;background:#fff;font-size:18px;font-weight:700;color:#15171a;display:grid;place-items:center}
@@ -962,6 +968,12 @@ body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weigh
   .simple-workshop-wrap .simple-task-detail-pane,.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:flex;align-items:center;justify-content:center;padding-left:32px;overflow-y:auto}
   .simple-task-list{max-width:none;margin:0}
   .simple-detail-idle,.simple-detail-active,.simple-detail-done{padding:32px 20px}
+  /* v7.95: кнопка "назад" нужна только на телефоне (там задача открывается на весь экран вместо
+     списка) — на планшете/десктопе список слева виден постоянно, отдельный "назад" там лишний.
+     У IDLE/DONE вместе с кнопкой убираем и всю шапку (кроме названия цеха в ней ничего не было);
+     у ACTIVE шапка остаётся — в ней ещё и кнопка паузы. */
+  .simple-back-btn{display:none}
+  .simple-detail-idle .simple-detail-head,.simple-detail-done .simple-detail-head{display:none}
 }
 @media(min-width:1280px){
   .simple-workshop-wrap{max-width:1280px;margin:0 auto}
