@@ -1264,16 +1264,21 @@ async function endShiftManually(orderId,index){
   op.status='paused';op.pausedAt=productionNow();
   await persistProductionWorkflow(o,`${tRu('historyProductionPaused')}: ${op.stepName} — ${t('endShiftBtn')}`,'production_operation_paused',{step:op.stepName});
 }
-// v7.88: раньше показывалась только ОДНА последняя отметка выпуска — пользователь попросил видеть
-// ВСЕ отметки за сегодня по этой операции (сколько, во сколько, кто) — например, чтобы сверить, что
-// все, кто работал за смену, записали свой выпуск. Переиспользует те же productionMeta(o).logs, что
-// и раньше (та же запись создаётся в finalizeProductionQuantity), просто не обрезает до одной штуки.
+// v7.92: раньше отметка показывала только количество/время/кто — по просьбе пользователя теперь
+// видно ещё и КОГДА закончил (начало → конец смены записи, не только момент отметки), и можно
+// исправить, если сотрудник ошибся — с сохранением следа правки. Вместо productionMeta(o).logs
+// (которые вперемешку содержат и сами записи, и отдельные строки-коррекции) переиспользует
+// op.sessions/productionSessionRowHtml — тот же источник и тот же компонент строки, что уже
+// показывает это (с кнопкой "Редактировать" и историей правок) в полной карточке операции заказа
+// (см. productionSessionHistoryHtml) — просто отфильтрованный по сегодняшнему дню, без дублирования
+// логики редактирования/списания.
 function workshopMarksTodayHtml(o,op){
   const todayStr=today();
-  const marks=(productionMeta(o).logs||[]).filter(l=>Number(l.stepIndex)===Number(op.stepIndex)&&String(l.at||'').slice(0,10)===todayStr);
-  if(!marks.length)return `<div class="workshop-marks-today"><div class="workshop-marks-empty">${escapeHtml(t('workshopNoMarksYet'))}</div></div>`;
-  const rows=marks.map(l=>`<div class="workshop-mark-row"><b class="${Number(l.qty)<0?'danger-text':''}">${Number(l.qty)>=0?'+':''}${Number(l.qty)} ${escapeHtml(t('unitPieces'))}</b><span>${escapeHtml(productionStartedAtText(l.at))}</span><em>${escapeHtml(l.by||'—')}</em></div>`).join('');
-  return `<div class="workshop-marks-today"><div class="workshop-marks-today-head">${escapeHtml(t('workshopMarksTodayLabel'))}</div><div class="workshop-marks-today-list">${rows}</div></div>`;
+  const sessions=(Array.isArray(op.sessions)?op.sessions:[]).filter(s=>String(s.startedAt||'').slice(0,10)===todayStr);
+  if(!sessions.length)return `<div class="workshop-marks-today"><div class="workshop-marks-today-head">${escapeHtml(t('workshopMarksTodayLabel'))}</div><div class="workshop-marks-empty">${escapeHtml(t('workshopNoMarksYet'))}</div></div>`;
+  const logs=productionMeta(o).consumptionLogs||[];
+  const rows=sessions.map(s=>productionSessionRowHtml(o,op,s,logs)).join('');
+  return `<div class="workshop-marks-today"><div class="workshop-marks-today-head">${escapeHtml(t('workshopMarksTodayLabel'))}</div><div class="production-session-list workshop-marks-today-list">${rows}</div></div>`;
 }
 function workshopCurrentCardHtml(row){
   if(!row)return `<div class="workshop-current-card empty"><div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div></div>`;
@@ -1582,21 +1587,27 @@ function productionOperationMaterialStatusHtml(o,op){
   const last=consumption.last?`<small>${escapeHtml(t('lastWriteOffLabel'))}: ${escapeHtml(consumption.last.qty)} ${escapeHtml(t('unitsGenitive'))} · ${escapeHtml(productionDateTimeText(consumption.last.at))}</small>`:`<small>${escapeHtml(t('lastWriteOffLabel'))}: —</small>`;
   return `<div class="production-op-materials ${coverage.ok?'ok':'warn'}"><strong>${coverage.ok?'✓':'⚠'} ${escapeHtml(title)}${infoBtn('materials')}</strong><em>${escapeHtml(t('materialsWrittenOffLabel'))}: ${escapeHtml(consumption.sets)} / ${escapeHtml(total)} ${escapeHtml(t('setsWord'))}</em>${last}${list?`<div>${list}</div>`:''}</div>`;
 }
+// v7.92: вынесено из productionSessionHistoryHtml() без изменения поведения — один и тот же рендер
+// строки смены (количество, начало → конец, длительность, кто, кнопка «Редактировать», след правки/
+// отмены) теперь переиспользуется и в полной карточке операции заказа, и в компактном списке
+// «Отметки за сегодня» на экране цеха (см. workshopMarksTodayHtml) — вместо повторения этой же
+// разметки/логики редактирования во второй раз.
+function productionSessionRowHtml(o,op,s,consumptionLogs){
+  const log=s.consumptionId?(consumptionLogs||[]).find(l=>String(l.id)===String(s.consumptionId)):null;
+  const canEdit=!!(log&&!log.undone);
+  const editBtn=canEdit?`<button class="btn small ghost session-edit-btn" type="button" onclick="openFixQuantityModal('${o.id}',${op.stepIndex},'${log.id}')">${escapeHtml(t('editBtn'))}</button>`:'';
+  const trace=s.undone
+    ?`<div class="session-edit-trace danger">${escapeHtml(t('sessionCancelledTrace'))}: ${escapeHtml(s.undoneBy||'—')} · ${escapeHtml(productionDateTimeText(s.undoneAt))}</div>`
+    :(s.editedBy?`<div class="session-edit-trace">${escapeHtml(t('sessionEditedTrace'))}: ${escapeHtml(s.originalQty??'')}→${escapeHtml(s.qty??'')} · ${escapeHtml(s.editedBy)} · ${escapeHtml(productionDateTimeText(s.editedAt))}</div>`:'');
+  return `<div class="${s.undone?'session-undone':''}"><span><b>${escapeHtml(s.qty||0)} ${escapeHtml(t('unitPieces'))}</b><small>${escapeHtml(productionDateTimeText(s.startedAt))} → ${escapeHtml(productionDateTimeText(s.endedAt))}</small>${trace}</span><strong>${escapeHtml(orderTimeText(s.minutes||0))}</strong><em>${escapeHtml(s.by||'—')}</em>${editBtn}</div>`;
+}
 function productionSessionHistoryHtml(o,op){
   const sessions=Array.isArray(op.sessions)?op.sessions:[];
   if(!sessions.length)return '';
   // v7.53: у каждой смены — своя кнопка «Редактировать» (не только у последней) и след правки/
   // отмены (кто и когда), если смену меняли — см. performQuantityDecrease/Increase().
   const logs=productionMeta(o).consumptionLogs||[];
-  return `<div class="production-session-list"><h5>${escapeHtml(t('sessionsByShiftTitle'))}${infoBtn('sessions')}</h5>${sessions.slice(0,4).map(s=>{
-    const log=s.consumptionId?logs.find(l=>String(l.id)===String(s.consumptionId)):null;
-    const canEdit=!!(log&&!log.undone);
-    const editBtn=canEdit?`<button class="btn small ghost session-edit-btn" type="button" onclick="openFixQuantityModal('${o.id}',${op.stepIndex},'${log.id}')">${escapeHtml(t('editBtn'))}</button>`:'';
-    const trace=s.undone
-      ?`<div class="session-edit-trace danger">${escapeHtml(t('sessionCancelledTrace'))}: ${escapeHtml(s.undoneBy||'—')} · ${escapeHtml(productionDateTimeText(s.undoneAt))}</div>`
-      :(s.editedBy?`<div class="session-edit-trace">${escapeHtml(t('sessionEditedTrace'))}: ${escapeHtml(s.originalQty??'')}→${escapeHtml(s.qty??'')} · ${escapeHtml(s.editedBy)} · ${escapeHtml(productionDateTimeText(s.editedAt))}</div>`:'');
-    return `<div class="${s.undone?'session-undone':''}"><span><b>${escapeHtml(s.qty||0)} ${escapeHtml(t('unitPieces'))}</b><small>${escapeHtml(productionDateTimeText(s.startedAt))} → ${escapeHtml(productionDateTimeText(s.endedAt))}</small>${trace}</span><strong>${escapeHtml(orderTimeText(s.minutes||0))}</strong><em>${escapeHtml(s.by||'—')}</em>${editBtn}</div>`;
-  }).join('')}</div>`;
+  return `<div class="production-session-list"><h5>${escapeHtml(t('sessionsByShiftTitle'))}${infoBtn('sessions')}</h5>${sessions.slice(0,4).map(s=>productionSessionRowHtml(o,op,s,logs)).join('')}</div>`;
 }
 function productionOperationCardHtml(o,op){
   const plan=productionPlanMinutesForStep(o,op.stepIndex),actual=productionActualMinutes(op,o),diff=actual-plan,pct=productionOpPercent(o,op),completed=productionCompletedQty(o,op),total=orderProductQty(o),state=productionQueueState(o.id,op.stepIndex),status=productionStatusClass(op.status),compact=op.status==='done'&&op.collapsed!==false,comments=Array.isArray(op.comments)?op.comments:[],toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart'),toggleIcon=op.status==='running'?'⏸':'▶';

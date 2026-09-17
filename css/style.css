@@ -3378,10 +3378,10 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-marks-today{padding-top:4px;border-top:1px solid #edf0f4;display:flex;flex-direction:column;gap:2px}
 .workshop-marks-today-head{color:#8490a3;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
 .workshop-marks-today-list{display:flex;flex-direction:column;gap:2px;max-height:160px;overflow-y:auto}
-.workshop-mark-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#8490a3;padding:3px 0}
-.workshop-mark-row b{color:#344054;font-weight:650;min-width:52px}
-.workshop-mark-row span{flex:0 0 auto}
-.workshop-mark-row em{margin-left:auto;font-style:normal;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+/* v7.92: .workshop-marks-today-list теперь дополнительно несёт класс .production-session-list —
+   переиспользует его строки (см. productionSessionRowHtml) вместо своего собственного, более
+   простого формата строки (.workshop-mark-row, без времени начала/конца и кнопки редактирования). */
+.workshop-marks-today-list.production-session-list{margin-top:0}
 .workshop-marks-empty{color:#8490a3;font-size:11.5px;padding-top:4px}
 .workshop-more-link{align-self:flex-start;padding:0;border:0;background:none;color:#175cd3;font-size:12px;font-weight:650;cursor:pointer}
 .workshop-queue-panel{padding:16px;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
