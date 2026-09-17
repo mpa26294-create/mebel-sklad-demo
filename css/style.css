@@ -3316,12 +3316,16 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 @media(max-width:1080px){.workshops-overview-layout{grid-template-columns:1fr}}
 @media(max-width:760px){
   .workshops-top-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .workshop-master-row{grid-template-columns:28px minmax(0,1fr) 16px;grid-template-areas:"icon main arrow" ". status status" ". queue note";row-gap:6px;padding:12px 4px}
+  /* v7.91: "note" (риск/следующий шаг — целая фраза вроде "продолжить после закупки") делил строку
+     пополам с "queue" и попадал в колонку шириной 16px, унаследованную от чевронной стрелки — текст
+     обрезался до 1-2 символов ("р…", "с…"). Теперь у "queue" и "note" — каждой своя строка на всю
+     ширину. */
+  .workshop-master-row{grid-template-columns:28px minmax(0,1fr) 16px;grid-template-areas:"icon main arrow" ". status status" ". queue queue" ". note note";row-gap:4px;padding:12px 4px}
   .workshop-master-row-icon{grid-area:icon}
   .workshop-master-row-main{grid-area:main}
   .workshop-master-row .production-status-pill{grid-area:status;justify-self:start}
-  .workshop-master-row-queue{grid-area:queue}
-  .workshop-master-row-note{grid-area:note;text-align:right;white-space:normal}
+  .workshop-master-row-queue{grid-area:queue;text-align:left}
+  .workshop-master-row-note{grid-area:note;text-align:left;white-space:normal;overflow:visible;text-overflow:clip}
   .workshop-list-row-arrow{grid-area:arrow}
   .workshop-main-alert{flex-direction:column}
   .workshop-main-alert .btn{align-self:stretch}
