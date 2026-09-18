@@ -38,6 +38,14 @@ function renderWorkerTabbar(activeId){
   if(!bar)return;
   bar.querySelectorAll('[data-tab-label]').forEach(el=>{el.textContent=t(el.dataset.tabLabel)});
   if(activeId)bar.querySelectorAll('button[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===activeId));
+  // v8.07: вкладки только те, что доступны по правам; если осталась одна — таб-бар не нужен совсем.
+  let shown=0;
+  bar.querySelectorAll('button[data-section]').forEach(b=>{
+    const allowed=typeof userCanSection!=='function'||userCanSection(b.dataset.section);
+    b.classList.toggle('role-hidden',!allowed);
+    if(allowed)shown++;
+  });
+  document.body.classList.toggle('worker-no-tabbar',shown<2);
 }
 function switchSection(sectionId){
   if(!sectionId)return false;
@@ -47,7 +55,7 @@ function switchSection(sectionId){
   // самой базе (Supabase RLS), но убирает лишние разделы, которые сотруднику не нужны.
   // v8.04: доступные разделы зависят от роли (js/roles.js): рабочий — Склад и Цеха, кладовщик — Склад и
   // просмотр заказов/технологий/моделей/справочников, мастер и админ — всё.
-  if(typeof userCanSection==='function'&&!userCanSection(sectionId))sectionId='stock';
+  if(typeof userCanSection==='function'&&!userCanSection(sectionId))sectionId=typeof firstAllowedSection==='function'?firstAllowedSection():'stock';
   const section=document.getElementById(sectionId);
   if(!section)return false;
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));
