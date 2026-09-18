@@ -1540,10 +1540,16 @@ function simpleTaskCardHtml(row){
   const limiting=workshopLimitingMaterial(o,op),blocked=!!(limiting&&limiting.enough<=0);
   const selected=simpleTaskKey(o.id,op.stepIndex)===getSimpleSelectedTaskKey();
   const title=[o.client,o.product].filter(Boolean).map(escapeHtml).join(' · ')||'—';
-  const running=op.status==='running'||op.status==='paused';
+  // Кнопка зависит от состояния: «Начать» (не начато) и «Продолжить» (пауза) меняют состояние работы
+  // и открывают задачу; у задачи, которая уже «В работе», запускать нечего — кнопка просто открывает её
+  // экран (вторичный стиль). Раньше у running-задачи тоже стояло «Продолжить» и повторно вызывало
+  // startProductionOperation() на уже идущей операции.
+  const isRunning=op.status==='running',isPaused=op.status==='paused';
   const actionHtml=blocked
     ?`<div class="sw-action disabled">${escapeHtml(t('simpleWaitingMaterialBtn'))}</div>`
-    :`<button type="button" class="sw-action" onclick="event.stopPropagation();simpleStartAndOpen('${o.id}',${op.stepIndex})">${escapeHtml(running?t('prodContinue'):t('simpleStartBtn'))}</button>`;
+    :isRunning
+      ?`<button type="button" class="sw-action secondary" onclick="event.stopPropagation();openSimpleTask('${o.id}',${op.stepIndex})">${escapeHtml(t('simpleOpenBtn'))}</button>`
+      :`<button type="button" class="sw-action" onclick="event.stopPropagation();simpleStartAndOpen('${o.id}',${op.stepIndex})">${escapeHtml(isPaused?t('prodContinue'):t('simpleStartBtn'))}</button>`;
   const open=blocked?'':` role="button" tabindex="0" onclick="openSimpleTask('${o.id}',${op.stepIndex})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSimpleTask('${o.id}',${op.stepIndex})}"`;
   return `<div class="sw-card ${selected?'selected':''} ${blocked?'blocked':''}"${open}>
     <div class="sw-card-top"><span class="sw-code">${escapeHtml(o.number||'—')}</span>${simpleStatusPillHtml(op,blocked)}</div>
@@ -1557,7 +1563,9 @@ function simpleTaskListHtml(){
   const names=window.WORKER_WORKSHOPS||[];
   if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('simpleNoWorkshopAssigned'))}</div>`;
   const current=simpleCurrentWorkshop();
-  const rows=workerAssignedTaskRows().filter(r=>r.workshopName===current);
+  // Что сейчас в работе — сверху, затем задачи на паузе, затем остальные (внутри группы — по сроку).
+  const stateRank=r=>{const op=productionOp(r.order,r.index);return op?.status==='running'?0:op?.status==='paused'?1:2};
+  const rows=workerAssignedTaskRows().filter(r=>r.workshopName===current).map((r,i)=>({r,i,k:stateRank(r)})).sort((a,b)=>a.k-b.k||a.i-b.i).map(x=>x.r);
   const access=names.map(n=>workshopLabel(n)).join(', ');
   const head=`<div class="sw-head">${simpleMonogramHtml(current)}<div><b>${escapeHtml(workshopLabel(current))}</b><small>${escapeHtml(simpleTasksCountText(rows.length))} · ${escapeHtml(t('simpleAccessLabel'))}: ${escapeHtml(access)}</small></div></div>`;
   const tabs=names.length>1
