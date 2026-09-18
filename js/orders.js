@@ -1494,42 +1494,77 @@ function workerAssignedTaskRows(){
   rows.sort((a,b)=>String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||'')));
   return rows;
 }
-function simpleTaskBadgeHtml(op,limiting){
-  if(limiting)return `<span class="simple-badge blocked">${escapeHtml(t('simpleNoMaterialBadge'))}</span>`;
-  if(op.status==='running')return `<span class="simple-badge running">${escapeHtml(t('prodStatusRunning'))}</span>`;
-  if(op.status==='paused')return `<span class="simple-badge paused">${escapeHtml(t('simplePausedBadge'))}</span>`;
-  return `<span class="simple-badge idle">${escapeHtml(t('simpleNotStartedBadge'))}</span>`;
+// v7.98: экран A) по макету (iPhone/iPad): шапка цеха → переключатель цехов (если допуск к
+// нескольким) → метка «В очереди» → карточки задач. Данные — те же настоящие, что и раньше
+// (workshopAnalytics(name).queue), ничего нового в схеме заказов не добавлено.
+let simpleActiveWorkshop='';
+function simpleCurrentWorkshop(){
+  const names=window.WORKER_WORKSHOPS||[];
+  if(!names.length)return '';
+  if(!names.includes(simpleActiveWorkshop))simpleActiveWorkshop=names[0];
+  return simpleActiveWorkshop;
 }
-// Экран A) — карточка очереди. Заблокированная материалом карточка — не кнопка (не открывает
-// задачу), приглушена и с пунктирной зоной "Ожидает материал", как в макете.
+function setSimpleWorkshopByIndex(i){
+  const name=(window.WORKER_WORKSHOPS||[])[Number(i)];
+  if(!name)return;
+  simpleActiveWorkshop=name;
+  renderWorkshops();
+}
+function simpleTasksCountText(n){
+  const m10=n%10,m100=n%100;
+  const key=(m10===1&&m100!==11)?'simpleTaskWord1':(m10>=2&&m10<=4&&(m100<12||m100>14))?'simpleTaskWord2':'simpleTaskWord5';
+  return `${n} ${t(key)}`;
+}
+function simpleMonogramHtml(name,cls=''){
+  const letter=String(workshopLabel(name)||'').trim().charAt(0).toUpperCase()||'•';
+  return `<span class="sw-chip ${cls}" aria-hidden="true">${escapeHtml(letter)}</span>`;
+}
+function simpleStatusPillHtml(op,limiting){
+  if(limiting)return `<span class="sw-pill blocked">${escapeHtml(t('simpleNoMaterialBadge'))}</span>`;
+  if(op.status==='running')return `<span class="sw-pill running">${escapeHtml(t('prodStatusRunning'))}</span>`;
+  if(op.status==='paused')return `<span class="sw-pill paused">${escapeHtml(t('simplePausedBadge'))}</span>`;
+  return `<span class="sw-pill idle">${escapeHtml(t('simpleNotStartedBadge'))}</span>`;
+}
+// Кнопка на карточке (только телефон — на планшете/десктопе её скрывает CSS, там задача открывается
+// в правой панели): «Начать»/«Продолжить» сразу запускает работу и открывает экран задачи.
+async function simpleStartAndOpen(orderId,index){
+  simpleShowDoneConfirmFor='';
+  setSimpleSelectedTaskKey(simpleTaskKey(orderId,index));
+  renderWorkshops();
+  await startProductionOperation(orderId,index);
+}
 function simpleTaskCardHtml(row){
   const o=row.order,op=productionOp(o,row.index);
   if(!op)return '';
   const total=orderProductQty(o),completed=productionCompletedQty(o,op),pct=productionOpPercent(o,op);
   const limiting=workshopLimitingMaterial(o,op),blocked=!!(limiting&&limiting.enough<=0);
-  const subtitle=`${escapeHtml(o.client||'—')}${o.product?` · ${escapeHtml(o.product)}`:''}`;
-  const zoneHtml=blocked
-    ?`<div class="simple-task-zone blocked">${escapeHtml(t('simpleWaitingMaterialBtn'))}</div>`
-    :(op.status==='running'||op.status==='paused')
-      ?`<div class="simple-task-zone continue">${escapeHtml(t('prodContinue'))}</div>`
-      :`<div class="simple-task-zone start">▶ ${escapeHtml(t('simpleStartBtn'))}</div>`;
-  const inner=`<div class="simple-task-top">
-      <span class="simple-task-icon">${workshopIcon(row.workshopName)}</span>
-      <span class="simple-task-info"><b>${escapeHtml(o.number||'—')} · ${escapeHtml(workshopLabel(row.workshopName))}</b><small>${subtitle}</small></span>
-      ${simpleTaskBadgeHtml(op,blocked)}
-    </div>
-    <div class="simple-task-progress"><i><b class="${blocked?'blocked':''}" style="width:${pct}%"></b></i><span>${completed} / ${total}</span></div>
-    ${zoneHtml}`;
-  return blocked
-    ?`<div class="simple-task-card blocked">${inner}</div>`
-    :`<button type="button" class="simple-task-card" onclick="openSimpleTask('${o.id}',${op.stepIndex})">${inner}</button>`;
+  const selected=simpleTaskKey(o.id,op.stepIndex)===getSimpleSelectedTaskKey();
+  const title=[o.client,o.product].filter(Boolean).map(escapeHtml).join(' · ')||'—';
+  const running=op.status==='running'||op.status==='paused';
+  const actionHtml=blocked
+    ?`<div class="sw-action disabled">${escapeHtml(t('simpleWaitingMaterialBtn'))}</div>`
+    :`<button type="button" class="sw-action" onclick="event.stopPropagation();simpleStartAndOpen('${o.id}',${op.stepIndex})">${escapeHtml(running?t('prodContinue'):t('simpleStartBtn'))}</button>`;
+  const open=blocked?'':` role="button" tabindex="0" onclick="openSimpleTask('${o.id}',${op.stepIndex})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSimpleTask('${o.id}',${op.stepIndex})}"`;
+  return `<div class="sw-card ${selected?'selected':''} ${blocked?'blocked':''}"${open}>
+    <div class="sw-card-top"><span class="sw-code">${escapeHtml(o.number||'—')}</span>${simpleStatusPillHtml(op,blocked)}</div>
+    <div class="sw-card-title">${title}</div>
+    <div class="sw-bar"><b style="width:${pct}%"></b></div>
+    <div class="sw-card-count">${completed} / ${total}</div>
+    ${actionHtml}
+  </div>`;
 }
 function simpleTaskListHtml(){
   const names=window.WORKER_WORKSHOPS||[];
   if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('simpleNoWorkshopAssigned'))}</div>`;
-  const rows=workerAssignedTaskRows();
+  const current=simpleCurrentWorkshop();
+  const rows=workerAssignedTaskRows().filter(r=>r.workshopName===current);
+  const access=names.map(n=>workshopLabel(n)).join(', ');
+  const head=`<div class="sw-head">${simpleMonogramHtml(current)}<div><b>${escapeHtml(workshopLabel(current))}</b><small>${escapeHtml(simpleTasksCountText(rows.length))} · ${escapeHtml(t('simpleAccessLabel'))}: ${escapeHtml(access)}</small></div></div>`;
+  const tabs=names.length>1
+    ?`<div class="sw-tabs" role="tablist">${names.map((n,i)=>`<button type="button" role="tab" aria-selected="${n===current}" class="sw-tab ${n===current?'active':''}" onclick="setSimpleWorkshopByIndex(${i})">${escapeHtml(workshopLabel(n))}</button>`).join('')}</div>`
+    :'';
   const body=rows.length?rows.map(simpleTaskCardHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('simpleNoTasks'))}</div>`;
-  return `<div class="simple-task-list">${body}</div>`;
+  return `${head}${tabs}<div class="sw-section-label">${escapeHtml(t('simpleQueueLabel'))}</div><div class="simple-task-list">${body}</div>`;
 }
 // v7.95: и IDLE, и DONE раньше открывались без единой кнопки "назад" наверху (у DONE была только
 // скромная текстовая ссылка внизу, у IDLE — вообще никакой) — на телефоне, тем более в режиме PWA
@@ -1604,7 +1639,9 @@ function simpleTaskDetailHtml(){
   return simpleTaskDetailIdleHtml(task);
 }
 function workerWorkshopTasksHtml(){
-  const hasSelected=!!findSimpleTaskByKey(getSimpleSelectedTaskKey());
+  const selectedTask=findSimpleTaskByKey(getSimpleSelectedTaskKey());
+  if(selectedTask)simpleActiveWorkshop=selectedTask.op.stepName;
+  const hasSelected=!!selectedTask;
   return `<div class="simple-workshop-wrap ${hasSelected?'has-selected':''}">
     <div class="simple-task-list-pane">${simpleTaskListHtml()}</div>
     <div class="simple-task-detail-pane">${simpleTaskDetailHtml()}</div>

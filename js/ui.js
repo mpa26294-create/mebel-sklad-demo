@@ -31,6 +31,14 @@ function placeChangelogNavLast(){
   if(nav&&changelog&&changelog!==nav.lastElementChild)nav.appendChild(changelog);
 }
 
+// v7.98: нижний таб-бар рабочего режима (Склад / Цеха) — подписи по текущему языку и подсветка
+// активного раздела; на планшете/десктопе таб-бар скрыт CSS-ом, здесь ничего специально не делаем.
+function renderWorkerTabbar(activeId){
+  const bar=document.getElementById('workerTabbar');
+  if(!bar)return;
+  bar.querySelectorAll('[data-tab-label]').forEach(el=>{el.textContent=t(el.dataset.tabLabel)});
+  if(activeId)bar.querySelectorAll('button[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===activeId));
+}
 function switchSection(sectionId){
   if(!sectionId)return false;
   // v7.41: рабочий режим — сотруднику из списка «Упрощённый доступ» (Настройки) доступны только
@@ -41,6 +49,7 @@ function switchSection(sectionId){
   const section=document.getElementById(sectionId);
   if(!section)return false;
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));
+  renderWorkerTabbar(sectionId);
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===sectionId));
   if(sectionId==='settings'&&typeof lockTelegramSettings==='function')lockTelegramSettings();
   if(sectionId==='settings'&&typeof loadProfileSettingsForm==='function')loadProfileSettingsForm();
