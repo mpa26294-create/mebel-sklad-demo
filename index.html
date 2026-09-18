@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MOLM" />
-  <link rel="stylesheet" href="css/style.css?v=8.05" />
+  <link rel="stylesheet" href="css/style.css?v=8.06" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -226,12 +226,12 @@
 
 
 <script src="js/changelog.js?v=7.39"></script>
-<script src="js/ui.js?v=8.05"></script>
+<script src="js/ui.js?v=8.06"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=8.05"></script>
+<script src="js/translations.js?v=8.06"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -246,10 +246,10 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.05"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.05"></script>
+<script src="js/orders.js?v=8.06"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
-<script src="js/roles.js?v=8.05"></script>
+<script src="js/roles.js?v=8.06"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -560,7 +560,7 @@ function isAccessSyncRow(row){return String(row?.article||'')===ACCESS_SYNC_ARTI
 // "workshop" из v7.40/v7.41) в массив "workshops", чтобы уже сохранённые строки не потерялись.
 function normalizeWorkerAccessRow(w){
   const workshops=Array.isArray(w?.workshops)?w.workshops.filter(Boolean):(w?.workshop?[w.workshop]:[]);
-  return {email:String(w?.email||'').trim().toLowerCase(),roles:['worker'],workshops};
+  return {email:String(w?.email||'').trim().toLowerCase(),roles:['worker'],workshops,extra:[],denied:[]};
 }
 // v8.05: у человека может быть НЕСКОЛЬКО должностей. Тот, у кого ТОЛЬКО «рабочий», по-прежнему лежит в
 // attributes.workers (старый код основного сайта понимает эту запись). Все остальные (любая другая должность,
@@ -573,7 +573,10 @@ function normalizeRoleRow(r){
   const roles=choices.filter(x=>raw.includes(x));
   if(!roles.length)return null;
   const workshops=roles.includes('worker')&&Array.isArray(r?.workshops)?r.workshops.filter(Boolean):[];
-  return {email:String(r?.email||'').trim().toLowerCase(),roles,workshops};
+  // v8.06: точечные права поверх должностей — extra (включено сверх должности) и denied (отключено).
+  const keys=(typeof PERMISSION_KEYS!=='undefined'&&PERMISSION_KEYS)||[];
+  const pick=a=>Array.isArray(a)?a.filter(k=>keys.includes(k)):[];
+  return {email:String(r?.email||'').trim().toLowerCase(),roles,workshops,extra:pick(r?.extra),denied:pick(r?.denied)};
 }
 function currentWorkerAssignment(){
   if(!currentUser)return null;
@@ -590,11 +593,11 @@ function currentUserRoles(){
   const a=currentWorkerAssignment();
   return a&&Array.isArray(a.roles)&&a.roles.length?a.roles:[DEFAULT_ROLE];
 }
-// Упрощённый вид — только у того, у кого ЕДИНСТВЕННАЯ должность «рабочий». Если есть ещё какая-то (например,
-// кладовщик), человек видит обычную версию сайта — в пределах прав, которые складываются.
-function isWorkerUser(){const r=currentUserRoles();return r.length===1&&r[0]==='worker'}
+// Упрощённый вид — только у того, у кого ЕДИНСТВЕННАЯ должность «рабочий» и кому админ не открыл ничего, кроме
+// Склада и Цехов. Если есть ещё какая-то должность или открыт другой раздел — обычная версия сайта, в пределах прав.
+function isWorkerUser(){const r=currentUserRoles();return r.length===1&&r[0]==='worker'&&(typeof userSeesOnlyWorkerSections!=='function'||userSeesOnlyWorkerSections())}
 function applyWorkerModeForCurrentUser(){
-  const worker=isWorkerUser(),roles=currentUserRoles();
+  const worker=isWorkerUser();
   document.body.classList.toggle('worker-mode',worker);
   if(typeof installRoleGuards==='function')installRoleGuards();
   if(typeof applyRoleVisibility==='function')applyRoleVisibility();
@@ -607,7 +610,7 @@ function applyWorkerModeForCurrentUser(){
   if(brandP)brandP.textContent=worker?(list.length===1?`Цех: ${list[0]}`:list.length?`Цеха: ${list.join(', ')}`:'цех не назначен'):'учёт материалов';
   if(typeof switchSection==='function'){
     const active=document.querySelector('.section.active')?.id||'';
-    if(worker||(typeof roleAllowsSection==='function'&&active&&!roleAllowsSection(roles,active)))switchSection('stock');
+    if(worker||(typeof userCanSection==='function'&&active&&!userCanSection(active)))switchSection('stock');
   }
   if(typeof renderTopbarProfile==='function')renderTopbarProfile();
 }
@@ -627,9 +630,17 @@ async function saveWorkerAccessList(list){
   try{
     // workers — только «чистые» рабочие, как и раньше (совместимо со старым кодом основного сайта);
     // всё остальное — в roles.
+    // Чистый рабочий ВСЕГДА остаётся и в workers (старый основной сайт не знает про roles и без этого счёл бы его
+    // обычным пользователем со всем доступом); если у него есть точечные права — они лежат ещё и в roles.
     const onlyWorker=w=>w.roles.length===1&&w.roles[0]==='worker';
+    const hasOverrides=w=>(w.extra&&w.extra.length)||(w.denied&&w.denied.length);
     const workers=list.filter(onlyWorker).map(w=>({email:w.email,workshops:w.workshops||[]}));
-    const roles=list.filter(w=>!onlyWorker(w)).map(w=>({email:w.email,roles:w.roles,workshops:w.roles.includes('worker')?(w.workshops||[]):[]}));
+    const roles=list.filter(w=>!onlyWorker(w)||hasOverrides(w)).map(w=>{
+      const row={email:w.email,roles:w.roles,workshops:w.roles.includes('worker')?(w.workshops||[]):[]};
+      if(w.extra&&w.extra.length)row.extra=w.extra;
+      if(w.denied&&w.denied.length)row.denied=w.denied;
+      return row;
+    });
     const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:{workers,roles,updatedAt:new Date().toISOString()}};
     if(accessSyncRowId){
       const{error}=await supabaseClient.from('materials').update(payload).eq('id',accessSyncRowId);
@@ -650,7 +661,7 @@ async function saveWorkerAccessList(list){
 }
 let workerAccessDraft=null;
 function ensureWorkerAccessDraft(){
-  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({email:w.email,roles:[...(w.roles||['worker'])],workshops:[...(w.workshops||[])]}));
+  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({email:w.email,roles:[...(w.roles||['worker'])],workshops:[...(w.workshops||[])],extra:[...(w.extra||[])],denied:[...(w.denied||[])]}));
   return workerAccessDraft;
 }
 function updateWorkerAccessDraft(index,field,value){
@@ -665,6 +676,29 @@ function toggleWorkerAccessDraftRole(index,role,checked){
   if(checked)set.add(role);else set.delete(role);
   row.roles=[...set];
   if(!set.has('worker'))row.workshops=[];
+  pruneWorkerAccessOverrides(row);
+  renderWorkerAccessPanel();
+}
+// Точечные права хранятся как ОТЛИЧИЯ от набора должностей: если после смены должностей право стало и так
+// входить в набор (или наоборот отключаемого права в наборе уже нет) — лишнее отличие убираем.
+function pruneWorkerAccessOverrides(row){
+  const base=permsFromRoles(row.roles);
+  row.extra=(row.extra||[]).filter(k=>!base.has(k));
+  row.denied=(row.denied||[]).filter(k=>base.has(k));
+}
+function toggleWorkerAccessDraftPerms(index){
+  const row=ensureWorkerAccessDraft()[index];
+  if(!row)return;
+  row._open=!row._open;
+  renderWorkerAccessPanel();
+}
+function toggleWorkerAccessDraftPerm(index,perm,checked){
+  const row=ensureWorkerAccessDraft()[index];
+  if(!row)return;
+  const base=permsFromRoles(row.roles),extra=new Set(row.extra||[]),denied=new Set(row.denied||[]);
+  if(checked){denied.delete(perm);if(!base.has(perm))extra.add(perm)}
+  else{extra.delete(perm);if(base.has(perm))denied.add(perm)}
+  row.extra=[...extra];row.denied=[...denied];
   renderWorkerAccessPanel();
 }
 function toggleWorkerAccessDraftWorkshop(index,name,checked){
@@ -680,7 +714,7 @@ function removeWorkerAccessDraft(index){
   renderWorkerAccessPanel();
 }
 function addWorkerAccessDraftRow(){
-  ensureWorkerAccessDraft().push({email:'',roles:['worker'],workshops:[]});
+  ensureWorkerAccessDraft().push({email:'',roles:['worker'],workshops:[],extra:[],denied:[]});
   renderWorkerAccessPanel();
 }
 function workerAccessRowHtml(row,index){
@@ -693,10 +727,23 @@ function workerAccessRowHtml(row,index){
   const shopChips=presets.map(w=>`<label class="worker-access-chip ${selected.has(w)?'checked':''}"><input type="checkbox" ${selected.has(w)?'checked':''} onchange="toggleWorkerAccessDraftWorkshop(${index},'${jsStrArg(w)}',this.checked)"><span>${escapeHtml(w)}</span></label>`).join('');
   const shops=roles.has('worker')?`<div class="worker-access-sub"><small>Цеха рабочего</small><div class="worker-access-chips">${shopChips||'<span class="muted" style="font-size:12px">нет цехов в списке</span>'}</div></div>`:'';
   const warn=roles.size?'':'<span class="worker-access-warn">Выберите хотя бы одну должность</span>';
+  // Точечные права: галочка = право есть (по должности или включено вручную); метка показывает отличие.
+  const eff=effectivePerms({roles:[...roles],extra:row.extra,denied:row.denied}),base=permsFromRoles([...roles]);
+  const diff=(row.extra||[]).length+(row.denied||[]).length;
+  let permsHtml='';
+  if(row._open){
+    const groups={};
+    PERMISSIONS.forEach(pm=>{(groups[pm.group]=groups[pm.group]||[]).push(pm)});
+    permsHtml=`<div class="worker-perms">${Object.keys(groups).map(g=>`<div class="worker-perm-group"><b>${escapeHtml(g)}</b>${groups[g].map(pm=>{
+      const on=eff.has(pm.key),mark=(row.extra||[]).includes(pm.key)?'добавлено':(row.denied||[]).includes(pm.key)?'отключено':'';
+      return `<label class="worker-perm ${on?'checked':''} ${mark?'override':''}"><input type="checkbox" ${on?'checked':''} onchange="toggleWorkerAccessDraftPerm(${index},'${pm.key}',this.checked)"><span>${escapeHtml(pm.label)}</span>${mark?`<em>${mark}</em>`:''}</label>`;
+    }).join('')}</div>`).join('')}</div>`;
+  }
+  const permsBlock=roles.size?`<div class="worker-access-sub"><button type="button" class="worker-access-permbtn" onclick="toggleWorkerAccessDraftPerms(${index})">Точечные права${diff?` · изменено: ${diff}`:''}<span class="worker-access-permchev ${row._open?'open':''}" aria-hidden="true">⌄</span></button>${permsHtml}</div>`:'';
   const mixed=(roles.has('worker')&&roles.size>1)?'<span class="muted" style="font-size:12px;line-height:1.4">Есть и другая должность — человек видит обычную версию сайта, а не упрощённую.</span>':'';
   return `<div class="worker-access-row">
     <input class="input no-autofill" type="email" autocomplete="new-password" aria-autocomplete="none" placeholder="email@example.com" value="${email}" oninput="updateWorkerAccessDraft(${index},'email',this.value)">
-    <div class="worker-access-cols"><div class="worker-access-sub"><small>Должности (можно несколько)</small><div class="worker-access-chips">${roleChips}</div></div>${shops}${mixed}${warn}</div>
+    <div class="worker-access-cols"><div class="worker-access-sub"><small>Должности (можно несколько)</small><div class="worker-access-chips">${roleChips}</div></div>${shops}${mixed}${warn}${permsBlock}</div>
     <button class="iconbtn" type="button" aria-label="Удалить" onclick="removeWorkerAccessDraft(${index})">×</button>
   </div>`;
 }
@@ -707,7 +754,7 @@ function renderWorkerAccessPanel(){
   panel.style.display='';
   const draft=ensureWorkerAccessDraft();
   panel.innerHTML=`<h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Пользователи и роли</h3>
-    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. К одному email можно отметить сразу несколько должностей — права складываются. Кого нет в списке, работает как «Мастер». <b>Технолог</b> — создаёт и правит заказы, технологии, модели, справочники; цеха только смотрит. <b>Мастер</b> — весь сайт, правит любые отметки. <b>Кладовщик</b> — Склад полностью, остальное только смотреть. <b>Рабочий</b> — упрощённый вид («Склад» + свои цеха), правит только свои отметки за сегодня; если у человека есть ещё другая должность, он видит обычную версию сайта. <b>Владелец</b> — только mpa26294@gmail.com. Ограничения действуют в интерфейсе.</p>
+    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. К одному email можно отметить сразу несколько должностей — права складываются, а в «Точечных правах» можно включить или отключить любое отдельное действие (например, «Удалять заказ») для конкретного человека. Кого нет в списке, работает как «Мастер». <b>Технолог</b> — создаёт и правит заказы, технологии, модели, справочники; цеха только смотрит. <b>Мастер</b> — весь сайт, правит любые отметки. <b>Кладовщик</b> — Склад полностью, остальное только смотреть. <b>Рабочий</b> — упрощённый вид («Склад» + свои цеха), правит только свои отметки за сегодня; если у человека есть ещё другая должность, он видит обычную версию сайта. <b>Владелец</b> — только mpa26294@gmail.com. Ограничения действуют в интерфейсе.</p>
     <div class="worker-access-list">${draft.map(workerAccessRowHtml).join('')||'<p class="muted" style="margin:0 0 12px">Пока никто не добавлен.</p>'}</div>
     <div class="actions" style="margin-top:12px">
       <button class="btn" type="button" onclick="addWorkerAccessDraftRow()">+ Добавить пользователя</button>
@@ -719,7 +766,7 @@ async function commitWorkerAccessDraft(){
   const rows=ensureWorkerAccessDraft().filter(w=>w.email&&w.email.includes('@'));
   const empty=rows.find(w=>!(w.roles||[]).length);
   if(empty){toast(`Выберите должность для ${empty.email}`);return}
-  const draft=rows.map(w=>({email:w.email,roles:['technologist','master','storekeeper','worker'].filter(r=>(w.roles||[]).includes(r)),workshops:(w.roles||[]).includes('worker')?(Array.isArray(w.workshops)?w.workshops:[]):[]})).filter(w=>seen.has(w.email)?false:(seen.add(w.email),true));
+  const draft=rows.map(w=>({email:w.email,roles:['technologist','master','storekeeper','worker'].filter(r=>(w.roles||[]).includes(r)),workshops:(w.roles||[]).includes('worker')?(Array.isArray(w.workshops)?w.workshops:[]):[],extra:(w.extra||[]).filter(k=>PERMISSION_KEYS.includes(k)),denied:(w.denied||[]).filter(k=>PERMISSION_KEYS.includes(k))})).filter(w=>seen.has(w.email)?false:(seen.add(w.email),true));
   const ok=await saveWorkerAccessList(draft);
   workerAccessDraft=null;
   if(ok)renderWorkerAccessPanel();

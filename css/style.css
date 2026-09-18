@@ -1039,16 +1039,26 @@ body.worker-mode{
 .sw-info-chevron{flex:0 0 auto;font-size:20px;line-height:1;color:var(--sw-text2);transition:transform .15s ease}
 .sw-info-chevron.open{transform:rotate(180deg)}
 .simple-detail-idle .simple-badge{margin-bottom:18px}
-/* v8.05: роли. Пункты меню и кнопки создания скрываются по ОБЪЕДИНЕНИЮ должностей (js/roles.js →
-   applyRoleVisibility): .role-hidden — раздел недоступен, .no-catalog-write — нет права создавать заказы/
-   технологии/модели/справочники (сами функции записи дополнительно закрыты в js/roles.js). */
+/* v8.06: права. Пункты меню скрываются по итоговым правам (.role-hidden), кнопки создания — по классам
+   deny-<право> на <body> (js/roles.js → applyRoleVisibility); сами функции записи дополнительно закрыты в guardWrite. */
 #mainNav button.role-hidden{display:none!important}
-body.no-catalog-write #orders>.topbar .btn.primary,body.no-catalog-write #models>.topbar .btn.primary,body.no-catalog-write #technologies .btn.primary,body.no-catalog-write #refs .btn.primary{display:none!important}
+body.deny-orders-create #orders>.topbar .btn.primary,body.deny-models-edit #models>.topbar .btn.primary,body.deny-tech-edit #technologies .btn.primary,body.deny-refs-edit #refs .btn.primary,body.deny-stock-edit #stock .topbar .actions .btn.primary{display:none!important}
 .worker-access-cols{flex:2;display:flex;flex-direction:column;gap:10px;min-width:0}
 .worker-access-sub small{display:block;margin-bottom:5px;font-size:11.5px;font-weight:600;color:#6b7280}
 .worker-access-cols .worker-access-chips{flex:none;padding-top:0}
 .worker-access-warn{font-size:12px;font-weight:600;color:#c73535}
 @media(max-width:640px){.worker-access-cols{flex:1 1 100%}}
+.worker-access-permbtn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px dashed #cbd0d8;border-radius:999px;background:#fff;color:#4a515c;font-size:12px;font-weight:600}
+.worker-access-permchev{font-size:15px;line-height:1;transition:transform .15s ease}
+.worker-access-permchev.open{transform:rotate(180deg)}
+.worker-perms{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px 18px;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fbfbfc}
+.worker-perm-group{display:flex;flex-direction:column;gap:2px;min-width:0}
+.worker-perm-group>b{margin-bottom:4px;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#6b7280}
+.worker-perm{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12.5px;line-height:1.35;color:#4a515c;cursor:pointer}
+.worker-perm input{flex:0 0 auto;width:15px;height:15px;margin:2px 0 0;accent-color:var(--accent)}
+.worker-perm.checked{color:#15171a}
+.worker-perm em{margin-left:auto;flex:0 0 auto;padding:1px 7px;border-radius:999px;background:#eef2ff;color:#3538cd;font-style:normal;font-size:11px;font-weight:600}
+.worker-perm.override em{background:#fff1e6;color:#b54708}
 /* v8.03: длинный список материалов — «Показать все» */
 .sw-info-card .sw-mat-summary{margin-top:6px;font-size:13px;font-weight:800;color:#c23b2e}
 .sw-mat-more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;margin-top:6px;border:1px solid var(--sw-line);border-radius:12px;background:#fff;color:var(--sw-text);font-size:14px;font-weight:700}

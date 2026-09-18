@@ -47,8 +47,7 @@ function switchSection(sectionId){
   // самой базе (Supabase RLS), но убирает лишние разделы, которые сотруднику не нужны.
   // v8.04: доступные разделы зависят от роли (js/roles.js): рабочий — Склад и Цеха, кладовщик — Склад и
   // просмотр заказов/технологий/моделей/справочников, мастер и админ — всё.
-  {const roles=typeof currentUserRoles==='function'?currentUserRoles():['admin'];
-   if(typeof roleAllowsSection==='function'&&!roleAllowsSection(roles,sectionId))sectionId='stock';}
+  if(typeof userCanSection==='function'&&!userCanSection(sectionId))sectionId='stock';
   const section=document.getElementById(sectionId);
   if(!section)return false;
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));
