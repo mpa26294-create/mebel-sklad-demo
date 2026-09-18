@@ -1278,14 +1278,14 @@ async function endShiftManually(orderId,index){
 // та же openFixQuantityModal(), она работает по id списания, а не «только последнюю».
 let workshopMarksScope='today'; // 'today' | 'all'
 function setWorkshopMarksScope(scope){workshopMarksScope=scope==='all'?'all':'today';renderWorkshops()}
+function uiDateLocale(){return {ru:'ru-RU',en:'en-GB',lv:'lv-LV'}[currentLang]||'ru-RU'}
 function marksDayLabel(dayKey){
   if(dayKey===today())return t('marksScopeToday');
   const y=new Date();y.setDate(y.getDate()-1);
   if(dayKey===y.toISOString().slice(0,10))return t('marksYesterday');
   const d=new Date(dayKey+'T12:00:00Z');
   if(isNaN(d))return dayKey||'—';
-  const loc={ru:'ru-RU',en:'en-GB',lv:'lv-LV'}[currentLang]||'ru-RU';
-  return d.toLocaleDateString(loc,{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+  return d.toLocaleDateString(uiDateLocale(),{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
 }
 function workshopMarksHtml(o,op){
   const scope=workshopMarksScope==='all'?'all':'today',todayStr=today();
@@ -1591,11 +1591,15 @@ function simpleTaskCardHtml(row){
       ?`<button type="button" class="sw-action secondary" onclick="event.stopPropagation();openSimpleTask('${o.id}',${op.stepIndex})">${escapeHtml(t('simpleOpenBtn'))}</button>`
       :`<button type="button" class="sw-action" onclick="event.stopPropagation();simpleStartAndOpen('${o.id}',${op.stepIndex})">${escapeHtml(isPaused?t('prodContinue'):t('simpleStartBtn'))}</button>`;
   const open=blocked?'':` role="button" tabindex="0" onclick="openSimpleTask('${o.id}',${op.stepIndex})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSimpleTask('${o.id}',${op.stepIndex})}"`;
+  const due=simpleDueInfo(o);
+  const dueHtml=`<span class="sw-due ${due?due.cls:''}">${due?`${escapeHtml(t('simpleDuePrefix'))} ${escapeHtml(due.shortDate)} · ${escapeHtml(due.text)}`:''}</span>`;
+  const warnHtml=(limiting&&!blocked)?`<div class="sw-card-warn">${escapeHtml(t('simpleCardEnough').replace('{n}',Math.floor(limiting.enough)).replace('{m}',limiting.total))}</div>`:'';
   return `<div class="sw-card ${selected?'selected':''} ${blocked?'blocked':''}"${open}>
     <div class="sw-card-top"><span class="sw-code">${escapeHtml(o.number||'—')}</span>${simpleStatusPillHtml(op,blocked)}</div>
     <div class="sw-card-title">${title}</div>
     <div class="sw-bar"><b style="width:${pct}%"></b></div>
-    <div class="sw-card-count">${completed} / ${total}</div>
+    <div class="sw-card-meta">${dueHtml}<span class="sw-card-count">${completed} / ${total}</span></div>
+    ${warnHtml}
     ${actionHtml}
   </div>`;
 }
@@ -1613,6 +1617,84 @@ function simpleTaskListHtml(){
     :'';
   const body=rows.length?rows.map(simpleTaskCardHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('simpleNoTasks'))}</div>`;
   return `${head}${tabs}<div class="sw-section-label">${escapeHtml(t('simpleQueueLabel'))}</div><div class="simple-task-list">${body}</div>`;
+}
+// v8.01: «Задание» для рабочего — срок, норма технолога на изделие и материалы. Всё из уже существующих
+// данных заказа: dueDate, steps[].minutes (минуты НА ОДНО изделие), материалы цеха (operationMaterials) и
+// расчёт productionConsumptionPlan() на остаток — новых полей в заказе нет.
+function simpleNum(n){return String(Number(Number(n).toFixed(1))).replace('.',currentLang==='en'?'.':',')}
+function simpleDueInfo(o){
+  const d=String(o?.dueDate||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return null;
+  const [y,m,dd]=d.split('-').map(Number),[ty,tm,td]=today().split('-').map(Number);
+  const days=Math.round((Date.UTC(y,m-1,dd)-Date.UTC(ty,tm-1,td))/86400000);
+  const dateText=new Date(Date.UTC(y,m-1,dd,12)).toLocaleDateString(uiDateLocale(),Object.assign({day:'numeric',month:'long',timeZone:'UTC'},y!==ty?{year:'numeric'}:{}));
+  let text,cls='';
+  if(days<0){text=t('simpleDueOverdue').replace('{n}',-days);cls='overdue'}
+  else if(days===0){text=t('simpleDueToday');cls='soon'}
+  else if(days===1){text=t('simpleDueTomorrow');cls='soon'}
+  else{text=t('simpleDueIn').replace('{n}',days);cls=days<=3?'soon':''}
+  return {days,dateText,shortDate:`${d.slice(8,10)}.${d.slice(5,7)}`,text,cls};
+}
+function simpleNormInfo(o,op){
+  const perUnit=Math.max(0,Number((orderSteps(o)[Number(op.stepIndex)]||{}).minutes||0));
+  const total=orderProductQty(o),remaining=Math.max(0,total-productionCompletedQty(o,op));
+  // Фактический темп — только по отметкам, где записано и время, и количество (запись «без учёта времени»
+  // и отменённые смены в среднее не идут).
+  const sess=(Array.isArray(op.sessions)?op.sessions:[]).filter(x=>!x.undone&&Number(x.qty)>0&&Number(x.minutes)>0);
+  const sq=sess.reduce((n,x)=>n+Number(x.qty),0),sm=sess.reduce((n,x)=>n+Number(x.minutes),0);
+  const pace=sq>0?sm/sq:0;
+  return {perUnit,remaining,remainingMin:Math.round(perUnit*remaining),pace,diff:perUnit>0&&pace>0?(pace-perUnit)/perUnit:null};
+}
+function simpleMaterialsInfo(o,op){
+  const assigned=operationMaterials(o,op).filter(i=>Number(i.qty||0)>0);
+  const remaining=Math.max(0,orderProductQty(o)-productionCompletedQty(o,op));
+  if(!assigned.length)return {kind:'none',rows:[],short:false};
+  if(remaining<=0)return {kind:'consumed',rows:[],short:false};
+  const plan=productionConsumptionPlan(o,op,remaining);
+  if(!plan.rows.length)return {kind:'consumed',rows:[],short:false};
+  const rows=plan.rows.map(r=>{
+    const missing=Math.max(0,stockNumForUnit(r.qty-r.stockBefore,r.unit));
+    return {name:materialTitle(r.m),need:qtyWithUnit(r.qty,r.unit),missing:missing>0?qtyWithUnit(missing,r.unit):''};
+  });
+  return {kind:'rows',rows,short:plan.shortages.length>0};
+}
+function simpleInfoChipsHtml(o,op){
+  const due=simpleDueInfo(o),mat=simpleMaterialsInfo(o,op);
+  const dueChip=due?`<span class="sw-mini ${due.cls}">${escapeHtml(t('simpleDuePrefix'))} ${escapeHtml(due.shortDate)} · ${escapeHtml(due.text)}</span>`:'';
+  const matChip=mat.kind==='rows'
+    ?`<span class="sw-mini ${mat.short?'overdue':'ok'}">${escapeHtml(t(mat.short?'simpleMatChipShort':'simpleMatChipOk'))}</span>`
+    :'';
+  return dueChip+matChip;
+}
+function simpleInfoBodyHtml(o,op){
+  const due=simpleDueInfo(o),norm=simpleNormInfo(o,op),mat=simpleMaterialsInfo(o,op);
+  const dueCard=`<div class="sw-info-card ${due?due.cls:''}"><small>${escapeHtml(t('simpleDueLabel'))}</small>${due?`<b>${escapeHtml(due.dateText)}</b><span>${escapeHtml(due.text)}</span>`:`<b>—</b><span>${escapeHtml(t('simpleDueNotSet'))}</span>`}</div>`;
+  let normSub='';
+  if(norm.perUnit>0){
+    normSub=`<span>${escapeHtml(t('simpleNormLeft'))}: ${escapeHtml(orderTimeText(norm.remainingMin))}</span>`;
+    if(norm.pace>0){
+      const tag=norm.diff<=-0.05?['ok',t('simplePaceFaster')]:norm.diff>=0.05?['soon',t('simplePaceSlower')]:['',t('simplePaceOnNorm')];
+      normSub+=`<span class="sw-pace ${tag[0]}">${escapeHtml(t('simpleNormFact'))}: ${escapeHtml(simpleNum(norm.pace))} ${escapeHtml(t('simpleMinPerPc'))} · ${escapeHtml(tag[1])}</span>`;
+    }
+  }
+  const normCard=`<div class="sw-info-card"><small>${escapeHtml(t('simpleNormLabel'))}</small>${norm.perUnit>0?`<b>${escapeHtml(simpleNum(norm.perUnit))} ${escapeHtml(t('simpleMinPerPc'))}</b>${normSub}`:`<b>—</b><span>${escapeHtml(t('simpleNormNotSet'))}</span>`}</div>`;
+  let matBody;
+  if(mat.kind==='rows'){
+    matBody=`<ul class="sw-mat-list">${mat.rows.map(r=>`<li><span class="name">${escapeHtml(r.name)}</span><span class="qty">${escapeHtml(r.need)}</span>${r.missing?`<span class="short">${escapeHtml(t('simpleMatMissing').replace('{qty}',r.missing))}</span>`:''}</li>`).join('')}</ul>`;
+  }else{
+    matBody=`<span class="sw-mat-empty">${escapeHtml(t(mat.kind==='none'?'simpleMatNone':'simpleMatConsumed'))}</span>`;
+  }
+  const remainingQty=Math.max(0,orderProductQty(o)-productionCompletedQty(o,op));
+  const matCard=`<div class="sw-info-card wide ${mat.short?'overdue':''}"><small>${escapeHtml(t('simpleMatLabel').replace('{n}',remainingQty))}</small>${matBody}</div>`;
+  return `<div class="sw-info-grid">${dueCard}${normCard}</div>${matCard}`;
+}
+// IDLE — блок раскрыт (решение «начинать ли» принимается, глядя на него); ACTIVE — свёрнут в одну строку
+// с двумя чипами (срок, материалы) и раскрывается по нажатию — экран счётчика остаётся коротким.
+let simpleInfoOpen=false;
+function toggleSimpleInfo(){simpleInfoOpen=!simpleInfoOpen;renderWorkshops()}
+function simpleTaskInfoHtml(o,op,collapsible){
+  if(!collapsible)return `<section class="sw-info"><div class="sw-info-title">${escapeHtml(t('simpleInfoTitle'))}</div>${simpleInfoBodyHtml(o,op)}</section>`;
+  return `<section class="sw-info"><button type="button" class="sw-info-toggle" aria-expanded="${simpleInfoOpen}" onclick="toggleSimpleInfo()"><span class="sw-info-toggle-title">${escapeHtml(t('simpleInfoTitle'))}</span><span class="sw-info-chips">${simpleInfoChipsHtml(o,op)}</span><span class="sw-info-chevron ${simpleInfoOpen?'open':''}" aria-hidden="true">⌄</span></button>${simpleInfoOpen?simpleInfoBodyHtml(o,op):''}</section>`;
 }
 // v7.95: и IDLE, и DONE раньше открывались без единой кнопки "назад" наверху (у DONE была только
 // скромная текстовая ссылка внизу, у IDLE — вообще никакой) — на телефоне, тем более в режиме PWA
@@ -1639,6 +1721,7 @@ function simpleTaskDetailIdleHtml(task){
     <h2>${escapeHtml(workshopLabel(op.stepName))}</h2>
     <p>${escapeHtml(o.number||'—')}</p>
     <span class="simple-badge idle">${escapeHtml(String(t('simpleDoneOfLabel')).replace('{completed}',completed).replace('{total}',total))}</span>
+    ${simpleTaskInfoHtml(o,op,false)}
     <button type="button" class="simple-btn-main" onclick="simpleStartTask('${o.id}',${op.stepIndex})">${escapeHtml(btnLabel)}</button>
   </div>`;
 }
@@ -1659,6 +1742,7 @@ function simpleTaskDetailActiveHtml(task){
       <button type="button" class="simple-round-btn" aria-label="+1" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},1)">+1</button>
     </div>
     <div class="simple-task-progress wide"><i><b style="width:${pct}%"></b></i></div>
+    ${simpleTaskInfoHtml(o,op,true)}
     <div class="simple-batch-row">
       ${[5,10,20].map(n=>`<button type="button" class="simple-batch-chip" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},${n})">+${n}</button>`).join('')}
     </div>

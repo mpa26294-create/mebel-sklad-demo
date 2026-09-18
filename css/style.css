@@ -934,7 +934,7 @@ body.worker-mode{
 .sw-bar{height:6px;border-radius:99px;background:var(--sw-track);overflow:hidden}
 .sw-bar b{display:block;height:100%;border-radius:99px;background:var(--sw-accent)}
 .sw-card.selected .sw-bar{background:#ffd9bd}
-.sw-card-count{margin-top:8px;text-align:right;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:500;color:var(--sw-text2)}
+.sw-card-count{margin:0;text-align:right;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:500;color:var(--sw-text2)}
 .sw-action{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin-top:12px;border-radius:14px;background:var(--sw-accent);color:#fff;font-size:16px;font-weight:800}
 .sw-action.secondary{background:var(--sw-card);border:1.5px solid var(--sw-accent);color:var(--sw-accent)}
 .sw-action.disabled{background:transparent;border:1.5px dashed #cfc8b8;color:var(--sw-text2);font-weight:700}
@@ -1003,6 +1003,42 @@ body.worker-mode{
 .simple-detail-done b{font-size:22px;font-weight:700;color:#15171a}
 .simple-detail-done p{margin:6px 0 22px;font-size:14px;color:#8a8f99}
 .simple-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:14px;font-weight:650}
+/* v8.01: срок и предупреждение о материале на карточке; блок «Задание» на экране задачи */
+.sw-card-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;min-height:20px}
+.sw-due{font-size:13px;font-weight:600;color:var(--sw-text2)}
+.sw-due.soon{color:#b54708;font-weight:700}
+.sw-due.overdue{color:#c23b2e;font-weight:800}
+.sw-card-warn{display:inline-block;margin-top:10px;padding:5px 10px;border-radius:10px;background:#fbe8c8;color:#7a4a0c;font-size:13px;font-weight:700}
+.sw-info{align-self:stretch;width:100%;text-align:left;margin:0 0 18px}
+.sw-info-title{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sw-text2)}
+.sw-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.sw-info-card{min-width:0;padding:12px 14px;border:1px solid var(--sw-line);border-radius:14px;background:#faf9f5}
+.sw-info-card.wide{grid-column:1/-1}
+.sw-info-card small{display:block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--sw-text2)}
+.sw-info-card b{display:block;margin-top:5px;font-size:17px;font-weight:800;line-height:1.25;color:var(--sw-text)}
+.sw-info-card span{display:block;margin-top:3px;font-size:13px;font-weight:600;line-height:1.35;color:var(--sw-text2)}
+.sw-info-card.soon span{color:#b54708}
+.sw-info-card.overdue{background:#fdecec;border-color:#f3c5c0}
+.sw-info-card.overdue b,.sw-info-card.overdue span{color:#c23b2e}
+.sw-info-card .sw-pace.ok{color:#2f6b2a}
+.sw-info-card .sw-pace.soon{color:#b54708}
+.sw-mat-list{list-style:none;margin:6px 0 0;padding:0}
+.sw-mat-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--sw-line)}
+.sw-mat-list li:first-child{border-top:0}
+.sw-info-card .sw-mat-list .name{margin:0;font-size:15px;font-weight:700;color:var(--sw-text);overflow-wrap:anywhere}
+.sw-info-card .sw-mat-list .qty{margin:0;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;font-weight:600;color:var(--sw-text);white-space:nowrap}
+.sw-info-card .sw-mat-list .short{grid-column:1/-1;margin:0;font-size:13px;font-weight:800;color:#c23b2e}
+.sw-info-card .sw-mat-empty{margin-top:6px;font-size:14px}
+.sw-info-toggle{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--sw-line);border-radius:14px;background:#faf9f5;text-align:left}
+.sw-info-toggle-title{flex:0 0 auto;font-size:14px;font-weight:800;color:var(--sw-text)}
+.sw-info-chips{flex:1;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.sw-mini{padding:3px 9px;border-radius:999px;background:#ece9e2;color:#5b564a;font-size:12px;font-weight:700;white-space:nowrap}
+.sw-mini.ok{background:#e4efdf;color:#2f6b2a}
+.sw-mini.soon{background:#fbe8c8;color:#7a4a0c}
+.sw-mini.overdue{background:#fdecec;color:#c23b2e}
+.sw-info-chevron{flex:0 0 auto;font-size:20px;line-height:1;color:var(--sw-text2);transition:transform .15s ease}
+.sw-info-chevron.open{transform:rotate(180deg)}
+.simple-detail-idle .simple-badge{margin-bottom:18px}
 /* v8.00: своё число + «Отметки» (Сегодня / За всё время) */
 .simple-custom-row{display:flex;gap:8px;width:100%;margin:0 0 22px}
 .simple-custom-input{flex:1;min-width:0;min-height:52px;padding:0 16px;border:1.5px solid var(--sw-line);border-radius:14px;background:#fff;color:var(--sw-text);font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:600}
