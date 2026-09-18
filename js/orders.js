@@ -1272,13 +1272,40 @@ async function endShiftManually(orderId,index){
 // показывает это (с кнопкой "Редактировать" и историей правок) в полной карточке операции заказа
 // (см. productionSessionHistoryHtml) — просто отфильтрованный по сегодняшнему дню, без дублирования
 // логики редактирования/списания.
-function workshopMarksTodayHtml(o,op){
-  const todayStr=today();
-  const sessions=(Array.isArray(op.sessions)?op.sessions:[]).filter(s=>String(s.startedAt||'').slice(0,10)===todayStr);
-  if(!sessions.length)return `<div class="workshop-marks-today"><div class="workshop-marks-today-head">${escapeHtml(t('workshopMarksTodayLabel'))}</div><div class="workshop-marks-empty">${escapeHtml(t('workshopNoMarksYet'))}</div></div>`;
+// v8.00: "Отметки" — теперь с переключателем «Сегодня / За всё время»: за всё время — список по дням
+// (день + итог за день), с той же кнопкой «Редактировать» у каждой строки, в т.ч. за прошлые дни.
+// Один общий компонент: и мастер в карточке цеха, и рабочий на экране задачи. Правка любой смены —
+// та же openFixQuantityModal(), она работает по id списания, а не «только последнюю».
+let workshopMarksScope='today'; // 'today' | 'all'
+function setWorkshopMarksScope(scope){workshopMarksScope=scope==='all'?'all':'today';renderWorkshops()}
+function marksDayLabel(dayKey){
+  if(dayKey===today())return t('marksScopeToday');
+  const y=new Date();y.setDate(y.getDate()-1);
+  if(dayKey===y.toISOString().slice(0,10))return t('marksYesterday');
+  const d=new Date(dayKey+'T12:00:00Z');
+  if(isNaN(d))return dayKey||'—';
+  const loc={ru:'ru-RU',en:'en-GB',lv:'lv-LV'}[currentLang]||'ru-RU';
+  return d.toLocaleDateString(loc,{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+}
+function workshopMarksHtml(o,op){
+  const scope=workshopMarksScope==='all'?'all':'today',todayStr=today();
+  const dayOf=s=>String(s.startedAt||'').slice(0,10);
+  const allSessions=(Array.isArray(op.sessions)?op.sessions:[]).slice().sort((a,b)=>String(b.startedAt||'').localeCompare(String(a.startedAt||'')));
+  const list=scope==='all'?allSessions:allSessions.filter(s=>dayOf(s)===todayStr);
+  const sum=arr=>arr.filter(s=>!s.undone).reduce((n,s)=>n+Number(s.qty||0),0);
   const logs=productionMeta(o).consumptionLogs||[];
-  const rows=sessions.map(s=>productionSessionRowHtml(o,op,s,logs)).join('');
-  return `<div class="workshop-marks-today"><div class="workshop-marks-today-head">${escapeHtml(t('workshopMarksTodayLabel'))}</div><div class="production-session-list workshop-marks-today-list">${rows}</div></div>`;
+  const tabs=`<div class="marks-scope" role="tablist"><button type="button" role="tab" aria-selected="${scope==='today'}" class="${scope==='today'?'active':''}" onclick="setWorkshopMarksScope('today')">${escapeHtml(t('marksScopeToday'))}</button><button type="button" role="tab" aria-selected="${scope==='all'}" class="${scope==='all'?'active':''}" onclick="setWorkshopMarksScope('all')">${escapeHtml(t('marksScopeAll'))}</button></div>`;
+  const head=`<div class="workshop-marks-today-head"><span>${escapeHtml(t('workshopMarksTitle'))}</span><span class="marks-total">${escapeHtml(t('marksTotalLabel'))}: ${sum(list)} ${escapeHtml(t('unitPieces'))}</span></div>${tabs}`;
+  if(!list.length)return `<div class="workshop-marks-today">${head}<div class="workshop-marks-empty">${escapeHtml(t('workshopNoMarksYet'))}</div></div>`;
+  let body;
+  if(scope==='today'){
+    body=`<div class="production-session-list workshop-marks-today-list">${list.map(s=>productionSessionRowHtml(o,op,s,logs)).join('')}</div>`;
+  }else{
+    const groups=[];
+    list.forEach(s=>{const k=dayOf(s);const g=groups[groups.length-1];if(g&&g.day===k)g.rows.push(s);else groups.push({day:k,rows:[s]})});
+    body=groups.map(g=>`<div class="marks-day-group"><div class="marks-day-head"><b>${escapeHtml(marksDayLabel(g.day))}</b><span>${sum(g.rows)} ${escapeHtml(t('unitPieces'))}</span></div><div class="production-session-list workshop-marks-today-list">${g.rows.map(s=>productionSessionRowHtml(o,op,s,logs)).join('')}</div></div>`).join('');
+  }
+  return `<div class="workshop-marks-today">${head}${body}</div>`;
 }
 function workshopCurrentCardHtml(row){
   if(!row)return `<div class="workshop-current-card empty"><div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div></div>`;
@@ -1317,7 +1344,7 @@ function workshopCurrentCardHtml(row){
       <button class="btn primary workshop-record-btn" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">✔ ${escapeHtml(t('recordOutputBtn'))}</button>
       <div class="workshop-qty-chips">${chips}<button class="btn workshop-qty-chip" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('otherQtyBtn'))}</button></div>
     </div>
-    ${workshopMarksTodayHtml(o,op)}
+    ${workshopMarksHtml(o,op)}
     <button type="button" class="workshop-more-link" onclick="goToOrderFromMaterial(event,'${o.id}')">${escapeHtml(t('openOrderCard'))} ↗</button>
   </div>`;
 }
@@ -1480,6 +1507,19 @@ async function simpleQuickAdd(orderId,index,qty){
   if(remaining<=0)return;
   await finalizeProductionQuantity(orderId,index,Math.max(1,Math.min(qty,remaining)));
 }
+// v8.00: своё число — рабочий вписывает количество сам (для партий не +5/+10/+20). В отличие от
+// чипов не «обрезается» молча до остатка: явно введённое больше остатка — ошибка, а не тихая правка.
+async function simpleQuickAddCustom(orderId,index){
+  const input=document.querySelector('.simple-custom-input');
+  const qty=Number(input?.value);
+  if(!input||input.value===''||!Number.isInteger(qty)||qty<1){toast(t('prodInvalidQty'));input?.focus();return}
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op||op.status==='done')return;
+  const remaining=orderProductQty(o)-productionCompletedQty(o,op);
+  if(qty>remaining){toast(`${t('prodInvalidQty')}: 1–${remaining}`);input.focus();input.select();return}
+  input.value='';
+  await finalizeProductionQuantity(orderId,index,qty);
+}
 // "−1" — реальная отмена последней (ещё не отменённой) единицы выпуска: тот же performQuantityDecrease,
 // что и админская "Исправить последнее" (см. openFixQuantityModal), просто без модального окна.
 async function simpleQuickRemove(orderId,index){
@@ -1603,7 +1643,7 @@ function simpleTaskDetailIdleHtml(task){
   </div>`;
 }
 // v7.92: сотрудник видит сегодняшние отметки и может сам исправить, если ошибся при вводе количества
-// (кнопка "Редактировать" у каждой строки) — тот же workshopMarksTodayHtml/productionSessionRowHtml,
+// (кнопка "Редактировать" у каждой строки) — тот же workshopMarksHtml/productionSessionRowHtml,
 // что и в полной карточке цеха для мастера, без отдельной логики специально для рабочего режима.
 function simpleTaskDetailActiveHtml(task){
   const {order:o,op}=task,total=orderProductQty(o),completed=productionCompletedQty(o,op),pct=productionOpPercent(o,op),remaining=Math.max(0,total-completed);
@@ -1620,11 +1660,14 @@ function simpleTaskDetailActiveHtml(task){
     </div>
     <div class="simple-task-progress wide"><i><b style="width:${pct}%"></b></i></div>
     <div class="simple-batch-row">
-      <button type="button" class="simple-batch-chip" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},10)">+10</button>
-      <button type="button" class="simple-batch-chip" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},50)">+50</button>
+      ${[5,10,20].map(n=>`<button type="button" class="simple-batch-chip" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},${n})">+${n}</button>`).join('')}
+    </div>
+    <div class="simple-custom-row">
+      <input class="simple-custom-input" type="number" inputmode="numeric" min="1" max="${remaining}" step="1" placeholder="${escapeHtml(t('simpleCustomPlaceholder'))}" aria-label="${escapeHtml(t('simpleCustomPlaceholder'))}" data-key="${simpleTaskKey(o.id,op.stepIndex)}" ${remaining<1?'disabled':''} onkeydown="if(event.key==='Enter'){event.preventDefault();simpleQuickAddCustom('${o.id}',${op.stepIndex})}">
+      <button type="button" class="simple-custom-btn" ${remaining<1?'disabled':''} onclick="simpleQuickAddCustom('${o.id}',${op.stepIndex})">${escapeHtml(t('simpleCustomAddBtn'))}</button>
     </div>
     <button type="button" class="simple-btn-main" onclick="simpleFinishForNow('${o.id}',${op.stepIndex})">${escapeHtml(t('simpleDoneBtn'))}</button>
-    ${workshopMarksTodayHtml(o,op)}
+    ${workshopMarksHtml(o,op)}
   </div>`;
 }
 function simpleTaskDetailDoneHtml(task){
@@ -1635,7 +1678,7 @@ function simpleTaskDetailDoneHtml(task){
     <b>${escapeHtml(String(t('simpleDeliveredLabel')).replace('{qty}',completed))}</b>
     <p>${escapeHtml(t('simpleDataSavedText'))}</p>
     <button type="button" class="simple-back-link" onclick="closeSimpleTask()">${escapeHtml(t('simpleBackToListLink'))}</button>
-    ${workshopMarksTodayHtml(o,op)}
+    ${workshopMarksHtml(o,op)}
   </div>`;
 }
 function simpleTaskDetailHtml(){
@@ -1667,7 +1710,12 @@ function renderWorkshops(){
   }
   const desc=document.getElementById('workshopsTopbarDesc');
   if(document.body.classList.contains('worker-mode')){
+    // Экран перерисовывается целиком (по таймеру раз в 30 с и после любой записи) — не даём этому стереть
+    // число, которое рабочий сейчас вписывает в поле «Своё число».
+    const prevInput=el.querySelector('.simple-custom-input');
+    const prev=prevInput&&prevInput.value!==''?{key:prevInput.dataset.key,value:prevInput.value,focus:document.activeElement===prevInput}:null;
     el.innerHTML=workerWorkshopTasksHtml();
+    if(prev){const ni=el.querySelector('.simple-custom-input');if(ni&&ni.dataset.key===prev.key){ni.value=prev.value;if(prev.focus)ni.focus()}}
     if(desc)desc.textContent='Ваши задачи по цеху';
     return;
   }
@@ -1750,16 +1798,33 @@ function productionOperationMaterialStatusHtml(o,op){
 // v7.92: вынесено из productionSessionHistoryHtml() без изменения поведения — один и тот же рендер
 // строки смены (количество, начало → конец, длительность, кто, кнопка «Редактировать», след правки/
 // отмены) теперь переиспользуется и в полной карточке операции заказа, и в компактном списке
-// «Отметки за сегодня» на экране цеха (см. workshopMarksTodayHtml) — вместо повторения этой же
+// «Отметки за сегодня» на экране цеха (см. workshopMarksHtml) — вместо повторения этой же
 // разметки/логики редактирования во второй раз.
+// v8.00: у смены хранится полная история правок (edits: [{from,to,by,at}]) — не только последняя.
+// Старые смены (правились до этой версии) имели только originalQty/editedBy/editedAt — из них
+// восстанавливается одна запись, чтобы прежние правки не пропали из списка.
+function sessionEditsList(s){
+  if(Array.isArray(s.edits)&&s.edits.length)return s.edits.slice();
+  return s.editedBy?[{from:s.originalQty,to:s.qty,by:s.editedBy,at:s.editedAt}]:[];
+}
+// Подряд идущие правки одного человека (например, несколько нажатий «−1») в списке схлопываются в одну
+// строку «было → стало» — в данных они остаются отдельными.
+function sessionEditTraceHtml(s){
+  const merged=[];
+  sessionEditsList(s).forEach(e=>{
+    const last=merged[merged.length-1];
+    if(last&&last.by===e.by&&Number(last.to)===Number(e.from))merged[merged.length-1]={...last,to:e.to,at:e.at};
+    else merged.push({...e});
+  });
+  const lines=merged.map(e=>`<div class="session-edit-trace">${escapeHtml(t('sessionEditedTrace'))}: ${escapeHtml(e.from??'')}→${escapeHtml(e.to??'')} · ${escapeHtml(e.by||'—')} · ${escapeHtml(productionDateTimeText(e.at))}</div>`);
+  if(s.undone)lines.push(`<div class="session-edit-trace danger">${escapeHtml(t('sessionCancelledTrace'))}: ${escapeHtml(s.undoneBy||'—')} · ${escapeHtml(productionDateTimeText(s.undoneAt))}</div>`);
+  return lines.join('');
+}
 function productionSessionRowHtml(o,op,s,consumptionLogs){
   const log=s.consumptionId?(consumptionLogs||[]).find(l=>String(l.id)===String(s.consumptionId)):null;
   const canEdit=!!(log&&!log.undone);
   const editBtn=canEdit?`<button class="btn small ghost session-edit-btn" type="button" onclick="openFixQuantityModal('${o.id}',${op.stepIndex},'${log.id}')">${escapeHtml(t('editBtn'))}</button>`:'';
-  const trace=s.undone
-    ?`<div class="session-edit-trace danger">${escapeHtml(t('sessionCancelledTrace'))}: ${escapeHtml(s.undoneBy||'—')} · ${escapeHtml(productionDateTimeText(s.undoneAt))}</div>`
-    :(s.editedBy?`<div class="session-edit-trace">${escapeHtml(t('sessionEditedTrace'))}: ${escapeHtml(s.originalQty??'')}→${escapeHtml(s.qty??'')} · ${escapeHtml(s.editedBy)} · ${escapeHtml(productionDateTimeText(s.editedAt))}</div>`:'');
-  return `<div class="${s.undone?'session-undone':''}"><span><b>${escapeHtml(s.qty||0)} ${escapeHtml(t('unitPieces'))}</b><small>${escapeHtml(productionDateTimeText(s.startedAt))} → ${escapeHtml(productionDateTimeText(s.endedAt))}</small>${trace}</span><strong>${escapeHtml(orderTimeText(s.minutes||0))}</strong><em>${escapeHtml(s.by||'—')}</em>${editBtn}</div>`;
+  return `<div class="${s.undone?'session-undone':''}"><span><b>${escapeHtml(s.qty||0)} ${escapeHtml(t('unitPieces'))}</b><small>${escapeHtml(productionDateTimeText(s.startedAt))} → ${escapeHtml(productionDateTimeText(s.endedAt))}</small>${sessionEditTraceHtml(s)}</span><strong>${escapeHtml(orderTimeText(s.minutes||0))}</strong><em>${escapeHtml(s.by||'—')}</em>${editBtn}</div>`;
 }
 function productionSessionHistoryHtml(o,op){
   const sessions=Array.isArray(op.sessions)?op.sessions:[];
@@ -1968,7 +2033,7 @@ async function performQuantityDecrease(orderId,index,consumptionId,newQty){
   // осталось совсем.
   if(op.status==='done'&&op.completedQty<orderProductQty(o)){op.status='paused';op.finishedAt='';op.collapsed=false;if(o.status==='Готов')o.status='В работе';}
   if(op.completedQty<=0)op.status='not_started';
-  op.sessions=(op.sessions||[]).map(s=>String(s.consumptionId)===String(log.id)?(cancelled?{...s,undone:true,undoneBy:who,undoneAt:now}:{...s,qty:newQty,originalQty:s.originalQty??s.qty,editedBy:who,editedAt:now}):s);
+  op.sessions=(op.sessions||[]).map(s=>String(s.consumptionId)===String(log.id)?(cancelled?{...s,undone:true,undoneBy:who,undoneAt:now,edits:sessionEditsList(s)}:{...s,qty:newQty,originalQty:s.originalQty??s.qty,editedBy:who,editedAt:now,edits:[...sessionEditsList(s),{from:oldQty,to:newQty,by:who,at:now}]}):s);
   const key=cancelled?'production_material_undo':'production_material_fix',label=cancelled?tRu('undoneLastWriteOff'):tRu('fixedLastWriteOff');
   productionMeta(o).logs.unshift({id:uid(),stepIndex:Number(index),stepName:op.stepName,qty:-delta,minutes:0,at:now,by:who,source:cancelled?'consumption-undo':'consumption-fix',consumptionId:log.id});
   try{if(typeof auditAdd==='function')auditAdd(key,'order',o.id,o.number,`${label}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')} (${who})`,{orderId:o.id,orderNumber:o.number,step:op.stepName,oldQty,newQty,by:who});}catch(e){}
@@ -1999,7 +2064,7 @@ async function performQuantityIncrease(orderId,index,consumptionId,newQty,plan){
   const fullyDone=op.completedQty>=orderProductQty(o);
   if(fullyDone){op.status='done';op.pausedAt='';op.finishedAt=now;op.collapsed=true;if(productionDoneCount(o)===productionOps(o).length)o.status='Готов';}
   else if(op.status==='not_started')op.status='paused';
-  op.sessions=(op.sessions||[]).map(s=>String(s.consumptionId)===String(log.id)?{...s,qty:newQty,originalQty:s.originalQty??oldQty,editedBy:who,editedAt:now}:s);
+  op.sessions=(op.sessions||[]).map(s=>String(s.consumptionId)===String(log.id)?{...s,qty:newQty,originalQty:s.originalQty??oldQty,editedBy:who,editedAt:now,edits:[...sessionEditsList(s),{from:oldQty,to:newQty,by:who,at:now}]}:s);
   try{if(typeof auditAdd==='function')auditAdd('production_material_fix','order',o.id,o.number,`${tRu('fixedLastWriteOff')}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')} (${who})`,{orderId:o.id,orderNumber:o.number,step:op.stepName,oldQty,newQty,by:who});}catch(e){}
   plan.rows.forEach(r=>{try{if(typeof auditAdd==='function')auditAdd('production_material_fix','material',r.m.id,materialTitle(r.m),`${tRu('writeOffCorrectedForOrder')} ${o.number}: ${op.stepName}, дополнительно списано ${qtyWithUnit(r.qty,r.unit)} (${who})`,{orderId:o.id,orderNumber:o.number,step:op.stepName,qty:r.qty,unit:r.unit,by:who});}catch(e){}});
   await persistProductionWorkflow(o,`${tRu('fixedLastWriteOff')}: ${op.stepName}, ${oldQty} → ${newQty} ${tRu('unitsGenitive')} (${who})`,'production_material_fix',{step:op.stepName,oldQty,newQty,consumptionId:log.id,by:who});

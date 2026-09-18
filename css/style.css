@@ -996,13 +996,41 @@ body.worker-mode{
 .simple-counter{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:96px}
 .simple-counter b{font-size:76px;font-weight:700;line-height:1;color:#15171a;font-variant-numeric:tabular-nums}
 .simple-counter span{font-size:14px;color:#8a8f99}
-.simple-batch-row{display:flex;gap:10px;margin:6px 0 26px}
+.simple-batch-row{display:flex;gap:10px;margin:6px 0 12px}
 .simple-batch-chip{min-height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#15171a;font-size:14px;font-weight:650}
 .simple-batch-chip:disabled{opacity:.4}
 .simple-done-icon{width:88px;height:88px;border-radius:50%;background:#e9f7ee;color:#1f9d4c;display:grid;place-items:center;font-size:40px;font-weight:700;margin-bottom:18px}
 .simple-detail-done b{font-size:22px;font-weight:700;color:#15171a}
 .simple-detail-done p{margin:6px 0 22px;font-size:14px;color:#8a8f99}
 .simple-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:14px;font-weight:650}
+/* v8.00: своё число + «Отметки» (Сегодня / За всё время) */
+.simple-custom-row{display:flex;gap:8px;width:100%;margin:0 0 22px}
+.simple-custom-input{flex:1;min-width:0;min-height:52px;padding:0 16px;border:1.5px solid var(--sw-line);border-radius:14px;background:#fff;color:var(--sw-text);font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:600}
+.simple-custom-input::placeholder{color:#a39c8c;font-family:inherit;font-size:15px;font-weight:500}
+.simple-custom-input:focus{outline:none;border-color:var(--sw-accent);box-shadow:0 0 0 3px rgba(255,102,0,.16)}
+.simple-custom-btn{flex:0 0 auto;min-height:52px;padding:0 22px;border-radius:14px;background:var(--sw-accent);color:#fff;font-size:16px;font-weight:800}
+.simple-custom-btn:disabled,.simple-custom-input:disabled{opacity:.4}
+.workshop-marks-today-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.marks-scope{display:flex;gap:6px;margin:6px 0 8px}
+.marks-scope button{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#475467;font-size:12px;font-weight:700}
+.marks-scope button.active{background:#15171a;border-color:#15171a;color:#fff}
+.marks-day-group{margin-top:10px}
+.marks-day-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 2px 6px;font-size:12px;color:#667085}
+.marks-day-head b{color:#344054;font-weight:700}
+.marks-day-group .workshop-marks-today-list{max-height:none}
+/* Рабочий режим: крупнее (в перчатках) и строка смены в два ряда — иначе 4 колонки не влезают в телефон. */
+.simple-workshop-wrap .workshop-marks-today-list{max-height:none;overflow:visible}
+.simple-workshop-wrap .marks-scope button{min-height:44px;padding:0 18px;font-size:14px}
+.simple-workshop-wrap .workshop-marks-today-head{font-size:12px;letter-spacing:.06em;color:var(--sw-text2)}
+.simple-workshop-wrap .production-session-list>div{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"main main btn" "dur who btn";gap:4px 12px;padding:12px 0}
+.simple-workshop-wrap .production-session-list>div>span{grid-area:main}
+.simple-workshop-wrap .production-session-list>div>strong{grid-area:dur}
+.simple-workshop-wrap .production-session-list>div>em{grid-area:who;overflow:hidden;text-overflow:ellipsis}
+.simple-workshop-wrap .production-session-list>div>button{grid-area:btn;align-self:center;min-height:44px;padding:0 16px;font-size:14px}
+.simple-workshop-wrap .production-session-list b{font-size:16px}
+.simple-workshop-wrap .production-session-list small{font-size:12.5px}
+.simple-workshop-wrap .production-session-list strong,.simple-workshop-wrap .production-session-list em{font-size:13px}
+.simple-workshop-wrap .production-session-list .session-edit-trace{font-size:12.5px}
 /* v7.92: "Отметки за сегодня" (workshopMarksTodayHtml) внутри центрированной колонки экрана
    ACTIVE/DONE рабочего режима — растягиваем на всю ширину и выравниваем текст по левому краю,
    иначе унаследованные align-items:center/text-align:center сплющили бы список строк по центру. */
