@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MOLM" />
-  <link rel="stylesheet" href="css/style.css?v=8.04" />
+  <link rel="stylesheet" href="css/style.css?v=8.05" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -226,12 +226,12 @@
 
 
 <script src="js/changelog.js?v=7.39"></script>
-<script src="js/ui.js?v=8.04"></script>
+<script src="js/ui.js?v=8.05"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=8.04"></script>
+<script src="js/translations.js?v=8.05"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -243,13 +243,13 @@ let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response ov
 
 const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что требует внимания»: скролл и фикс мобильной раскладки';
 </script>
-<script src="js/auth.js?v=8.04"></script>
+<script src="js/auth.js?v=8.05"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.04"></script>
+<script src="js/orders.js?v=8.05"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
-<script src="js/roles.js?v=8.04"></script>
+<script src="js/roles.js?v=8.05"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -560,14 +560,20 @@ function isAccessSyncRow(row){return String(row?.article||'')===ACCESS_SYNC_ARTI
 // "workshop" из v7.40/v7.41) в массив "workshops", чтобы уже сохранённые строки не потерялись.
 function normalizeWorkerAccessRow(w){
   const workshops=Array.isArray(w?.workshops)?w.workshops.filter(Boolean):(w?.workshop?[w.workshop]:[]);
-  return {email:String(w?.email||'').trim().toLowerCase(),role:'worker',workshops};
+  return {email:String(w?.email||'').trim().toLowerCase(),roles:['worker'],workshops};
 }
-// v8.04: мастер и кладовщик хранятся в отдельном списке attributes.roles (а не в workers) — общая база у
-// тестового и основного сайта, а старый код основного сайта считает КАЖДОГО из workers рабочим и
-// запер бы мастера в упрощённом режиме. Так основной сайт эту запись просто не видит.
+// v8.05: у человека может быть НЕСКОЛЬКО должностей. Тот, у кого ТОЛЬКО «рабочий», по-прежнему лежит в
+// attributes.workers (старый код основного сайта понимает эту запись). Все остальные (любая другая должность,
+// в т.ч. в сочетании с рабочим) — в отдельном attributes.roles: общая база у тестового и основного сайта, а
+// старый код считает КАЖДОГО из workers рабочим и запер бы мастера в упрощённом режиме — roles он не видит.
+// Читаются оба формата roles: v8.04 (role: 'master') и v8.05 (roles: ['master','worker']).
 function normalizeRoleRow(r){
-  const role=['master','storekeeper'].includes(r?.role)?r.role:'';
-  return role?{email:String(r?.email||'').trim().toLowerCase(),role,workshops:[]}:null;
+  const choices=(typeof ROLE_CHOICES!=='undefined'&&ROLE_CHOICES)||['technologist','master','storekeeper','worker'];
+  const raw=Array.isArray(r?.roles)?r.roles:(r?.role?[r.role]:[]);
+  const roles=choices.filter(x=>raw.includes(x));
+  if(!roles.length)return null;
+  const workshops=roles.includes('worker')&&Array.isArray(r?.workshops)?r.workshops.filter(Boolean):[];
+  return {email:String(r?.email||'').trim().toLowerCase(),roles,workshops};
 }
 function currentWorkerAssignment(){
   if(!currentUser)return null;
@@ -575,20 +581,23 @@ function currentWorkerAssignment(){
   if(!email)return null;
   return workerAccessList.find(w=>String(w?.email||'').trim().toLowerCase()===email)||null;
 }
-// v8.04: роль текущего пользователя. Администратор (NOTIFICATION_ADMIN_EMAIL, js/orders.js) — всегда
-// admin, что бы ни лежало в списке (иначе он мог бы сам себя запереть). Не в списке — DEFAULT_ROLE:
+// v8.05: должности текущего пользователя. Администратор (NOTIFICATION_ADMIN_EMAIL, js/orders.js) — всегда
+// только admin, что бы ни лежало в списке (иначе он мог бы сам себя запереть). Не в списке — DEFAULT_ROLE:
 // до введения ролей такие люди видели весь сайт, так что и сейчас работают как мастер.
 const DEFAULT_ROLE='master';
-function currentUserRole(){
-  if(typeof isNotificationAdmin==='function'&&isNotificationAdmin())return 'admin';
-  return currentWorkerAssignment()?.role||DEFAULT_ROLE;
+function currentUserRoles(){
+  if(typeof isNotificationAdmin==='function'&&isNotificationAdmin())return ['admin'];
+  const a=currentWorkerAssignment();
+  return a&&Array.isArray(a.roles)&&a.roles.length?a.roles:[DEFAULT_ROLE];
 }
-function isWorkerUser(){return currentUserRole()==='worker'}
+// Упрощённый вид — только у того, у кого ЕДИНСТВЕННАЯ должность «рабочий». Если есть ещё какая-то (например,
+// кладовщик), человек видит обычную версию сайта — в пределах прав, которые складываются.
+function isWorkerUser(){const r=currentUserRoles();return r.length===1&&r[0]==='worker'}
 function applyWorkerModeForCurrentUser(){
-  const worker=isWorkerUser(),role=currentUserRole();
+  const worker=isWorkerUser(),roles=currentUserRoles();
   document.body.classList.toggle('worker-mode',worker);
-  ['admin','master','storekeeper','worker'].forEach(r=>document.body.classList.toggle('role-'+r,r===role));
   if(typeof installRoleGuards==='function')installRoleGuards();
+  if(typeof applyRoleVisibility==='function')applyRoleVisibility();
   const list=worker?(currentWorkerAssignment().workshops||[]):[];
   window.WORKER_WORKSHOPS=list;
   // v7.43: «Цеха» у рабочего — всегда один плоский список его задач (см. workerWorkshopTasksHtml
@@ -598,14 +607,15 @@ function applyWorkerModeForCurrentUser(){
   if(brandP)brandP.textContent=worker?(list.length===1?`Цех: ${list[0]}`:list.length?`Цеха: ${list.join(', ')}`:'цех не назначен'):'учёт материалов';
   if(typeof switchSection==='function'){
     const active=document.querySelector('.section.active')?.id||'';
-    if(worker||(typeof roleAllowsSection==='function'&&active&&!roleAllowsSection(role,active)))switchSection('stock');
+    if(worker||(typeof roleAllowsSection==='function'&&active&&!roleAllowsSection(roles,active)))switchSection('stock');
   }
   if(typeof renderTopbarProfile==='function')renderTopbarProfile();
 }
 function applyAccessSyncRow(row){
   const workers=(Array.isArray(row?.attributes?.workers)?row.attributes.workers:[]).map(normalizeWorkerAccessRow);
-  const roles=(Array.isArray(row?.attributes?.roles)?row.attributes.roles:[]).map(normalizeRoleRow).filter(r=>r&&!workers.some(w=>w.email===r.email));
-  workerAccessList=[...workers,...roles];
+  const roles=(Array.isArray(row?.attributes?.roles)?row.attributes.roles:[]).map(normalizeRoleRow).filter(Boolean);
+  // если email есть в обоих списках — новее и точнее запись из roles
+  workerAccessList=[...workers.filter(w=>!roles.some(r=>r.email===w.email)),...roles];
   accessSyncRowId=row?.id||accessSyncRowId;
   applyWorkerModeForCurrentUser();
   if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();
@@ -615,9 +625,11 @@ async function saveWorkerAccessList(list){
   workerAccessList=list;
   if(!canWriteSupabase()){toast('Локальный режим: сохранение недоступно');return false}
   try{
-    // workers — как и раньше (совместимо со старым кодом основного сайта); мастер/кладовщик — отдельно, в roles.
-    const workers=list.filter(w=>w.role==='worker').map(w=>({email:w.email,workshops:w.workshops||[]}));
-    const roles=list.filter(w=>w.role==='master'||w.role==='storekeeper').map(w=>({email:w.email,role:w.role}));
+    // workers — только «чистые» рабочие, как и раньше (совместимо со старым кодом основного сайта);
+    // всё остальное — в roles.
+    const onlyWorker=w=>w.roles.length===1&&w.roles[0]==='worker';
+    const workers=list.filter(onlyWorker).map(w=>({email:w.email,workshops:w.workshops||[]}));
+    const roles=list.filter(w=>!onlyWorker(w)).map(w=>({email:w.email,roles:w.roles,workshops:w.roles.includes('worker')?(w.workshops||[]):[]}));
     const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:{workers,roles,updatedAt:new Date().toISOString()}};
     if(accessSyncRowId){
       const{error}=await supabaseClient.from('materials').update(payload).eq('id',accessSyncRowId);
@@ -638,14 +650,22 @@ async function saveWorkerAccessList(list){
 }
 let workerAccessDraft=null;
 function ensureWorkerAccessDraft(){
-  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({email:w.email,role:w.role||'worker',workshops:[...(w.workshops||[])]}));
+  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({email:w.email,roles:[...(w.roles||['worker'])],workshops:[...(w.workshops||[])]}));
   return workerAccessDraft;
 }
 function updateWorkerAccessDraft(index,field,value){
   const draft=ensureWorkerAccessDraft();
   if(!draft[index])return;
   draft[index][field]=field==='email'?value.trim().toLowerCase():value;
-  if(field==='role'){if(value!=='worker')draft[index].workshops=[];renderWorkerAccessPanel();}
+}
+function toggleWorkerAccessDraftRole(index,role,checked){
+  const row=ensureWorkerAccessDraft()[index];
+  if(!row)return;
+  const set=new Set(Array.isArray(row.roles)?row.roles:[]);
+  if(checked)set.add(role);else set.delete(role);
+  row.roles=[...set];
+  if(!set.has('worker'))row.workshops=[];
+  renderWorkerAccessPanel();
 }
 function toggleWorkerAccessDraftWorkshop(index,name,checked){
   const draft=ensureWorkerAccessDraft(),row=draft[index];
@@ -660,21 +680,23 @@ function removeWorkerAccessDraft(index){
   renderWorkerAccessPanel();
 }
 function addWorkerAccessDraftRow(){
-  ensureWorkerAccessDraft().push({email:'',role:'worker',workshops:[]});
+  ensureWorkerAccessDraft().push({email:'',roles:['worker'],workshops:[]});
   renderWorkerAccessPanel();
 }
 function workerAccessRowHtml(row,index){
   const email=escapeHtml(row.email||'');
   const selected=new Set(row.workshops||[]);
+  const roles=new Set(row.roles||[]);
   const presets=(typeof ORDER_TECH_WORKSHOP_PRESETS!=='undefined'&&ORDER_TECH_WORKSHOP_PRESETS)||[];
-  const role=row.role||'worker';
-  const chips=presets.map(w=>`<label class="worker-access-chip ${selected.has(w)?'checked':''}"><input type="checkbox" ${selected.has(w)?'checked':''} onchange="toggleWorkerAccessDraftWorkshop(${index},'${jsStrArg(w)}',this.checked)"><span>${escapeHtml(w)}</span></label>`).join('');
-  const roleSelect=`<select class="select worker-access-role" aria-label="Роль" onchange="updateWorkerAccessDraft(${index},'role',this.value)"><option value="worker" ${role==='worker'?'selected':''}>Рабочий</option><option value="master" ${role==='master'?'selected':''}>Мастер / технолог</option><option value="storekeeper" ${role==='storekeeper'?'selected':''}>Кладовщик</option></select>`;
-  const roleHint={master:'Весь сайт: заказы, технологии, цеха, склад, модели, справочники.',storekeeper:'Склад — полностью. Заказы, технологии, модели и справочники — только просмотр.'}[role]||'';
+  const roleNames={technologist:'Технолог',master:'Мастер',storekeeper:'Кладовщик',worker:'Рабочий'};
+  const roleChips=['technologist','master','storekeeper','worker'].map(r=>`<label class="worker-access-chip ${roles.has(r)?'checked':''}"><input type="checkbox" ${roles.has(r)?'checked':''} onchange="toggleWorkerAccessDraftRole(${index},'${r}',this.checked)"><span>${roleNames[r]}</span></label>`).join('');
+  const shopChips=presets.map(w=>`<label class="worker-access-chip ${selected.has(w)?'checked':''}"><input type="checkbox" ${selected.has(w)?'checked':''} onchange="toggleWorkerAccessDraftWorkshop(${index},'${jsStrArg(w)}',this.checked)"><span>${escapeHtml(w)}</span></label>`).join('');
+  const shops=roles.has('worker')?`<div class="worker-access-sub"><small>Цеха рабочего</small><div class="worker-access-chips">${shopChips||'<span class="muted" style="font-size:12px">нет цехов в списке</span>'}</div></div>`:'';
+  const warn=roles.size?'':'<span class="worker-access-warn">Выберите хотя бы одну должность</span>';
+  const mixed=(roles.has('worker')&&roles.size>1)?'<span class="muted" style="font-size:12px;line-height:1.4">Есть и другая должность — человек видит обычную версию сайта, а не упрощённую.</span>':'';
   return `<div class="worker-access-row">
     <input class="input no-autofill" type="email" autocomplete="new-password" aria-autocomplete="none" placeholder="email@example.com" value="${email}" oninput="updateWorkerAccessDraft(${index},'email',this.value)">
-    ${roleSelect}
-    <div class="worker-access-chips">${role==='worker'?(chips||'<span class="muted" style="font-size:12px">нет цехов в списке</span>'):`<span class="muted" style="font-size:12px;line-height:1.4">${escapeHtml(roleHint)}</span>`}</div>
+    <div class="worker-access-cols"><div class="worker-access-sub"><small>Должности (можно несколько)</small><div class="worker-access-chips">${roleChips}</div></div>${shops}${mixed}${warn}</div>
     <button class="iconbtn" type="button" aria-label="Удалить" onclick="removeWorkerAccessDraft(${index})">×</button>
   </div>`;
 }
@@ -685,7 +707,7 @@ function renderWorkerAccessPanel(){
   panel.style.display='';
   const draft=ensureWorkerAccessDraft();
   panel.innerHTML=`<h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Пользователи и роли</h3>
-    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. Кого нет в списке, работает как «Мастер». <b>Мастер / технолог</b> — весь сайт. <b>Кладовщик</b> — Склад полностью, заказы/технологии/модели/справочники только смотреть. <b>Рабочий</b> — упрощённый вид: «Склад» (быстрый приход/расход) и свои цеха (можно отметить несколько); правит только свои отметки за сегодня, чужие и за прошлые дни — мастер. Ограничения действуют в интерфейсе.</p>
+    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. К одному email можно отметить сразу несколько должностей — права складываются. Кого нет в списке, работает как «Мастер». <b>Технолог</b> — создаёт и правит заказы, технологии, модели, справочники; цеха только смотрит. <b>Мастер</b> — весь сайт, правит любые отметки. <b>Кладовщик</b> — Склад полностью, остальное только смотреть. <b>Рабочий</b> — упрощённый вид («Склад» + свои цеха), правит только свои отметки за сегодня; если у человека есть ещё другая должность, он видит обычную версию сайта. <b>Владелец</b> — только mpa26294@gmail.com. Ограничения действуют в интерфейсе.</p>
     <div class="worker-access-list">${draft.map(workerAccessRowHtml).join('')||'<p class="muted" style="margin:0 0 12px">Пока никто не добавлен.</p>'}</div>
     <div class="actions" style="margin-top:12px">
       <button class="btn" type="button" onclick="addWorkerAccessDraftRow()">+ Добавить пользователя</button>
@@ -694,7 +716,10 @@ function renderWorkerAccessPanel(){
 }
 async function commitWorkerAccessDraft(){
   const seen=new Set();
-  const draft=ensureWorkerAccessDraft().filter(w=>w.email&&w.email.includes('@')).map(w=>({email:w.email,role:['master','storekeeper'].includes(w.role)?w.role:'worker',workshops:w.role==='worker'||!w.role?(Array.isArray(w.workshops)?w.workshops:[]):[]})).filter(w=>seen.has(w.email)?false:(seen.add(w.email),true));
+  const rows=ensureWorkerAccessDraft().filter(w=>w.email&&w.email.includes('@'));
+  const empty=rows.find(w=>!(w.roles||[]).length);
+  if(empty){toast(`Выберите должность для ${empty.email}`);return}
+  const draft=rows.map(w=>({email:w.email,roles:['technologist','master','storekeeper','worker'].filter(r=>(w.roles||[]).includes(r)),workshops:(w.roles||[]).includes('worker')?(Array.isArray(w.workshops)?w.workshops:[]):[]})).filter(w=>seen.has(w.email)?false:(seen.add(w.email),true));
   const ok=await saveWorkerAccessList(draft);
   workerAccessDraft=null;
   if(ok)renderWorkerAccessPanel();

@@ -517,9 +517,9 @@ Object.assign(I18N.ru,{simpleMatShowAll:'Показать все ({n})',simpleMa
 Object.assign(I18N.en,{simpleMatShowAll:'Show all ({n})',simpleMatCollapse:'Collapse',simpleMatShortCount:'Short: {k} of {n} items'});
 Object.assign(I18N.lv,{simpleMatShowAll:'Rādīt visus ({n})',simpleMatCollapse:'Sakļaut',simpleMatShortCount:'Trūkst: {k} no {n} poz.'});
 // v8.04: роли
-Object.assign(I18N.ru,{roleAdmin:'Администратор',roleMaster:'Мастер / технолог',roleStorekeeper:'Кладовщик',roleWorker:'Рабочий',roleReadOnly:'Только просмотр — у вашей роли нет права это менять',roleNotYourMark:'Править можно только свои отметки за сегодня'});
-Object.assign(I18N.en,{roleAdmin:'Administrator',roleMaster:'Master / technologist',roleStorekeeper:'Storekeeper',roleWorker:'Worker',roleReadOnly:'View only — your role cannot change this',roleNotYourMark:'You can edit only your own marks from today'});
-Object.assign(I18N.lv,{roleAdmin:'Administrators',roleMaster:'Meistars / tehnologs',roleStorekeeper:'Noliktavas darbinieks',roleWorker:'Darbinieks',roleReadOnly:'Tikai skatīšanās — jūsu loma to nevar mainīt',roleNotYourMark:'Var labot tikai savas šodienas atzīmes'});
+Object.assign(I18N.ru,{roleAdmin:'Администратор',roleTechnologist:'Технолог',roleMaster:'Мастер',roleStorekeeper:'Кладовщик',roleWorker:'Рабочий',roleReadOnly:'Только просмотр — у вашей роли нет права это менять',roleNotYourMark:'Править можно только свои отметки за сегодня'});
+Object.assign(I18N.en,{roleAdmin:'Administrator',roleTechnologist:'Technologist',roleMaster:'Master',roleStorekeeper:'Storekeeper',roleWorker:'Worker',roleReadOnly:'View only — your role cannot change this',roleNotYourMark:'You can edit only your own marks from today'});
+Object.assign(I18N.lv,{roleAdmin:'Administrators',roleTechnologist:'Tehnologs',roleMaster:'Meistars',roleStorekeeper:'Noliktavas darbinieks',roleWorker:'Darbinieks',roleReadOnly:'Tikai skatīšanās — jūsu loma to nevar mainīt',roleNotYourMark:'Var labot tikai savas šodienas atzīmes'});
 // v8.00: «Отметки» (Сегодня / За всё время) и ввод своего числа
 Object.assign(I18N.ru,{marksScopeToday:'Сегодня',marksScopeAll:'За всё время',marksYesterday:'Вчера',marksTotalLabel:'Итого',workshopMarksTitle:'Отметки',simpleCustomPlaceholder:'Своё число',simpleCustomAddBtn:'Добавить'});
 Object.assign(I18N.en,{marksScopeToday:'Today',marksScopeAll:'All time',marksYesterday:'Yesterday',marksTotalLabel:'Total',workshopMarksTitle:'Marks',simpleCustomPlaceholder:'Custom number',simpleCustomAddBtn:'Add'});

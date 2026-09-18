@@ -1039,12 +1039,16 @@ body.worker-mode{
 .sw-info-chevron{flex:0 0 auto;font-size:20px;line-height:1;color:var(--sw-text2);transition:transform .15s ease}
 .sw-info-chevron.open{transform:rotate(180deg)}
 .simple-detail-idle .simple-badge{margin-bottom:18px}
-/* v8.04: роли. Кладовщик — Склад полностью + просмотр заказов/технологий/моделей/справочников
-   (сами функции записи дополнительно закрыты в js/roles.js, тут только прячем кнопки создания). */
-body.role-storekeeper #mainNav button:not([data-section="stock"]):not([data-section="orders"]):not([data-section="technologies"]):not([data-section="models"]):not([data-section="refs"]):not([data-section="changelog"]){display:none}
-body.role-storekeeper #orders>.topbar .btn.primary,body.role-storekeeper #models>.topbar .btn.primary,body.role-storekeeper #technologies .btn.primary,body.role-storekeeper #refs .btn.primary{display:none!important}
-.worker-access-row .worker-access-role{flex:0 0 190px;height:40px}
-@media(max-width:640px){.worker-access-row .worker-access-role{flex:1 1 100%}}
+/* v8.05: роли. Пункты меню и кнопки создания скрываются по ОБЪЕДИНЕНИЮ должностей (js/roles.js →
+   applyRoleVisibility): .role-hidden — раздел недоступен, .no-catalog-write — нет права создавать заказы/
+   технологии/модели/справочники (сами функции записи дополнительно закрыты в js/roles.js). */
+#mainNav button.role-hidden{display:none!important}
+body.no-catalog-write #orders>.topbar .btn.primary,body.no-catalog-write #models>.topbar .btn.primary,body.no-catalog-write #technologies .btn.primary,body.no-catalog-write #refs .btn.primary{display:none!important}
+.worker-access-cols{flex:2;display:flex;flex-direction:column;gap:10px;min-width:0}
+.worker-access-sub small{display:block;margin-bottom:5px;font-size:11.5px;font-weight:600;color:#6b7280}
+.worker-access-cols .worker-access-chips{flex:none;padding-top:0}
+.worker-access-warn{font-size:12px;font-weight:600;color:#c73535}
+@media(max-width:640px){.worker-access-cols{flex:1 1 100%}}
 /* v8.03: длинный список материалов — «Показать все» */
 .sw-info-card .sw-mat-summary{margin-top:6px;font-size:13px;font-weight:800;color:#c23b2e}
 .sw-mat-more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;margin-top:6px;border:1px solid var(--sw-line);border-radius:12px;background:#fff;color:var(--sw-text);font-size:14px;font-weight:700}

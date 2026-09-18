@@ -1923,13 +1923,13 @@ function sessionEditTraceHtml(s){
   if(s.undone)lines.push(`<div class="session-edit-trace danger">${escapeHtml(t('sessionCancelledTrace'))}: ${escapeHtml(s.undoneBy||'—')} · ${escapeHtml(productionDateTimeText(s.undoneAt))}</div>`);
   return lines.join('');
 }
-// v8.04: кто может править отметку выпуска. Админ и мастер — любую; рабочий — только СВОЮ и только за
+// v8.04/8.05: кто может править отметку выпуска. Админ и мастер — любую; рабочий — только СВОЮ и только за
 // сегодня (владелец определяется по byEmail смены; у старых смен без byEmail — по имени); остальные роли
 // править не могут. Проверяется и в интерфейсе (кнопка «Редактировать»), и в самих функциях правки.
 function canEditMark(o,op,consumptionId){
-  const role=typeof currentUserRole==='function'?currentUserRole():'admin';
-  if(role==='admin'||role==='master')return true;
-  if(role!=='worker')return false;
+  const roles=typeof userRoles==='function'?userRoles():['admin'];
+  if(roles.includes('admin')||roles.includes('master'))return true;
+  if(!roles.includes('worker'))return false;
   const s=(op?.sessions||[]).find(x=>String(x.consumptionId)===String(consumptionId));
   if(!s)return false;
   const me=String(currentUser?.email||'').toLowerCase();
