@@ -45,7 +45,10 @@ function switchSection(sectionId){
   // Склад и Цеха; переход в любой другой раздел (в т.ч. по прямой ссылке или через меню профиля)
   // молча возвращает на Склад. Это ограничение только в интерфейсе — не замена прав доступа в
   // самой базе (Supabase RLS), но убирает лишние разделы, которые сотруднику не нужны.
-  if(document.body.classList.contains('worker-mode')&&sectionId!=='stock'&&sectionId!=='workshops')sectionId='stock';
+  // v8.04: доступные разделы зависят от роли (js/roles.js): рабочий — Склад и Цеха, кладовщик — Склад и
+  // просмотр заказов/технологий/моделей/справочников, мастер и админ — всё.
+  {const role=typeof currentUserRole==='function'?currentUserRole():'admin';
+   if(typeof roleAllowsSection==='function'&&!roleAllowsSection(role,sectionId))sectionId='stock';}
   const section=document.getElementById(sectionId);
   if(!section)return false;
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));

@@ -147,7 +147,7 @@ function renderTopbarProfile(){
   }
   const avatar=document.getElementById('tpAvatar');if(avatar)avatar.textContent=profileAvatarInitial();
   const nameEl=document.getElementById('tpUserName');if(nameEl)nameEl.textContent=profileDisplayName();
-  const roleEl=document.getElementById('tpUserRole');if(roleEl)roleEl.textContent=profileDisplayRole()||t('roleNotSet');
+  const roleEl=document.getElementById('tpUserRole');if(roleEl)roleEl.textContent=profileDisplayRole()||(currentUser&&typeof currentUserRole==='function'&&typeof roleLabel==='function'?roleLabel(currentUserRole()):t('roleNotSet'));
   if(document.getElementById('tpNotifPanel')?.classList.contains('show'))renderNotificationsPanelList();
   if(document.getElementById('tpProfileMenu')?.classList.contains('show'))renderProfileMenu();
 }

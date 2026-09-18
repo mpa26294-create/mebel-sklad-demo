@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MOLM" />
-  <link rel="stylesheet" href="css/style.css?v=8.03" />
+  <link rel="stylesheet" href="css/style.css?v=8.04" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -226,12 +226,12 @@
 
 
 <script src="js/changelog.js?v=7.39"></script>
-<script src="js/ui.js?v=7.98"></script>
+<script src="js/ui.js?v=8.04"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=8.03"></script>
+<script src="js/translations.js?v=8.04"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -243,12 +243,13 @@ let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response ov
 
 const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что требует внимания»: скролл и фикс мобильной раскладки';
 </script>
-<script src="js/auth.js?v=6.6"></script>
+<script src="js/auth.js?v=8.04"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.03"></script>
+<script src="js/orders.js?v=8.04"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
+<script src="js/roles.js?v=8.04"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -559,7 +560,14 @@ function isAccessSyncRow(row){return String(row?.article||'')===ACCESS_SYNC_ARTI
 // "workshop" из v7.40/v7.41) в массив "workshops", чтобы уже сохранённые строки не потерялись.
 function normalizeWorkerAccessRow(w){
   const workshops=Array.isArray(w?.workshops)?w.workshops.filter(Boolean):(w?.workshop?[w.workshop]:[]);
-  return {email:String(w?.email||'').trim().toLowerCase(),workshops};
+  return {email:String(w?.email||'').trim().toLowerCase(),role:'worker',workshops};
+}
+// v8.04: мастер и кладовщик хранятся в отдельном списке attributes.roles (а не в workers) — общая база у
+// тестового и основного сайта, а старый код основного сайта считает КАЖДОГО из workers рабочим и
+// запер бы мастера в упрощённом режиме. Так основной сайт эту запись просто не видит.
+function normalizeRoleRow(r){
+  const role=['master','storekeeper'].includes(r?.role)?r.role:'';
+  return role?{email:String(r?.email||'').trim().toLowerCase(),role,workshops:[]}:null;
 }
 function currentWorkerAssignment(){
   if(!currentUser)return null;
@@ -567,12 +575,20 @@ function currentWorkerAssignment(){
   if(!email)return null;
   return workerAccessList.find(w=>String(w?.email||'').trim().toLowerCase()===email)||null;
 }
-// Администратор (NOTIFICATION_ADMIN_EMAIL, js/orders.js) никогда не переводится в рабочий режим,
-// даже если случайно окажется в списке — иначе он мог бы сам себя запереть в упрощённом интерфейсе.
-function isWorkerUser(){return !!currentWorkerAssignment()&&!(typeof isNotificationAdmin==='function'&&isNotificationAdmin())}
+// v8.04: роль текущего пользователя. Администратор (NOTIFICATION_ADMIN_EMAIL, js/orders.js) — всегда
+// admin, что бы ни лежало в списке (иначе он мог бы сам себя запереть). Не в списке — DEFAULT_ROLE:
+// до введения ролей такие люди видели весь сайт, так что и сейчас работают как мастер.
+const DEFAULT_ROLE='master';
+function currentUserRole(){
+  if(typeof isNotificationAdmin==='function'&&isNotificationAdmin())return 'admin';
+  return currentWorkerAssignment()?.role||DEFAULT_ROLE;
+}
+function isWorkerUser(){return currentUserRole()==='worker'}
 function applyWorkerModeForCurrentUser(){
-  const worker=isWorkerUser();
+  const worker=isWorkerUser(),role=currentUserRole();
   document.body.classList.toggle('worker-mode',worker);
+  ['admin','master','storekeeper','worker'].forEach(r=>document.body.classList.toggle('role-'+r,r===role));
+  if(typeof installRoleGuards==='function')installRoleGuards();
   const list=worker?(currentWorkerAssignment().workshops||[]):[];
   window.WORKER_WORKSHOPS=list;
   // v7.43: «Цеха» у рабочего — всегда один плоский список его задач (см. workerWorkshopTasksHtml
@@ -580,10 +596,16 @@ function applyWorkerModeForCurrentUser(){
   // блокировка здесь больше не нужны — не важно, назначен ему один цех или несколько.
   const brandP=document.querySelector('.brand p');
   if(brandP)brandP.textContent=worker?(list.length===1?`Цех: ${list[0]}`:list.length?`Цеха: ${list.join(', ')}`:'цех не назначен'):'учёт материалов';
-  if(worker&&typeof switchSection==='function')switchSection('stock');
+  if(typeof switchSection==='function'){
+    const active=document.querySelector('.section.active')?.id||'';
+    if(worker||(typeof roleAllowsSection==='function'&&active&&!roleAllowsSection(role,active)))switchSection('stock');
+  }
+  if(typeof renderTopbarProfile==='function')renderTopbarProfile();
 }
 function applyAccessSyncRow(row){
-  workerAccessList=(Array.isArray(row?.attributes?.workers)?row.attributes.workers:[]).map(normalizeWorkerAccessRow);
+  const workers=(Array.isArray(row?.attributes?.workers)?row.attributes.workers:[]).map(normalizeWorkerAccessRow);
+  const roles=(Array.isArray(row?.attributes?.roles)?row.attributes.roles:[]).map(normalizeRoleRow).filter(r=>r&&!workers.some(w=>w.email===r.email));
+  workerAccessList=[...workers,...roles];
   accessSyncRowId=row?.id||accessSyncRowId;
   applyWorkerModeForCurrentUser();
   if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();
@@ -593,7 +615,10 @@ async function saveWorkerAccessList(list){
   workerAccessList=list;
   if(!canWriteSupabase()){toast('Локальный режим: сохранение недоступно');return false}
   try{
-    const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:{workers:list,updatedAt:new Date().toISOString()}};
+    // workers — как и раньше (совместимо со старым кодом основного сайта); мастер/кладовщик — отдельно, в roles.
+    const workers=list.filter(w=>w.role==='worker').map(w=>({email:w.email,workshops:w.workshops||[]}));
+    const roles=list.filter(w=>w.role==='master'||w.role==='storekeeper').map(w=>({email:w.email,role:w.role}));
+    const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:{workers,roles,updatedAt:new Date().toISOString()}};
     if(accessSyncRowId){
       const{error}=await supabaseClient.from('materials').update(payload).eq('id',accessSyncRowId);
       if(error)throw error;
@@ -602,7 +627,7 @@ async function saveWorkerAccessList(list){
       if(error)throw error;
       accessSyncRowId=rows?.[0]?.id||'';
     }
-    if(typeof auditAdd==='function')auditAdd('worker_access_changed','settings','worker_access','Упрощённый доступ',`Список сотрудников с упрощённым доступом обновлён (${list.length})`);
+    if(typeof auditAdd==='function')auditAdd('worker_access_changed','settings','worker_access','Пользователи и роли',`Список пользователей и ролей обновлён (${list.length})`);
     toast('Список сохранён');
     return true;
   }catch(e){
@@ -613,13 +638,14 @@ async function saveWorkerAccessList(list){
 }
 let workerAccessDraft=null;
 function ensureWorkerAccessDraft(){
-  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({email:w.email,workshops:[...(w.workshops||[])]}));
+  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({email:w.email,role:w.role||'worker',workshops:[...(w.workshops||[])]}));
   return workerAccessDraft;
 }
 function updateWorkerAccessDraft(index,field,value){
   const draft=ensureWorkerAccessDraft();
   if(!draft[index])return;
   draft[index][field]=field==='email'?value.trim().toLowerCase():value;
+  if(field==='role'){if(value!=='worker')draft[index].workshops=[];renderWorkerAccessPanel();}
 }
 function toggleWorkerAccessDraftWorkshop(index,name,checked){
   const draft=ensureWorkerAccessDraft(),row=draft[index];
@@ -634,17 +660,21 @@ function removeWorkerAccessDraft(index){
   renderWorkerAccessPanel();
 }
 function addWorkerAccessDraftRow(){
-  ensureWorkerAccessDraft().push({email:'',workshops:[]});
+  ensureWorkerAccessDraft().push({email:'',role:'worker',workshops:[]});
   renderWorkerAccessPanel();
 }
 function workerAccessRowHtml(row,index){
   const email=escapeHtml(row.email||'');
   const selected=new Set(row.workshops||[]);
   const presets=(typeof ORDER_TECH_WORKSHOP_PRESETS!=='undefined'&&ORDER_TECH_WORKSHOP_PRESETS)||[];
+  const role=row.role||'worker';
   const chips=presets.map(w=>`<label class="worker-access-chip ${selected.has(w)?'checked':''}"><input type="checkbox" ${selected.has(w)?'checked':''} onchange="toggleWorkerAccessDraftWorkshop(${index},'${jsStrArg(w)}',this.checked)"><span>${escapeHtml(w)}</span></label>`).join('');
+  const roleSelect=`<select class="select worker-access-role" aria-label="Роль" onchange="updateWorkerAccessDraft(${index},'role',this.value)"><option value="worker" ${role==='worker'?'selected':''}>Рабочий</option><option value="master" ${role==='master'?'selected':''}>Мастер / технолог</option><option value="storekeeper" ${role==='storekeeper'?'selected':''}>Кладовщик</option></select>`;
+  const roleHint={master:'Весь сайт: заказы, технологии, цеха, склад, модели, справочники.',storekeeper:'Склад — полностью. Заказы, технологии, модели и справочники — только просмотр.'}[role]||'';
   return `<div class="worker-access-row">
     <input class="input no-autofill" type="email" autocomplete="new-password" aria-autocomplete="none" placeholder="email@example.com" value="${email}" oninput="updateWorkerAccessDraft(${index},'email',this.value)">
-    <div class="worker-access-chips">${chips||'<span class="muted" style="font-size:12px">нет цехов в списке</span>'}</div>
+    ${roleSelect}
+    <div class="worker-access-chips">${role==='worker'?(chips||'<span class="muted" style="font-size:12px">нет цехов в списке</span>'):`<span class="muted" style="font-size:12px;line-height:1.4">${escapeHtml(roleHint)}</span>`}</div>
     <button class="iconbtn" type="button" aria-label="Удалить" onclick="removeWorkerAccessDraft(${index})">×</button>
   </div>`;
 }
@@ -654,16 +684,17 @@ function renderWorkerAccessPanel(){
   if(typeof isNotificationAdmin!=='function'||!isNotificationAdmin()){panel.style.display='none';panel.innerHTML='';workerAccessDraft=null;return}
   panel.style.display='';
   const draft=ensureWorkerAccessDraft();
-  panel.innerHTML=`<h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Упрощённый доступ (рабочие)</h3>
-    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. Сотрудник из списка при входе видит не весь сайт, а только «Склад» (быстрый приход/расход по артикулу) и свои цеха — можно отметить один или несколько.</p>
+  panel.innerHTML=`<h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Пользователи и роли</h3>
+    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. Кого нет в списке, работает как «Мастер». <b>Мастер / технолог</b> — весь сайт. <b>Кладовщик</b> — Склад полностью, заказы/технологии/модели/справочники только смотреть. <b>Рабочий</b> — упрощённый вид: «Склад» (быстрый приход/расход) и свои цеха (можно отметить несколько); правит только свои отметки за сегодня, чужие и за прошлые дни — мастер. Ограничения действуют в интерфейсе.</p>
     <div class="worker-access-list">${draft.map(workerAccessRowHtml).join('')||'<p class="muted" style="margin:0 0 12px">Пока никто не добавлен.</p>'}</div>
     <div class="actions" style="margin-top:12px">
-      <button class="btn" type="button" onclick="addWorkerAccessDraftRow()">+ Добавить сотрудника</button>
+      <button class="btn" type="button" onclick="addWorkerAccessDraftRow()">+ Добавить пользователя</button>
       <button class="btn primary" type="button" onclick="commitWorkerAccessDraft()">Сохранить</button>
     </div>`;
 }
 async function commitWorkerAccessDraft(){
-  const draft=ensureWorkerAccessDraft().filter(w=>w.email&&w.email.includes('@')).map(w=>({email:w.email,workshops:Array.isArray(w.workshops)?w.workshops:[]}));
+  const seen=new Set();
+  const draft=ensureWorkerAccessDraft().filter(w=>w.email&&w.email.includes('@')).map(w=>({email:w.email,role:['master','storekeeper'].includes(w.role)?w.role:'worker',workshops:w.role==='worker'||!w.role?(Array.isArray(w.workshops)?w.workshops:[]):[]})).filter(w=>seen.has(w.email)?false:(seen.add(w.email),true));
   const ok=await saveWorkerAccessList(draft);
   workerAccessDraft=null;
   if(ok)renderWorkerAccessPanel();

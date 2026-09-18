@@ -1923,9 +1923,22 @@ function sessionEditTraceHtml(s){
   if(s.undone)lines.push(`<div class="session-edit-trace danger">${escapeHtml(t('sessionCancelledTrace'))}: ${escapeHtml(s.undoneBy||'—')} · ${escapeHtml(productionDateTimeText(s.undoneAt))}</div>`);
   return lines.join('');
 }
+// v8.04: кто может править отметку выпуска. Админ и мастер — любую; рабочий — только СВОЮ и только за
+// сегодня (владелец определяется по byEmail смены; у старых смен без byEmail — по имени); остальные роли
+// править не могут. Проверяется и в интерфейсе (кнопка «Редактировать»), и в самих функциях правки.
+function canEditMark(o,op,consumptionId){
+  const role=typeof currentUserRole==='function'?currentUserRole():'admin';
+  if(role==='admin'||role==='master')return true;
+  if(role!=='worker')return false;
+  const s=(op?.sessions||[]).find(x=>String(x.consumptionId)===String(consumptionId));
+  if(!s)return false;
+  const me=String(currentUser?.email||'').toLowerCase();
+  const mine=s.byEmail?String(s.byEmail).toLowerCase()===me:(!!s.by&&s.by===productionActorName());
+  return mine&&String(s.startedAt||'').slice(0,10)===today();
+}
 function productionSessionRowHtml(o,op,s,consumptionLogs){
   const log=s.consumptionId?(consumptionLogs||[]).find(l=>String(l.id)===String(s.consumptionId)):null;
-  const canEdit=!!(log&&!log.undone);
+  const canEdit=!!(log&&!log.undone)&&canEditMark(o,op,log.id);
   const editBtn=canEdit?`<button class="btn small ghost session-edit-btn" type="button" onclick="openFixQuantityModal('${o.id}',${op.stepIndex},'${log.id}')">${escapeHtml(t('editBtn'))}</button>`:'';
   return `<div class="${s.undone?'session-undone':''}"><span><b>${escapeHtml(s.qty||0)} ${escapeHtml(t('unitPieces'))}</b><small>${escapeHtml(productionDateTimeText(s.startedAt))} → ${escapeHtml(productionDateTimeText(s.endedAt))}</small>${sessionEditTraceHtml(s)}</span><strong>${escapeHtml(orderTimeText(s.minutes||0))}</strong><em>${escapeHtml(s.by||'—')}</em>${editBtn}</div>`;
 }
@@ -2057,7 +2070,7 @@ async function finalizeProductionQuantity(orderId,index,qty,options={}){const o=
 // options.skipSessionPrompt=true — это уже ответ пользователя (см. openWorkSessionMissingModal ниже),
 // повторный вопрос не нужен.
 if(!options.skipSessionPrompt&&op.status!=='running'){openWorkSessionMissingModal(orderId,index,qty);return}
-const plan=productionConsumptionPlan(o,op,qty);if(!plan.ok){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('changeQuantity'))}</button>`);return}const now=productionNow();if(!op.startedAt)op.startedAt=now;if(!op.currentSessionStartedAt)op.currentSessionStartedAt=now;if(op.status==='paused'&&op.pausedAt){const paused=productionMinutesBetween(op.pausedAt,now);op.pauseMinutes=Number(op.pauseMinutes||0)+paused;op.currentSessionPauseMinutes=Number(op.currentSessionPauseMinutes||0)+paused;}const sessionStartedAt=op.currentSessionStartedAt,sessionMinutes=Math.max(0,productionMinutesBetween(sessionStartedAt,now)-Number(op.currentSessionPauseMinutes||0)),sessionId=uid();if(!Array.isArray(op.sessions))op.sessions=[];op.sessions.unshift({id:sessionId,startedAt:sessionStartedAt,endedAt:now,minutes:sessionMinutes,qty,by:productionActorName()});const log=applyProductionConsumptionPlan(o,op,plan,sessionId);op.sessions[0].consumptionId=log.id;op.completedQty=productionCompletedQty(o,op)+qty;op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)+sessionMinutes);const fullyDone=op.completedQty>=orderProductQty(o);
+const plan=productionConsumptionPlan(o,op,qty);if(!plan.ok){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('changeQuantity'))}</button>`);return}const now=productionNow();if(!op.startedAt)op.startedAt=now;if(!op.currentSessionStartedAt)op.currentSessionStartedAt=now;if(op.status==='paused'&&op.pausedAt){const paused=productionMinutesBetween(op.pausedAt,now);op.pauseMinutes=Number(op.pauseMinutes||0)+paused;op.currentSessionPauseMinutes=Number(op.currentSessionPauseMinutes||0)+paused;}const sessionStartedAt=op.currentSessionStartedAt,sessionMinutes=Math.max(0,productionMinutesBetween(sessionStartedAt,now)-Number(op.currentSessionPauseMinutes||0)),sessionId=uid();if(!Array.isArray(op.sessions))op.sessions=[];op.sessions.unshift({id:sessionId,startedAt:sessionStartedAt,endedAt:now,minutes:sessionMinutes,qty,by:productionActorName(),byEmail:currentUser?.email||''});const log=applyProductionConsumptionPlan(o,op,plan,sessionId);op.sessions[0].consumptionId=log.id;op.completedQty=productionCompletedQty(o,op)+qty;op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)+sessionMinutes);const fullyDone=op.completedQty>=orderProductQty(o);
 // v7.84: запись выпуска — тоже точка, где активная рабочая сессия (см. workSessions) заканчивается:
 // либо операция полностью выполнена (order_completed), либо это осознанная пауза после того, как
 // часть партии записали (ближе всего по смыслу к manual_pause — отдельной причины "записан частичный
@@ -2087,6 +2100,7 @@ function openFixQuantityModal(orderId,index,consumptionId=''){
   const op=productionOp(o,index);if(!op)return;
   const log=resolveConsumptionLog(o,index,consumptionId);
   if(!log){toast(t('noWriteOffsToUndo'));return}
+  if(!canEditMark(o,op,log.id)){toast(t('roleNotYourMark'));return}
   const oldQty=Number(log.qty||0),maxPossible=Math.max(oldQty,orderProductQty(o)-productionCompletedQty(o,op)+oldQty);
   const body=`<div class="production-quantity-modal"><p>${escapeHtml(t('fixLastQtyHint'))}: <b>${oldQty} ${escapeHtml(t('unitsGenitive'))}</b> · ${escapeHtml(t('operationWord'))} ${escapeHtml(op.stepName)}</p><div class="field"><label>${escapeHtml(t('fixLastQtyLabel'))}</label><input class="input" id="fixQtyInput" type="number" min="0" max="${maxPossible}" step="1" value="${oldQty}" inputmode="numeric"></div><small class="hint">${escapeHtml(t('fixLastQtyNote'))}</small></div>`;
   openModal(t('fixLastQtyTitle'),body,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="applyFixQuantity('${orderId}',${index},'${log.id}')">${escapeHtml(t('save'))}</button>`);
@@ -2097,6 +2111,7 @@ async function applyFixQuantity(orderId,index,consumptionId){
   const op=productionOp(o,index);if(!op)return;
   const log=resolveConsumptionLog(o,index,consumptionId);
   if(!log){toast(t('noWriteOffsToUndo'));return}
+  if(!canEditMark(o,op,log.id)){toast(t('roleNotYourMark'));return}
   const oldQty=Number(log.qty||0),maxPossible=Math.max(oldQty,orderProductQty(o)-productionCompletedQty(o,op)+oldQty);
   const input=document.getElementById('fixQtyInput');
   const newQty=Math.trunc(Number(input?.value));
@@ -2112,6 +2127,7 @@ async function performQuantityDecrease(orderId,index,consumptionId,newQty){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
   const op=productionOp(o,index);if(!op)return;
   const log=resolveConsumptionLog(o,index,consumptionId);if(!log)return;
+  if(!canEditMark(o,op,log.id)){toast(t('roleNotYourMark'));return}
   const oldQty=Number(log.qty||0),delta=oldQty-newQty;
   if(delta<=0)return;
   const cancelled=newQty<=0,ratio=delta/oldQty,now=productionNow(),who=productionActorName(),returnedRows=[];
@@ -2148,6 +2164,7 @@ async function performQuantityIncrease(orderId,index,consumptionId,newQty,plan){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
   const op=productionOp(o,index);if(!op)return;
   const log=resolveConsumptionLog(o,index,consumptionId);if(!log)return;
+  if(!canEditMark(o,op,log.id)){toast(t('roleNotYourMark'));return}
   const oldQty=Number(log.qty||0),now=productionNow(),who=productionActorName();
   if(!Array.isArray(log.materials))log.materials=[];
   plan.rows.forEach(r=>{
