@@ -512,6 +512,10 @@ Object.assign(I18N.lv,{simpleInfoTitle:'Uzdevums',simpleDuePrefix:'līdz',simple
 Object.assign(I18N.ru,{simpleNormShort:'по норме {time}'});
 Object.assign(I18N.en,{simpleNormShort:'standard {time}'});
 Object.assign(I18N.lv,{simpleNormShort:'pēc normas {time}'});
+// v8.03: длинный список материалов сворачивается
+Object.assign(I18N.ru,{simpleMatShowAll:'Показать все ({n})',simpleMatCollapse:'Свернуть',simpleMatShortCount:'Не хватает: {k} из {n} поз.'});
+Object.assign(I18N.en,{simpleMatShowAll:'Show all ({n})',simpleMatCollapse:'Collapse',simpleMatShortCount:'Short: {k} of {n} items'});
+Object.assign(I18N.lv,{simpleMatShowAll:'Rādīt visus ({n})',simpleMatCollapse:'Sakļaut',simpleMatShortCount:'Trūkst: {k} no {n} poz.'});
 // v8.00: «Отметки» (Сегодня / За всё время) и ввод своего числа
 Object.assign(I18N.ru,{marksScopeToday:'Сегодня',marksScopeAll:'За всё время',marksYesterday:'Вчера',marksTotalLabel:'Итого',workshopMarksTitle:'Отметки',simpleCustomPlaceholder:'Своё число',simpleCustomAddBtn:'Добавить'});
 Object.assign(I18N.en,{marksScopeToday:'Today',marksScopeAll:'All time',marksYesterday:'Yesterday',marksTotalLabel:'Total',workshopMarksTitle:'Marks',simpleCustomPlaceholder:'Custom number',simpleCustomAddBtn:'Add'});

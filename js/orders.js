@@ -1659,11 +1659,13 @@ function simpleMaterialsInfo(o,op){
   if(remaining<=0)return {kind:'consumed',rows:[],short:false};
   const plan=productionConsumptionPlan(o,op,remaining);
   if(!plan.rows.length)return {kind:'consumed',rows:[],short:false};
-  const rows=plan.rows.map(r=>{
+  const rows=plan.rows.map((r,i)=>{
     const missing=Math.max(0,stockNumForUnit(r.qty-r.stockBefore,r.unit));
-    return {name:materialTitle(r.m),need:qtyWithUnit(r.qty,r.unit),missing:missing>0?qtyWithUnit(missing,r.unit):''};
+    return {i,name:materialTitle(r.m),need:qtyWithUnit(r.qty,r.unit),missing:missing>0?qtyWithUnit(missing,r.unit):''};
   });
-  return {kind:'rows',rows,short:plan.shortages.length>0};
+  // Сначала то, чего не хватает — при свёрнутом длинном списке первым делом видны проблемные позиции.
+  rows.sort((a,b)=>(a.missing?0:1)-(b.missing?0:1)||a.i-b.i);
+  return {kind:'rows',rows,short:plan.shortages.length>0,shortCount:rows.filter(r=>r.missing).length};
 }
 function simpleInfoChipsHtml(o,op){
   const due=simpleDueInfo(o),mat=simpleMaterialsInfo(o,op);
@@ -1673,6 +1675,9 @@ function simpleInfoChipsHtml(o,op){
     :'';
   return dueChip+matChip;
 }
+const SIMPLE_MATS_LIMIT=3;
+const simpleMatsExpanded=new Set(); // ключи "orderId_stepIndex" раскрытых списков материалов
+function toggleSimpleMats(key){if(simpleMatsExpanded.has(key))simpleMatsExpanded.delete(key);else simpleMatsExpanded.add(key);renderWorkshops()}
 function simpleInfoBodyHtml(o,op){
   const due=simpleDueInfo(o),norm=simpleNormInfo(o,op),mat=simpleMaterialsInfo(o,op);
   const dueCard=`<div class="sw-info-card ${due?due.cls:''}"><small>${escapeHtml(t('simpleDueLabel'))}</small>${due?`<b>${escapeHtml(due.dateText)}</b><span>${escapeHtml(due.text)}</span>`:`<b>—</b><span>${escapeHtml(t('simpleDueNotSet'))}</span>`}</div>`;
@@ -1686,13 +1691,20 @@ function simpleInfoBodyHtml(o,op){
   }
   const normCard=`<div class="sw-info-card"><small>${escapeHtml(t('simpleNormLabel'))}</small>${norm.perUnit>0?`<b>${escapeHtml(simpleNum(norm.perUnit))} ${escapeHtml(t('simpleMinPerPc'))}</b>${normSub}`:`<b>—</b><span>${escapeHtml(t('simpleNormNotSet'))}</span>`}</div>`;
   let matBody;
+  let matSummary='';
   if(mat.kind==='rows'){
-    matBody=`<ul class="sw-mat-list">${mat.rows.map(r=>`<li><span class="name">${escapeHtml(r.name)}</span><span class="qty">${escapeHtml(r.need)}</span>${r.missing?`<span class="short">${escapeHtml(t('simpleMatMissing').replace('{qty}',r.missing))}</span>`:''}</li>`).join('')}</ul>`;
+    // Длинный список (у реального заказа бывает 10+ позиций) не растягиваем на весь экран: показываем
+    // первые SIMPLE_MATS_LIMIT (сначала проблемные), остальное — по кнопке «Показать все».
+    const matKey=`${o.id}_${op.stepIndex}`,collapsible=mat.rows.length>SIMPLE_MATS_LIMIT+1,expanded=simpleMatsExpanded.has(matKey);
+    const shown=collapsible&&!expanded?mat.rows.slice(0,SIMPLE_MATS_LIMIT):mat.rows;
+    if(collapsible&&mat.shortCount>0)matSummary=`<span class="sw-mat-summary">${escapeHtml(t('simpleMatShortCount').replace('{k}',mat.shortCount).replace('{n}',mat.rows.length))}</span>`;
+    matBody=`<ul class="sw-mat-list">${shown.map(r=>`<li><span class="name">${escapeHtml(r.name)}</span><span class="qty">${escapeHtml(r.need)}</span>${r.missing?`<span class="short">${escapeHtml(t('simpleMatMissing').replace('{qty}',r.missing))}</span>`:''}</li>`).join('')}</ul>`
+      +(collapsible?`<button type="button" class="sw-mat-more" aria-expanded="${expanded}" onclick="toggleSimpleMats('${matKey}')">${escapeHtml(expanded?t('simpleMatCollapse'):t('simpleMatShowAll').replace('{n}',mat.rows.length))}<span class="sw-info-chevron ${expanded?'open':''}" aria-hidden="true">⌄</span></button>`:'');
   }else{
     matBody=`<span class="sw-mat-empty">${escapeHtml(t(mat.kind==='none'?'simpleMatNone':'simpleMatConsumed'))}</span>`;
   }
   const remainingQty=Math.max(0,orderProductQty(o)-productionCompletedQty(o,op));
-  const matCard=`<div class="sw-info-card wide ${mat.short?'overdue':''}"><small>${escapeHtml(t('simpleMatLabel').replace('{n}',remainingQty))}</small>${matBody}</div>`;
+  const matCard=`<div class="sw-info-card wide ${mat.short?'overdue':''}"><small>${escapeHtml(t('simpleMatLabel').replace('{n}',remainingQty))}</small>${matSummary}${matBody}</div>`;
   return `<div class="sw-info-grid">${dueCard}${normCard}</div>${matCard}`;
 }
 // IDLE — блок раскрыт (решение «начинать ли» принимается, глядя на него); ACTIVE — свёрнут в одну строку
