@@ -1092,12 +1092,16 @@ function workshopQueueItemHtml(row,etaMap){
   const matNote=!coverage.ok?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('missingMaterialsCount')).toLowerCase()}</span>`:'';
   const eta=etaMap?etaMap.get(`${o.id}_${row.index}`):null;
   const riskNote=(dClass!=='overdue'&&eta&&o.dueDate&&eta>o.dueDate)?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('workshopRiskShort'))} (${escapeHtml(t('etaApprox'))} ${escapeHtml(eta)})</span>`:'';
+  // v8.02: срок «через N дн.» и время по норме технолога на остаток — то же, что видит рабочий на своём экране.
+  const dueInfo=simpleDueInfo(o),normInfo=simpleNormInfo(o,op);
+  const countNote=(dueInfo&&!dClass)?`<span>· ${escapeHtml(dueInfo.text)}</span>`:'';
+  const normNote=(normInfo.perUnit>0&&normInfo.remaining>0)?`<span>· ${escapeHtml(t('simpleNormShort').replace('{time}',orderTimeText(normInfo.remainingMin)))}</span>`:'';
   return `<div class="workshop-queue-item">
     <button type="button" class="workshop-queue-row ${status}" onclick="toggleWorkshopQueueItem('${o.id}',${op.stepIndex})">
       <span class="workshop-row-dot ${status}"></span>
       <span class="workshop-row-info">
         <b>${escapeHtml(o.number||'—')}</b>${o.client?`<em> · ${escapeHtml(o.client)}</em>`:''}
-        <small>${escapeHtml(formatDeadline(o))} ${dueNote} ${riskNote} ${matNote}</small>
+        <small>${escapeHtml(formatDeadline(o))} ${countNote} ${dueNote} ${normNote} ${riskNote} ${matNote}</small>
       </span>
       <span class="workshop-row-progress"><i><b style="width:${pct}%"></b></i></span>
       <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
@@ -1339,6 +1343,7 @@ function workshopCurrentCardHtml(row){
       <div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div>
       <span class="workshop-current-remaining">${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}</span>
     </div>
+    ${simpleTaskInfoHtml(o,op,false)}
     ${workshopShiftInfoHtml(o,op)}
     <div class="workshop-record-actions">
       <button class="btn primary workshop-record-btn" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">✔ ${escapeHtml(t('recordOutputBtn'))}</button>
@@ -1358,11 +1363,12 @@ function workshopQueueMiniRowHtml(row,isCurrent,etaMap){
   const paused=isCurrent&&op?.status==='paused';
   const tagCls=isCurrent?(paused?'paused':'current'):risk?risk.cls:'';
   const tagText=isCurrent?(paused?t('prodStatusPaused'):t('workshopNowTag')):risk?risk.text:(op&&op.status!=='not_started'?productionStatusLabel(op.status):t('workshopNotStartedTag'));
+  const dueInfo=simpleDueInfo(o),queueDueHtml=dueInfo?`${escapeHtml(formatDeadline(o))} · <span class="sw-due ${dueInfo.cls}">${escapeHtml(dueInfo.text)}</span>`:escapeHtml(formatDeadline(o));
   const startBtn=!isCurrent?`<button type="button" class="btn small workshop-queue-mini-start" aria-label="${escapeHtml(t('prodStart'))}" title="${escapeHtml(t('prodStart'))}" onclick="event.stopPropagation();startProductionOperation('${o.id}',${row.index})">▶</button>`:'';
   return `<div class="workshop-queue-mini-row ${isCurrent?'current':''}">
     <button type="button" class="workshop-queue-mini-info-btn" onclick="goToOrderFromMaterial(event,'${o.id}')">
       <span class="workshop-queue-mini-dot ${tagCls||'ok'}"></span>
-      <span class="workshop-queue-mini-info"><b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · ${isCurrent?`${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}`:escapeHtml(formatDeadline(o))}</small></span>
+      <span class="workshop-queue-mini-info"><b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · ${isCurrent?`${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}`:queueDueHtml}</small></span>
       <span class="workshop-queue-mini-tag ${tagCls}">${escapeHtml(tagText)}</span>
     </button>
     ${startBtn}
@@ -1618,6 +1624,7 @@ function simpleTaskListHtml(){
   const body=rows.length?rows.map(simpleTaskCardHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('simpleNoTasks'))}</div>`;
   return `${head}${tabs}<div class="sw-section-label">${escapeHtml(t('simpleQueueLabel'))}</div><div class="simple-task-list">${body}</div>`;
 }
+// v8.02: этот же блок показывается и в полной версии (карточка «Сейчас в работе» у мастера, очередь цеха).
 // v8.01: «Задание» для рабочего — срок, норма технолога на изделие и материалы. Всё из уже существующих
 // данных заказа: dueDate, steps[].minutes (минуты НА ОДНО изделие), материалы цеха (operationMaterials) и
 // расчёт productionConsumptionPlan() на остаток — новых полей в заказе нет.
