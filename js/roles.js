@@ -101,13 +101,19 @@ function applyRoleVisibility(){
   const p=userPerms(),roles=typeof currentUserRoles==='function'?currentUserRoles():['admin'];
   ['admin','technologist','master','storekeeper','worker'].forEach(r=>document.body.classList.toggle('role-'+r,roles.includes(r)));
   PERMISSION_KEYS.forEach(k=>document.body.classList.toggle('deny-'+k.replace('.','-'),!p.has(k)));
+  document.body.classList.toggle('not-owner',!isOwnerUser());
   document.querySelectorAll('#mainNav button[data-section]').forEach(b=>b.classList.toggle('role-hidden',!userCanSection(b.dataset.section)));
 }
+// v8.16: действия, доступные ТОЛЬКО владельцу (mpa26294@gmail.com): экспорт/импорт JSON и «Очистить всё». Мастер и остальные
+// их не видят (панель скрыта классом not-owner) и не могут вызвать (защита ниже), даже если у них есть право на «Настройки».
+const OWNER_ONLY_GUARDS=['exportData','runSecureExport','importData','applyImportedData','wipeData'];
+const isOwnerUser=()=>typeof isNotificationAdmin==='function'&&isNotificationAdmin();
 function guardWrite(name,spec){
   const fn=window[name];
   if(typeof fn!=='function'||fn.__roleGuarded)return;
   const wrapped=function(...args){
     const permission=typeof spec==='function'?spec(args):spec;
+    if(permission==='owner'){if(!isOwnerUser()){toast(t('roleOwnerOnly'));return}return fn.apply(this,args)}
     if(!userCan(permission)){toast(t('roleNoPermission').replace('{perm}',permissionLabel(permission)));return}
     return fn.apply(this,args);
   };
@@ -120,4 +126,5 @@ function installRoleGuards(){
   if(roleGuardsInstalled)return;
   roleGuardsInstalled=true;
   Object.keys(ROLE_GUARDS).forEach(name=>guardWrite(name,ROLE_GUARDS[name]));
+  OWNER_ONLY_GUARDS.forEach(name=>guardWrite(name,'owner'));
 }

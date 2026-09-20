@@ -524,6 +524,10 @@ Object.assign(I18N.lv,{roleAdmin:'Administrators',roleTechnologist:'Tehnologs',r
 Object.assign(I18N.ru,{simpleNowWorking:'Сейчас работают',simpleYouLabel:'вы',simpleSinceTime:'с {time}',simpleWorkingNames:'Работают: {names}',simpleTeamTitle:'Кто сколько работал',simpleTeamTotal:'Всего человеко-времени',simpleTeamNoData:'Пока никто не работал'});
 Object.assign(I18N.en,{simpleNowWorking:'Working now',simpleYouLabel:'you',simpleSinceTime:'since {time}',simpleWorkingNames:'Working: {names}',simpleTeamTitle:'Who worked how long',simpleTeamTotal:'Total man-time',simpleTeamNoData:'Nobody has worked yet'});
 Object.assign(I18N.lv,{simpleNowWorking:'Tagad strādā',simpleYouLabel:'jūs',simpleSinceTime:'no {time}',simpleWorkingNames:'Strādā: {names}',simpleTeamTitle:'Kurš cik ilgi strādājis',simpleTeamTotal:'Kopā cilvēkstundas',simpleTeamNoData:'Vēl neviens nav strādājis'});
+// v8.16: действия только для владельца
+Object.assign(I18N.ru,{roleOwnerOnly:'Это действие доступно только владельцу'});
+Object.assign(I18N.en,{roleOwnerOnly:'Only the owner can do this'});
+Object.assign(I18N.lv,{roleOwnerOnly:'Šī darbība pieejama tikai īpašniekam'});
 // v8.13: отправки заказа (несколько дат и количеств)
 Object.assign(I18N.ru,{shipSplitToggle:'Разделить на несколько отправок',shipAdd:'Добавить отправку',shipSummary:'Распределено {a} из {b} · осталось {c}',shipOver:'Превышено количество заказа на {n} шт.',shipErrDate:'В отправке не указана дата',shipErrQty:'В отправке не указано количество',shipQtyPlaceholder:'Кол-во',shipTitle:'Отправки',shipDone:'готово',shipUnscheduled:'Дата не назначена',shipDueExtra:'к этой дате ещё {n} шт · отправка {i} из {m}'});
 Object.assign(I18N.en,{shipSplitToggle:'Split into several shipments',shipAdd:'Add shipment',shipSummary:'Allocated {a} of {b} · {c} left',shipOver:'Over the order quantity by {n} pcs',shipErrDate:'A shipment has no date',shipErrQty:'A shipment has no quantity',shipQtyPlaceholder:'Qty',shipTitle:'Shipments',shipDone:'done',shipUnscheduled:'No date yet',shipDueExtra:'{n} more pcs by this date · shipment {i} of {m}'});

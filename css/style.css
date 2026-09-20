@@ -4276,3 +4276,6 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
    на следующую строку и он налезал на «Клиент»), плюс название изделия под номером. */
 #orders .order-card-number b .order-material-alert{display:inline-flex;margin:0 0 0 8px;vertical-align:middle;font-size:12px;line-height:1}
 #orders .order-card-number .order-card-product{display:block;margin-top:3px;color:#175cd3;font-size:13px;font-weight:750;font-style:normal;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* v8.16: экспорт/импорт JSON и «Очистить всё» — только владельцу */
+body.not-owner #dataAdminPanel{display:none!important}
