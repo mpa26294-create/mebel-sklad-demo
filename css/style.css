@@ -888,34 +888,244 @@ body.worker-mode #quickAddBox .input{height:56px;font-size:17px}
 body.worker-mode .quick-stock-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 body.worker-mode .quick-stock-actions .btn{height:56px;font-size:16px;font-weight:600;border-radius:12px}
 
-/* v7.43: «Цеха» у рабочего — не обзор/детальный экран цеха (это для мастера/технолога — плановые
-   часы, KPI, timeline), а плоский список ЕГО задач с одной главной кнопкой на карточку.
-   См. workerWorkshopTasksHtml() в js/orders.js. */
-.worker-task-list{display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
-.worker-task-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
-.worker-task-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.worker-task-info b{font-size:15px}
-.worker-task-info span{color:var(--muted);font-size:13px}
-.worker-task-info small{display:block;margin-top:3px;color:var(--muted);font-size:12px}
-.worker-task-danger{color:var(--redText);font-weight:500}
-.worker-task-today{color:var(--yellowText);font-weight:500}
-.worker-task-progress{display:flex;align-items:center;gap:10px;margin:12px 0}
-.worker-task-progress i{flex:1;height:8px;border-radius:99px;background:#eef0f3;overflow:hidden;display:block}
-.worker-task-progress i b{display:block;height:100%;background:var(--accent);border-radius:99px}
-.worker-task-progress span{font-size:12px;color:var(--muted);white-space:nowrap;font-weight:500}
-.worker-task-actions{display:flex;gap:8px}
-.worker-task-btn{flex:1;height:52px;font-size:15px;font-weight:600;border-radius:12px}
-.worker-task-btn.ghost{background:#fff;border:1.5px solid var(--line);color:#4a515c}
-/* v7.44: количество, сколько сделано, вводится прямо на карточке — узкое числовое поле между
-   кнопкой паузы и кнопкой «Готово», а не в отдельном всплывающем окне (см. workerCompleteTask()). */
-.worker-task-btn-pause{flex:0 0 52px;font-size:18px;padding:0}
-.worker-task-qty{flex:0 0 76px;height:52px;padding:0;text-align:center;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
-/* v7.50: «Исправить последнее» — рабочий сам отменяет своё последнее (ошибочное) завершение
-   операции, без участия администратора. Небольшая, не привлекающая лишнего внимания кнопка под
-   основными действиями карточки — видна только когда есть что отменять (см. workerTaskCardHtml()). */
-.worker-task-fix-row{margin-top:8px;display:flex;justify-content:center}
-.worker-task-fix-btn{color:#8a8f99;border-color:transparent;background:transparent}
-.worker-task-fix-btn:hover{color:#4a515c;background:#f5f6f7}
+/* v7.90: «Цеха» у рабочего — два экрана по утверждённому макету: A) очередь задач (список карточек)
+   и B) активная задача (IDLE/ACTIVE/DONE). Раскладка переключается ТОЛЬКО этим CSS по ширине экрана —
+   один и тот же HTML на телефоне/планшете/десктопе (класс .has-selected решает, что видно на
+   телефоне; на планшете/десктопе видно всегда обе колонки). См. workerWorkshopTasksHtml() и вокруг
+   неё в js/orders.js. Старые классы .worker-task-* (плоский список без экрана задачи) удалены —
+   были нужны только предыдущей версии этого экрана.
+   Мобильный (по умолчанию, <768px): экраны A и B — друг за другом, не два блока на странице. */
+.simple-workshop-wrap{display:block}
+.simple-task-list-pane{display:block}
+.simple-task-detail-pane{display:none}
+.simple-workshop-wrap.has-selected .simple-task-list-pane{display:none}
+.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:flex}
+.simple-task-list{display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
+/* v7.98: экран A) «список задач» по макету (iPhone/iPad). Токены — точно из макета. Шрифты: Manrope
+   (основной) и JetBrains Mono (коды заказов и цифры), подключены в <head> index.html. Всё, что
+   относится к рабочему режиму, — под body.worker-mode: у админа/мастера внешний вид не меняется. */
+/* v8.02: токены вынесены в :root — блок «Задание» (.sw-info) теперь показывается и в полной версии. */
+:root{--sw-bg:#f6f5f1;--sw-card:#fff;--sw-line:#e7e2d6;--sw-text:#1b1712;--sw-text2:#625c4e;--sw-accent:#ff6600;--sw-accent-soft:#fff1e6;--sw-track:#ece9e2}
+body.worker-mode{
+  --bg:var(--sw-bg);
+  font-family:Manrope,Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+.sw-head{display:flex;align-items:center;gap:14px;margin:0 0 16px}
+.sw-head>div{min-width:0}
+.sw-chip{flex:0 0 52px;width:52px;height:52px;border-radius:16px;background:#f3ecdd;color:var(--sw-text);display:grid;place-items:center;font-size:22px;font-weight:800}
+.sw-head b{display:block;font-size:22px;font-weight:800;line-height:1.15;color:var(--sw-text);letter-spacing:-.01em}
+.sw-head small{display:block;margin-top:3px;font-size:13px;font-weight:500;line-height:1.35;color:var(--sw-text2)}
+.sw-tabs{display:flex;gap:8px;margin:0 0 20px;overflow-x:auto;scrollbar-width:none}
+.sw-tabs::-webkit-scrollbar{display:none}
+.sw-tab{flex:0 0 auto;min-height:44px;padding:0 20px;border-radius:12px;border:1px solid var(--sw-line);background:var(--sw-card);color:var(--sw-text2);font-size:15px;font-weight:700}
+.sw-tab.active{background:var(--sw-text);border-color:var(--sw-text);color:#fff}
+.sw-section-label{margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sw-text2)}
+.sw-card{background:var(--sw-card);border:1px solid var(--sw-line);border-radius:18px;padding:16px;text-align:left;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.sw-card.selected{background:var(--sw-accent-soft);border-color:var(--sw-accent)}
+.sw-card.blocked{cursor:default;opacity:.7}
+.sw-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sw-code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:500;color:var(--sw-text2)}
+.sw-pill{flex:0 0 auto;display:inline-flex;align-items:center;min-height:26px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+.sw-pill.paused{background:#fbe8c8;color:#7a4a0c}
+.sw-pill.idle{background:#ece9e2;color:#5b564a}
+.sw-pill.running{background:#e4efdf;color:#2f6b2a}
+.sw-pill.blocked{background:#fdecec;color:#c23b2e}
+.sw-card-title{margin:10px 0 12px;font-size:17px;font-weight:800;line-height:1.3;color:var(--sw-text);overflow-wrap:anywhere}
+.sw-bar{height:6px;border-radius:99px;background:var(--sw-track);overflow:hidden}
+.sw-bar b{display:block;height:100%;border-radius:99px;background:var(--sw-accent)}
+.sw-card.selected .sw-bar{background:#ffd9bd}
+.sw-card-count{margin:0;text-align:right;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:500;color:var(--sw-text2)}
+.sw-action{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin-top:12px;border-radius:14px;background:var(--sw-accent);color:#fff;font-size:16px;font-weight:800}
+.sw-action.secondary{background:var(--sw-card);border:1.5px solid var(--sw-accent);color:var(--sw-accent)}
+.sw-action.disabled{background:transparent;border:1.5px dashed #cfc8b8;color:var(--sw-text2);font-weight:700}
+/* Нижний таб-бар «Склад / Цеха» — только рабочий режим на телефоне (там же, где на сайте вместо
+   боковой панели включается меню-гамбургер, ≤820px). z-index ниже модальных окон (30 → см. выше). */
+.worker-tabbar{display:none}
+@media(max-width:820px){
+  body.worker-mode .worker-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--sw-card);border-top:1px solid var(--sw-line);padding:6px 12px max(8px,env(safe-area-inset-bottom))}
+  body.worker-mode .worker-tabbar button{flex:1;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:12px;color:var(--sw-text2);font-size:12px;font-weight:700}
+  body.worker-mode .worker-tabbar button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  body.worker-mode .worker-tabbar button.active{color:var(--sw-accent)}
+  body.worker-mode .worker-tabbar button.role-hidden{display:none}
+  /* v8.07: осталась одна вкладка — таб-бар и запас под него не нужны */
+  body.worker-mode.worker-no-tabbar .worker-tabbar{display:none}
+  body.worker-mode.worker-no-tabbar .main{padding-bottom:22px!important}
+  body.worker-mode .main{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
+  body.worker-mode .mobile-menu-btn{display:none!important}
+  body.worker-mode #workshops>.topbar{display:none!important}
+  body.worker-mode .sidebar{display:none!important}
+  /* Панель профиля (колокольчик/аватар) фиксирована сверху — без фона карточки при прокрутке заезжали под неё
+     и просвечивали. Фон + pointer-events:auto, чтобы касания по этой полосе не проваливались в карточки под ней. */
+  body.worker-mode .topbar-profile{background:var(--sw-bg);box-shadow:0 1px 0 var(--sw-line);pointer-events:auto}
+  body.worker-mode #workshops{padding-top:12px}
+}
+.simple-badge{flex:0 0 auto;display:inline-flex;align-items:center;min-height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;background:#f0f1f3;color:#575d68}
+.simple-badge.blocked{background:#fdecec;color:#c23b2e}
+.simple-badge.paused{background:#fff7ed;color:#b54708}
+.simple-badge.running{background:#eff6ff;color:#1d4ed8}
+.simple-task-progress{display:flex;align-items:center;gap:10px;margin:11px 0}
+.simple-task-progress i{flex:1;height:7px;border-radius:99px;background:#f0f0f0;overflow:hidden;display:block}
+.simple-task-progress i b{display:block;height:100%;border-radius:99px;background:#e86a2b}
+.simple-task-progress i b.blocked{background:#c9c9c9}
+.simple-task-progress span{font-size:12px;color:#8a8f99;white-space:nowrap;font-weight:500;font-variant-numeric:tabular-nums}
+.simple-task-progress.wide{margin:14px 0;width:100%}
+/* Экран B) — активная задача. Плейсхолдер виден только когда обе колонки на экране одновременно
+   (планшет/десктоп, см. медиазапрос ниже) — на телефоне без выбранной задачи вся панель B) скрыта
+   правилом выше, так что этот текст там просто не рендерится видимым. */
+.simple-detail-placeholder{display:flex;align-items:center;justify-content:center;width:100%;min-height:320px;color:#8a8f99;font-size:14px;text-align:center;padding:24px}
+/* v7.96: раньше экраны IDLE/ACTIVE/DONE просто лежали прямо на фоне страницы (--bg) без своего
+   контейнера — выглядело незаконченно, особенно на широких экранах, где вокруг много пустого
+   места. Теперь это карточка — тот же язык, что и у карточек очереди (.simple-task-card): белый
+   фон, скругление, тень var(--shadow), как у остальных карточек сайта. */
+.simple-detail-idle,.simple-detail-active,.simple-detail-done{display:flex;flex-direction:column;align-items:center;text-align:center;width:100%;max-width:440px;margin:12px auto 0;padding:28px 24px calc(28px + env(safe-area-inset-bottom));background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+/* v7.95: единая шапка "назад" для IDLE/DONE (у ACTIVE своя, .simple-detail-active-head — та же
+   кнопка .simple-back-btn просто встроена в неё рядом с паузой). ≥44px — как и все остальные
+   интерактивные зоны в упрощённом режиме. Разделительная линия снизу отделяет её от содержимого
+   карточки, как шапка листа/модалки. */
+.simple-detail-head{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.simple-back-btn{flex-shrink:0;width:44px;height:44px;border-radius:12px;border:0;background:var(--soft);font-size:22px;font-weight:700;color:#3f4651;display:grid;place-items:center;line-height:1;transition:background .15s ease}
+.simple-back-btn:hover{background:#e7e9ee}
+.simple-detail-head-label{flex:1;min-width:0;font-size:15px;font-weight:700;color:#15171a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simple-detail-icon{width:88px;height:88px;border-radius:24px;background:#f4f0ea;display:grid;place-items:center;font-size:38px;margin-bottom:18px;box-shadow:0 6px 16px rgba(180,150,110,.18)}
+.simple-detail-idle h2{margin:0 0 4px;font-size:26px;font-weight:700;color:#15171a}
+.simple-detail-idle p{margin:0 0 14px;font-size:14px;color:#8a8f99}
+.simple-detail-idle .simple-badge{margin-bottom:28px}
+.simple-btn-main{width:100%;min-height:64px;border-radius:16px;background:linear-gradient(180deg,#f0793a 0%,#dd5e1f 100%);color:#fff;font-size:16px;font-weight:700;box-shadow:0 10px 22px rgba(221,94,31,.25);margin-top:auto}
+.simple-detail-active-head{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 24px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.simple-detail-active-label{flex:1;min-width:0;text-align:center;font-size:12.5px;color:#8a8f99;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simple-pause-btn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:16px;display:grid;place-items:center;flex-shrink:0}
+.simple-counter-row{display:flex;align-items:center;justify-content:center;gap:22px;width:100%}
+.simple-round-btn{flex-shrink:0;width:56px;height:56px;border-radius:50%;border:1.5px solid #e2e2e2;background:#fff;font-size:18px;font-weight:700;color:#15171a;display:grid;place-items:center}
+.simple-round-btn:disabled{opacity:.4}
+.simple-counter{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:96px}
+.simple-counter b{font-size:76px;font-weight:700;line-height:1;color:#15171a;font-variant-numeric:tabular-nums}
+.simple-counter span{font-size:14px;color:#8a8f99}
+.simple-batch-row{display:flex;gap:10px;margin:6px 0 12px}
+.simple-batch-chip{min-height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#15171a;font-size:14px;font-weight:650}
+.simple-batch-chip:disabled{opacity:.4}
+.simple-done-icon{width:88px;height:88px;border-radius:50%;background:#e9f7ee;color:#1f9d4c;display:grid;place-items:center;font-size:40px;font-weight:700;margin-bottom:18px}
+.simple-detail-done b{font-size:22px;font-weight:700;color:#15171a}
+.simple-detail-done p{margin:6px 0 22px;font-size:14px;color:#8a8f99}
+.simple-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:14px;font-weight:650}
+/* v8.01: срок и предупреждение о материале на карточке; блок «Задание» на экране задачи */
+.sw-card-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;min-height:20px}
+.sw-due{font-size:13px;font-weight:600;color:var(--sw-text2)}
+.sw-due.soon{color:#b54708;font-weight:700}
+.sw-due.overdue{color:#c23b2e;font-weight:800}
+.sw-card-warn{display:inline-block;margin-top:10px;padding:5px 10px;border-radius:10px;background:#fbe8c8;color:#7a4a0c;font-size:13px;font-weight:700}
+.sw-info{align-self:stretch;width:100%;text-align:left;margin:0 0 18px}
+.sw-info-title{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sw-text2)}
+.sw-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.sw-info-card{min-width:0;padding:12px 14px;border:1px solid var(--sw-line);border-radius:14px;background:#faf9f5}
+.sw-info-card.wide{grid-column:1/-1}
+.sw-info-card small{display:block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--sw-text2)}
+.sw-info-card b{display:block;margin-top:5px;font-size:17px;font-weight:800;line-height:1.25;color:var(--sw-text)}
+.sw-info-card span{display:block;margin-top:3px;font-size:13px;font-weight:600;line-height:1.35;color:var(--sw-text2)}
+.sw-info-card.soon span{color:#b54708}
+.sw-info-card.overdue{background:#fdecec;border-color:#f3c5c0}
+.sw-info-card.overdue b,.sw-info-card.overdue span{color:#c23b2e}
+.sw-info-card .sw-pace.ok{color:#2f6b2a}
+.sw-info-card .sw-pace.soon{color:#b54708}
+.sw-mat-list{list-style:none;margin:6px 0 0;padding:0}
+.sw-mat-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--sw-line)}
+.sw-mat-list li:first-child{border-top:0}
+.sw-info-card .sw-mat-list .name{margin:0;font-size:15px;font-weight:700;color:var(--sw-text);overflow-wrap:anywhere}
+.sw-info-card .sw-mat-list .qty{margin:0;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;font-weight:600;color:var(--sw-text);white-space:nowrap}
+.sw-info-card .sw-mat-list .short{grid-column:1/-1;margin:0;font-size:13px;font-weight:800;color:#c23b2e}
+.sw-info-card .sw-mat-empty{margin-top:6px;font-size:14px}
+.sw-info-toggle{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--sw-line);border-radius:14px;background:#faf9f5;text-align:left}
+.sw-info-toggle-title{flex:0 0 auto;font-size:14px;font-weight:800;color:var(--sw-text)}
+.sw-info-chips{flex:1;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.sw-mini{padding:3px 9px;border-radius:999px;background:#ece9e2;color:#5b564a;font-size:12px;font-weight:700;white-space:nowrap}
+.sw-mini.ok{background:#e4efdf;color:#2f6b2a}
+.sw-mini.soon{background:#fbe8c8;color:#7a4a0c}
+.sw-mini.overdue{background:#fdecec;color:#c23b2e}
+.sw-info-chevron{flex:0 0 auto;font-size:20px;line-height:1;color:var(--sw-text2);transition:transform .15s ease}
+.sw-info-chevron.open{transform:rotate(180deg)}
+.simple-detail-idle .simple-badge{margin-bottom:18px}
+/* v8.06: права. Пункты меню скрываются по итоговым правам (.role-hidden), кнопки создания — по классам
+   deny-<право> на <body> (js/roles.js → applyRoleVisibility); сами функции записи дополнительно закрыты в guardWrite. */
+#mainNav button.role-hidden{display:none!important}
+body.deny-orders-create #orders>.topbar .btn.primary,body.deny-models-edit #models>.topbar .btn.primary,body.deny-tech-edit #technologies .btn.primary,body.deny-refs-edit #refs .btn.primary,body.deny-stock-edit #stock .topbar .actions .btn.primary{display:none!important}
+.worker-access-cols{flex:2;display:flex;flex-direction:column;gap:10px;min-width:0}
+.worker-access-sub small{display:block;margin-bottom:5px;font-size:11.5px;font-weight:600;color:#6b7280}
+.worker-access-cols .worker-access-chips{flex:none;padding-top:0}
+.worker-access-warn{font-size:12px;font-weight:600;color:#c73535}
+@media(max-width:640px){.worker-access-cols{flex:1 1 100%}}
+.worker-access-permbtn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px dashed #cbd0d8;border-radius:999px;background:#fff;color:#4a515c;font-size:12px;font-weight:600}
+.worker-access-permchev{font-size:15px;line-height:1;transition:transform .15s ease}
+.worker-access-permchev.open{transform:rotate(180deg)}
+.worker-perms{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px 18px;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fbfbfc}
+.worker-perm-group{display:flex;flex-direction:column;gap:2px;min-width:0}
+.worker-perm-group>b{margin-bottom:4px;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#6b7280}
+.worker-perm{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12.5px;line-height:1.35;color:#4a515c;cursor:pointer}
+.worker-perm input{flex:0 0 auto;width:15px;height:15px;margin:2px 0 0;accent-color:var(--accent)}
+.worker-perm.checked{color:#15171a}
+.worker-perm em{margin-left:auto;flex:0 0 auto;padding:1px 7px;border-radius:999px;background:#eef2ff;color:#3538cd;font-style:normal;font-size:11px;font-weight:600}
+.worker-perm.override em{background:#fff1e6;color:#b54708}
+/* v8.03: длинный список материалов — «Показать все» */
+.sw-info-card .sw-mat-summary{margin-top:6px;font-size:13px;font-weight:800;color:#c23b2e}
+.sw-mat-more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;margin-top:6px;border:1px solid var(--sw-line);border-radius:12px;background:#fff;color:var(--sw-text);font-size:14px;font-weight:700}
+/* v8.02: блок «Задание» внутри карточек полной версии */
+.workshop-current-card .sw-info{margin:14px 0}
+.workshop-queue-mini-info .sw-due,.workshop-row-info .sw-due{font-size:inherit}
+/* v8.00: своё число + «Отметки» (Сегодня / За всё время) */
+.simple-custom-row{display:flex;gap:8px;width:100%;margin:0 0 22px}
+.simple-custom-input{flex:1;min-width:0;min-height:52px;padding:0 16px;border:1.5px solid var(--sw-line);border-radius:14px;background:#fff;color:var(--sw-text);font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:600}
+.simple-custom-input::placeholder{color:#a39c8c;font-family:inherit;font-size:15px;font-weight:500}
+.simple-custom-input:focus{outline:none;border-color:var(--sw-accent);box-shadow:0 0 0 3px rgba(255,102,0,.16)}
+.simple-custom-btn{flex:0 0 auto;min-height:52px;padding:0 22px;border-radius:14px;background:var(--sw-accent);color:#fff;font-size:16px;font-weight:800}
+.simple-custom-btn:disabled,.simple-custom-input:disabled{opacity:.4}
+.workshop-marks-today-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.marks-scope{display:flex;gap:6px;margin:6px 0 8px}
+.marks-scope button{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#475467;font-size:12px;font-weight:700}
+.marks-scope button.active{background:#15171a;border-color:#15171a;color:#fff}
+.marks-day-group{margin-top:10px}
+.marks-day-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 2px 6px;font-size:12px;color:#667085}
+.marks-day-head b{color:#344054;font-weight:700}
+.marks-day-group .workshop-marks-today-list{max-height:none}
+/* Рабочий режим: крупнее (в перчатках) и строка смены в два ряда — иначе 4 колонки не влезают в телефон. */
+.simple-workshop-wrap .workshop-marks-today-list{max-height:none;overflow:visible}
+.simple-workshop-wrap .marks-scope button{min-height:44px;padding:0 18px;font-size:14px}
+.simple-workshop-wrap .workshop-marks-today-head{font-size:12px;letter-spacing:.06em;color:var(--sw-text2)}
+.simple-workshop-wrap .production-session-list>div{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"main main btn" "dur who btn";gap:4px 12px;padding:12px 0}
+.simple-workshop-wrap .production-session-list>div>span{grid-area:main}
+.simple-workshop-wrap .production-session-list>div>strong{grid-area:dur}
+.simple-workshop-wrap .production-session-list>div>em{grid-area:who;overflow:hidden;text-overflow:ellipsis}
+.simple-workshop-wrap .production-session-list>div>button{grid-area:btn;align-self:center;min-height:44px;padding:0 16px;font-size:14px}
+.simple-workshop-wrap .production-session-list b{font-size:16px}
+.simple-workshop-wrap .production-session-list small{font-size:12.5px}
+.simple-workshop-wrap .production-session-list strong,.simple-workshop-wrap .production-session-list em{font-size:13px}
+.simple-workshop-wrap .production-session-list .session-edit-trace{font-size:12.5px}
+/* v7.92: "Отметки за сегодня" (workshopMarksTodayHtml) внутри центрированной колонки экрана
+   ACTIVE/DONE рабочего режима — растягиваем на всю ширину и выравниваем текст по левому краю,
+   иначе унаследованные align-items:center/text-align:center сплющили бы список строк по центру. */
+.simple-detail-active .workshop-marks-today,.simple-detail-done .workshop-marks-today{align-self:stretch;width:100%;text-align:left;margin-top:24px}
+/* Планшет (768–1279px) и десктоп (≥1280px): список слева (своя прокрутка) + панель задачи справа,
+   всегда обе видны — .has-selected здесь не действует. Кнопки/шрифты панели B) намеренно НЕ
+   уменьшаются — планшет в цеху обычно закреплён у станка, пользуются на расстоянии руки. */
+@media(min-width:768px){
+  .simple-workshop-wrap,.simple-workshop-wrap.has-selected{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);gap:0;align-items:stretch;min-height:calc(100vh - 220px)}
+  .simple-workshop-wrap .simple-task-list-pane,.simple-workshop-wrap.has-selected .simple-task-list-pane{display:block;border-right:1px solid var(--line);padding-right:20px;overflow-y:auto;max-height:calc(100vh - 220px)}
+  /* v7.97: было display:flex;align-items:center;justify-content:center — в Safari на iPad эта
+     карточка вместо центра прижималась к левому краю панели (известная нестыковка flex-центрирования
+     с overflow:auto на прокручиваемом контейнере в WebKit). Блочный контейнер + margin:auto у самой
+     карточки (уже был) центрирует её надёжно в любом браузере, без флекс-раскладки на этом уровне. */
+  .simple-workshop-wrap .simple-task-detail-pane,.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:block;padding:40px 32px;overflow-y:auto}
+  .simple-task-list{max-width:none;margin:0}
+  .sw-action{display:none}
+  body.worker-mode #workshops>.topbar{display:none!important}
+  .simple-detail-idle,.simple-detail-active,.simple-detail-done{padding:28px 24px;margin-top:0}
+  /* v7.95: кнопка "назад" нужна только на телефоне (там задача открывается на весь экран вместо
+     списка) — на планшете/десктопе список слева виден постоянно, отдельный "назад" там лишний.
+     У IDLE/DONE вместе с кнопкой убираем и всю шапку (кроме названия цеха в ней ничего не было);
+     у ACTIVE шапка остаётся — в ней ещё и кнопка паузы. */
+  .simple-back-btn{display:none}
+  .simple-detail-idle .simple-detail-head,.simple-detail-done .simple-detail-head{display:none}
+}
+@media(min-width:1280px){
+  .simple-workshop-wrap{max-width:1280px;margin:0 auto}
+}
 
 /* v6.42: clean stock section redesign */
 #stock .panel{

@@ -4,13 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MOLM</title>
+  <!-- v7.98: шрифты макета рабочего режима — Manrope (основной) и JetBrains Mono (коды заказов и цифры) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@500;600;700;800&display=swap" />
+  <!-- v7.90: минимальный PWA-манифест, чтобы раздел "Цеха" (рабочий режим) можно было добавить на
+       экран "Домой" на телефоне — сама разметка/логика не рассчитана на офлайн-режим, только на
+       "иконка на экране + без адресной строки браузера". -->
+  <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#ff6600" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
-  <link rel="stylesheet" href="css/style.css?v=7.92" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="MOLM" />
+  <link rel="stylesheet" href="css/style.css?v=8.07" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
+<!-- v7.98: нижний таб-бар рабочего режима (только телефон, см. .worker-tabbar в css) -->
+<nav class="worker-tabbar" id="workerTabbar" aria-label="MOLM">
+  <button type="button" data-section="stock" onclick="switchSection('stock')"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg><span data-tab-label="stock">Склад</span></button>
+  <button type="button" data-section="workshops" onclick="switchSection('workshops')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-tab-label="workshops">Цеха</span></button>
+</nav>
 
 <div class="mobile-sidebar-backdrop" onclick="closeMobileSidebar()"></div>
 <div class="app">
@@ -209,12 +226,12 @@
 
 
 <script src="js/changelog.js?v=7.39"></script>
-<script src="js/ui.js?v=7.43"></script>
+<script src="js/ui.js?v=8.07"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=7.89"></script>
+<script src="js/translations.js?v=8.06"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -226,12 +243,13 @@ let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response ov
 
 const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что требует внимания»: скролл и фикс мобильной раскладки';
 </script>
-<script src="js/auth.js?v=6.6"></script>
+<script src="js/auth.js?v=8.05"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=7.92"></script>
+<script src="js/orders.js?v=8.06"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
+<script src="js/roles.js?v=8.07"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -311,6 +329,15 @@ function materialToDb(m){
 
 const ORDER_SYNC_ARTICLE='__FURNICORE_ORDERS__';
 let orderSyncRowId='',orderSyncTimer=null,orderSyncLoading=false,orderSyncDirty=false,orderSyncInFlight=false,orderSyncRetryTimer=null,orderSyncRetryCount=0,orderSyncLocalUpdatedAt='',orderSyncLastPersistedAt='',orderSyncLastRemoteUpdatedAt='',orderSyncToastAt=0,orderSyncKnownRemoteIds=new Set();
+// v7.94: снимок содержимого КАЖДОГО заказа на момент, когда мы последний раз точно знали, что
+// именно это содержимое уже подтверждено (либо мы сами это записали, либо приняли как есть от
+// сервера) — см. mergeIncomingOrderRow ниже. В отличие от orderSyncDirty/orderSyncTimer (один
+// флаг на весь сайт, помечающий лишь узкое окно вокруг сетевого запроса), это позволяет решать
+// вопрос "можно ли перезаписать этот заказ входящими данными" по каждому заказу отдельно и не
+// зависеть от точного тайминга — если реальное содержимое заказа в data.orders отличается от
+// этого снимка, значит по нему есть локальная правка, которая ещё не долетела до сервера, и её
+// нельзя терять, независимо от того, что показывает общий флаг в этот момент.
+let orderSyncPersistedSnapshots=new Map();
 function isOrderSyncRow(row){return String(row?.article||'')===ORDER_SYNC_ARTICLE}
 function orderSyncOrdersFromRow(row){return cleanStoredOrders(Array.isArray(row?.attributes?.orders)?row.attributes.orders:[])}
 function orderSyncUpdatedAt(row){return String(row?.attributes?.updatedAt||'')}
@@ -341,6 +368,44 @@ function mergeOrdersForSync(localOrders,remoteOrders){
     merged.push(order);
   });
   local.forEach(order=>merged.push(order));
+  return merged;
+}
+// v7.94: раньше входящее realtime-обновление заказов (см. applyOrderSyncRow) просто целиком
+// заменяло data.orders новым массивом, распарсенным из JSON строки — ни один старый объект-заказ
+// не переиспользовался. Если в этот момент где-то в коде ещё шла локальная правка конкретного
+// заказа (мутация объекта, захваченного ДО этой замены, или мутация уже после того, как флаг
+// orderSyncDirty был снят — например, пока persistReservationMaterials() ещё не завершился) —
+// эта правка молча терялась: она применялась к объекту, который уже не входил в data.orders.
+// Теперь входящие данные сливаются ПО ID заказа, а не заменяют массив целиком: если реальное
+// содержимое заказа в data.orders совпадает с тем, что мы сами последний раз подтвердили как
+// сохранённое (orderSyncPersistedSnapshots), значит локальных правок по нему нет — берём входящую
+// версию. Если не совпадает — по этому заказу есть ещё не отправленная правка, оставляем локальную
+// версию как есть (следующее событие синхронизации разрешит это, когда правка дойдёт до сервера).
+function mergeIncomingOrderRow(remoteOrders){
+  const remoteById=new Map((remoteOrders||[]).map(o=>[String(o?.id||''),o]).filter(([id])=>id));
+  const local=cleanStoredOrders(data.orders||[]);
+  const merged=[];
+  local.forEach(order=>{
+    const id=String(order?.id||'');
+    const remote=id?remoteById.get(id):null;
+    if(!remote){
+      if(id&&orderSyncKnownRemoteIds.has(id))return; // был на сервере, теперь удалён — удаляем и у себя
+      merged.push(order); // ещё не синхронизированный локальный заказ — не теряем
+      return;
+    }
+    remoteById.delete(id);
+    const lastPersisted=orderSyncPersistedSnapshots.get(id);
+    if(lastPersisted!==undefined&&lastPersisted===JSON.stringify(order)){
+      merged.push(remote);
+      orderSyncPersistedSnapshots.set(id,JSON.stringify(remote));
+    }else{
+      merged.push(order); // локальная правка по этому заказу ещё не подтверждена — не перезаписываем
+    }
+  });
+  remoteById.forEach((order,id)=>{
+    merged.push(order); // заказ появился на сервере, которого нет локально
+    orderSyncPersistedSnapshots.set(id,JSON.stringify(order));
+  });
   return merged;
 }
 function renderOrdersFromSync(){
@@ -421,6 +486,10 @@ async function persistOrdersToSupabase(options={}){
       orderSyncLastRemoteUpdatedAt=updatedAt;
       data.orders=mergedOrders;
       updateKnownRemoteOrderIds(mergedOrders);
+      // v7.94: то, что мы только что записали, — точно подтверждённое состояние каждого заказа.
+      // Полностью пересобираем снимки (а не дополняем) — заказы, которых больше нет в mergedOrders
+      // (удалённые), не должны оставлять в карте устаревшую запись.
+      orderSyncPersistedSnapshots=new Map(mergedOrders.map(ord=>[String(ord?.id||''),JSON.stringify(ord)]));
       orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
       if(typeof __saveLocalOnly==='function')__saveLocalOnly();
       if(!options.silent)showOrderSyncToast('Заказы синхронизированы');
@@ -462,8 +531,12 @@ async function applyOrderSyncRow(orderRow,{render=true}={}){
   }
   if(remoteUpdatedAt&&orderSyncTime(remoteUpdatedAt)<orderSyncTime(orderSyncLastRemoteUpdatedAt))return false;
   orderSyncLoading=true;
-  data.orders=orderSyncOrdersFromRow(orderRow);
-  updateKnownRemoteOrderIds(data.orders);
+  const remoteOrders=orderSyncOrdersFromRow(orderRow);
+  // v7.94: раньше здесь было "data.orders=remoteOrders" — полная замена массива, которая теряла
+  // любую локальную правку конкретного заказа, если ровно в этот момент она ещё не долетела до
+  // сервера (см. mergeIncomingOrderRow). Теперь сливаем по id заказа вместо замены целиком.
+  data.orders=mergeIncomingOrderRow(remoteOrders);
+  updateKnownRemoteOrderIds(remoteOrders);
   orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
   orderSyncLastRemoteUpdatedAt=remoteUpdatedAt||orderSyncLastRemoteUpdatedAt;
   if(typeof __saveLocalOnly==='function')__saveLocalOnly();
@@ -487,7 +560,23 @@ function isAccessSyncRow(row){return String(row?.article||'')===ACCESS_SYNC_ARTI
 // "workshop" из v7.40/v7.41) в массив "workshops", чтобы уже сохранённые строки не потерялись.
 function normalizeWorkerAccessRow(w){
   const workshops=Array.isArray(w?.workshops)?w.workshops.filter(Boolean):(w?.workshop?[w.workshop]:[]);
-  return {email:String(w?.email||'').trim().toLowerCase(),workshops};
+  return {email:String(w?.email||'').trim().toLowerCase(),roles:['worker'],workshops,extra:[],denied:[]};
+}
+// v8.05: у человека может быть НЕСКОЛЬКО должностей. Тот, у кого ТОЛЬКО «рабочий», по-прежнему лежит в
+// attributes.workers (старый код основного сайта понимает эту запись). Все остальные (любая другая должность,
+// в т.ч. в сочетании с рабочим) — в отдельном attributes.roles: общая база у тестового и основного сайта, а
+// старый код считает КАЖДОГО из workers рабочим и запер бы мастера в упрощённом режиме — roles он не видит.
+// Читаются оба формата roles: v8.04 (role: 'master') и v8.05 (roles: ['master','worker']).
+function normalizeRoleRow(r){
+  const choices=(typeof ROLE_CHOICES!=='undefined'&&ROLE_CHOICES)||['technologist','master','storekeeper','worker'];
+  const raw=Array.isArray(r?.roles)?r.roles:(r?.role?[r.role]:[]);
+  const roles=choices.filter(x=>raw.includes(x));
+  if(!roles.length)return null;
+  const workshops=roles.includes('worker')&&Array.isArray(r?.workshops)?r.workshops.filter(Boolean):[];
+  // v8.06: точечные права поверх должностей — extra (включено сверх должности) и denied (отключено).
+  const keys=(typeof PERMISSION_KEYS!=='undefined'&&PERMISSION_KEYS)||[];
+  const pick=a=>Array.isArray(a)?a.filter(k=>keys.includes(k)):[];
+  return {email:String(r?.email||'').trim().toLowerCase(),roles,workshops,extra:pick(r?.extra),denied:pick(r?.denied)};
 }
 function currentWorkerAssignment(){
   if(!currentUser)return null;
@@ -495,12 +584,23 @@ function currentWorkerAssignment(){
   if(!email)return null;
   return workerAccessList.find(w=>String(w?.email||'').trim().toLowerCase()===email)||null;
 }
-// Администратор (NOTIFICATION_ADMIN_EMAIL, js/orders.js) никогда не переводится в рабочий режим,
-// даже если случайно окажется в списке — иначе он мог бы сам себя запереть в упрощённом интерфейсе.
-function isWorkerUser(){return !!currentWorkerAssignment()&&!(typeof isNotificationAdmin==='function'&&isNotificationAdmin())}
+// v8.05: должности текущего пользователя. Администратор (NOTIFICATION_ADMIN_EMAIL, js/orders.js) — всегда
+// только admin, что бы ни лежало в списке (иначе он мог бы сам себя запереть). Не в списке — DEFAULT_ROLE:
+// до введения ролей такие люди видели весь сайт, так что и сейчас работают как мастер.
+const DEFAULT_ROLE='master';
+function currentUserRoles(){
+  if(typeof isNotificationAdmin==='function'&&isNotificationAdmin())return ['admin'];
+  const a=currentWorkerAssignment();
+  return a&&Array.isArray(a.roles)&&a.roles.length?a.roles:[DEFAULT_ROLE];
+}
+// Упрощённый вид — только у того, у кого ЕДИНСТВЕННАЯ должность «рабочий» и кому админ не открыл ничего, кроме
+// Склада и Цехов. Если есть ещё какая-то должность или открыт другой раздел — обычная версия сайта, в пределах прав.
+function isWorkerUser(){const r=currentUserRoles();return r.length===1&&r[0]==='worker'&&(typeof userSeesOnlyWorkerSections!=='function'||userSeesOnlyWorkerSections())}
 function applyWorkerModeForCurrentUser(){
   const worker=isWorkerUser();
   document.body.classList.toggle('worker-mode',worker);
+  if(typeof installRoleGuards==='function')installRoleGuards();
+  if(typeof applyRoleVisibility==='function')applyRoleVisibility();
   const list=worker?(currentWorkerAssignment().workshops||[]):[];
   window.WORKER_WORKSHOPS=list;
   // v7.43: «Цеха» у рабочего — всегда один плоский список его задач (см. workerWorkshopTasksHtml
@@ -508,10 +608,21 @@ function applyWorkerModeForCurrentUser(){
   // блокировка здесь больше не нужны — не важно, назначен ему один цех или несколько.
   const brandP=document.querySelector('.brand p');
   if(brandP)brandP.textContent=worker?(list.length===1?`Цех: ${list[0]}`:list.length?`Цеха: ${list.join(', ')}`:'цех не назначен'):'учёт материалов';
-  if(worker&&typeof switchSection==='function')switchSection('stock');
+  if(typeof switchSection==='function'){
+    const active=document.querySelector('.section.active')?.id||'';
+    // Рабочего при каждом применении прав возвращаем на «домашний» раздел (Склад, а если он отключён — первый
+    // из разрешённых); остальных — только если текущий раздел им больше недоступен.
+    const home=typeof firstAllowedSection==='function'?firstAllowedSection():'stock';
+    if(worker||(typeof userCanSection==='function'&&active&&!userCanSection(active)))switchSection(home);
+    else if(typeof renderWorkerTabbar==='function')renderWorkerTabbar(active);
+  }
+  if(typeof renderTopbarProfile==='function')renderTopbarProfile();
 }
 function applyAccessSyncRow(row){
-  workerAccessList=(Array.isArray(row?.attributes?.workers)?row.attributes.workers:[]).map(normalizeWorkerAccessRow);
+  const workers=(Array.isArray(row?.attributes?.workers)?row.attributes.workers:[]).map(normalizeWorkerAccessRow);
+  const roles=(Array.isArray(row?.attributes?.roles)?row.attributes.roles:[]).map(normalizeRoleRow).filter(Boolean);
+  // если email есть в обоих списках — новее и точнее запись из roles
+  workerAccessList=[...workers.filter(w=>!roles.some(r=>r.email===w.email)),...roles];
   accessSyncRowId=row?.id||accessSyncRowId;
   applyWorkerModeForCurrentUser();
   if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();
@@ -521,7 +632,20 @@ async function saveWorkerAccessList(list){
   workerAccessList=list;
   if(!canWriteSupabase()){toast('Локальный режим: сохранение недоступно');return false}
   try{
-    const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:{workers:list,updatedAt:new Date().toISOString()}};
+    // workers — только «чистые» рабочие, как и раньше (совместимо со старым кодом основного сайта);
+    // всё остальное — в roles.
+    // Чистый рабочий ВСЕГДА остаётся и в workers (старый основной сайт не знает про roles и без этого счёл бы его
+    // обычным пользователем со всем доступом); если у него есть точечные права — они лежат ещё и в roles.
+    const onlyWorker=w=>w.roles.length===1&&w.roles[0]==='worker';
+    const hasOverrides=w=>(w.extra&&w.extra.length)||(w.denied&&w.denied.length);
+    const workers=list.filter(onlyWorker).map(w=>({email:w.email,workshops:w.workshops||[]}));
+    const roles=list.filter(w=>!onlyWorker(w)||hasOverrides(w)).map(w=>{
+      const row={email:w.email,roles:w.roles,workshops:w.roles.includes('worker')?(w.workshops||[]):[]};
+      if(w.extra&&w.extra.length)row.extra=w.extra;
+      if(w.denied&&w.denied.length)row.denied=w.denied;
+      return row;
+    });
+    const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:{workers,roles,updatedAt:new Date().toISOString()}};
     if(accessSyncRowId){
       const{error}=await supabaseClient.from('materials').update(payload).eq('id',accessSyncRowId);
       if(error)throw error;
@@ -530,7 +654,7 @@ async function saveWorkerAccessList(list){
       if(error)throw error;
       accessSyncRowId=rows?.[0]?.id||'';
     }
-    if(typeof auditAdd==='function')auditAdd('worker_access_changed','settings','worker_access','Упрощённый доступ',`Список сотрудников с упрощённым доступом обновлён (${list.length})`);
+    if(typeof auditAdd==='function')auditAdd('worker_access_changed','settings','worker_access','Пользователи и роли',`Список пользователей и ролей обновлён (${list.length})`);
     toast('Список сохранён');
     return true;
   }catch(e){
@@ -541,13 +665,45 @@ async function saveWorkerAccessList(list){
 }
 let workerAccessDraft=null;
 function ensureWorkerAccessDraft(){
-  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({email:w.email,workshops:[...(w.workshops||[])]}));
+  if(!workerAccessDraft)workerAccessDraft=workerAccessList.map(w=>({email:w.email,roles:[...(w.roles||['worker'])],workshops:[...(w.workshops||[])],extra:[...(w.extra||[])],denied:[...(w.denied||[])]}));
   return workerAccessDraft;
 }
 function updateWorkerAccessDraft(index,field,value){
   const draft=ensureWorkerAccessDraft();
   if(!draft[index])return;
   draft[index][field]=field==='email'?value.trim().toLowerCase():value;
+}
+function toggleWorkerAccessDraftRole(index,role,checked){
+  const row=ensureWorkerAccessDraft()[index];
+  if(!row)return;
+  const set=new Set(Array.isArray(row.roles)?row.roles:[]);
+  if(checked)set.add(role);else set.delete(role);
+  row.roles=[...set];
+  if(!set.has('worker'))row.workshops=[];
+  pruneWorkerAccessOverrides(row);
+  renderWorkerAccessPanel();
+}
+// Точечные права хранятся как ОТЛИЧИЯ от набора должностей: если после смены должностей право стало и так
+// входить в набор (или наоборот отключаемого права в наборе уже нет) — лишнее отличие убираем.
+function pruneWorkerAccessOverrides(row){
+  const base=permsFromRoles(row.roles);
+  row.extra=(row.extra||[]).filter(k=>!base.has(k));
+  row.denied=(row.denied||[]).filter(k=>base.has(k));
+}
+function toggleWorkerAccessDraftPerms(index){
+  const row=ensureWorkerAccessDraft()[index];
+  if(!row)return;
+  row._open=!row._open;
+  renderWorkerAccessPanel();
+}
+function toggleWorkerAccessDraftPerm(index,perm,checked){
+  const row=ensureWorkerAccessDraft()[index];
+  if(!row)return;
+  const base=permsFromRoles(row.roles),extra=new Set(row.extra||[]),denied=new Set(row.denied||[]);
+  if(checked){denied.delete(perm);if(!base.has(perm))extra.add(perm)}
+  else{extra.delete(perm);if(base.has(perm))denied.add(perm)}
+  row.extra=[...extra];row.denied=[...denied];
+  renderWorkerAccessPanel();
 }
 function toggleWorkerAccessDraftWorkshop(index,name,checked){
   const draft=ensureWorkerAccessDraft(),row=draft[index];
@@ -562,17 +718,36 @@ function removeWorkerAccessDraft(index){
   renderWorkerAccessPanel();
 }
 function addWorkerAccessDraftRow(){
-  ensureWorkerAccessDraft().push({email:'',workshops:[]});
+  ensureWorkerAccessDraft().push({email:'',roles:['worker'],workshops:[],extra:[],denied:[]});
   renderWorkerAccessPanel();
 }
 function workerAccessRowHtml(row,index){
   const email=escapeHtml(row.email||'');
   const selected=new Set(row.workshops||[]);
+  const roles=new Set(row.roles||[]);
   const presets=(typeof ORDER_TECH_WORKSHOP_PRESETS!=='undefined'&&ORDER_TECH_WORKSHOP_PRESETS)||[];
-  const chips=presets.map(w=>`<label class="worker-access-chip ${selected.has(w)?'checked':''}"><input type="checkbox" ${selected.has(w)?'checked':''} onchange="toggleWorkerAccessDraftWorkshop(${index},'${jsStrArg(w)}',this.checked)"><span>${escapeHtml(w)}</span></label>`).join('');
+  const roleNames={technologist:'Технолог',master:'Мастер',storekeeper:'Кладовщик',worker:'Рабочий'};
+  const roleChips=['technologist','master','storekeeper','worker'].map(r=>`<label class="worker-access-chip ${roles.has(r)?'checked':''}"><input type="checkbox" ${roles.has(r)?'checked':''} onchange="toggleWorkerAccessDraftRole(${index},'${r}',this.checked)"><span>${roleNames[r]}</span></label>`).join('');
+  const shopChips=presets.map(w=>`<label class="worker-access-chip ${selected.has(w)?'checked':''}"><input type="checkbox" ${selected.has(w)?'checked':''} onchange="toggleWorkerAccessDraftWorkshop(${index},'${jsStrArg(w)}',this.checked)"><span>${escapeHtml(w)}</span></label>`).join('');
+  const shops=roles.has('worker')?`<div class="worker-access-sub"><small>Цеха рабочего</small><div class="worker-access-chips">${shopChips||'<span class="muted" style="font-size:12px">нет цехов в списке</span>'}</div></div>`:'';
+  const warn=roles.size?'':'<span class="worker-access-warn">Выберите хотя бы одну должность</span>';
+  // Точечные права: галочка = право есть (по должности или включено вручную); метка показывает отличие.
+  const eff=effectivePerms({roles:[...roles],extra:row.extra,denied:row.denied}),base=permsFromRoles([...roles]);
+  const diff=(row.extra||[]).length+(row.denied||[]).length;
+  let permsHtml='';
+  if(row._open){
+    const groups={};
+    PERMISSIONS.forEach(pm=>{(groups[pm.group]=groups[pm.group]||[]).push(pm)});
+    permsHtml=`<div class="worker-perms">${Object.keys(groups).map(g=>`<div class="worker-perm-group"><b>${escapeHtml(g)}</b>${groups[g].map(pm=>{
+      const on=eff.has(pm.key),mark=(row.extra||[]).includes(pm.key)?'добавлено':(row.denied||[]).includes(pm.key)?'отключено':'';
+      return `<label class="worker-perm ${on?'checked':''} ${mark?'override':''}"><input type="checkbox" ${on?'checked':''} onchange="toggleWorkerAccessDraftPerm(${index},'${pm.key}',this.checked)"><span>${escapeHtml(pm.label)}</span>${mark?`<em>${mark}</em>`:''}</label>`;
+    }).join('')}</div>`).join('')}</div>`;
+  }
+  const permsBlock=roles.size?`<div class="worker-access-sub"><button type="button" class="worker-access-permbtn" onclick="toggleWorkerAccessDraftPerms(${index})">Точечные права${diff?` · изменено: ${diff}`:''}<span class="worker-access-permchev ${row._open?'open':''}" aria-hidden="true">⌄</span></button>${permsHtml}</div>`:'';
+  const mixed=(roles.has('worker')&&roles.size>1)?'<span class="muted" style="font-size:12px;line-height:1.4">Есть и другая должность — человек видит обычную версию сайта, а не упрощённую.</span>':'';
   return `<div class="worker-access-row">
     <input class="input no-autofill" type="email" autocomplete="new-password" aria-autocomplete="none" placeholder="email@example.com" value="${email}" oninput="updateWorkerAccessDraft(${index},'email',this.value)">
-    <div class="worker-access-chips">${chips||'<span class="muted" style="font-size:12px">нет цехов в списке</span>'}</div>
+    <div class="worker-access-cols"><div class="worker-access-sub"><small>Должности (можно несколько)</small><div class="worker-access-chips">${roleChips}</div></div>${shops}${mixed}${warn}${permsBlock}</div>
     <button class="iconbtn" type="button" aria-label="Удалить" onclick="removeWorkerAccessDraft(${index})">×</button>
   </div>`;
 }
@@ -582,16 +757,20 @@ function renderWorkerAccessPanel(){
   if(typeof isNotificationAdmin!=='function'||!isNotificationAdmin()){panel.style.display='none';panel.innerHTML='';workerAccessDraft=null;return}
   panel.style.display='';
   const draft=ensureWorkerAccessDraft();
-  panel.innerHTML=`<h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Упрощённый доступ (рабочие)</h3>
-    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. Сотрудник из списка при входе видит не весь сайт, а только «Склад» (быстрый приход/расход по артикулу) и свои цеха — можно отметить один или несколько.</p>
+  panel.innerHTML=`<h3 style="margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:#111"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#6b7280"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Пользователи и роли</h3>
+    <p class="muted" style="margin:0 0 16px;font-size:13px;line-height:1.45;color:#6b7280">Видно только администратору. К одному email можно отметить сразу несколько должностей — права складываются, а в «Точечных правах» можно включить или отключить любое отдельное действие (например, «Удалять заказ») для конкретного человека. Кого нет в списке, работает как «Мастер». <b>Технолог</b> — создаёт и правит заказы, технологии, модели, справочники; цеха только смотрит. <b>Мастер</b> — весь сайт, правит любые отметки. <b>Кладовщик</b> — Склад полностью, остальное только смотреть. <b>Рабочий</b> — упрощённый вид («Склад» + свои цеха), правит только свои отметки за сегодня; если у человека есть ещё другая должность, он видит обычную версию сайта. <b>Владелец</b> — только mpa26294@gmail.com. Ограничения действуют в интерфейсе.</p>
     <div class="worker-access-list">${draft.map(workerAccessRowHtml).join('')||'<p class="muted" style="margin:0 0 12px">Пока никто не добавлен.</p>'}</div>
     <div class="actions" style="margin-top:12px">
-      <button class="btn" type="button" onclick="addWorkerAccessDraftRow()">+ Добавить сотрудника</button>
+      <button class="btn" type="button" onclick="addWorkerAccessDraftRow()">+ Добавить пользователя</button>
       <button class="btn primary" type="button" onclick="commitWorkerAccessDraft()">Сохранить</button>
     </div>`;
 }
 async function commitWorkerAccessDraft(){
-  const draft=ensureWorkerAccessDraft().filter(w=>w.email&&w.email.includes('@')).map(w=>({email:w.email,workshops:Array.isArray(w.workshops)?w.workshops:[]}));
+  const seen=new Set();
+  const rows=ensureWorkerAccessDraft().filter(w=>w.email&&w.email.includes('@'));
+  const empty=rows.find(w=>!(w.roles||[]).length);
+  if(empty){toast(`Выберите должность для ${empty.email}`);return}
+  const draft=rows.map(w=>({email:w.email,roles:['technologist','master','storekeeper','worker'].filter(r=>(w.roles||[]).includes(r)),workshops:(w.roles||[]).includes('worker')?(Array.isArray(w.workshops)?w.workshops:[]):[],extra:(w.extra||[]).filter(k=>PERMISSION_KEYS.includes(k)),denied:(w.denied||[]).filter(k=>PERMISSION_KEYS.includes(k))})).filter(w=>seen.has(w.email)?false:(seen.add(w.email),true));
   const ok=await saveWorkerAccessList(draft);
   workerAccessDraft=null;
   if(ok)renderWorkerAccessPanel();

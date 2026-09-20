@@ -1,0 +1,14 @@
+{
+  "name": "MOLM — учёт материалов",
+  "short_name": "MOLM",
+  "description": "Учёт материалов и производства MOLM",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff6600",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
