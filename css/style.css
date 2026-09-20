@@ -1065,6 +1065,29 @@ body.deny-orders-create #orders>.topbar .btn.primary,body.deny-models-edit #mode
 .worker-perm.checked{color:#15171a}
 .worker-perm em{margin-left:auto;flex:0 0 auto;padding:1px 7px;border-radius:999px;background:#eef2ff;color:#3538cd;font-style:normal;font-size:11px;font-weight:600}
 .worker-perm.override em{background:#fff1e6;color:#b54708}
+/* v8.13: отправки заказа — редактор в форме и список в карточке */
+.order-shipments-field{gap:8px}
+.order-ship-toggle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650;color:#344054;cursor:pointer}
+#orderShipmentsBox{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #e5e9f0;border-radius:12px;background:#fafbfc}
+#orderShipmentsBox[hidden]{display:none}
+#orderShipmentsBox>.btn{align-self:flex-start}
+.ship-row{display:grid;grid-template-columns:22px minmax(0,1fr) 90px auto 34px;gap:8px;align-items:center;margin-bottom:8px}
+.ship-row .ship-n{width:22px;height:22px;border-radius:50%;background:#fff1e6;color:#ff6600;font-size:11px;font-weight:800;display:grid;place-items:center}
+.ship-row .ship-unit{font-size:12px;color:#667085}
+.ship-row .ship-del{padding:0;width:34px;height:34px}
+.ship-summary{font-size:12px;font-weight:700;color:#287047}
+.ship-summary.over{color:#c0392b}
+.order-ship-info{margin-top:10px}
+.order-ship-info>small{display:block;margin-bottom:6px;color:#8490a3;font-size:10px;text-transform:uppercase}
+.order-ship-info ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.order-ship-info li{display:grid;grid-template-columns:22px auto auto 1fr;gap:10px;align-items:center;padding:8px 10px;border:1px solid #e5e9f0;border-radius:10px;background:#fff;font-size:13px}
+.order-ship-info li .ship-i{width:22px;height:22px;border-radius:50%;background:#fff1e6;color:#ff6600;font-size:11px;font-weight:800;display:grid;place-items:center}
+.order-ship-info li.done{background:#f4fbf6;border-color:#bfe8cc}
+.order-ship-info li.done .ship-i{background:#e3f4e8;color:#287047}
+.order-ship-info li.rest{border-style:dashed;color:#667085}
+.order-ship-info li em{font-style:normal;color:#287047;font-size:12px;font-weight:700;text-align:right}
+.sw-ship-extra{color:var(--sw-text2);font-weight:700}
+@media(max-width:520px){.ship-row{grid-template-columns:22px minmax(0,1fr) 72px 34px}.ship-row .ship-unit{display:none}}
 /* v8.10: рабочий режим — название раздела в верхней панели, на одной линии с колокольчиком и профилем;
    собственный крупный заголовок раздела «Склад» под панелью убираем (у «Цехов» он и так скрыт). */
 .tp-section-title{display:none}

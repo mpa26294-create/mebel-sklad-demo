@@ -355,6 +355,7 @@ function auditOrderFieldDiffsV570(prev,next){
   auditPushDiffV570(diffs,'Заказчик',prev.client,next.client);
   auditPushDiffV570(diffs,'Количество изделий',orderProductQty(prev),orderProductQty(next));
   auditPushDiffV570(diffs,'Срок сдачи',prev.dueDate,next.dueDate);
+  auditPushDiffV570(diffs,'Отправки',orderShipmentsText(prev),orderShipmentsText(next));
   auditPushDiffV570(diffs,'Дата создания',prev.date,next.date);
   auditPushDiffV570(diffs,'Комментарий',prev.comment,next.comment);
   return diffs;

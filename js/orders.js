@@ -23,8 +23,49 @@ function orderUnitOptions(category='',selected=''){
   const units=[orderDefaultUnitForCategory(category),...base].filter((v,i,a)=>v&&a.indexOf(v)===i);
   return units.map(u=>`<option value="${escapeHtml(u)}" ${u===selected?'selected':''}>${escapeHtml(unitLabel(u))}</option>`).join('')
 }
-function orderDeadlineClass(o){const d=o?.dueDate||'';if(!d)return '';const todayStr=today();if(d<todayStr && !orderIsTerminal(o?.status)&&!['Завершён','Отменён'].includes(calcOrderAutoStatus(o)))return 'overdue';if(d===todayStr)return 'today';return ''}
-function formatDeadline(o){return o?.dueDate||'—'}
+// v8.13: заказ можно разбить на несколько ОТПРАВОК — order.shipments=[{id,date,qty}] (дата + сколько штук к этой дате).
+// Сумма может быть меньше количества заказа (остаток пока не назначен). Срок для цеха — ближайшая отправка, которая
+// ещё не «закрыта» выполненным количеством этого цеха (накопительно: 20 к 25.09, ещё 40 к 14.10 → пока цех сделал 25,
+// ближайшая — вторая, и к ней нужно ещё 35). Если отправок нет — как раньше, order.dueDate. order.dueDate при
+// сохранении заказа = самая ранняя отправка (для старого кода/списков).
+function orderShipments(o){
+  const arr=Array.isArray(o?.shipments)?o.shipments:[];
+  return arr.map(x=>({id:x?.id||'',date:String(x?.date||'').slice(0,10),qty:Math.max(0,Math.trunc(Number(x?.qty)||0))}))
+    .filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&x.qty>0)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+}
+// «Готово к отправке» на уровне заказа — сколько прошло ПОСЛЕДНИЙ этап (без создания production у заказа).
+function orderProducedQty(o){
+  const steps=orderSteps(o),ops=Array.isArray(o?.production?.operations)?o.production.operations:[];
+  if(!steps.length)return 0;
+  const last=ops.find(op=>Number(op.stepIndex)===steps.length-1);
+  return last?productionCompletedQty(o,last):0;
+}
+function orderDueInfo(o,op){
+  const ships=orderShipments(o);
+  if(!ships.length){
+    const d=String(o?.dueDate||'').slice(0,10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(d)?{date:d,shipQty:0,need:0,cum:0,index:0,count:0}:null;
+  }
+  const done=op?productionCompletedQty(o,op):orderProducedQty(o);
+  let cum=0;
+  for(let i=0;i<ships.length;i++){
+    cum+=ships[i].qty;
+    if(cum>done)return {date:ships[i].date,shipQty:ships[i].qty,cum,need:cum-done,index:i+1,count:ships.length};
+  }
+  return null; // все назначенные отправки уже покрыты выполненным количеством
+}
+function orderDueDate(o,op){const i=orderDueInfo(o,op);return i?i.date:''}
+function rowDueDate(row){return orderDueDate(row.order,productionOp(row.order,row.index))}
+function orderDueSortKey(o){return orderDueDate(o)||String(o?.dueDate||'')||String(o?.date||'')}
+function orderShipmentsText(o){return orderShipments(o).map(x=>`${x.date} — ${x.qty} ${t('unitPieces')}`).join('; ')}
+function orderDeadlineClass(o,op){const d=orderDueDate(o,op)||'';if(!d)return '';const todayStr=today();if(d<todayStr && !orderIsTerminal(o?.status)&&!['Завершён','Отменён'].includes(calcOrderAutoStatus(o)))return 'overdue';if(d===todayStr)return 'today';return ''}
+function formatDeadline(o,op){
+  const i=orderDueInfo(o,op);
+  if(i)return i.count>1?`${i.date} (${i.index}/${i.count})`:i.date;
+  const ships=orderShipments(o);
+  return ships.length?ships[ships.length-1].date:'—';
+}
 function materialReservedOutsideOrder(matId,excludeOrderId='',targetUnit=''){
   const m=data.materials.find(x=>String(x.id)===String(matId));
   return (data.orders||[])
@@ -112,7 +153,7 @@ function syncMaterialReservations(){const totals={};(data.orders||[]).forEach(o=
 // не по номеру, что при разных сроках выглядит нелогично. Вместо того чтобы просто сменить порядок
 // по умолчанию, добавлен выбор — пользователь сам решает, как ему удобнее смотреть список.
 function orderSortCompare(a,b,mode){
-  const byDeadline=()=>String(a.dueDate||a.date||'').localeCompare(String(b.dueDate||b.date||''));
+  const byDeadline=()=>String(orderDueSortKey(a)).localeCompare(String(orderDueSortKey(b)));
   const byNumber=()=>String(a.number||'').localeCompare(String(b.number||''),undefined,{numeric:true,sensitivity:'base'});
   const byCreated=()=>String(a.date||'').localeCompare(String(b.date||''));
   switch(mode){
@@ -171,7 +212,7 @@ function orderWorkflowStepperHtml(o,context='card'){
 }
 function orderCreationDataHtml(o,{includeOperational=false}={}){
   const auto=calcOrderAutoStatus(o),oq=orderProductQty(o);
-  const basics=`<section class="order-workflow-panel" role="tabpanel"><h4>${escapeHtml(t('orderBasicData'))}</h4><div class="order-basic-grid"><div><small>${escapeHtml(t('orderNumberLabel'))}</small><b>${escapeHtml(o.number||'—')}</b></div><div><small>${escapeHtml(u42('orderClient'))}</small><b>${escapeHtml(o.client||'—')}</b></div><div><small>${escapeHtml(t('orderProductCount'))}</small><b>${oq}</b></div><div><small>${escapeHtml(t('orderDueDate'))}</small><b class="order-deadline ${orderDeadlineClass({...o,status:auto})}">${escapeHtml(formatDeadline(o))}</b></div><div><small>${escapeHtml(t('orderCreatedDate'))}</small><b>${escapeHtml(o.date||'—')}</b></div><div><small>${escapeHtml(t('orderCurrentStatus'))}</small>${orderStatusCellHtml(o,auto)}</div><div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div></section>`;
+  const basics=`<section class="order-workflow-panel" role="tabpanel"><h4>${escapeHtml(t('orderBasicData'))}</h4><div class="order-basic-grid"><div><small>${escapeHtml(t('orderNumberLabel'))}</small><b>${escapeHtml(o.number||'—')}</b></div><div><small>${escapeHtml(u42('orderClient'))}</small><b>${escapeHtml(o.client||'—')}</b></div><div><small>${escapeHtml(t('orderProductCount'))}</small><b>${oq}</b></div><div><small>${escapeHtml(t('orderDueDate'))}</small><b class="order-deadline ${orderDeadlineClass({...o,status:auto})}">${escapeHtml(formatDeadline(o))}</b></div>${orderShipments(o).length?`<div class="full">${orderShipmentsInfoHtml(o)}</div>`:''}<div><small>${escapeHtml(t('orderCreatedDate'))}</small><b>${escapeHtml(o.date||'—')}</b></div><div><small>${escapeHtml(t('orderCurrentStatus'))}</small>${orderStatusCellHtml(o,auto)}</div><div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div></section>`;
   if(!includeOperational)return basics;
   const matPct=calcOrderMaterialPercent(o),prod=orderProductionPercentForCard(o),prodLbl=t('orderStageProduction');
   return basics+orderResponsibilityHtml(o)+`<div class="order-operational-data"><div class="order-detail-progress"><div><span>${escapeHtml(u42('materials'))}</span><b>${matPct}%</b><i><em style="width:${matPct}%"></em></i></div><div><span>${escapeHtml(prodLbl)}</span><b>${prod}%</b><i><em style="width:${prod}%"></em></i></div></div>${orderMaterialsDetailHtml(o)}</div>`;
@@ -704,7 +745,7 @@ function productionQueueForWorkshop(stepName){
     if(op&&(op.status==='done'||op.status==='cancelled'))return false;
     return true;
   });
-  rows.sort((a,b)=>String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||'')));
+  rows.sort((a,b)=>String(rowDueDate(a)||a.order.date||'').localeCompare(String(rowDueDate(b)||b.order.date||'')));
   return rows;
 }
 function productionQueueState(orderId,stepIndex){
@@ -757,12 +798,13 @@ function workshopAnalytics(stepName){
   // Теперь active = количество операций, которые ДЕЙСТВИТЕЛЬНО запущены (running) именно на этом цехе —
   // то же самое, что использует бейдж статуса (workshopStatusBadgeHtml/workshopOpStatusCounts).
   const active=workshopOpStatusCounts(queue).running;
-  const overdue=queue.filter(row=>row.order.dueDate&&row.order.dueDate<todayStr).length;
+  const overdue=queue.filter(row=>{const d=rowDueDate(row);return d&&d<todayStr}).length;
   const etaMap=workshopQueueEtaMap(queue);
   const atRisk=queue.filter(row=>{
-    if(!row.order.dueDate||row.order.dueDate<todayStr)return false; // уже просрочен — считается отдельно
+    const due=rowDueDate(row);
+    if(!due||due<todayStr)return false; // уже просрочен — считается отдельно
     const eta=etaMap.get(`${row.order.id}_${row.index}`);
-    return !!eta&&eta>row.order.dueDate;
+    return !!eta&&eta>due;
   }).length;
   const plan=queue.reduce((s,row)=>s+productionPlanMinutesForStep(row.order,row.index),0);
   const actual=queue.reduce((s,row)=>s+productionActualMinutes(productionOp(row.order,row.index),row.order),0);
@@ -851,7 +893,7 @@ function currentlyActiveOperations(){
   rows.sort((a,b)=>{
     const rank=r=>r.op.status==='running'?0:1;
     const d=rank(a)-rank(b);
-    return d||String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||''));
+    return d||String(rowDueDate(a)||a.order.date||'').localeCompare(String(rowDueDate(b)||b.order.date||''));
   });
   return rows;
 }
@@ -971,7 +1013,7 @@ function workshopsMostUrgentIssue(){
       if(!op||op.status==='done'||op.status==='cancelled')return;
       const limiting=workshopLimitingMaterial(row.order,op);
       if(!limiting||limiting.enough>0)return;
-      if(!best||String(row.order.dueDate||'9999')<String(best.row.order.dueDate||'9999'))best={row,op,limiting,workshopName:name};
+      if(!best||String(rowDueDate(row)||'9999')<String(rowDueDate(best.row)||'9999'))best={row,op,limiting,workshopName:name};
     });
   });
   return best;
@@ -1152,13 +1194,13 @@ function workshopQueueItemHtml(row,etaMap){
   const key=`${o.id}_${op.stepIndex}`,expanded=expandedWorkshopOps.has(key);
   const pct=productionOpPercent(o,op),status=productionStatusClass(op.status);
   const coverage=productionMaterialCoverage(o,operationMaterials(o,op),productionCompletedQty(o,op));
-  const dClass=orderDeadlineClass(o);
+  const dClass=orderDeadlineClass(o,op);
   const dueNote=dClass==='overdue'?`<span class="workshop-row-danger">· ${escapeHtml(t('overdue')).toLowerCase()}</span>`:dClass==='today'?`<span class="workshop-row-today">· ${escapeHtml(t('dueTodayNote'))}</span>`:'';
   const matNote=!coverage.ok?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('missingMaterialsCount')).toLowerCase()}</span>`:'';
   const eta=etaMap?etaMap.get(`${o.id}_${row.index}`):null;
-  const riskNote=(dClass!=='overdue'&&eta&&o.dueDate&&eta>o.dueDate)?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('workshopRiskShort'))} (${escapeHtml(t('etaApprox'))} ${escapeHtml(eta)})</span>`:'';
+  const rowDue=orderDueDate(o,op),riskNote=(dClass!=='overdue'&&eta&&rowDue&&eta>rowDue)?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('workshopRiskShort'))} (${escapeHtml(t('etaApprox'))} ${escapeHtml(eta)})</span>`:'';
   // v8.02: срок «через N дн.» и время по норме технолога на остаток — то же, что видит рабочий на своём экране.
-  const dueInfo=simpleDueInfo(o),normInfo=simpleNormInfo(o,op);
+  const dueInfo=simpleDueInfo(o,op),normInfo=simpleNormInfo(o,op);
   const teamInfo=opTeamInfo(o,op),teamNote=teamInfo.active.length?`<span>· ● ${escapeHtml(teamInfo.active.map(u=>u.name).join(', '))}</span>`:'';
   const countNote=(dueInfo&&!dClass)?`<span>· ${escapeHtml(dueInfo.text)}</span>`:'';
   const normNote=(normInfo.perUnit>0&&normInfo.remaining>0)?`<span>· ${escapeHtml(t('simpleNormShort').replace('{time}',orderTimeText(normInfo.remainingMin)))}</span>`:'';
@@ -1167,7 +1209,7 @@ function workshopQueueItemHtml(row,etaMap){
       <span class="workshop-row-dot ${status}"></span>
       <span class="workshop-row-info">
         <b>${escapeHtml(o.number||'—')}</b>${o.client?`<em> · ${escapeHtml(o.client)}</em>`:''}
-        <small>${escapeHtml(formatDeadline(o))} ${countNote} ${dueNote} ${normNote} ${teamNote} ${riskNote} ${matNote}</small>
+        <small>${escapeHtml(formatDeadline(o,op))} ${countNote} ${dueNote} ${normNote} ${teamNote} ${riskNote} ${matNote}</small>
       </span>
       <span class="workshop-row-progress"><i><b style="width:${pct}%"></b></i></span>
       <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
@@ -1235,9 +1277,10 @@ function workshopRowRisk(row,etaMap){
   // / "ожидание закупки") — уже просроченный заказ и заказ, который рискует не успеть к сроку,
   // технически разные условия, но текст один и тот же ("риск срока"), различается только цвет
   // (просрочка — красный/danger, риск — оранжевый/warn).
-  if(orderDeadlineClass(o)==='overdue')return {cls:'danger',text:t('workshopRiskDeadline')};
+  if(orderDeadlineClass(o,op)==='overdue')return {cls:'danger',text:t('workshopRiskDeadline')};
   const eta=etaMap?etaMap.get(`${o.id}_${row.index}`):null;
-  if(eta&&o.dueDate&&eta>o.dueDate)return {cls:'warn',text:t('workshopRiskDeadline')};
+  const rowDue=orderDueDate(o,op);
+  if(eta&&rowDue&&eta>rowDue)return {cls:'warn',text:t('workshopRiskDeadline')};
   if(op){
     const coverage=productionMaterialCoverage(o,operationMaterials(o,op),productionCompletedQty(o,op));
     if(!coverage.ok){
@@ -1431,7 +1474,7 @@ function workshopQueueMiniRowHtml(row,isCurrent,etaMap){
   const paused=isCurrent&&op?.status==='paused';
   const tagCls=isCurrent?(paused?'paused':'current'):risk?risk.cls:'';
   const tagText=isCurrent?(paused?t('prodStatusPaused'):t('workshopNowTag')):risk?risk.text:(op&&op.status!=='not_started'?productionStatusLabel(op.status):t('workshopNotStartedTag'));
-  const dueInfo=simpleDueInfo(o),queueDueHtml=dueInfo?`${escapeHtml(formatDeadline(o))} · <span class="sw-due ${dueInfo.cls}">${escapeHtml(dueInfo.text)}</span>`:escapeHtml(formatDeadline(o));
+  const dueInfo=simpleDueInfo(o,op),queueDueHtml=dueInfo?`${escapeHtml(formatDeadline(o,op))} · <span class="sw-due ${dueInfo.cls}">${escapeHtml(dueInfo.text)}</span>`:escapeHtml(formatDeadline(o,op));
   const startBtn=!isCurrent?`<button type="button" class="btn small workshop-queue-mini-start" aria-label="${escapeHtml(t('prodStart'))}" title="${escapeHtml(t('prodStart'))}" onclick="event.stopPropagation();startProductionOperation('${o.id}',${row.index})">▶</button>`:'';
   return `<div class="workshop-queue-mini-row ${isCurrent?'current':''}">
     <button type="button" class="workshop-queue-mini-info-btn" onclick="goToOrderFromMaterial(event,'${o.id}')">
@@ -1605,7 +1648,7 @@ async function simpleQuickRemove(orderId,index){
 function workerAssignedTaskRows(){
   const names=window.WORKER_WORKSHOPS||[],rows=[];
   names.forEach(name=>workshopAnalytics(name).queue.forEach(row=>rows.push({...row,workshopName:name})));
-  rows.sort((a,b)=>String(a.order.dueDate||a.order.date||'').localeCompare(String(b.order.dueDate||b.order.date||'')));
+  rows.sort((a,b)=>String(rowDueDate(a)||a.order.date||'').localeCompare(String(rowDueDate(b)||b.order.date||'')));
   return rows;
 }
 // v7.98: экран A) по макету (iPhone/iPad): шапка цеха → переключатель цехов (если допуск к
@@ -1667,7 +1710,7 @@ function simpleTaskCardHtml(row){
       ?`<button type="button" class="sw-action secondary" onclick="event.stopPropagation();openSimpleTask('${o.id}',${op.stepIndex})">${escapeHtml(t('simpleOpenBtn'))}</button>`
       :`<button type="button" class="sw-action" onclick="event.stopPropagation();simpleStartAndOpen('${o.id}',${op.stepIndex})">${escapeHtml(isPaused?t('prodContinue'):t('simpleStartBtn'))}</button>`;
   const open=blocked?'':` role="button" tabindex="0" onclick="openSimpleTask('${o.id}',${op.stepIndex})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSimpleTask('${o.id}',${op.stepIndex})}"`;
-  const due=simpleDueInfo(o);
+  const due=simpleDueInfo(o,op);
   const dueHtml=`<span class="sw-due ${due?due.cls:''}">${due?`${escapeHtml(t('simpleDuePrefix'))} ${escapeHtml(due.shortDate)} · ${escapeHtml(due.text)}`:''}</span>`;
   const warnHtml=(limiting&&!blocked)?`<div class="sw-card-warn">${escapeHtml(t('simpleCardEnough').replace('{n}',Math.floor(limiting.enough)).replace('{m}',limiting.total))}</div>`:'';
   return `<div class="sw-card ${selected?'selected':''} ${blocked?'blocked':''}"${open}>
@@ -1700,8 +1743,8 @@ function simpleTaskListHtml(){
 // данных заказа: dueDate, steps[].minutes (минуты НА ОДНО изделие), материалы цеха (operationMaterials) и
 // расчёт productionConsumptionPlan() на остаток — новых полей в заказе нет.
 function simpleNum(n){return String(Number(Number(n).toFixed(1))).replace('.',currentLang==='en'?'.':',')}
-function simpleDueInfo(o){
-  const d=String(o?.dueDate||'').slice(0,10);
+function simpleDueInfo(o,op){
+  const di=orderDueInfo(o,op),d=di?di.date:'';
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return null;
   const [y,m,dd]=d.split('-').map(Number),[ty,tm,td]=today().split('-').map(Number);
   const days=Math.round((Date.UTC(y,m-1,dd)-Date.UTC(ty,tm-1,td))/86400000);
@@ -1711,7 +1754,9 @@ function simpleDueInfo(o){
   else if(days===0){text=t('simpleDueToday');cls='soon'}
   else if(days===1){text=t('simpleDueTomorrow');cls='soon'}
   else{text=t('simpleDueIn').replace('{n}',days);cls=days<=3?'soon':''}
-  return {days,dateText,shortDate:`${d.slice(8,10)}.${d.slice(5,7)}`,text,cls};
+  // v8.13: при нескольких отправках — «к этой дате ещё N шт · отправка 2 из 3» (N — сколько к этой дате не хватает)
+  const extra=(di.count>1||di.shipQty>0)?t('shipDueExtra').replace('{n}',di.need).replace('{i}',di.index).replace('{m}',di.count):'';
+  return {days,dateText,shortDate:`${d.slice(8,10)}.${d.slice(5,7)}`,text,cls,extra};
 }
 function simpleNormInfo(o,op){
   const perUnit=Math.max(0,Number((orderSteps(o)[Number(op.stepIndex)]||{}).minutes||0));
@@ -1792,7 +1837,7 @@ function teamTimeCardHtml(o,op){
   return `<div class="sw-info-card wide"><small>${escapeHtml(t('simpleTeamTitle'))}</small>${body}</div>`;
 }
 function simpleInfoChipsHtml(o,op){
-  const due=simpleDueInfo(o),mat=simpleMaterialsInfo(o,op);
+  const due=simpleDueInfo(o,op),mat=simpleMaterialsInfo(o,op);
   const dueChip=due?`<span class="sw-mini ${due.cls}">${escapeHtml(t('simpleDuePrefix'))} ${escapeHtml(due.shortDate)} · ${escapeHtml(due.text)}</span>`:'';
   const matChip=mat.kind==='rows'
     ?`<span class="sw-mini ${mat.short?'overdue':'ok'}">${escapeHtml(t(mat.short?'simpleMatChipShort':'simpleMatChipOk'))}</span>`
@@ -1803,8 +1848,8 @@ const SIMPLE_MATS_LIMIT=3;
 const simpleMatsExpanded=new Set(); // ключи "orderId_stepIndex" раскрытых списков материалов
 function toggleSimpleMats(key){if(simpleMatsExpanded.has(key))simpleMatsExpanded.delete(key);else simpleMatsExpanded.add(key);renderWorkshops()}
 function simpleInfoBodyHtml(o,op){
-  const due=simpleDueInfo(o),norm=simpleNormInfo(o,op),mat=simpleMaterialsInfo(o,op);
-  const dueCard=`<div class="sw-info-card ${due?due.cls:''}"><small>${escapeHtml(t('simpleDueLabel'))}</small>${due?`<b>${escapeHtml(due.dateText)}</b><span>${escapeHtml(due.text)}</span>`:`<b>—</b><span>${escapeHtml(t('simpleDueNotSet'))}</span>`}</div>`;
+  const due=simpleDueInfo(o,op),norm=simpleNormInfo(o,op),mat=simpleMaterialsInfo(o,op);
+  const dueCard=`<div class="sw-info-card ${due?due.cls:''}"><small>${escapeHtml(t('simpleDueLabel'))}</small>${due?`<b>${escapeHtml(due.dateText)}</b><span>${escapeHtml(due.text)}</span>${due.extra?`<span class="sw-ship-extra">${escapeHtml(due.extra)}</span>`:''}`:`<b>—</b><span>${escapeHtml(t('simpleDueNotSet'))}</span>`}</div>`;
   let normSub='';
   if(norm.perUnit>0){
     normSub=`<span>${escapeHtml(t('simpleNormLeft'))}: ${escapeHtml(orderTimeText(norm.remainingMin))}</span>`;
@@ -2506,15 +2551,80 @@ function openOrderModal(id=''){
     <div class="field"><label>${escapeHtml(t('orderNumberLabel'))}</label><input id="orderNumber" class="input" value="${escapeHtml(number)}"></div>
     <div class="field"><label>${escapeHtml(t('orderCustomer'))}</label><input id="orderClient" class="input" value="${escapeHtml(o?.client||'')}" placeholder="${escapeHtml(t('orderCustomerPlaceholder'))}"></div>
     <div class="field"><label>${escapeHtml(t('orderProduct'))}</label><input id="orderProduct" class="input" value="${escapeHtml(o?.product||'')}" placeholder="${escapeHtml(t('orderProductPlaceholder'))}"></div>
-    <div class="field"><label>${escapeHtml(t('orderProductCount'))}</label><input id="orderProductQty" type="number" min="1" step="1" class="input" value="${orderProductQty(o||{})}"></div>
-    <div class="field"><label>${escapeHtml(t('orderDueDate'))}</label><input id="orderDueDate" type="date" class="input" value="${escapeHtml(o?.dueDate||'')}"></div>
+    <div class="field"><label>${escapeHtml(t('orderProductCount'))}</label><input id="orderProductQty" type="number" min="1" step="1" class="input" value="${orderProductQty(o||{})}" oninput="updateOrderShipSummary()"></div>
+    <div class="field" id="orderDueDateField" ${orderShipments(o||{}).length?'hidden':''}><label>${escapeHtml(t('orderDueDate'))}</label><input id="orderDueDate" type="date" class="input" value="${escapeHtml(o?.dueDate||'')}"></div>
     <div class="field"><label>${escapeHtml(t('orderPriority'))}</label><select id="orderPriority" class="select"><option value="low" ${o?.priority==='low'?'selected':''}>${escapeHtml(t('priorityLow'))}</option><option value="normal" ${!o?.priority||o?.priority==='normal'?'selected':''}>${escapeHtml(t('priorityNormal'))}</option><option value="high" ${o?.priority==='high'?'selected':''}>${escapeHtml(t('priorityHigh'))}</option><option value="urgent" ${o?.priority==='urgent'?'selected':''}>${escapeHtml(t('priorityUrgent'))}</option></select></div>
+    ${orderShipmentsEditorHtml(o)}
     <div class="field full"><label>${escapeHtml(t('orderComment'))}</label><textarea id="orderComment" placeholder="${escapeHtml(t('orderCommentPlaceholder'))}">${escapeHtml(o?.comment||'')}</textarea></div>
   </div>
   <section class="order-notification-box"><h4>${escapeHtml(t('notificationTitle'))}</h4><label class="order-notification-toggle"><input id="notifyTechnologist" type="checkbox" ${notification.enabled!==false?'checked':''}> <span>${escapeHtml(t('notifyTechnologist'))}</span></label><div class="order-notification-methods"><small>${escapeHtml(t('notificationMethod'))}</small>${['internal','telegram','email','whatsapp'].map(method=>`<label><input type="radio" name="notificationMethod" value="${method}" ${notification.method===method?'checked':''}> <span>${escapeHtml(t(`notificationMethod_${method}`))}</span><em>${escapeHtml(t(`notificationMode_${method}`))}</em></label>`).join('')}</div></section>
   ${typeof orderFilesSectionHtml==='function'?orderFilesSectionHtml(o,filesTargetId):''}`;
   const foot=`<button class="btn" onclick="closeModal()">${u42('cancel')}</button><button class="btn primary" onclick="saveOrder('${id||draftId||''}')">${u42('save')}</button>`;
   openModal(id?u42('editOrder'):u42('addOrder'),body,foot);
+  updateOrderShipSummary();
+}
+// v8.13: редактор отправок в форме заказа. Флажок «Разделить на несколько отправок» скрывает одиночную дату срока и
+// показывает строки [дата][шт.][×]; под ними — «Распределено X из N · осталось M».
+function orderShipRowHtml(x={}){
+  return `<div class="ship-row"><span class="ship-n"></span><input type="date" class="input ship-date" value="${escapeHtml(x.date||'')}"><input type="number" min="1" step="1" class="input ship-qty" value="${x.qty?Number(x.qty):''}" placeholder="${escapeHtml(t('shipQtyPlaceholder'))}" oninput="updateOrderShipSummary()"><span class="ship-unit">${escapeHtml(t('unitPieces'))}</span><button type="button" class="btn small danger ship-del" aria-label="${escapeHtml(t('delete')||'×')}" onclick="removeOrderShipmentRow(this)">×</button></div>`;
+}
+function orderShipmentsEditorHtml(o){
+  const ships=orderShipments(o||{});
+  return `<div class="field full order-shipments-field">
+    <label class="order-ship-toggle"><input id="orderShipToggle" type="checkbox" ${ships.length?'checked':''} onchange="toggleOrderShipments()"> <span>${escapeHtml(t('shipSplitToggle'))}</span></label>
+    <div id="orderShipmentsBox" ${ships.length?'':'hidden'}>
+      <div id="orderShipRows">${ships.map(orderShipRowHtml).join('')}</div>
+      <button type="button" class="btn small" onclick="addOrderShipmentRow()">+ ${escapeHtml(t('shipAdd'))}</button>
+      <div id="orderShipSummary" class="ship-summary"></div>
+    </div>
+  </div>`;
+}
+function orderShipFormQty(){return orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1})}
+function orderShipFormRows(){
+  return [...document.querySelectorAll('#orderShipRows .ship-row')].map(r=>({
+    date:r.querySelector('.ship-date')?.value||'',
+    qty:Math.max(0,Math.trunc(Number(r.querySelector('.ship-qty')?.value||0)))
+  }));
+}
+function updateOrderShipSummary(){
+  const box=document.getElementById('orderShipSummary');if(!box)return;
+  document.querySelectorAll('#orderShipRows .ship-row .ship-n').forEach((el,i)=>{el.textContent=i+1});
+  const total=orderShipFormQty(),sum=orderShipFormRows().reduce((n,r)=>n+r.qty,0),left=total-sum;
+  box.classList.toggle('over',left<0);
+  box.textContent=left<0?t('shipOver').replace('{n}',-left):t('shipSummary').replace('{a}',sum).replace('{b}',total).replace('{c}',left);
+}
+function toggleOrderShipments(){
+  const on=!!document.getElementById('orderShipToggle')?.checked;
+  const boxEl=document.getElementById('orderShipmentsBox'),dueField=document.getElementById('orderDueDateField'),rows=document.getElementById('orderShipRows');
+  if(boxEl)boxEl.hidden=!on;
+  if(dueField)dueField.hidden=on;
+  if(on&&rows&&!rows.children.length){
+    // первая строка — из уже введённого срока и всего количества; дальше пользователь правит цифры и добавляет строки
+    rows.insertAdjacentHTML('beforeend',orderShipRowHtml({date:document.getElementById('orderDueDate')?.value||'',qty:orderShipFormQty()}));
+  }
+  updateOrderShipSummary();
+}
+function addOrderShipmentRow(){
+  const rows=document.getElementById('orderShipRows');if(!rows)return;
+  const left=orderShipFormQty()-orderShipFormRows().reduce((n,r)=>n+r.qty,0);
+  rows.insertAdjacentHTML('beforeend',orderShipRowHtml({date:'',qty:left>0?left:0}));
+  updateOrderShipSummary();
+  rows.lastElementChild?.querySelector('.ship-date')?.focus();
+}
+function removeOrderShipmentRow(btn){btn.closest('.ship-row')?.remove();updateOrderShipSummary()}
+// Отправки из формы для сохранения: {list,error}. Полностью пустые строки пропускаются; включённый режим без единой
+// заполненной строки = «без отправок» (сработает обычная дата срока).
+function collectOrderShipmentsForSave(productQty){
+  if(!document.getElementById('orderShipToggle')?.checked)return {list:[],error:''};
+  const raw=orderShipFormRows().filter(r=>r.date||r.qty);
+  for(const r of raw){
+    if(!r.date)return {list:[],error:t('shipErrDate')};
+    if(!(r.qty>0))return {list:[],error:t('shipErrQty')};
+  }
+  const sum=raw.reduce((n,r)=>n+r.qty,0);
+  if(sum>productQty)return {list:[],error:t('shipOver').replace('{n}',sum-productQty)};
+  const list=raw.map(r=>({id:uid(),date:r.date,qty:r.qty})).sort((a,b)=>a.date.localeCompare(b.date));
+  return {list,error:''};
 }
 function orderStepRow(s={name:'',minutes:0}){return `<div class="order-row order-step-row"><div class="field"><label>${u42('stage')}</label><input class="input step-name" value="${escapeHtml(s.name||'')}"></div><div class="field"><label>${u42('minutes')}</label><input class="input step-min" type="number" min="0" step="1" value="${Number(s.minutes||0)}" oninput="updateOrderTimeTotal()"></div><button class="btn small danger" onclick="this.closest('.order-step-row').remove();updateOrderTimeTotal()">×</button></div>`}
 function addOrderStep(){document.getElementById('orderStepsBox').insertAdjacentHTML('beforeend',orderStepRow({name:u42('newStage'),minutes:0}));updateOrderTimeTotal()}
@@ -2698,20 +2808,21 @@ function checkOrderOverdueRiskNotifications(){
     if(typeof orderIsTerminal==='function'&&orderIsTerminal(o.status))return;
     let reason='';
     if(orderDeadlineClass(o)==='overdue')reason='overdue';
-    if(!reason&&o.dueDate){
+    if(!reason&&(o.dueDate||orderShipments(o).length)){
       const steps=orderSteps(o);
       for(let i=0;i<steps.length;i++){
         const step=steps[i];if(!step?.name||Number(step.minutes||0)<=0)continue;
         const op=productionOp(o,i);if(op&&(op.status==='done'||op.status==='cancelled'))continue;
+        const opDue=orderDueDate(o,op);if(!opDue)continue;
         const queue=productionQueueForWorkshop(step.name);
         const eta=workshopQueueEtaMap(queue).get(`${o.id}_${i}`);
-        if(eta&&eta>o.dueDate){reason='risk';break}
+        if(eta&&eta>opDue){reason='risk';break}
       }
     }
     if(!reason)return;
     if(!shouldPushRuleNotification('orderOverdueRisk',o.id))return;
     const title=reason==='overdue'?t('notifOrderOverdueTitle'):t('notifOrderRiskTitle');
-    pushRuleNotification('orderOverdueRisk',o.id,title,`${title}: ${o.number}${o.dueDate?` (${t('orderDueDate')}: ${o.dueDate})`:''}`,{orderId:o.id});
+    pushRuleNotification('orderOverdueRisk',o.id,title,`${title}: ${o.number}${orderDueDate(o)?` (${t('orderDueDate')}: ${orderDueDate(o)})`:''}`,{orderId:o.id});
   });
 }
 function checkLowStockNotifications(){
@@ -2863,8 +2974,24 @@ async function sendOrderNotification(o,method){
   if(method==='whatsapp'){window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank','noopener');return true}
   return false;
 }
+// v8.13: список отправок в карточке заказа: дата, сколько, ✓ если уже произведено (накопительно) и остаток без даты.
+function orderShipmentsInfoHtml(o){
+  const ships=orderShipments(o);
+  if(!ships.length)return '';
+  const done=orderProducedQty(o),total=orderProductQty(o);
+  let cum=0;
+  const rows=ships.map((x,i)=>{
+    cum+=x.qty;
+    const ok=done>=cum;
+    return `<li class="${ok?'done':''}"><span class="ship-i">${i+1}</span><b>${escapeHtml(x.date)}</b><span>${x.qty} ${escapeHtml(t('unitPieces'))}</span><em>${ok?'✓ '+escapeHtml(t('shipDone')):''}</em></li>`;
+  }).join('');
+  const rest=total-cum;
+  return `<div class="order-ship-info"><small>${escapeHtml(t('shipTitle'))}</small><ul>${rows}${rest>0?`<li class="rest"><span class="ship-i">·</span><b>${escapeHtml(t('shipUnscheduled'))}</b><span>${rest} ${escapeHtml(t('unitPieces'))}</span><em></em></li>`:''}</ul></div>`;
+}
 async function saveManagerOrder(id=''){
   const productQty=orderProductQty({productQty:document.getElementById('orderProductQty')?.value||1});
+  const shipCheck=collectOrderShipmentsForSave(productQty);
+  if(shipCheck.error){toast(shipCheck.error);return}
   const prev=id?data.orders.find(o=>String(o.id)===String(id)):null;
   const isNew=!prev,notifyEnabled=!!document.getElementById('notifyTechnologist')?.checked,method=document.querySelector('input[name="notificationMethod"]:checked')?.value||'internal',now=productionNow();
   const notification={enabled:notifyEnabled,method,recipientRole:'technologist',state:notifyEnabled&&method==='internal'?'sent':'prepared',createdAt:now};
@@ -2872,7 +2999,7 @@ async function saveManagerOrder(id=''){
   // загрузили ДО этого "Сохранить" (см. openOrderModal/consumePendingOrderFiles в js/order-files.js);
   // у существующего заказа files уже корректно приходят через spread {...prev} выше.
   const draftFiles=prev?(prev.files||[]):(typeof consumePendingOrderFiles==='function'?consumePendingOrderFiles(id):[]);
-  let draft={...(prev||{}),id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),product:document.getElementById('orderProduct').value.trim(),productQty,dueDate:document.getElementById('orderDueDate')?.value||'',priority:document.getElementById('orderPriority')?.value||'normal',comment:document.getElementById('orderComment').value.trim(),date:prev?.date||today(),status:isNew?'Ожидает технолога':prev.status,steps:prev?.steps||[],materials:prev?.materials||[],notification,files:draftFiles};
+  let draft={...(prev||{}),id:id||uid(),number:document.getElementById('orderNumber').value.trim()||nextOrderNumber(id),client:document.getElementById('orderClient').value.trim(),product:document.getElementById('orderProduct').value.trim(),productQty,shipments:shipCheck.list,dueDate:shipCheck.list.length?shipCheck.list[0].date:(document.getElementById('orderDueDate')?.value||''),priority:document.getElementById('orderPriority')?.value||'normal',comment:document.getElementById('orderComment').value.trim(),date:prev?.date||today(),status:isNew?'Ожидает технолога':prev.status,steps:prev?.steps||[],materials:prev?.materials||[],notification,files:draftFiles};
   if(typeof setOrderMetaForSave==='function')draft=setOrderMetaForSave(draft,prev);
   // v7.80: КРИТИЧЕСКИЙ ФИКС — новые заказы молча пропадали (не появлялись в списке, хотя запись в
   // Истории "Заказ передан технологу" создавалась). Причина: openOrderModal() для НОВОГО заказа
@@ -2941,13 +3068,13 @@ function showOrderInfoModal(id){
   // row for the same order first — otherwise the same history entries would be visible twice
   // at once (inline in the list and here in the modal).
   if(typeof expandedOrders!=='undefined'&&expandedOrders.has(id)){expandedOrders.delete(id);if(typeof renderOrders==='function')renderOrders();}
-  const status=calcOrderAutoStatus(o),fields=[[t('orderNumberLabel'),o.number||'—'],[t('orderCustomer'),o.client||'—'],[t('orderProduct'),o.product||'—'],[t('orderProductCount'),orderProductQty(o)],[t('orderDueDate'),o.dueDate||'—'],[t('orderCreatedDate'),o.date||'—'],[t('orderPriority'),orderPriorityLabel(o.priority)],[t('orderCurrentStatus'),status]];
+  const status=calcOrderAutoStatus(o),fields=[[t('orderNumberLabel'),o.number||'—'],[t('orderCustomer'),o.client||'—'],[t('orderProduct'),o.product||'—'],[t('orderProductCount'),orderProductQty(o)],[t('orderDueDate'),orderShipments(o).length?formatDeadline(o):(o.dueDate||'—')],[t('orderCreatedDate'),o.date||'—'],[t('orderPriority'),orderPriorityLabel(o.priority)],[t('orderCurrentStatus'),status]];
   // v7.72: по просьбе пользователя — в карточке просмотра заказа теперь видно и материалы (те же
   // строки "нужно/на складе/резерв/доступно/статус", что и в развёрнутой строке списка заказов и во
   // вкладке "Технология"), а не только номер/заказчик/сроки. orderMaterialsDetailHtml() уже
   // существовала и переиспользуется как есть — стили для неё вне #orders продублированы в css/style.css
   // под .order-clean-modal.
-  const body=`<div class="order-info-view"><div class="order-info-grid">${fields.map(([label,value])=>`<div><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}<div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div>${orderMaterialsDetailHtml(o)}${typeof orderFilesSectionHtml==='function'?orderFilesSectionHtml(o,'',false):''}${orderInfoHistoryHtml(o)}${typeof cancelReviewPending==='function'&&cancelReviewPending(o)&&typeof cancelReviewHtml==='function'?cancelReviewHtml(o):''}</div>`;
+  const body=`<div class="order-info-view"><div class="order-info-grid">${fields.map(([label,value])=>`<div><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}<div class="full"><small>${escapeHtml(t('orderComment'))}</small><b>${escapeHtml(o.comment||'—')}</b></div></div>${orderShipmentsInfoHtml(o)}${orderMaterialsDetailHtml(o)}${typeof orderFilesSectionHtml==='function'?orderFilesSectionHtml(o,'',false):''}${orderInfoHistoryHtml(o)}${typeof cancelReviewPending==='function'&&cancelReviewPending(o)&&typeof cancelReviewHtml==='function'?cancelReviewHtml(o):''}</div>`;
   const technologyLabel=currentLang==='en'?'Technology':currentLang==='lv'?'Tehnoloģija':'Технология';
   openModal(o.number||t('orderStageCreation'),body,`<button class="btn" type="button" onclick="openOrderModal('${o.id}')">${escapeHtml(u42('edit'))}</button><button class="btn primary" type="button" onclick="openOrderTechnologyFromInfo('${o.id}')">${escapeHtml(technologyLabel)}</button><button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('close'))}</button>`);setCleanModalClass('order-clean-modal order-info-modal');
 }
