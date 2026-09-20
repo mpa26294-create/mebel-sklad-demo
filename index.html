@@ -339,6 +339,8 @@ let orderSyncRowId='',orderSyncTimer=null,orderSyncLoading=false,orderSyncDirty=
 // этого снимка, значит по нему есть локальная правка, которая ещё не долетела до сервера, и её
 // нельзя терять, независимо от того, что показывает общий флаг в этот момент.
 let orderSyncPersistedSnapshots=new Map();
+// v8.07.1: false, пока серверные заказы ни разу не применялись в этой странице (см. mergeIncomingOrderRow).
+let orderSyncSnapshotsReady=false;
 function isOrderSyncRow(row){return String(row?.article||'')===ORDER_SYNC_ARTICLE}
 function orderSyncOrdersFromRow(row){return cleanStoredOrders(Array.isArray(row?.attributes?.orders)?row.attributes.orders:[])}
 function orderSyncUpdatedAt(row){return String(row?.attributes?.updatedAt||'')}
@@ -404,6 +406,16 @@ function mergeOrdersForSync(localOrders,remoteOrders){
 // версию. Если не совпадает — по этому заказу есть ещё не отправленная правка, оставляем локальную
 // версию как есть (следующее событие синхронизации разрешит это, когда правка дойдёт до сервера).
 function mergeIncomingOrderRow(remoteOrders){
+  // v8.07.1 (ИСПРАВЛЕНИЕ ошибки v7.94): при первой загрузке страницы снимков ещё нет, и «локальная версия не
+  // совпала со снимком» означало «есть неотправленная правка» — устаревшие заказы из localStorage побеждали
+  // серверные (данные других людей не подтягивались, а при следующей записи устаревшая копия могла затереть
+  // серверную). При первом применении серверных данных сервер главнее — как и было до v7.94; локальный кэш
+  // из localStorage — лишь кэш. Слияние по заказам работает уже со следующих обновлений.
+  if(!orderSyncSnapshotsReady){
+    orderSyncSnapshotsReady=true;
+    orderSyncPersistedSnapshots=new Map((remoteOrders||[]).map(o=>[String(o?.id||''),JSON.stringify(o)]));
+    return (remoteOrders||[]).slice();
+  }
   const remoteById=new Map((remoteOrders||[]).map(o=>[String(o?.id||''),o]).filter(([id])=>id));
   const local=cleanStoredOrders(data.orders||[]);
   const merged=[];
@@ -513,6 +525,7 @@ async function persistOrdersToSupabase(options={}){
       // Полностью пересобираем снимки (а не дополняем) — заказы, которых больше нет в mergedOrders
       // (удалённые), не должны оставлять в карте устаревшую запись.
       orderSyncPersistedSnapshots=new Map(mergedOrders.map(ord=>[String(ord?.id||''),JSON.stringify(ord)]));
+      orderSyncSnapshotsReady=true;
       orderSyncLocalSnapshot=JSON.stringify(cleanStoredOrders(data.orders||[]));
       if(typeof __saveLocalOnly==='function')__saveLocalOnly();
       if(!options.silent)showOrderSyncToast('Заказы синхронизированы');
