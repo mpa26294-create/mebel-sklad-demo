@@ -1438,7 +1438,7 @@ function workshopCurrentCardHtml(row){
   // рабочем режиме) — сам решает start/pause по текущему статусу.
   const canToggle=op.status==='running'||op.status==='paused'||op.status==='not_started';
   const iWork=!!myWorkSession(o,op.stepIndex),othersWork=openWorkSessions(o,op.stepIndex).length>0&&!iWork;
-  const toggleLabel=iWork?t('prodPause'):(op.status==='paused'&&!othersWork)?t('prodContinue'):t('prodStart');
+  const toggleLabel=iWork?t('prodPause'):othersWork?t('simpleJoinBtn'):(op.status==='paused')?t('prodContinue'):t('prodStart'); // v8.17: если уже работают другие — «Присоединиться»
   const toggleIcon=iWork?'⏸':'▶';
   const toggleBtn=canToggle?`<button class="btn workshop-toggle-btn" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})">${toggleIcon} ${escapeHtml(toggleLabel)}</button>`:'';
   return `<div class="workshop-current-card">
@@ -1475,7 +1475,8 @@ function workshopQueueMiniRowHtml(row,isCurrent,etaMap){
   const tagCls=isCurrent?(paused?'paused':'current'):risk?risk.cls:'';
   const tagText=isCurrent?(paused?t('prodStatusPaused'):t('workshopNowTag')):risk?risk.text:(op&&op.status!=='not_started'?productionStatusLabel(op.status):t('workshopNotStartedTag'));
   const dueInfo=simpleDueInfo(o,op),queueDueHtml=dueInfo?`${escapeHtml(formatDeadline(o,op))} · <span class="sw-due ${dueInfo.cls}">${escapeHtml(dueInfo.text)}</span>`:escapeHtml(formatDeadline(o,op));
-  const startBtn=!isCurrent?`<button type="button" class="btn small workshop-queue-mini-start" aria-label="${escapeHtml(t('prodStart'))}" title="${escapeHtml(t('prodStart'))}" onclick="event.stopPropagation();startProductionOperation('${o.id}',${row.index})">▶</button>`:'';
+  const startLbl=(op&&openWorkSessions(o,op.stepIndex).length>0&&!myWorkSession(o,op.stepIndex))?t('simpleJoinBtn'):t('prodStart');
+  const startBtn=!isCurrent?`<button type="button" class="btn small workshop-queue-mini-start" aria-label="${escapeHtml(startLbl)}" title="${escapeHtml(startLbl)}" onclick="event.stopPropagation();startProductionOperation('${o.id}',${row.index})">▶</button>`:'';
   return `<div class="workshop-queue-mini-row ${isCurrent?'current':''}">
     <button type="button" class="workshop-queue-mini-info-btn" onclick="goToOrderFromMaterial(event,'${o.id}')">
       <span class="workshop-queue-mini-dot ${tagCls||'ok'}"></span>
@@ -1708,7 +1709,7 @@ function simpleTaskCardHtml(row){
     ?`<div class="sw-action disabled">${escapeHtml(t('simpleWaitingMaterialBtn'))}</div>`
     :isRunning
       ?`<button type="button" class="sw-action secondary" onclick="event.stopPropagation();openSimpleTask('${o.id}',${op.stepIndex})">${escapeHtml(t('simpleOpenBtn'))}</button>`
-      :`<button type="button" class="sw-action" onclick="event.stopPropagation();simpleStartAndOpen('${o.id}',${op.stepIndex})">${escapeHtml(isPaused?t('prodContinue'):t('simpleStartBtn'))}</button>`;
+      :`<button type="button" class="sw-action" onclick="event.stopPropagation();simpleStartAndOpen('${o.id}',${op.stepIndex})">${escapeHtml(othersWork?t('simpleJoinBtn'):isPaused?t('prodContinue'):t('simpleStartBtn'))}</button>`;
   const open=blocked?'':` role="button" tabindex="0" onclick="openSimpleTask('${o.id}',${op.stepIndex})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSimpleTask('${o.id}',${op.stepIndex})}"`;
   const due=simpleDueInfo(o,op);
   const dueHtml=`<span class="sw-due ${due?due.cls:''}">${due?`${escapeHtml(t('simpleDuePrefix'))} ${escapeHtml(due.shortDate)} · ${escapeHtml(due.text)}`:''}</span>`;
@@ -1902,7 +1903,8 @@ function simpleDetailBackBarHtml(task){
 // кнопки меняется на "Продолжить") — startProductionOperation() сам решает start/resume.
 function simpleTaskDetailIdleHtml(task){
   const {order:o,op}=task,total=orderProductQty(o),completed=productionCompletedQty(o,op);
-  const btnLabel=(op.status==='paused'&&!openWorkSessions(o,op.stepIndex).length)?t('prodContinue'):t('simpleStartWorkBtn');
+  const othersWorking=openWorkSessions(o,op.stepIndex).length>0;
+  const btnLabel=othersWorking?t('simpleJoinBtn'):op.status==='paused'?t('prodContinue'):t('simpleStartWorkBtn'); // v8.17: работают другие — «Присоединиться»
   return `<div class="simple-detail-idle">
     ${simpleDetailBackBarHtml(task)}
     <div class="simple-detail-icon">${workshopIcon(op.stepName)}</div>

@@ -524,6 +524,10 @@ Object.assign(I18N.lv,{roleAdmin:'Administrators',roleTechnologist:'Tehnologs',r
 Object.assign(I18N.ru,{simpleNowWorking:'Сейчас работают',simpleYouLabel:'вы',simpleSinceTime:'с {time}',simpleWorkingNames:'Работают: {names}',simpleTeamTitle:'Кто сколько работал',simpleTeamTotal:'Всего человеко-времени',simpleTeamNoData:'Пока никто не работал'});
 Object.assign(I18N.en,{simpleNowWorking:'Working now',simpleYouLabel:'you',simpleSinceTime:'since {time}',simpleWorkingNames:'Working: {names}',simpleTeamTitle:'Who worked how long',simpleTeamTotal:'Total man-time',simpleTeamNoData:'Nobody has worked yet'});
 Object.assign(I18N.lv,{simpleNowWorking:'Tagad strādā',simpleYouLabel:'jūs',simpleSinceTime:'no {time}',simpleWorkingNames:'Strādā: {names}',simpleTeamTitle:'Kurš cik ilgi strādājis',simpleTeamTotal:'Kopā cilvēkstundas',simpleTeamNoData:'Vēl neviens nav strādājis'});
+// v8.17: кнопка, когда над задачей уже работают другие
+Object.assign(I18N.ru,{simpleJoinBtn:'Присоединиться'});
+Object.assign(I18N.en,{simpleJoinBtn:'Join'});
+Object.assign(I18N.lv,{simpleJoinBtn:'Pievienoties'});
 // v8.16: действия только для владельца
 Object.assign(I18N.ru,{roleOwnerOnly:'Это действие доступно только владельцу'});
 Object.assign(I18N.en,{roleOwnerOnly:'Only the owner can do this'});
