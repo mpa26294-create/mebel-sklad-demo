@@ -456,6 +456,23 @@ function todayShiftWindow(schedule){
   const [eh,em]=(schedule.endTime||DEFAULT_SHIFT_SCHEDULE.endTime).split(':').map(Number);
   return {startMs:zonedWallTimeToInstant(now.y,now.mo,now.d,sh,sm,tz),endMs:zonedWallTimeToInstant(now.y,now.mo,now.d,eh,em,tz)};
 }
+// v8.11: календарный день (ГГГГ-ММ-ДД) момента в часовом поясе смены и окно смены ДЛЯ ЭТОГО дня (не только для
+// сегодняшнего) — нужны, чтобы сессия, оставшаяся открытой с прошлых дней, закрывалась концом смены того дня,
+// когда началась, а не «сейчас» (иначе в её время засчитывались часы/сутки, когда никто не работал).
+function tzDayKeyOf(ms,tz){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms)).map(x=>[x.type,x.value]));
+  return `${p.year}-${p.month}-${p.day}`;
+}
+function shiftWindowForInstant(schedule,ms){
+  const tz=schedule.timezone||DEFAULT_SHIFT_SCHEDULE.timezone,workDays=schedule.workDays||DEFAULT_SHIFT_SCHEDULE.workDays;
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms)).map(x=>[x.type,x.value]));
+  const y=Number(p.year),mo=Number(p.month),d=Number(p.day);
+  const weekday={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short'}).format(new Date(zonedWallTimeToInstant(y,mo,d,12,0,tz)))];
+  if(!workDays.includes(weekday))return null;
+  const [sh,sm]=(schedule.startTime||DEFAULT_SHIFT_SCHEDULE.startTime).split(':').map(Number);
+  const [eh,em]=(schedule.endTime||DEFAULT_SHIFT_SCHEDULE.endTime).split(':').map(Number);
+  return {startMs:zonedWallTimeToInstant(y,mo,d,sh,sm,tz),endMs:zonedWallTimeToInstant(y,mo,d,eh,em,tz)};
+}
 // v7.87: во сколько начинается СЛЕДУЮЩАЯ по графику смена после указанного момента (epoch ms) — нужно,
 // чтобы сверхурочная сессия не переспрашивалась и не останавливалась повторно каждые 30 секунд весь
 // вечер, а держалась до начала следующей смены (например, до 8 утра следующего рабочего дня), и только
@@ -582,12 +599,28 @@ function applyShiftAutoStops(){
       if(!schedule.autoEndAtShiftEnd)return;
       // v8.09: у операции может быть несколько открытых сессий (разные люди) — каждая проверяется отдельно.
       let stopped=false,stoppedAt='',overtimeOn=false;
+      const tz=schedule.timezone||DEFAULT_SHIFT_SCHEDULE.timezone;
       openWorkSessions(o,op.stepIndex).forEach(session=>{
+        const startMs=productionDateValue(session.startedAt)||Date.now();
         if(session.overtime){
-          const nextStart=nextShiftStartMs(schedule,Date.now());
+          // v8.11: «до начала следующей смены» считаем от НАЧАЛА сессии. Раньше — от текущего момента, то есть
+          // всегда «в будущем»: условие ниже никогда не выполнялось, и сверхурочная сессия не закрывалась вовсе.
+          const nextStart=nextShiftStartMs(schedule,startMs);
           if(Date.now()<nextStart)return; // сверхурочная сессия ещё идёт — не трогаем и не переспрашиваем
           const endedAt=new Date(nextStart).toISOString();
           closeWorkSession(session,'overtime_end',endedAt);
+          stopped=true;stoppedAt=endedAt;
+          return;
+        }
+        // v8.11: сессия осталась открытой с ПРОШЛОГО дня (никто не нажал «Пауза»/«Завершить смену», а экран потом
+        // долго не открывали). Закрываем её концом смены ТОГО дня, когда она началась (если начали уже после конца
+        // смены или в нерабочий день — сразу, 0 минут), а не «сейчас»: иначе в неё засчитывались сутки, когда
+        // никто не работал (например, 33 часа у одного человека).
+        if(tzDayKeyOf(startMs,tz)!==tzDayKeyOf(Date.now(),tz)){
+          const w0=shiftWindowForInstant(schedule,startMs);
+          const endMs=Math.min(Date.now(),w0?Math.max(w0.endMs,startMs):startMs);
+          const endedAt=new Date(endMs).toISOString();
+          closeWorkSession(session,'end_of_shift',endedAt);
           stopped=true;stoppedAt=endedAt;
           return;
         }
