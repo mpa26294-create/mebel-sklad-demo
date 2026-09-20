@@ -4283,3 +4283,6 @@ body.not-owner #dataAdminPanel{display:none!important}
 /* v8.18: кнопка «Остановить» у мастера в блоке «Сейчас работают» */
 .sw-now-stop{margin-left:10px;padding:4px 10px;border-radius:99px;border:1px solid #f0c9bd;background:#fff5f2;color:#b3261e;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .sw-now-stop:hover{background:#fdeae5}
+
+/* v8.19: метка «Тестовая база» — чтобы не перепутать с боевыми данными */
+body.db-test::after{content:"Тестовая база";position:fixed;left:12px;bottom:12px;z-index:99999;padding:6px 12px;border-radius:99px;background:#175cd3;color:#fff;font-size:12px;font-weight:800;letter-spacing:.02em;box-shadow:0 4px 14px rgba(23,92,211,.35);pointer-events:none}
