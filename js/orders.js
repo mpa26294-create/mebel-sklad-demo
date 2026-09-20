@@ -1786,7 +1786,7 @@ function simpleTaskDetailDoneHtml(task){
 }
 function simpleTaskDetailHtml(){
   const key=getSimpleSelectedTaskKey(),task=findSimpleTaskByKey(key);
-  if(!task)return `<div class="simple-detail-placeholder">${escapeHtml(t('simpleChooseTaskHint'))}</div>`;
+  if(!task)return `<div class="simple-detail-placeholder"><span class="sw-ph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 6h12"/><path d="M8 12h12"/><path d="M8 18h12"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg></span>${escapeHtml(t('simpleChooseTaskHint'))}</div>`;
   const {op}=task;
   if(op.status==='done'||simpleShowDoneConfirmFor===key)return simpleTaskDetailDoneHtml(task);
   if(op.status==='running')return simpleTaskDetailActiveHtml(task);
