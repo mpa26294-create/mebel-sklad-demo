@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MOLM" />
-  <link rel="stylesheet" href="css/style.css?v=8.08" />
+  <link rel="stylesheet" href="css/style.css?v=8.09" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -231,7 +231,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=8.06"></script>
+<script src="js/translations.js?v=8.09"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -246,7 +246,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.05"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.08"></script>
+<script src="js/orders.js?v=8.09"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script src="js/roles.js?v=8.07"></script>
@@ -356,6 +356,27 @@ function showLocalModeWarning(){
 function updateKnownRemoteOrderIds(orders){
   orderSyncKnownRemoteIds=new Set((orders||[]).map(o=>String(o?.id||'')).filter(Boolean));
 }
+// v8.09: над одним заказом могут одновременно работать несколько человек, и каждый пишет заказ целиком —
+// при слиянии «своя версия побеждает» чужая только что открытая сессия («кто сейчас работает») терялась.
+// Рабочие сессии (production.workSessions) — журнал с уникальными id, поэтому их безопасно объединять:
+// сессия есть хоть в одной версии — остаётся; закрытая версия важнее открытой.
+function unionWorkSessionsInto(target,other){
+  const b=other?.production?.workSessions;
+  if(!Array.isArray(b)||!b.length||!target||!target.production||typeof target.production!=='object')return false;
+  const list=Array.isArray(target.production.workSessions)?target.production.workSessions:(target.production.workSessions=[]);
+  const byId=new Map(list.map(x=>[x.id,x]));
+  let changed=false;
+  b.forEach(x=>{
+    const mine=byId.get(x.id);
+    if(!mine){const copy={...x};list.push(copy);byId.set(x.id,copy);changed=true}
+    else if(!mine.endedAt&&x.endedAt){Object.assign(mine,x);changed=true}
+  });
+  if(changed){
+    list.sort((p,q)=>String(q.startedAt||'').localeCompare(String(p.startedAt||'')));
+    if(typeof reconcileOrderRunningStates==='function')reconcileOrderRunningStates(target);
+  }
+  return changed;
+}
 function mergeOrdersForSync(localOrders,remoteOrders){
   const local=cleanStoredOrders(localOrders||[]);
   const remote=cleanStoredOrders(remoteOrders||[]);
@@ -363,7 +384,7 @@ function mergeOrdersForSync(localOrders,remoteOrders){
   const merged=[];
   remote.forEach(order=>{
     const id=String(order?.id||'');
-    if(id&&localIds.has(id))return;
+    if(id&&localIds.has(id)){const mine=local.find(x=>String(x?.id||'')===id);if(mine)unionWorkSessionsInto(mine,order);return}
     if(id&&orderSyncKnownRemoteIds.has(id))return;
     merged.push(order);
   });
@@ -399,6 +420,7 @@ function mergeIncomingOrderRow(remoteOrders){
       merged.push(remote);
       orderSyncPersistedSnapshots.set(id,JSON.stringify(remote));
     }else{
+      unionWorkSessionsInto(order,remote); // чужие рабочие сессии («кто сейчас работает») всё равно подтягиваем
       merged.push(order); // локальная правка по этому заказу ещё не подтверждена — не перезаписываем
     }
   });
@@ -3182,7 +3204,7 @@ async function completeOrder(id){
   if(typeof productionOps==='function'&&typeof currentWorkSession==='function'&&typeof endWorkSession==='function'){
     productionOps(o).forEach(op=>{
       if(op.status==='running'&&currentWorkSession(o,op.stepIndex)){
-        endWorkSession(o,op.stepIndex,'order_completed');
+        endWorkSession(o,op.stepIndex,'order_completed',{all:true}); // v8.09: закрываются сессии ВСЕХ, кто работал
         op.status='paused';op.pausedAt=o.completedAt;
       }
     });

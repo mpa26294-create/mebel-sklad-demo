@@ -486,7 +486,40 @@ function nextShiftStartMs(schedule,afterMs){
 // ---- Рабочие сессии (отдельная сущность, добавляется к производственным данным заказа) ----
 // Каждая сессия: {id, orderId, workshop, stepIndex, userEmail, startedAt, endedAt, stopReason, overtime}.
 // stopReason: manual_pause | end_of_shift | switch_order | order_completed | material_shortage | overtime_end.
-function currentWorkSession(o,stepIndex){return (productionMeta(o).workSessions||[]).find(s=>Number(s.stepIndex)===Number(stepIndex)&&!s.endedAt)||null}
+// v8.09: НЕСКОЛЬКО человек на одной операции. Раньше на операцию приходилась одна открытая сессия «на всех»
+// (startWorkSession выходил, если открытая уже была), а отметка выпуска ставила операцию на паузу для всех.
+// Теперь у каждого человека своя открытая сессия; операция «в работе», пока открыта хотя бы одна.
+function sessionUserKey(email){return String(email||'').trim().toLowerCase()}
+function openWorkSessions(o,stepIndex){return (productionMeta(o).workSessions||[]).filter(s=>Number(s.stepIndex)===Number(stepIndex)&&!s.endedAt)}
+// email не задан — любая открытая сессия операции (как раньше); задан — сессия этого человека.
+function currentWorkSession(o,stepIndex,email){
+  const list=openWorkSessions(o,stepIndex);
+  if(email===undefined)return list[0]||null;
+  return list.find(s=>sessionUserKey(s.userEmail)===sessionUserKey(email))||null;
+}
+function myWorkSession(o,stepIndex){return currentWorkSession(o,stepIndex,currentUser?.email||'')}
+function closeWorkSession(session,stopReason,endedAt){
+  session.endedAt=endedAt||productionNow();
+  // Сессия, которая шла сверхурочно, закрывается как overtime_end, а не обычной причиной — иначе из
+  // истории потерялось бы, что это было именно окончание переработки, а не обычная пауза/смена.
+  session.stopReason=(session.overtime&&(stopReason==='manual_pause'||stopReason==='end_of_shift'))?'overtime_end':stopReason;
+  return session;
+}
+// Статус операции — производное от сессий: «в работе», пока открыта хотя бы одна; закрылась последняя —
+// «на паузе». Вызывается после любого закрытия/открытия сессии.
+function syncOpRunningState(o,op,when){
+  if(!op||op.status==='done'||op.status==='cancelled')return;
+  if(openWorkSessions(o,op.stepIndex).length){op.status='running';op.pausedAt='';}
+  else if(op.status==='running'){op.status='paused';op.pausedAt=when||productionNow();op.currentSessionStartedAt='';op.currentSessionPauseMinutes=0;}
+}
+// После слияния заказа с чужой версией (index.html → union рабочих сессий) статус мог разойтись с сессиями.
+function reconcileOrderRunningStates(o){
+  productionOps(o).forEach(op=>{
+    if(op.status==='paused'||op.status==='not_started'){
+      if(openWorkSessions(o,op.stepIndex).length){op.status='running';op.pausedAt='';}
+    }
+  });
+}
 function findOpenWorkSessionForUser(email){
   if(!email)return null;
   for(const o of (data.orders||[])){
@@ -496,17 +529,14 @@ function findOpenWorkSessionForUser(email){
   return null;
 }
 function startWorkSession(o,op){
-  if(currentWorkSession(o,op.stepIndex))return; // уже есть открытая сессия на эту операцию
-  productionMeta(o).workSessions.unshift({id:uid(),orderId:o.id,workshop:op.stepName,stepIndex:op.stepIndex,userEmail:currentUser?.email||'',startedAt:productionNow(),endedAt:'',stopReason:'',overtime:false});
+  if(myWorkSession(o,op.stepIndex))return; // МОЯ сессия на эту операцию уже открыта (чужие не мешают — работать можно вместе)
+  productionMeta(o).workSessions.unshift({id:uid(),orderId:o.id,workshop:op.stepName,stepIndex:op.stepIndex,userEmail:currentUser?.email||'',userName:productionActorName(),startedAt:productionNow(),endedAt:'',stopReason:'',overtime:false});
 }
+// По умолчанию закрывает МОЮ сессию; options.all — все открытые сессии операции (заказ выполнен/завершён).
 function endWorkSession(o,stepIndex,stopReason,options={}){
-  const session=currentWorkSession(o,stepIndex);
-  if(!session)return null;
-  session.endedAt=options.endedAt||productionNow();
-  // Сессия, которая шла сверхурочно, закрывается как overtime_end, а не обычной причиной — иначе из
-  // истории потерялось бы, что это было именно окончание переработки, а не обычная пауза/смена.
-  session.stopReason=(session.overtime&&(stopReason==='manual_pause'||stopReason==='end_of_shift'))?'overtime_end':stopReason;
-  return session;
+  const list=options.all?openWorkSessions(o,stepIndex):[myWorkSession(o,stepIndex)].filter(Boolean);
+  list.forEach(session=>closeWorkSession(session,stopReason,options.endedAt));
+  return list[0]||null;
 }
 function workSessionMinutes(session,capMs){
   const start=productionDateValue(session.startedAt);
@@ -518,7 +548,7 @@ function workSessionMinutes(session,capMs){
 function ensureRunningOpHasWorkSession(o,op){
   if(op.status!=='running'||currentWorkSession(o,op.stepIndex))return;
   const startedAt=op.currentSessionStartedAt||op.startedAt||productionNow();
-  productionMeta(o).workSessions.unshift({id:uid(),orderId:o.id,workshop:op.stepName,stepIndex:op.stepIndex,userEmail:currentUser?.email||'',startedAt,endedAt:'',stopReason:'',overtime:false});
+  productionMeta(o).workSessions.unshift({id:uid(),orderId:o.id,workshop:op.stepName,stepIndex:op.stepIndex,userEmail:currentUser?.email||'',userName:productionActorName(),startedAt,endedAt:'',stopReason:'',overtime:false});
 }
 // Сегодняшние рабочие сессии конкретной операции заказа — источник "Сегодня отработано" в блоке
 // смены на активной карточке заказа (см. workshopShiftInfoHtml). Смены по графику не переходят через
@@ -550,29 +580,31 @@ function applyShiftAutoStops(){
       ensureRunningOpHasWorkSession(o,op);
       const schedule=shiftScheduleFor(op.stepName);
       if(!schedule.autoEndAtShiftEnd)return;
-      const session=currentWorkSession(o,op.stepIndex);
-      if(!session)return;
-      if(session.overtime){
-        const nextStart=nextShiftStartMs(schedule,Date.now());
-        if(Date.now()<nextStart)return; // сверхурочная сессия ещё идёт — не трогаем и не переспрашиваем
-        const endedAt=new Date(nextStart).toISOString();
-        endWorkSession(o,op.stepIndex,'overtime_end',{endedAt});
-        op.status='paused';op.pausedAt=endedAt;
-        touched.push({o,op,kind:'stopped'});
-        return;
-      }
-      const win=todayShiftWindow(schedule),isOverdue=win?Date.now()>win.endMs:true; // сегодня выходной — тоже пора остановить
-      if(!isOverdue)return;
-      const isOwn=String(session.userEmail||'').toLowerCase()===String(currentUser.email||'').toLowerCase();
-      if(isOwn&&schedule.allowOvertime){
-        const confirmText=win?String(t('shiftOvertimeConfirm')).replace('{time}',schedule.endTime):t('shiftOvertimeConfirmNonWorkDay');
-        const ok=confirm(confirmText);
-        if(ok){session.overtime=true;touched.push({o,op,kind:'overtime'});return}
-      }
-      const endedAt=win?new Date(win.endMs).toISOString():productionNow();
-      endWorkSession(o,op.stepIndex,'end_of_shift',{endedAt});
-      op.status='paused';op.pausedAt=endedAt;
-      touched.push({o,op,kind:'stopped'});
+      // v8.09: у операции может быть несколько открытых сессий (разные люди) — каждая проверяется отдельно.
+      let stopped=false,stoppedAt='',overtimeOn=false;
+      openWorkSessions(o,op.stepIndex).forEach(session=>{
+        if(session.overtime){
+          const nextStart=nextShiftStartMs(schedule,Date.now());
+          if(Date.now()<nextStart)return; // сверхурочная сессия ещё идёт — не трогаем и не переспрашиваем
+          const endedAt=new Date(nextStart).toISOString();
+          closeWorkSession(session,'overtime_end',endedAt);
+          stopped=true;stoppedAt=endedAt;
+          return;
+        }
+        const win=todayShiftWindow(schedule),isOverdue=win?Date.now()>win.endMs:true; // сегодня выходной — тоже пора остановить
+        if(!isOverdue)return;
+        const isOwn=String(session.userEmail||'').toLowerCase()===String(currentUser.email||'').toLowerCase();
+        if(isOwn&&schedule.allowOvertime){
+          const confirmText=win?String(t('shiftOvertimeConfirm')).replace('{time}',schedule.endTime):t('shiftOvertimeConfirmNonWorkDay');
+          const ok=confirm(confirmText);
+          if(ok){session.overtime=true;overtimeOn=true;return}
+        }
+        const endedAt=win?new Date(win.endMs).toISOString():productionNow();
+        closeWorkSession(session,'end_of_shift',endedAt);
+        stopped=true;stoppedAt=endedAt;
+      });
+      if(stopped){syncOpRunningState(o,op,stoppedAt);touched.push({o,op,kind:'stopped'})}
+      if(overtimeOn)touched.push({o,op,kind:'overtime'});
     });
   });
   return touched;
@@ -1094,6 +1126,7 @@ function workshopQueueItemHtml(row,etaMap){
   const riskNote=(dClass!=='overdue'&&eta&&o.dueDate&&eta>o.dueDate)?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('workshopRiskShort'))} (${escapeHtml(t('etaApprox'))} ${escapeHtml(eta)})</span>`:'';
   // v8.02: срок «через N дн.» и время по норме технолога на остаток — то же, что видит рабочий на своём экране.
   const dueInfo=simpleDueInfo(o),normInfo=simpleNormInfo(o,op);
+  const teamInfo=opTeamInfo(o,op),teamNote=teamInfo.active.length?`<span>· ● ${escapeHtml(teamInfo.active.map(u=>u.name).join(', '))}</span>`:'';
   const countNote=(dueInfo&&!dClass)?`<span>· ${escapeHtml(dueInfo.text)}</span>`:'';
   const normNote=(normInfo.perUnit>0&&normInfo.remaining>0)?`<span>· ${escapeHtml(t('simpleNormShort').replace('{time}',orderTimeText(normInfo.remainingMin)))}</span>`:'';
   return `<div class="workshop-queue-item">
@@ -1101,7 +1134,7 @@ function workshopQueueItemHtml(row,etaMap){
       <span class="workshop-row-dot ${status}"></span>
       <span class="workshop-row-info">
         <b>${escapeHtml(o.number||'—')}</b>${o.client?`<em> · ${escapeHtml(o.client)}</em>`:''}
-        <small>${escapeHtml(formatDeadline(o))} ${countNote} ${dueNote} ${normNote} ${riskNote} ${matNote}</small>
+        <small>${escapeHtml(formatDeadline(o))} ${countNote} ${dueNote} ${normNote} ${teamNote} ${riskNote} ${matNote}</small>
       </span>
       <span class="workshop-row-progress"><i><b style="width:${pct}%"></b></i></span>
       <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
@@ -1228,7 +1261,7 @@ function workshopShiftInfoHtml(o,op){
   const schedule=shiftScheduleFor(op.stepName);
   const win=todayShiftWindow(schedule);
   const workedToday=opWorkedMinutesToday(o,op.stepIndex);
-  const session=currentWorkSession(o,op.stepIndex);
+  const session=myWorkSession(o,op.stepIndex)||currentWorkSession(o,op.stepIndex);
   const overtime=!!(session&&session.overtime);
   // v7.85: пользователь попросил показывать не только "сколько отработано", но и конкретное время —
   // во сколько сотрудник начал и во сколько закончил (или ещё работает). workSessions хранится
@@ -1244,7 +1277,7 @@ function workshopShiftInfoHtml(o,op){
   else if(win&&win.endMs>Date.now()){statusLabel=t('shiftUntilEndLabel');statusValue=orderTimeText(Math.max(0,Math.round((win.endMs-Date.now())/60000)));}
   else if(win){statusLabel=t('shiftStatusLabel');statusValue=t('shiftOverText');}
   else{statusLabel=t('shiftStatusLabel');statusValue=t('shiftNotWorkDayText');}
-  const canAct=op.status==='running';
+  const canAct=!!myWorkSession(o,op.stepIndex);
   return `<div class="workshop-shift-info">
     <div class="workshop-shift-info-row"><span>${escapeHtml(t('shiftHoursLabel'))}</span><b>${escapeHtml(schedule.startTime)}–${escapeHtml(schedule.endTime)}</b></div>
     <div class="workshop-shift-info-row"><span>${escapeHtml(t('shiftWorkedTodayLabel'))}</span><b>${escapeHtml(orderTimeText(workedToday))}</b></div>
@@ -1263,9 +1296,9 @@ function workshopShiftInfoHtml(o,op){
 // инициировано человеком, а не обнаружено при следующем заходе на экран.
 async function endShiftManually(orderId,index){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
-  const op=productionOp(o,index);if(!op||op.status!=='running')return;
+  const op=productionOp(o,index);if(!op||op.status!=='running'||!myWorkSession(o,index))return;
   endWorkSession(o,index,'end_of_shift');
-  op.status='paused';op.pausedAt=productionNow();
+  syncOpRunningState(o,op,productionNow());
   await persistProductionWorkflow(o,`${tRu('historyProductionPaused')}: ${op.stepName} — ${t('endShiftBtn')}`,'production_operation_paused',{step:op.stepName});
 }
 // v7.92: раньше отметка показывала только количество/время/кто — по просьбе пользователя теперь
@@ -1328,8 +1361,9 @@ function workshopCurrentCardHtml(row){
   // было заходить в полную карточку заказа. toggleProductionOperation уже существует (используется в
   // рабочем режиме) — сам решает start/pause по текущему статусу.
   const canToggle=op.status==='running'||op.status==='paused'||op.status==='not_started';
-  const toggleLabel=op.status==='running'?t('prodPause'):op.status==='paused'?t('prodContinue'):t('prodStart');
-  const toggleIcon=op.status==='running'?'⏸':'▶';
+  const iWork=!!myWorkSession(o,op.stepIndex),othersWork=openWorkSessions(o,op.stepIndex).length>0&&!iWork;
+  const toggleLabel=iWork?t('prodPause'):(op.status==='paused'&&!othersWork)?t('prodContinue'):t('prodStart');
+  const toggleIcon=iWork?'⏸':'▶';
   const toggleBtn=canToggle?`<button class="btn workshop-toggle-btn" type="button" onclick="toggleProductionOperation('${o.id}',${op.stepIndex})">${toggleIcon} ${escapeHtml(toggleLabel)}</button>`:'';
   return `<div class="workshop-current-card">
     <div class="workshop-current-head">
@@ -1338,6 +1372,7 @@ function workshopCurrentCardHtml(row){
     </div>
     <div class="workshop-current-op"><b>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}</b><span>${escapeHtml(posText)}</span></div>
     ${workshopMaterialAlertHtml(o,op)}
+    ${teamNowHtml(o,op)}
     <div class="workshop-current-progress">
       <div class="workshop-current-progress-num"><b>${completed}</b><span> / ${total}</span></div>
       <div class="production-op-progress"><i><b style="width:${pct}%"></b></i><strong>${pct}%</strong></div>
@@ -1500,7 +1535,7 @@ async function simpleFinishForNow(orderId,index){
   simpleShowDoneConfirmFor=simpleTaskKey(orderId,index);
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
   const op=productionOp(o,index);
-  if(op&&op.status==='running')await pauseProductionOperation(orderId,index);
+  if(op&&myWorkSession(o,index))await pauseProductionOperation(orderId,index);
   else if(typeof renderWorkshops==='function')renderWorkshops();
 }
 // +1/+10/+50 — то же самое немедленное списание через finalizeProductionQuantity(), что и быстрые
@@ -1590,7 +1625,9 @@ function simpleTaskCardHtml(row){
   // и открывают задачу; у задачи, которая уже «В работе», запускать нечего — кнопка просто открывает её
   // экран (вторичный стиль). Раньше у running-задачи тоже стояло «Продолжить» и повторно вызывало
   // startProductionOperation() на уже идущей операции.
-  const isRunning=op.status==='running',isPaused=op.status==='paused';
+  // v8.09: «Открыть» — только тому, кто сам работает над этой операцией. Если работают другие — человек
+  // тоже жмёт «Начать» и присоединяется (у каждого своя сессия); «Продолжить» — когда никто не работает.
+  const isRunning=!!myWorkSession(o,op.stepIndex),othersWork=openWorkSessions(o,op.stepIndex).length>0&&!isRunning,isPaused=op.status==='paused'&&!othersWork;
   const actionHtml=blocked
     ?`<div class="sw-action disabled">${escapeHtml(t('simpleWaitingMaterialBtn'))}</div>`
     :isRunning
@@ -1605,6 +1642,7 @@ function simpleTaskCardHtml(row){
     <div class="sw-card-title">${title}</div>
     <div class="sw-bar"><b style="width:${pct}%"></b></div>
     <div class="sw-card-meta">${dueHtml}<span class="sw-card-count">${completed} / ${total}</span></div>
+    ${teamLineHtml(o,op)}
     ${warnHtml}
     ${actionHtml}
   </div>`;
@@ -1614,7 +1652,7 @@ function simpleTaskListHtml(){
   if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('simpleNoWorkshopAssigned'))}</div>`;
   const current=simpleCurrentWorkshop();
   // Что сейчас в работе — сверху, затем задачи на паузе, затем остальные (внутри группы — по сроку).
-  const stateRank=r=>{const op=productionOp(r.order,r.index);return op?.status==='running'?0:op?.status==='paused'?1:2};
+  const stateRank=r=>{const op=productionOp(r.order,r.index);if(!op)return 3;if(myWorkSession(r.order,op.stepIndex))return 0;return op.status==='running'?1:op.status==='paused'?2:3};
   const rows=workerAssignedTaskRows().filter(r=>r.workshopName===current).map((r,i)=>({r,i,k:stateRank(r)})).sort((a,b)=>a.k-b.k||a.i-b.i).map(x=>x.r);
   const access=names.map(n=>workshopLabel(n)).join(', ');
   const head=`<div class="sw-head">${simpleMonogramHtml(current)}<div><b>${escapeHtml(workshopLabel(current))}</b><small>${escapeHtml(simpleTasksCountText(rows.length))} · ${escapeHtml(t('simpleAccessLabel'))}: ${escapeHtml(access)}</small></div></div>`;
@@ -1667,6 +1705,59 @@ function simpleMaterialsInfo(o,op){
   rows.sort((a,b)=>(a.missing?0:1)-(b.missing?0:1)||a.i-b.i);
   return {kind:'rows',rows,short:plan.shortages.length>0,shortCount:rows.filter(r=>r.missing).length};
 }
+// v8.09: кто сейчас работает над операцией и сколько кто отработал. Источник — рабочие сессии (workSessions:
+// у каждой человек и время) и отметки выпуска (op.sessions: кто и сколько записал).
+function timeHM(iso){const d=new Date(iso);return isNaN(d)?'—':d.toLocaleTimeString(uiDateLocale(),{hour:'2-digit',minute:'2-digit'})}
+function opTeamInfo(o,op){
+  const sessions=(productionMeta(o).workSessions||[]).filter(s=>Number(s.stepIndex)===Number(op.stepIndex));
+  const marks=(op.sessions||[]).filter(m=>!m.undone);
+  const myKey=sessionUserKey(currentUser?.email);
+  const names=new Map(); // email → отображаемое имя (сессия помнит имя на момент старта; отметка — на момент записи)
+  marks.forEach(m=>{const k=sessionUserKey(m.byEmail);if(k&&m.by)names.set(k,m.by)});
+  sessions.forEach(x=>{const k=sessionUserKey(x.userEmail);if(k&&x.userName)names.set(k,x.userName)});
+  if(myKey)names.set(myKey,productionActorName());
+  const users=new Map();
+  const userFor=(key,fallbackName)=>{
+    let u=users.get(key);
+    if(!u){u={key,name:names.get(key)||fallbackName||(key.includes('@')?key.split('@')[0]:'—'),minutes:0,activeSince:'',qty:0,me:!!myKey&&key===myKey};users.set(key,u)}
+    return u;
+  };
+  sessions.forEach(x=>{const u=userFor(sessionUserKey(x.userEmail)||('n:'+(x.userName||'?')),x.userName);u.minutes+=workSessionMinutes(x);if(!x.endedAt)u.activeSince=x.startedAt});
+  marks.forEach(m=>{
+    let key=sessionUserKey(m.byEmail);
+    if(!key){const f=[...users.values()].find(u=>u.name===m.by);key=f?f.key:('n:'+(m.by||'?'))}
+    userFor(key,m.by).qty+=Number(m.qty||0);
+  });
+  const all=[...users.values()].sort((a,b)=>b.minutes-a.minutes);
+  return {active:all.filter(u=>u.activeSince).sort((a,b)=>String(a.activeSince).localeCompare(String(b.activeSince))),all,totalMinutes:all.reduce((n,u)=>n+u.minutes,0)};
+}
+function teamUserLabel(u){return u.me?`${u.name} (${t('simpleYouLabel')})`:u.name}
+// «Сейчас работают» — крупно, до кнопки «Начать»: чтобы было видно, что над заказом уже кто-то работает,
+// и можно присоединиться, нажав «Начать».
+function teamNowHtml(o,op){
+  const info=opTeamInfo(o,op);
+  if(!info.active.length)return '';
+  const chips=info.active.map(u=>`<span class="sw-now-chip ${u.me?'me':''}"><i class="sw-live"></i><b>${escapeHtml(teamUserLabel(u))}</b><small>${escapeHtml(t('simpleSinceTime').replace('{time}',timeHM(u.activeSince)))}</small></span>`).join('');
+  return `<div class="sw-now"><div class="sw-now-title">${escapeHtml(t('simpleNowWorking'))}</div><div class="sw-now-list">${chips}</div></div>`;
+}
+// Короткая строка для карточки в очереди: «Вы, Anna +1».
+function teamLineHtml(o,op){
+  const info=opTeamInfo(o,op);
+  if(!info.active.length)return '';
+  const shown=info.active.slice(0,3).map(u=>u.me?t('simpleYouLabel').replace(/^./,c=>c.toUpperCase()):u.name),more=info.active.length-shown.length;
+  return `<div class="sw-card-team"><i class="sw-live"></i>${escapeHtml(t('simpleWorkingNames').replace('{names}',shown.join(', ')+(more>0?` +${more}`:'')))}</div>`;
+}
+// «Кто сколько работал» — время (сумма сессий) и выпуск по каждому человеку.
+function teamTimeCardHtml(o,op){
+  const info=opTeamInfo(o,op);
+  let body;
+  if(!info.all.length)body=`<span class="sw-mat-empty">${escapeHtml(t('simpleTeamNoData'))}</span>`;
+  else{
+    body=`<ul class="sw-mat-list sw-team-list">${info.all.map(u=>`<li><span class="name">${u.activeSince?'<i class="sw-live"></i>':''}${escapeHtml(teamUserLabel(u))}</span><span class="qty">${escapeHtml(orderTimeText(u.minutes))}${u.qty?` · ${u.qty} ${escapeHtml(t('unitPieces'))}`:''}</span></li>`).join('')}</ul>`
+      +(info.all.length>1?`<div class="sw-team-total"><span>${escapeHtml(t('simpleTeamTotal'))}</span><b>${escapeHtml(orderTimeText(info.totalMinutes))}</b></div>`:'');
+  }
+  return `<div class="sw-info-card wide"><small>${escapeHtml(t('simpleTeamTitle'))}</small>${body}</div>`;
+}
 function simpleInfoChipsHtml(o,op){
   const due=simpleDueInfo(o),mat=simpleMaterialsInfo(o,op);
   const dueChip=due?`<span class="sw-mini ${due.cls}">${escapeHtml(t('simpleDuePrefix'))} ${escapeHtml(due.shortDate)} · ${escapeHtml(due.text)}</span>`:'';
@@ -1705,7 +1796,7 @@ function simpleInfoBodyHtml(o,op){
   }
   const remainingQty=Math.max(0,orderProductQty(o)-productionCompletedQty(o,op));
   const matCard=`<div class="sw-info-card wide ${mat.short?'overdue':''}"><small>${escapeHtml(t('simpleMatLabel').replace('{n}',remainingQty))}</small>${matSummary}${matBody}</div>`;
-  return `<div class="sw-info-grid">${dueCard}${normCard}</div>${matCard}`;
+  return `<div class="sw-info-grid">${dueCard}${normCard}</div>${matCard}${teamTimeCardHtml(o,op)}`;
 }
 // IDLE — блок раскрыт (решение «начинать ли» принимается, глядя на него); ACTIVE — свёрнут в одну строку
 // с двумя чипами (срок, материалы) и раскрывается по нажатию — экран счётчика остаётся коротким.
@@ -1733,13 +1824,14 @@ function simpleDetailBackBarHtml(task){
 // кнопки меняется на "Продолжить") — startProductionOperation() сам решает start/resume.
 function simpleTaskDetailIdleHtml(task){
   const {order:o,op}=task,total=orderProductQty(o),completed=productionCompletedQty(o,op);
-  const btnLabel=op.status==='paused'?t('prodContinue'):t('simpleStartWorkBtn');
+  const btnLabel=(op.status==='paused'&&!openWorkSessions(o,op.stepIndex).length)?t('prodContinue'):t('simpleStartWorkBtn');
   return `<div class="simple-detail-idle">
     ${simpleDetailBackBarHtml(task)}
     <div class="simple-detail-icon">${workshopIcon(op.stepName)}</div>
     <h2>${escapeHtml(workshopLabel(op.stepName))}</h2>
     <p>${escapeHtml(o.number||'—')}</p>
     <span class="simple-badge idle">${escapeHtml(String(t('simpleDoneOfLabel')).replace('{completed}',completed).replace('{total}',total))}</span>
+    ${teamNowHtml(o,op)}
     ${simpleTaskInfoHtml(o,op,false)}
     <button type="button" class="simple-btn-main" onclick="simpleStartTask('${o.id}',${op.stepIndex})">${escapeHtml(btnLabel)}</button>
   </div>`;
@@ -1761,6 +1853,7 @@ function simpleTaskDetailActiveHtml(task){
       <button type="button" class="simple-round-btn" aria-label="+1" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},1)">+1</button>
     </div>
     <div class="simple-task-progress wide"><i><b style="width:${pct}%"></b></i></div>
+    ${teamNowHtml(o,op)}
     ${simpleTaskInfoHtml(o,op,true)}
     <div class="simple-batch-row">
       ${[5,10,20].map(n=>`<button type="button" class="simple-batch-chip" ${remaining<1?'disabled':''} onclick="simpleQuickAdd('${o.id}',${op.stepIndex},${n})">+${n}</button>`).join('')}
@@ -1787,9 +1880,10 @@ function simpleTaskDetailDoneHtml(task){
 function simpleTaskDetailHtml(){
   const key=getSimpleSelectedTaskKey(),task=findSimpleTaskByKey(key);
   if(!task)return `<div class="simple-detail-placeholder"><span class="sw-ph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 6h12"/><path d="M8 12h12"/><path d="M8 18h12"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg></span>${escapeHtml(t('simpleChooseTaskHint'))}</div>`;
-  const {op}=task;
+  const {order,op}=task;
   if(op.status==='done'||simpleShowDoneConfirmFor===key)return simpleTaskDetailDoneHtml(task);
-  if(op.status==='running')return simpleTaskDetailActiveHtml(task);
+  if(myWorkSession(order,op.stepIndex))return simpleTaskDetailActiveHtml(task); // экран счётчика — только тому, кто сам работает
+  if(op.status==='running'&&!openWorkSessions(order,op.stepIndex).length&&!currentWorkSession(order,op.stepIndex))return simpleTaskDetailActiveHtml(task); // запуск без сессий (старые данные)
   return simpleTaskDetailIdleHtml(task);
 }
 function workerWorkshopTasksHtml(){
@@ -2009,7 +2103,7 @@ async function startProductionOperation(orderId,index){
     const otherOp=productionOp(openElsewhere.order,openElsewhere.session.stepIndex);
     if(otherOp){
       endWorkSession(openElsewhere.order,otherOp.stepIndex,'switch_order');
-      otherOp.status='paused';otherOp.pausedAt=now;
+      syncOpRunningState(openElsewhere.order,otherOp,now); // на той операции могут продолжать работать другие
       await persistProductionWorkflow(openElsewhere.order,`${tRu('historyProductionPaused')}: ${otherOp.stepName}`,'production_operation_paused',{step:otherOp.stepName});
     }
   }
@@ -2024,21 +2118,26 @@ async function startProductionOperation(orderId,index){
   // (другой stepIndex), старая ссылка `op` осталась бы от предыдущей версии массива и её мутации
   // ниже потерялись бы при следующей перестройке. Перечитываем на всякий случай.
   const freshOp=productionOp(o,index);if(!freshOp||freshOp.status==='done')return;
+  if(myWorkSession(o,index))return; // я уже работаю над этой операцией
   if(!freshOp.startedAt)freshOp.startedAt=now;
-  if(freshOp.status==='paused'&&freshOp.pausedAt){const paused=productionMinutesBetween(freshOp.pausedAt,now);freshOp.pauseMinutes=Number(freshOp.pauseMinutes||0)+paused;if(freshOp.currentSessionStartedAt)freshOp.currentSessionPauseMinutes=Number(freshOp.currentSessionPauseMinutes||0)+paused;}
-  if(!freshOp.currentSessionStartedAt){freshOp.currentSessionStartedAt=now;freshOp.currentSessionPauseMinutes=0;}
+  // v8.09: если над операцией уже работают другие — просто присоединяемся (своя сессия), состояние
+  // операции не трогаем; возобновление с паузы / первый старт — как и раньше.
+  if(!openWorkSessions(o,index).length){
+    if(freshOp.status==='paused'&&freshOp.pausedAt){const paused=productionMinutesBetween(freshOp.pausedAt,now);freshOp.pauseMinutes=Number(freshOp.pauseMinutes||0)+paused;if(freshOp.currentSessionStartedAt)freshOp.currentSessionPauseMinutes=Number(freshOp.currentSessionPauseMinutes||0)+paused;}
+    if(!freshOp.currentSessionStartedAt){freshOp.currentSessionStartedAt=now;freshOp.currentSessionPauseMinutes=0;}
+  }
   freshOp.pausedAt='';freshOp.status='running';o.status='В работе';
   startWorkSession(o,freshOp);
   await persistProductionWorkflow(o,`${tRu('historyProductionOperationStarted')}: ${freshOp.stepName}`,'production_operation_started',{step:freshOp.stepName});
 }
 async function pauseProductionOperation(orderId,index){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
-  const op=productionOp(o,index);if(!op||op.status!=='running')return;
-  op.status='paused';op.pausedAt=productionNow();
+  const op=productionOp(o,index);if(!op||op.status!=='running'||!myWorkSession(o,index))return;
   endWorkSession(o,index,'manual_pause');
+  syncOpRunningState(o,op,productionNow()); // «на паузе» — только если больше никто не работает
   await persistProductionWorkflow(o,`${tRu('historyProductionPaused')}: ${op.stepName}`,'production_operation_paused',{step:op.stepName});
 }
-async function toggleProductionOperation(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(op?.status==='running')return pauseProductionOperation(orderId,index);return startProductionOperation(orderId,index)}
+async function toggleProductionOperation(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(op&&myWorkSession(o,index))return pauseProductionOperation(orderId,index);return startProductionOperation(orderId,index)}
 function completeProductionOperation(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;const remaining=orderProductQty(o)-productionCompletedQty(o,op);openModal(t('prodComplete'),`<div class="production-quantity-modal"><p>${escapeHtml(t('prodEnterCompletedQty'))}</p><input class="input" id="productionCompletedQty" type="number" min="1" max="${remaining}" step="1" value="${remaining}"><small>${escapeHtml(t('prodRemainingQty'))}: ${remaining}</small><div class="hint">${escapeHtml(t('partialCompleteHintPrefix'))} ${remaining} ${escapeHtml(t('unitsGenitive'))}.</div></div>`,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmProductionQuantity('${o.id}',${op.stepIndex})">${escapeHtml(t('confirm'))}</button>`);setTimeout(()=>document.getElementById('productionCompletedQty')?.select(),0)}
 function confirmProductionQuantity(orderId,index){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;const input=document.getElementById('productionCompletedQty'),remaining=orderProductQty(o)-productionCompletedQty(o,op),qty=Math.trunc(Number(input?.value||0));if(!Number.isFinite(qty)||qty<1||qty>remaining){toast(t('prodInvalidQty'));return}const plan=productionConsumptionPlan(o,op,qty);const foot=plan.ok?`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="finalizeProductionQuantity('${o.id}',${op.stepIndex},${qty})">${escapeHtml(t('confirm'))}</button>`:`<button class="btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('changeQuantity'))}</button>`;openModal(t('confirmWriteOffTitle'),productionConsumptionPreviewHtml(plan),foot)}
 // v7.86: "Рабочая сессия не начата" — вместо того чтобы молча писать выпуск без учёта времени (или
@@ -2070,14 +2169,20 @@ async function finalizeProductionQuantity(orderId,index,qty,options={}){const o=
 // спрашиваем — записать без учёта времени или сначала начать смену — а не решаем это за сотрудника.
 // options.skipSessionPrompt=true — это уже ответ пользователя (см. openWorkSessionMissingModal ниже),
 // повторный вопрос не нужен.
-if(!options.skipSessionPrompt&&op.status!=='running'){openWorkSessionMissingModal(orderId,index,qty);return}
-const plan=productionConsumptionPlan(o,op,qty);if(!plan.ok){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('changeQuantity'))}</button>`);return}const now=productionNow();if(!op.startedAt)op.startedAt=now;if(!op.currentSessionStartedAt)op.currentSessionStartedAt=now;if(op.status==='paused'&&op.pausedAt){const paused=productionMinutesBetween(op.pausedAt,now);op.pauseMinutes=Number(op.pauseMinutes||0)+paused;op.currentSessionPauseMinutes=Number(op.currentSessionPauseMinutes||0)+paused;}const sessionStartedAt=op.currentSessionStartedAt,sessionMinutes=Math.max(0,productionMinutesBetween(sessionStartedAt,now)-Number(op.currentSessionPauseMinutes||0)),sessionId=uid();if(!Array.isArray(op.sessions))op.sessions=[];op.sessions.unshift({id:sessionId,startedAt:sessionStartedAt,endedAt:now,minutes:sessionMinutes,qty,by:productionActorName(),byEmail:currentUser?.email||''});const log=applyProductionConsumptionPlan(o,op,plan,sessionId);op.sessions[0].consumptionId=log.id;op.completedQty=productionCompletedQty(o,op)+qty;op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)+sessionMinutes);const fullyDone=op.completedQty>=orderProductQty(o);
+if(!options.skipSessionPrompt&&!myWorkSession(o,index)){openWorkSessionMissingModal(orderId,index,qty);return}
+const plan=productionConsumptionPlan(o,op,qty);if(!plan.ok){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn primary" type="button" onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('changeQuantity'))}</button>`);return}const now=productionNow();if(!op.startedAt)op.startedAt=now;
+// v8.09: время отметки — от старта МОЕЙ сессии или от моей предыдущей отметки (что позже): работа продолжается,
+// пока я сам не нажму «Пауза»/«Готово». Запись «без учёта времени» (сессии нет) — 0 минут.
+const mine=myWorkSession(o,index),sinceIso=mine?((mine.lastMarkAt&&mine.lastMarkAt>mine.startedAt)?mine.lastMarkAt:mine.startedAt):now;const sessionStartedAt=sinceIso,sessionMinutes=mine?Math.max(0,productionMinutesBetween(sinceIso,now)):0,sessionId=uid();if(mine)mine.lastMarkAt=now;if(!Array.isArray(op.sessions))op.sessions=[];op.sessions.unshift({id:sessionId,startedAt:sessionStartedAt,endedAt:now,minutes:sessionMinutes,qty,by:productionActorName(),byEmail:currentUser?.email||''});const log=applyProductionConsumptionPlan(o,op,plan,sessionId);op.sessions[0].consumptionId=log.id;op.completedQty=productionCompletedQty(o,op)+qty;op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)+sessionMinutes);const fullyDone=op.completedQty>=orderProductQty(o);
 // v7.84: запись выпуска — тоже точка, где активная рабочая сессия (см. workSessions) заканчивается:
 // либо операция полностью выполнена (order_completed), либо это осознанная пауза после того, как
 // часть партии записали (ближе всего по смыслу к manual_pause — отдельной причины "записан частичный
 // выпуск" в списке нет, а это тоже добровольное действие сотрудника, а не что-то автоматическое).
-endWorkSession(o,index,fullyDone?'order_completed':'manual_pause',{endedAt:now});
-op.status=fullyDone?'done':'paused';op.pausedAt=fullyDone?'':now;op.finishedAt=fullyDone?now:'';op.currentSessionStartedAt='';op.currentSessionPauseMinutes=0;op.collapsed=fullyDone;productionMeta(o).logs.unshift({id:uid(),stepIndex:Number(index),stepName:op.stepName,qty,minutes:sessionMinutes,at:now,by:productionActorName(),source:fullyDone?'workflow-complete':'workflow-partial',consumptionId:log.id});if(fullyDone&&productionDoneCount(o)===productionOps(o).length)o.status='Готов';closeModal();const message=`${op.stepName}: ${tRu('completedMsgDone')} ${qty} ${tRu('unitsGenitive')}, ${tRu('materialsAutoWrittenOff')} (${log.materials.length} ${tRu('positionsWord')})`;await persistProductionWorkflow(o,message,fullyDone?'production_operation_completed':'production_operation_partial',{step:op.stepName,qty,minutes:sessionMinutes,completedQty:op.completedQty,totalQty:orderProductQty(o),fullyDone,consumptionId:log.id,materials:log.materials})}
+// v8.09: отметка выпуска больше НЕ останавливает работу (раньше — пауза для всех): сессия закрывается только
+// когда операция выполнена целиком (у всех), иначе человек продолжает работать до своей «Паузы»/«Готово».
+if(fullyDone){endWorkSession(o,index,'order_completed',{endedAt:now,all:true});op.status='done';op.pausedAt='';op.finishedAt=now;op.currentSessionStartedAt='';op.currentSessionPauseMinutes=0;}
+else{op.finishedAt='';if(openWorkSessions(o,index).length){op.status='running';op.pausedAt='';}else{op.status='paused';op.pausedAt=now;op.currentSessionStartedAt='';op.currentSessionPauseMinutes=0;}}
+op.collapsed=fullyDone;productionMeta(o).logs.unshift({id:uid(),stepIndex:Number(index),stepName:op.stepName,qty,minutes:sessionMinutes,at:now,by:productionActorName(),source:fullyDone?'workflow-complete':'workflow-partial',consumptionId:log.id});if(fullyDone&&productionDoneCount(o)===productionOps(o).length)o.status='Готов';closeModal();const message=`${op.stepName}: ${tRu('completedMsgDone')} ${qty} ${tRu('unitsGenitive')}, ${tRu('materialsAutoWrittenOff')} (${log.materials.length} ${tRu('positionsWord')})`;await persistProductionWorkflow(o,message,fullyDone?'production_operation_completed':'production_operation_partial',{step:op.stepName,qty,minutes:sessionMinutes,completedQty:op.completedQty,totalQty:orderProductQty(o),fullyDone,consumptionId:log.id,materials:log.materials})}
 // v7.51: раньше подтверждение отмены списания шло через системное window.confirm() — единственное
 // место во всём сайте, где так сделано (везде рядом используется своё модальное окно). В части
 // мобильных/встроенных браузеров confirm() может не показываться и молча возвращать «отмена» —
