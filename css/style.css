@@ -4279,3 +4279,7 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 
 /* v8.16: экспорт/импорт JSON и «Очистить всё» — только владельцу */
 body.not-owner #dataAdminPanel{display:none!important}
+
+/* v8.18: кнопка «Остановить» у мастера в блоке «Сейчас работают» */
+.sw-now-stop{margin-left:10px;padding:4px 10px;border-radius:99px;border:1px solid #f0c9bd;background:#fff5f2;color:#b3261e;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.sw-now-stop:hover{background:#fdeae5}

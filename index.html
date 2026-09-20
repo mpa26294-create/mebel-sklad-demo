@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MOLM" />
-  <link rel="stylesheet" href="css/style.css?v=8.16" />
+  <link rel="stylesheet" href="css/style.css?v=8.18" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -233,7 +233,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=8.17"></script>
+<script src="js/translations.js?v=8.18"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 const SUPABASE_URL = "https://zzilsernfsymlpzvajkc.supabase.co";
@@ -248,10 +248,10 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.10"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.17"></script>
+<script src="js/orders.js?v=8.18"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
-<script src="js/roles.js?v=8.16"></script>
+<script src="js/roles.js?v=8.18"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -688,10 +688,15 @@ function applyAccessSyncRow(row){
   // если email есть в обоих списках — новее и точнее запись из roles
   workerAccessList=[...workers.filter(w=>!roles.some(r=>r.email===w.email)),...roles];
   accessSyncRowId=row?.id||accessSyncRowId;
+  // v8.18: график смены — общий для всех устройств (лежит в той же служебной строке, attributes.shiftSchedule).
+  // Раньше он хранился только в браузере владельца, у остальных работал график по умолчанию (08:00–17:00).
+  const sharedShift=row?.attributes?.shiftSchedule;
+  if(sharedShift&&typeof sharedShift==='object'){if(typeof applySharedShiftSchedule==='function')applySharedShiftSchedule(sharedShift)}
+  else if(typeof pushLocalShiftScheduleOnce==='function')pushLocalShiftScheduleOnce();
   applyWorkerModeForCurrentUser();
   if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel();
 }
-async function saveWorkerAccessList(list){
+async function saveWorkerAccessList(list,opts={}){
   if(typeof isNotificationAdmin!=='function'||!isNotificationAdmin())return false;
   workerAccessList=list;
   if(!canWriteSupabase()){toast('Локальный режим: сохранение недоступно');return false}
@@ -709,7 +714,7 @@ async function saveWorkerAccessList(list){
       if(w.denied&&w.denied.length)row.denied=w.denied;
       return row;
     });
-    const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:{workers,roles,updatedAt:new Date().toISOString()}};
+    const payload={article:ACCESS_SYNC_ARTICLE,name:'MOLM Access Sync',category:'__system__',subcategory:'access',quantity:0,unit:'',min_quantity:0,attributes:Object.assign({workers,roles,updatedAt:new Date().toISOString()},(typeof currentSharedShiftSchedule==='function'&&currentSharedShiftSchedule())?{shiftSchedule:currentSharedShiftSchedule()}:{})};
     if(accessSyncRowId){
       const{error}=await supabaseClient.from('materials').update(payload).eq('id',accessSyncRowId);
       if(error)throw error;
@@ -718,8 +723,10 @@ async function saveWorkerAccessList(list){
       if(error)throw error;
       accessSyncRowId=rows?.[0]?.id||'';
     }
-    if(typeof auditAdd==='function')auditAdd('worker_access_changed','settings','worker_access','Пользователи и роли',`Список пользователей и ролей обновлён (${list.length})`);
-    toast('Список сохранён');
+    if(!opts.silent){
+      if(typeof auditAdd==='function')auditAdd('worker_access_changed','settings','worker_access','Пользователи и роли',`Список пользователей и ролей обновлён (${list.length})`);
+      toast('Список сохранён');
+    }
     return true;
   }catch(e){
     console.error('saveWorkerAccessList failed',e);

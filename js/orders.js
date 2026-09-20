@@ -448,9 +448,38 @@ function productionMinutesBetween(start,end){const a=productionDateValue(start),
 // shiftSettings().perWorkshop на будущее, но экрана для них пока нет). Хранится в data.settings —
 // как и notificationRules() рядом — то есть, как и они, это НАСТРОЙКА ЭТОГО БРАУЗЕРА, а не общая
 // для всех устройств строка синхронизации (см. ORDER_SYNC_ARTICLE/ACCESS_SYNC_ARTICLE в index.html).
+// v8.18: ИЗМЕНЕНО — график теперь общий, см. currentSharedShiftSchedule()/applySharedShiftSchedule() ниже.
 // Рабочие сессии (кто когда реально работал) — часть данных ЗАКАЗА и потому синхронизируются со всеми
 // устройствами как обычно; не синхронизируется только сама настройка "с какого до какого часа смена".
 const DEFAULT_SHIFT_SCHEDULE={workDays:[1,2,3,4,5],startTime:'08:00',endTime:'17:00',timezone:'Europe/Riga',autoEndAtShiftEnd:true,allowOvertime:true};
+// v8.18: график смены теперь ОБЩИЙ: владелец сохраняет его в служебную строку доступа (index.html:
+// saveWorkerAccessList → attributes.shiftSchedule), остальные устройства получают его при загрузке и через realtime
+// (applyAccessSyncRow → applySharedShiftSchedule). Локальная копия в data.settings остаётся кэшем.
+function currentSharedShiftSchedule(){
+  const d=shiftSettings().default;
+  return {workDays:[...d.workDays],startTime:d.startTime,endTime:d.endTime,timezone:d.timezone,autoEndAtShiftEnd:!!d.autoEndAtShiftEnd,allowOvertime:!!d.allowOvertime};
+}
+function applySharedShiftSchedule(src){
+  const d=shiftSettings().default,before=JSON.stringify(currentSharedShiftSchedule());
+  if(Array.isArray(src.workDays)&&src.workDays.length)d.workDays=src.workDays.map(Number).filter(v=>v>=0&&v<=6);
+  if(/^([01]\d|2[0-3]):[0-5]\d$/.test(src.startTime||''))d.startTime=src.startTime;
+  if(/^([01]\d|2[0-3]):[0-5]\d$/.test(src.endTime||''))d.endTime=src.endTime;
+  if(src.timezone){try{new Intl.DateTimeFormat('en-US',{timeZone:src.timezone});d.timezone=src.timezone}catch(e){}}
+  if(src.autoEndAtShiftEnd!=null)d.autoEndAtShiftEnd=!!src.autoEndAtShiftEnd;
+  if(src.allowOvertime!=null)d.allowOvertime=!!src.allowOvertime;
+  shiftSettings();
+  if(JSON.stringify(currentSharedShiftSchedule())!==before&&typeof renderShiftSchedulePanel==='function'&&document.getElementById('shiftSchedulePanel')){renderShiftSchedulePanel();}
+}
+// Сервер ещё не знает про график (первый заход после обновления): если владелец раньше настраивал его на этом
+// устройстве — один раз отправляем, чтобы у остальных стал такой же.
+let shiftSchedulePushedOnce=false;
+function pushLocalShiftScheduleOnce(){
+  if(shiftSchedulePushedOnce||typeof isNotificationAdmin!=='function'||!isNotificationAdmin())return;
+  const cur=currentSharedShiftSchedule();
+  if(JSON.stringify(cur)===JSON.stringify(DEFAULT_SHIFT_SCHEDULE))return;
+  shiftSchedulePushedOnce=true;
+  if(typeof saveWorkerAccessList==='function')saveWorkerAccessList(workerAccessList,{silent:true});
+}
 function shiftSettings(){
   if(!data.settings||typeof data.settings!=='object')data.settings={};
   if(!data.settings.shiftSchedule||typeof data.settings.shiftSchedule!=='object')data.settings.shiftSchedule={};
@@ -1816,7 +1845,8 @@ function teamUserLabel(u){return u.me?`${u.name} (${t('simpleYouLabel')})`:u.nam
 function teamNowHtml(o,op){
   const info=opTeamInfo(o,op);
   if(!info.active.length)return '';
-  const chips=info.active.map(u=>`<span class="sw-now-chip ${u.me?'me':''}"><i class="sw-live"></i><b>${escapeHtml(teamUserLabel(u))}</b><small>${escapeHtml(t('simpleSinceTime').replace('{time}',timeHM(u.activeSince)))}</small></span>`).join('');
+  const canStop=typeof userCan==='function'&&userCan('production.fixAny');
+  const chips=info.active.map(u=>`<span class="sw-now-chip ${u.me?'me':''}"><i class="sw-live"></i><b>${escapeHtml(teamUserLabel(u))}</b><small>${escapeHtml(t('simpleSinceTime').replace('{time}',timeHM(u.activeSince)))}</small>${(canStop&&!u.me)?`<button type="button" class="sw-now-stop" data-key="${escapeHtml(u.key)}" title="${escapeHtml(t('simpleStopUserBtn'))}" onclick="event.stopPropagation();stopOtherWorkSession('${o.id}',${op.stepIndex},this.dataset.key)">■ ${escapeHtml(t('simpleStopUserBtn'))}</button>`:''}</span>`).join('');
   return `<div class="sw-now"><div class="sw-now-title">${escapeHtml(t('simpleNowWorking'))}</div><div class="sw-now-list">${chips}</div></div>`;
 }
 // Короткая строка для карточки в очереди: «Вы, Anna +1».
@@ -2209,6 +2239,20 @@ async function startProductionOperation(orderId,index){
   freshOp.pausedAt='';freshOp.status='running';o.status='В работе';
   startWorkSession(o,freshOp);
   await persistProductionWorkflow(o,`${tRu('historyProductionOperationStarted')}: ${freshOp.stepName}`,'production_operation_started',{step:freshOp.stepName});
+}
+// v8.18: мастер (право «Править чужие отметки») может остановить чужую рабочую сессию — например, если человек
+// забыл нажать «Пауза». Время сессии считается до текущего момента; причина — stopped_by_master.
+async function stopOtherWorkSession(orderId,index,userKey){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
+  const op=productionOp(o,index);if(!op)return;
+  const session=openWorkSessions(o,index).find(x=>sessionUserKey(x.userEmail)===userKey);
+  if(!session)return;
+  const name=session.userName||String(session.userEmail||'').split('@')[0];
+  if(!confirm(t('simpleStopUserConfirm').replace('{name}',name)))return;
+  closeWorkSession(session,'stopped_by_master');
+  session.stoppedBy=productionActorName();
+  syncOpRunningState(o,op,productionNow());
+  await persistProductionWorkflow(o,`${tRu('historyProductionPaused')}: ${op.stepName} — ${name}`,'production_operation_paused',{step:op.stepName,stoppedUser:name});
 }
 async function pauseProductionOperation(orderId,index){
   const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
@@ -2958,6 +3002,7 @@ function saveShiftScheduleSettings(){
   d.autoEndAtShiftEnd=!!document.getElementById('shiftAutoEnd')?.checked;
   d.allowOvertime=!!document.getElementById('shiftAllowOvertime')?.checked;
   save();
+  if(typeof saveWorkerAccessList==='function')saveWorkerAccessList(workerAccessList,{silent:true}); // v8.18: общий график — на сервер
   toast(t('shiftScheduleSaved'));
   if(typeof auditAdd==='function')auditAdd('shift_schedule_changed','settings','shift_schedule',t('shiftScheduleTitle'),t('shiftScheduleSaved'));
   renderShiftSchedulePanel();

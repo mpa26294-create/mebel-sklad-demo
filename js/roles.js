@@ -58,6 +58,7 @@ const ROLE_GUARDS={
   openMaterialModal:'stock.edit',openFabricModal:'stock.edit',openFoamModal:'stock.edit',openWoodModal:'stock.edit',openMaterialEditor:'stock.edit',saveMaterial:'stock.edit',saveFabricMaterial:'stock.edit',saveFoamMaterial:'stock.edit',saveWoodMaterial:'stock.edit',
   deleteMaterial:'stock.delete',
   quickAddStock:'stock.move',quickWriteOffStock:'stock.move',quickSubmitStock:'stock.move',quickMaterialAction:'stock.move',adjustMaterialQty:'stock.move',openMaterialReceipt:'stock.move',applyMaterialReceipt:'stock.move',saveMaterialReceipt:'stock.move',
+  stopOtherWorkSession:'production.fixAny',
   startProductionOperation:'production.mark',pauseProductionOperation:'production.mark',toggleProductionOperation:'production.mark',completeProductionOperation:'production.mark',finalizeProductionQuantity:'production.mark',saveProductionComment:'production.mark',recordWorkshopQuickQty:'production.mark',undoLastProductionConsumption:'production.mark'
 };
 // Кнопки создания скрываем по классу на <body> (deny-<право>) — см. css; сами функции закрыты в guardWrite.

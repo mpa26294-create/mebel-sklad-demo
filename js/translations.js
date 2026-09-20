@@ -524,6 +524,10 @@ Object.assign(I18N.lv,{roleAdmin:'Administrators',roleTechnologist:'Tehnologs',r
 Object.assign(I18N.ru,{simpleNowWorking:'Сейчас работают',simpleYouLabel:'вы',simpleSinceTime:'с {time}',simpleWorkingNames:'Работают: {names}',simpleTeamTitle:'Кто сколько работал',simpleTeamTotal:'Всего человеко-времени',simpleTeamNoData:'Пока никто не работал'});
 Object.assign(I18N.en,{simpleNowWorking:'Working now',simpleYouLabel:'you',simpleSinceTime:'since {time}',simpleWorkingNames:'Working: {names}',simpleTeamTitle:'Who worked how long',simpleTeamTotal:'Total man-time',simpleTeamNoData:'Nobody has worked yet'});
 Object.assign(I18N.lv,{simpleNowWorking:'Tagad strādā',simpleYouLabel:'jūs',simpleSinceTime:'no {time}',simpleWorkingNames:'Strādā: {names}',simpleTeamTitle:'Kurš cik ilgi strādājis',simpleTeamTotal:'Kopā cilvēkstundas',simpleTeamNoData:'Vēl neviens nav strādājis'});
+// v8.18: мастер останавливает чужую рабочую сессию
+Object.assign(I18N.ru,{simpleStopUserBtn:'Остановить',simpleStopUserConfirm:'Остановить работу сотрудника {name}? Время будет посчитано до текущего момента.'});
+Object.assign(I18N.en,{simpleStopUserBtn:'Stop',simpleStopUserConfirm:'Stop {name}\'s work? The time will be counted up to now.'});
+Object.assign(I18N.lv,{simpleStopUserBtn:'Apturēt',simpleStopUserConfirm:'Apturēt darbinieka {name} darbu? Laiks tiks skaitīts līdz šim brīdim.'});
 // v8.17: кнопка, когда над задачей уже работают другие
 Object.assign(I18N.ru,{simpleJoinBtn:'Присоединиться'});
 Object.assign(I18N.en,{simpleJoinBtn:'Join'});
