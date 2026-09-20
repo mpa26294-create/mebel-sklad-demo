@@ -247,7 +247,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.10"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.11"></script>
+<script src="js/orders.js?v=8.12"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script src="js/roles.js?v=8.07"></script>
@@ -446,6 +446,33 @@ function mergeIncomingOrderRow(remoteOrders){
 function renderOrdersFromSync(){
   try{ syncMaterialReservations(); }catch(e){}
   if(typeof renderOrders==='function')renderOrders();
+  // v8.12: раньше после прихода данных с сервера перерисовывался только список заказов — экран «Цеха» (кто сейчас
+  // работает, выпуск, статус) обновлялся лишь по таймеру раз в 30 секунд, а то и никогда, если связь уснула.
+  if(typeof renderWorkshops==='function'&&document.getElementById('workshops')?.classList.contains('active'))renderWorkshops();
+}
+// v8.12: страховка к realtime-подписке. У планшета/телефона после сна или смены сети веб-сокет может молча
+// отвалиться — тогда чужие изменения (например, «Иван начал работу») не приходят вовсе до перезахода на сайт.
+// Раз в 15 секунд (и при возвращении на вкладку / появлении сети) спрашиваем у сервера ТОЛЬКО метку времени строки
+// заказов (крошечный запрос) и, если там новее, чем мы знаем, — забираем строку целиком и применяем как обычное
+// realtime-обновление. Не трогаем, пока у нас есть неотправленная правка — её сначала отправит обычный механизм.
+let orderPullBusy=false;
+async function pullOrdersIfChanged(){
+  if(orderPullBusy||!canWriteSupabase()||document.hidden||hasPendingOrderSync())return;
+  orderPullBusy=true;
+  try{
+    const {data:head,error}=await supabaseClient.from('materials').select('id,updatedAt:attributes->>updatedAt').eq('article',ORDER_SYNC_ARTICLE).limit(1);
+    if(error||!head||!head[0])return;
+    const remoteUpdatedAt=head[0].updatedAt||'';
+    if(remoteUpdatedAt&&orderSyncTime(remoteUpdatedAt)<=orderSyncTime(orderSyncLastRemoteUpdatedAt))return; // нового нет
+    const {data:full,error:fullError}=await supabaseClient.from('materials').select('id,article,attributes').eq('id',head[0].id).limit(1);
+    if(fullError||!full||!full[0]||hasPendingOrderSync())return;
+    await applyOrderSyncRow(full[0],{render:true});
+  }catch(e){}finally{orderPullBusy=false}
+}
+if(typeof window!=='undefined'){
+  setInterval(()=>{pullOrdersIfChanged()},15000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)pullOrdersIfChanged()});
+  window.addEventListener('online',()=>{pullOrdersIfChanged()});
 }
 function showOrderSyncToast(text,force=false){
   const now=Date.now();
