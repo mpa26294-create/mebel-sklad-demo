@@ -137,6 +137,7 @@ function unreadNotificationCount(){
   return visibleNotifications().filter(n=>!n.read).length;
 }
 function renderTopbarProfile(){
+  if(typeof updateSectionTitle==='function')updateSectionTitle();
   const widget=document.getElementById('topbarProfile');
   if(!widget)return;
   const badge=document.getElementById('tpBellBadge');

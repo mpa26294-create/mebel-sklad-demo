@@ -33,6 +33,16 @@ function placeChangelogNavLast(){
 
 // v7.98: нижний таб-бар рабочего режима (Склад / Цеха) — подписи по текущему языку и подсветка
 // активного раздела; на планшете/десктопе таб-бар скрыт CSS-ом, здесь ничего специально не делаем.
+// v8.10: в рабочем режиме название раздела («Склад», «Цеха») — в верхней панели, на одной линии с уведомлениями и
+// профилем, а не отдельным крупным заголовком ниже (см. .tp-section-title в css). Текст — из подписи пункта меню,
+// которая уже переведена на текущий язык.
+function updateSectionTitle(sectionId){
+  const el=document.getElementById('tpSectionTitle');
+  if(!el)return;
+  const id=sectionId||document.querySelector('.section.active')?.id||'';
+  const btn=document.querySelector(`#mainNav button[data-section="${id}"]`);
+  el.textContent=btn?btn.textContent.trim():'';
+}
 function renderWorkerTabbar(activeId){
   const bar=document.getElementById('workerTabbar');
   if(!bar)return;
@@ -60,6 +70,7 @@ function switchSection(sectionId){
   if(!section)return false;
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));
   renderWorkerTabbar(sectionId);
+  updateSectionTitle(sectionId);
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===sectionId));
   if(sectionId==='settings'&&typeof lockTelegramSettings==='function')lockTelegramSettings();
   if(sectionId==='settings'&&typeof loadProfileSettingsForm==='function')loadProfileSettingsForm();

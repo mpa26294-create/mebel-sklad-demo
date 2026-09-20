@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MOLM" />
-  <link rel="stylesheet" href="css/style.css?v=8.09" />
+  <link rel="stylesheet" href="css/style.css?v=8.10" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -51,6 +51,7 @@
 </aside>
 
   <div class="topbar-profile" id="topbarProfile">
+    <span class="tp-section-title" id="tpSectionTitle"></span>
     <div class="tp-bell-wrap">
       <button type="button" class="tp-bell" id="tpBellBtn" onclick="toggleNotificationsPanel(event)" aria-label="Уведомления" title="Уведомления">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -226,7 +227,7 @@
 
 
 <script src="js/changelog.js?v=7.39"></script>
-<script src="js/ui.js?v=8.07"></script>
+<script src="js/ui.js?v=8.10"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -243,7 +244,7 @@ let __materialsLoadSeq = 0; // v7.09: guards against an out-of-order response ov
 
 const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что требует внимания»: скролл и фикс мобильной раскладки';
 </script>
-<script src="js/auth.js?v=8.05"></script>
+<script src="js/auth.js?v=8.10"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
 <script src="js/orders.js?v=8.09"></script>

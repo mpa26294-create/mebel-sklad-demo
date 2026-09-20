@@ -1065,6 +1065,13 @@ body.deny-orders-create #orders>.topbar .btn.primary,body.deny-models-edit #mode
 .worker-perm.checked{color:#15171a}
 .worker-perm em{margin-left:auto;flex:0 0 auto;padding:1px 7px;border-radius:999px;background:#eef2ff;color:#3538cd;font-style:normal;font-size:11px;font-weight:600}
 .worker-perm.override em{background:#fff1e6;color:#b54708}
+/* v8.10: рабочий режим — название раздела в верхней панели, на одной линии с колокольчиком и профилем;
+   собственный крупный заголовок раздела «Склад» под панелью убираем (у «Цехов» он и так скрыт). */
+.tp-section-title{display:none}
+body.worker-mode .tp-section-title{display:block;margin-right:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--sw-text)}
+body.worker-mode #stock>.topbar .title{display:none}
+body.worker-mode #stock>.topbar{margin-bottom:16px}
+body.worker-mode #stock{padding-top:12px}
 /* v8.09: кто сейчас работает над операцией + кто сколько работал */
 .sw-live{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:#22a34a;box-shadow:0 0 0 0 rgba(34,163,74,.5);animation:swLive 1.8s infinite;vertical-align:middle;flex:0 0 auto}
 @keyframes swLive{0%{box-shadow:0 0 0 0 rgba(34,163,74,.5)}70%{box-shadow:0 0 0 7px rgba(34,163,74,0)}100%{box-shadow:0 0 0 0 rgba(34,163,74,0)}}
