@@ -972,7 +972,9 @@ body.worker-mode{
 /* Экран B) — активная задача. Плейсхолдер виден только когда обе колонки на экране одновременно
    (планшет/десктоп, см. медиазапрос ниже) — на телефоне без выбранной задачи вся панель B) скрыта
    правилом выше, так что этот текст там просто не рендерится видимым. */
-.simple-detail-placeholder{display:flex;align-items:center;justify-content:center;width:100%;min-height:320px;color:#8a8f99;font-size:14px;text-align:center;padding:24px}
+.simple-detail-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;width:100%;min-height:320px;color:var(--sw-text2);font-size:16px;font-weight:700;text-align:center;padding:24px}
+.sw-ph-icon{width:64px;height:64px;border-radius:20px;background:#f3ecdd;color:var(--sw-text2);display:grid;place-items:center}
+.sw-ph-icon svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 /* v7.96: раньше экраны IDLE/ACTIVE/DONE просто лежали прямо на фоне страницы (--bg) без своего
    контейнера — выглядело незаконченно, особенно на широких экранах, где вокруг много пустого
    места. Теперь это карточка — тот же язык, что и у карточек очереди (.simple-task-card): белый
@@ -1105,15 +1107,25 @@ body.deny-orders-create #orders>.topbar .btn.primary,body.deny-models-edit #mode
    всегда обе видны — .has-selected здесь не действует. Кнопки/шрифты панели B) намеренно НЕ
    уменьшаются — планшет в цеху обычно закреплён у станка, пользуются на расстоянии руки. */
 @media(min-width:768px){
-  .simple-workshop-wrap,.simple-workshop-wrap.has-selected{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);gap:0;align-items:stretch;min-height:calc(100vh - 220px)}
-  .simple-workshop-wrap .simple-task-list-pane,.simple-workshop-wrap.has-selected .simple-task-list-pane{display:block;border-right:1px solid var(--line);padding-right:20px;overflow-y:auto;max-height:calc(100vh - 220px)}
+  /* v8.08: раньше высота колонок была «100vh − 220px» — на iPad (и особенно с панелями Safari, которые
+     входят в 100vh) снизу оставалась пустая полоса, а разделитель обрывался на середине экрана. Теперь
+     рабочая область сама занимает всю доступную высоту окна (.main — колонка на 100dvh), а очередь и
+     задача прокручиваются ВНУТРИ своих колонок. Только рабочий режим, только ≥768px. */
+  body.worker-mode .main{height:100vh;height:100dvh;overflow-y:auto;display:flex;flex-direction:column}
+  body.worker-mode .main>.section.active{flex:0 0 auto}
+  body.worker-mode .main>#workshops.active{display:flex;flex-direction:column;flex:1 1 0;min-height:0}
+  body.worker-mode #workshopsContent{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+  .simple-workshop-wrap,.simple-workshop-wrap.has-selected{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0;align-items:stretch;flex:1 1 0;min-height:0;width:100%}
+  .simple-workshop-wrap .simple-task-list-pane,.simple-workshop-wrap.has-selected .simple-task-list-pane{display:block;border-right:1px solid var(--line);padding-right:20px;padding-bottom:12px;overflow-y:auto;min-height:0}
   /* v7.97: было display:flex;align-items:center;justify-content:center — в Safari на iPad эта
      карточка вместо центра прижималась к левому краю панели (известная нестыковка flex-центрирования
      с overflow:auto на прокручиваемом контейнере в WebKit). Блочный контейнер + margin:auto у самой
      карточки (уже был) центрирует её надёжно в любом браузере, без флекс-раскладки на этом уровне. */
-  .simple-workshop-wrap .simple-task-detail-pane,.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:block;padding:40px 32px;overflow-y:auto}
+  .simple-workshop-wrap .simple-task-detail-pane,.simple-workshop-wrap.has-selected .simple-task-detail-pane{display:block;padding:4px 24px 24px 32px;overflow-y:auto;min-height:0}
   .simple-task-list{max-width:none;margin:0}
   .sw-action{display:none}
+  /* «Выберите задачу слева» — рамка на всю высоту колонки, а не маленький блок сверху */
+  .simple-task-detail-pane .simple-detail-placeholder{height:100%;min-height:0;border:1.5px dashed #d9d3c4;border-radius:24px;background:rgba(255,255,255,.55)}
   body.worker-mode #workshops>.topbar{display:none!important}
   .simple-detail-idle,.simple-detail-active,.simple-detail-done{padding:28px 24px;margin-top:0}
   /* v7.95: кнопка "назад" нужна только на телефоне (там задача открывается на весь экран вместо
