@@ -440,6 +440,9 @@ function switchQuickActionMode(mode){
     panel.classList.remove('active');
   });
 
+  // v8.27: у вкладки «Заказать» своё поле количества — общее «изменить количество» и поля рулона прячем
+  document.querySelector('.quick-shared-qty')?.classList.toggle('hidden',mode==='order');
+  document.getElementById('detailRollFields')?.classList.toggle('hidden',mode==='order');
   const activePanel=document.getElementById('quickAction'+mode.charAt(0).toUpperCase()+mode.slice(1));
   if(activePanel){
     activePanel.classList.remove('hidden');
@@ -537,6 +540,54 @@ function quickMaterialAction(materialId,mode){
   }
 }
 
+// v8.27: настоящая история материала (раньше блок был заглушкой и всегда писал «История пуста»).
+const MATERIAL_HISTORY_KIND={
+  stock_in:'in',receive:'in',material_receipt:'in',
+  stock_out:'out',production_material_consumed:'out',production_material_fix:'out',production_material_undo:'out',
+  purchase:'purchase',purchase_cancel:'purchase',material_purchase_manual:'purchase',material_order_qty:'purchase',material_order_link:'purchase',material_order_unlink:'purchase',material_order_email:'purchase',
+  material_fields_changed:'adjust',material_create:'adjust',material_delete:'adjust'
+};
+function materialHistoryListHtml(m){
+  const rows=(typeof auditFor==='function'?auditFor('material',m.id):[]).filter(r=>r.type!=='material_update');
+  const items=rows.map(r=>{
+    const kind=MATERIAL_HISTORY_KIND[r.type]||'adjust';
+    let body;
+    if(r.type==='material_fields_changed'){
+      const diffs=typeof auditHumanDiffsV827==='function'?auditHumanDiffsV827(r):[];
+      if(!diffs.length)return '';
+      body=`<ul class="mh-diffs">${diffs.map(d=>d.text?`<li>${escapeHtml(d.text)}</li>`:`<li><span>${escapeHtml(d.label)}</span> <s>${escapeHtml(d.from)}</s> → <b>${escapeHtml(d.to)}</b></li>`).join('')}</ul>`;
+    }else body=`<div class="mh-text">${escapeHtml(typeof auditDisplayTextV572==='function'?auditDisplayTextV572(r):(r.text||''))}</div>`;
+    return `<div class="history-item mh-item" data-type="${kind}"><span class="audit-dot"></span><div>${body}<small>${escapeHtml(auditTime(r.at))} · ${escapeHtml(r.by||'—')}</small></div></div>`;
+  }).filter(Boolean);
+  if(!items.length)return `<div class="history-empty">${t('historyEmptyGeneric')}</div>`;
+  return items.join('')+`<div class="history-empty" id="materialHistoryNone" style="display:none">${t('historyEmptyGeneric')}</div>`;
+}
+// v8.27: простой заказ прямо из карточки материала. Только добавляет «заказано» — остаток на складе не трогает
+// (когда придёт — вкладка «Приход» уменьшит «заказано» и увеличит остаток).
+async function orderMaterialFromCard(id){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+  if(!m){toast(t('notFoundMaterial'));return}
+  const unit=m.unit||'шт';
+  const qty=normalizeStockValue(document.getElementById('detailOrderQty')?.value||0,unit,true);
+  if(qty===null||qty<=0){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return}
+  const date=document.getElementById('detailOrderDate')?.value||'';
+  const note=(document.getElementById('detailOrderNote')?.value||'').trim();
+  const oldAttrs={...(m.attributes||{})},oldUpdated=m.lastUpdated;
+  const a={...oldAttrs};
+  a.orderedQty=stockNumForUnit(orderedManualQty(m)+qty,unit);
+  a.purchaseStatus='ordered';
+  if(Number(m.quantity||0)<=0)a.status='ordered'; // остаток есть — статус «на складе» не меняем
+  if(date){a.expectedReceiptDate=date;a.arrivalDate=date}
+  if(note){a.purchaseNote=note;a.purchaseOrderInfo=note;a.order=note}
+  m.attributes=a;m.lastUpdated=today();
+  const ok=await updateMaterialInSupabase(m);
+  if(!ok){m.attributes=oldAttrs;m.lastUpdated=oldUpdated;return}
+  try{if(typeof auditAdd==='function')auditAdd('purchase','material',m.id,m.sku||m.name,`Заказано: +${qty} ${unitLabel(unit)||unit}${date?`, ожидается ${typeof auditFmtDateV827==='function'?auditFmtDateV827(date):date}`:''}${note?` · ${note}`:''}`,{qty,date,note})}catch(e){}
+  await loadMaterialsFromSupabase();
+  renderAll();
+  openMaterialDetails(id);
+  toast(`${t('orderDoneToast')}: ${qty} ${unitLabel(unit)||unit}`);
+}
 // Material history filtering
 function filterMaterialHistory(filterType){
   // Update filter buttons
@@ -557,6 +608,8 @@ function filterMaterialHistory(filterType){
         item.style.display='none';
       }
     });
+    const none=document.getElementById('materialHistoryNone');
+    if(none)none.style.display=[...items].some(i=>i.style.display!=='none')?'none':'block';
   }
 }
 
@@ -852,6 +905,7 @@ function openMaterialDetails(id){
       <button class="quick-tab active" data-mode="in" onclick="switchQuickActionMode('in')">${t('receiptTabLabel')}</button>
       <button class="quick-tab" data-mode="out" onclick="switchQuickActionMode('out')">${t('writeoffTabLabel')}</button>
       <button class="quick-tab" data-mode="adjust" onclick="switchQuickActionMode('adjust')">${t('adjustTabLabel')}</button>
+      <button class="quick-tab" data-mode="order" onclick="switchQuickActionMode('order')">${t('orderTabLabel')}</button>
     </div>
     <div class="quick-shared-qty">
       <label class="field"><span id="detailQtyLabel">${t('changeStockLabelWithUnit')}, ${escapeHtml(unitLabel(displayUnit)||displayUnit)}</span><input id="detailQtyChange" class="input" type="number" step="${stockStep(displayUnit)}" min="${stockStep(displayUnit)}" value="${stockDefaultValue(displayUnit)}" inputmode="decimal" oninput="syncDetailRollPreview()"></label>
@@ -864,6 +918,13 @@ function openMaterialDetails(id){
       </div>
       <div class="quick-action-panel hidden" id="quickActionOut">
         <button class="btn danger-fill full-width" onclick="adjustMaterialQty('${m.id}',-1)">− ${t('writeOffFromStockBtn')}</button>
+      </div>
+      <div class="quick-action-panel hidden" id="quickActionOrder">
+        <div class="wizard-soft-note">${t('orderTabHint')}</div>
+        <label class="field"><span>${t('orderQtyLabel')}, ${escapeHtml(unitLabel(unit)||unit)}</span><input id="detailOrderQty" class="input" type="number" step="${stockStep(unit)}" min="0" placeholder="0"></label>
+        <label class="field"><span>${t('orderDateLabel')}</span><input id="detailOrderDate" class="input" type="date"></label>
+        <label class="field"><span>${t('orderNoteLabel')}</span><input id="detailOrderNote" class="input" type="text" placeholder="${escapeHtml(t('orderNotePlaceholder'))}"></label>
+        <button class="btn primary full-width" onclick="orderMaterialFromCard('${m.id}')">✓ ${t('orderBtn')}</button>
       </div>
       <div class="quick-action-panel hidden" id="quickActionAdjust">
         <label class="field"><span>${t('currentStockLabel')}</span><input id="quickAdjustCurrent" class="input" type="number" step="${stockStep(displayUnit)}" min="0" value="${inputQtyValue(stock,displayUnit)}" inputmode="decimal" readonly></label>
@@ -888,7 +949,7 @@ function openMaterialDetails(id){
         </div>
       </div>
       <div class="material-history-list" id="materialHistoryList">
-        <div class="history-empty">${t('historyEmptyGeneric')}</div>
+        ${materialHistoryListHtml(m)}
       </div>
     </div>
   `;

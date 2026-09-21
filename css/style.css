@@ -4319,3 +4319,14 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 #workstats .st-chip-list[hidden]{display:none}
 #workstats .st-table .n .st-chip-list{align-items:flex-end;text-align:right;white-space:normal}
 #workstats .st-card b .st-chip{font-size:inherit}
+
+/* v8.27: история материала (понятный вид) и вкладка «Заказать» */
+.material-history-list .mh-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;margin-bottom:8px;border:1px solid #e7e2d6;border-radius:12px;background:#fff}
+.material-history-list .mh-item small{display:block;margin-top:4px;color:#8a8470;font-size:12px}
+.material-history-list .mh-diffs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:14px}
+.material-history-list .mh-diffs li span{color:#625c4e;font-weight:600}
+.material-history-list .mh-diffs li s{color:#8a8470}
+.material-history-list .mh-diffs li b{color:#1b1712}
+.material-history-list .mh-text{font-size:14px;font-weight:600}
+#quickActionOrder .wizard-soft-note{margin-bottom:10px;font-size:12.5px;line-height:1.4}
+#quickActionOrder .field{margin-bottom:10px}

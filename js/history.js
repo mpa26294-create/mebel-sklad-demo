@@ -1148,3 +1148,60 @@ if(typeof renderAll === 'function'){
     window.auditAdd=function(){ const r=oldAuditAdd.apply(this,arguments); try{renderSiteHistory();}catch(e){} return r; };
   }
 })();
+
+/* ===== v8.27: понятная история материала ===== */
+const AUDIT_LANGS=['ru','en','lv'];
+const AUDIT_FIELD_HUMAN={
+  arrivalDate:{ru:'Дата поступления',en:'Arrival date',lv:'Piegādes datums'},
+  expectedReceiptDate:{ru:'Ожидаемая дата поступления',en:'Expected arrival date',lv:'Gaidāmais piegādes datums'},
+  receiptDate:{ru:'Дата прихода',en:'Receipt date',lv:'Saņemšanas datums'},
+  status:{ru:'Статус',en:'Status',lv:'Statuss'},
+  purchaseStatus:{ru:'Закупка',en:'Purchase',lv:'Iepirkums'},
+  orderedQty:{ru:'Заказано',en:'Ordered',lv:'Pasūtīts'},
+  orderedCount:{ru:'Заказано, шт',en:'Ordered, pcs',lv:'Pasūtīts, gab.'},
+  purchasePrice:{ru:'Цена закупки',en:'Purchase price',lv:'Iepirkuma cena'},
+  storageLocation:{ru:'Место хранения',en:'Storage location',lv:'Glabāšanas vieta'},
+  supplierEmail:{ru:'Почта поставщика',en:'Supplier email',lv:'Piegādātāja e-pasts'},
+  supplier:{ru:'Поставщик',en:'Supplier',lv:'Piegādātājs'},
+  purchaseOrderInfo:{ru:'Заказ у поставщика',en:'Supplier order',lv:'Pasūtījums piegādātājam'},
+  order:{ru:'Заказ у поставщика',en:'Supplier order',lv:'Pasūtījums piegādātājam'},
+  purchaseNote:{ru:'Комментарий к заказу',en:'Order note',lv:'Piezīme pasūtījumam'},
+  minStockQty:{ru:'Мин. остаток',en:'Min. stock',lv:'Min. atlikums'},
+  grade:{ru:'Марка',en:'Grade',lv:'Marka'},
+  format:{ru:'Формат',en:'Format',lv:'Formāts'},
+  foamKind:{ru:'Вид',en:'Kind',lv:'Veids'}
+};
+const AUDIT_STATUS_HUMAN={
+  ru:{stock:'На складе',instock:'На складе',ordered:'Заказано',noorder:'Не заказано',needorder:'Нужно заказать',part:'Деталь',sheet:'Лист',detail:'Деталь'},
+  en:{stock:'In stock',instock:'In stock',ordered:'Ordered',noorder:'Not ordered',needorder:'Needs ordering',part:'Part',sheet:'Sheet',detail:'Part'},
+  lv:{stock:'Noliktavā',instock:'Noliktavā',ordered:'Pasūtīts',noorder:'Nav pasūtīts',needorder:'Jāpasūta',part:'Detaļa',sheet:'Loksne',detail:'Detaļa'}
+};
+// служебные поля — в истории для человека не нужны (кто/когда изменил и так видно под записью; остаток дублируется)
+const AUDIT_DROP_FIELDS=new Set(['updatedByEmail','updatedBy','updatedAt','createdByEmail','createdBy','createdAt','stockChangedByEmail','stockChangedBy','stockChangedAt','stockParts','stockSheets','stockQty','stockCount','frozenQty','pdfUrl','pdfPath','pdfName','reservedQty','lastUpdated']);
+function auditLangV827(){return AUDIT_LANGS.includes(currentLang)?currentLang:'ru'}
+function auditFmtDateV827(v){const m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}.${m[2]}.${m[1]}`:String(v||'')}
+// Разбирает строку «Поле: было → стало» и делает её понятной; null — служебное поле, показывать не нужно.
+function auditHumanDiff(str){
+  const raw=String(str||'');
+  const m=raw.match(/^([^:]+): ([\s\S]*?) → ([\s\S]*)$/);
+  if(!m)return {text:raw};
+  const key=m[1].trim();
+  if(AUDIT_DROP_FIELDS.has(key))return null;
+  const lang=auditLangV827(),fm=AUDIT_FIELD_HUMAN[key];
+  const label=fm?(fm[lang]||fm.ru):key;
+  const isStatus=key==='status'||key==='purchaseStatus'||key==='foamKind'||key==='format';
+  const val=v=>{v=String(v).trim();if(/^\d{4}-\d{2}-\d{2}/.test(v))return auditFmtDateV827(v);if(isStatus&&AUDIT_STATUS_HUMAN[lang][v])return AUDIT_STATUS_HUMAN[lang][v];return v};
+  return {label,from:val(m[2]),to:val(m[3])};
+}
+function auditHumanDiffsV827(row){
+  const diffs=row&&row.meta&&Array.isArray(row.meta.diffs)?row.meta.diffs:[];
+  return diffs.map(auditHumanDiff).filter(Boolean);
+}
+const __auditDisplayTextV827Prev=auditDisplayTextV572;
+auditDisplayTextV572=function(row){
+  if(row&&row.type==='material_fields_changed'){
+    const parts=auditHumanDiffsV827(row).map(d=>d.text||`${d.label}: ${d.from} → ${d.to}`);
+    return parts.length?parts.join('; '):'Служебные данные обновлены';
+  }
+  return __auditDisplayTextV827Prev(row);
+};
