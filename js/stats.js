@@ -65,9 +65,18 @@ function statsAggregate(d){
   const peopleList=[...people.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
   const shopList=[...shops.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
   const dayList=[...days.values()].sort((a,b)=>a.day.localeCompare(b.day));
-  return {peopleList,shopList,dayList,ordersCount:orders.size,
+  return {peopleList,shopList,dayList,ordersCount:orders.size,orderList:[...orders].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})),
     totalQty:d.marks.reduce((n,m)=>n+m.qty,0),totalMinutes:d.sessions.reduce((n,s)=>n+s.minutes,0),realPeople:peopleList.filter(p=>p.key!=='__restored__').length};
 }
+// v8.25: число («Людей», «Сотрудников», «Заказов») кликабельное: при наведении — подсказка со списком, по нажатию —
+// список раскрывается под числом (работает и на планшете, где нет наведения).
+function statsChipHtml(count,items){
+  const list=(items||[]).filter(Boolean);
+  if(!list.length)return String(count);
+  return `<button type="button" class="st-chip" title="${escapeHtml(list.join(', '))}" onclick="toggleStatsList(this)">${count}</button><div class="st-chip-list" hidden>${list.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div>`;
+}
+function toggleStatsList(btn){const box=btn.nextElementSibling;if(!box)return;box.hidden=!box.hidden;btn.classList.toggle('open',!box.hidden)}
+function statsPersonLabel(p){return p.email&&p.email!==p.name?`${p.name} (${p.email})`:p.name}
 function statsPace(p){return p.qty>0&&p.minutes>0?(Math.round(p.minutes/p.qty*10)/10):null}
 function statsFmtNum(n){return String(Number(n)).replace('.',currentLang==='en'?'.':',')}
 function statsDayLabel(key){const d=new Date(key+'T12:00:00Z');return d.toLocaleDateString(uiDateLocale(),{day:'2-digit',month:'2-digit',timeZone:'UTC'})}
@@ -103,15 +112,15 @@ function renderWorkStats(){
   const cards=`<div class="st-cards">
     <div class="st-card"><small>${escapeHtml(t('statsCardQty'))}</small><b>${a.totalQty}</b><span>${escapeHtml(t('unitPieces'))}</span></div>
     <div class="st-card"><small>${escapeHtml(t('statsCardTime'))}</small><b>${escapeHtml(orderTimeText(a.totalMinutes))}</b><span>${escapeHtml(t('statsCardTimeSub'))}</span></div>
-    <div class="st-card"><small>${escapeHtml(t('statsCardPeople'))}</small><b>${a.realPeople}</b><span>&nbsp;</span></div>
-    <div class="st-card"><small>${escapeHtml(t('statsCardOrders'))}</small><b>${a.ordersCount}</b><span>&nbsp;</span></div>
+    <div class="st-card"><small>${escapeHtml(t('statsCardPeople'))}</small><b>${statsChipHtml(a.realPeople,a.peopleList.filter(p=>p.key!=='__restored__').map(statsPersonLabel))}</b></div>
+    <div class="st-card"><small>${escapeHtml(t('statsCardOrders'))}</small><b>${statsChipHtml(a.ordersCount,a.orderList)}</b></div>
   </div>`;
   if(!a.peopleList.length){box.innerHTML=filters+cards+`<div class="empty"><b>${escapeHtml(t('statsEmpty'))}</b>${escapeHtml(t('statsEmptyHint'))}</div>`;return}
   const maxQty=Math.max(1,...a.dayList.map(x=>x.qty));
   const dayList=a.dayList.slice(-31);
   const chart=`<div class="st-chart">${dayList.map(x=>`<div class="st-bar" title="${escapeHtml(statsDayLabel(x.day))}: ${x.qty} ${escapeHtml(t('unitPieces'))} · ${escapeHtml(orderTimeText(x.minutes))}"><i style="height:${Math.round(x.qty/maxQty*100)}%"></i><em>${x.qty}</em><span>${escapeHtml(statsDayLabel(x.day))}</span></div>`).join('')}</div>`;
   const peopleTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColPerson'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColMarks'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPace'))}</th><th>${escapeHtml(t('statsColWorkshops'))}</th></tr></thead><tbody>${a.peopleList.map(p=>{const pace=statsPace(p);return `<tr class="${p.key==='__restored__'?'restored':''}"><td><b>${escapeHtml(p.name)}</b>${p.email&&p.email!==p.name?`<small>${escapeHtml(p.email)}</small>`:''}</td><td class="n">${p.qty}</td><td class="n">${p.marks}</td><td class="n">${p.minutes?escapeHtml(orderTimeText(p.minutes)):'—'}</td><td class="n">${pace!==null?statsFmtNum(pace):'—'}</td><td>${escapeHtml([...p.shops].join(', ')||'—')}</td></tr>`}).join('')}</tbody></table></div>`;
-  const shopTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPeople'))}</th></tr></thead><tbody>${a.shopList.map(s=>`<tr><td><b>${escapeHtml(s.name)}</b></td><td class="n">${s.qty}</td><td class="n">${s.minutes?escapeHtml(orderTimeText(s.minutes)):'—'}</td><td class="n">${[...s.people].filter(k=>k!=='__restored__').length}</td></tr>`).join('')}</tbody></table></div>`;
+  const shopTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPeople'))}</th></tr></thead><tbody>${a.shopList.map(s=>`<tr><td><b>${escapeHtml(s.name)}</b></td><td class="n">${s.qty}</td><td class="n">${s.minutes?escapeHtml(orderTimeText(s.minutes)):'—'}</td><td class="n">${(()=>{const names=[...s.people].filter(k=>k!=='__restored__').map(k=>{const p=a.peopleList.find(x=>x.key===k);return p?statsPersonLabel(p):''});return statsChipHtml(names.length,names)})()}</td></tr>`).join('')}</tbody></table></div>`;
   const last=d.marks.slice().sort((x,y)=>String(y.at).localeCompare(String(x.at))).slice(0,40);
   const marksTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColDate'))}</th><th>${escapeHtml(t('statsColPerson'))}</th><th>${escapeHtml(t('statsColOrder'))}</th><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th></tr></thead><tbody>${last.map(m=>`<tr class="${m.restored?'restored':''}"><td>${escapeHtml(statsMarkTime(m.at))}</td><td>${escapeHtml(m.name)}</td><td><b>${escapeHtml(m.order)}</b>${m.client?`<small>${escapeHtml(m.client)}</small>`:''}</td><td>${escapeHtml(m.workshop)}</td><td class="n">${m.qty}</td></tr>`).join('')}</tbody></table></div>`;
   box.innerHTML=filters+cards

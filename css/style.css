@@ -4312,3 +4312,10 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 #workstats .st-bar em{font-style:normal;font-size:11px;font-weight:700;color:#1b1712;order:-1}
 #workstats .st-bar span{font-size:10px;color:#8a8470}
 @media(max-width:640px){#workstats .st-filters label{min-width:calc(50% - 6px)}}
+/* v8.25: кликабельные числа со списком людей/заказов */
+#workstats .st-chip{font:inherit;color:inherit;background:none;border:0;border-bottom:1.5px dashed #ff6600;padding:0 2px;cursor:pointer}
+#workstats .st-chip:hover,#workstats .st-chip.open{color:#ff6600}
+#workstats .st-chip-list{display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:12px;font-weight:600;color:#625c4e;line-height:1.3}
+#workstats .st-chip-list[hidden]{display:none}
+#workstats .st-table .n .st-chip-list{align-items:flex-end;text-align:right;white-space:normal}
+#workstats .st-card b .st-chip{font-size:inherit}
