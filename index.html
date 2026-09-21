@@ -265,7 +265,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.10"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.20"></script>
+<script src="js/orders.js?v=8.21"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script src="js/roles.js?v=8.18"></script>
@@ -398,14 +398,95 @@ function unionWorkSessionsInto(target,other){
   }
   return changed;
 }
+// v8.21: КОРНЕВАЯ причина потери отметок выпуска (Z-0003: 26 вместо 95 при полностью списанном материале). Раньше при
+// записи заказов «прочитать → слить → записать» для каждого заказа, который есть и у нас, и на сервере, побеждала
+// НАША копия целиком (у неё сливались только рабочие сессии). Если устройство держало устаревшую копию заказа (не
+// успело получить чужие изменения) и что-то сохраняло — на сервер уходила устаревшая версия и стирала свежие отметки,
+// журнал списаний и статус, записанные другим человеком. Теперь слияние идёт по полям, как в git (трёхстороннее):
+//  • база — то, что мы последний раз подтвердили на сервере (orderSyncPersistedSnapshots);
+//  • поле, которое мы НЕ трогали, а на сервере изменилось — берём серверное;
+//  • поле, которое трогали мы, — остаётся нашим;
+//  • журналы (отметки выпуска, рабочие сессии, журнал выпуска, журнал списаний) объединяются по id — запись, добавленная
+//    любой стороной, не пропадает; отмена/исправление отметки побеждает исходную; выполненное количество пересчитывается.
+const orderClone=x=>x==null?x:JSON.parse(JSON.stringify(x));
+function validMarksQty(op){return (Array.isArray(op?.sessions)?op.sessions:[]).reduce((n,m)=>n+(m&&!m.undone?Math.max(0,Number(m.qty)||0):0),0)}
+function journalTime(x){return String(x?.endedAt||x?.startedAt||x?.at||'')}
+function unionJournal(localList,remoteList,pickRemote){
+  const local=Array.isArray(localList)?localList:[];
+  const remote=Array.isArray(remoteList)?remoteList:[];
+  const list=local.slice(),fromRemote=new Set();
+  if(!remote.length)return {list,changed:false,fromRemote};
+  const byId=new Map(list.map(x=>[String(x?.id),x]));
+  let changed=false;
+  remote.forEach(r=>{
+    if(!r||r.id==null)return;
+    const id=String(r.id),mine=byId.get(id);
+    if(!mine){const copy=orderClone(r);list.push(copy);byId.set(id,copy);fromRemote.add(id);changed=true;return}
+    if(pickRemote(r,mine)){const copy=orderClone(r);list[list.indexOf(mine)]=copy;byId.set(id,copy);fromRemote.add(id);changed=true}
+  });
+  return {list,changed,fromRemote};
+}
+function mergeOrderJournals(local,remote){
+  const rp=remote?.production;
+  if(!rp||typeof rp!=='object')return false;
+  if(!local.production||typeof local.production!=='object'){local.production=orderClone(rp);return true}
+  const lp=local.production;
+  let changed=false;
+  const remoteConsumption=new Set();
+  const total=typeof orderProductQty==='function'?orderProductQty(local):Infinity;
+  (Array.isArray(rp.operations)?rp.operations:[]).forEach(rop=>{
+    const lop=(Array.isArray(lp.operations)?lp.operations:[]).find(x=>Number(x.stepIndex)===Number(rop.stepIndex));
+    const rMarks=Array.isArray(rop.sessions)?rop.sessions:[];
+    if(!lop||!rMarks.length)return;
+    const raw=lop.completedQty==null?(lop.status==='done'?total:0):Number(lop.completedQty);
+    const base=Math.max(0,Math.trunc(Number.isFinite(raw)?raw:0)-validMarksQty(lop)); // выпуск, не покрытый отметками (старые данные)
+    const u=unionJournal(lop.sessions,rMarks,(r,m)=>(!!r.undone&&!m.undone)||(!!r.undone===!!m.undone&&(r.edits||[]).length>(m.edits||[]).length));
+    if(!u.changed)return;
+    lop.sessions=u.list.sort((a,b)=>journalTime(b).localeCompare(journalTime(a)));
+    u.fromRemote.forEach(id=>{const mk=lop.sessions.find(x=>String(x.id)===id);if(mk?.consumptionId)remoteConsumption.add(String(mk.consumptionId))});
+    lop.completedQty=Math.min(total,base+validMarksQty(lop));
+    changed=true;
+  });
+  const cu=unionJournal(lp.consumptionLogs,rp.consumptionLogs,(r,m)=>remoteConsumption.has(String(r.id))||(!!r.undone&&!m.undone));
+  if(cu.changed){lp.consumptionLogs=cu.list.sort((a,b)=>journalTime(b).localeCompare(journalTime(a)));changed=true}
+  const lu=unionJournal(lp.logs,rp.logs,()=>false);
+  if(lu.changed){lp.logs=lu.list.sort((a,b)=>journalTime(b).localeCompare(journalTime(a)));changed=true}
+  const wu=unionJournal(lp.workSessions,rp.workSessions,(r,m)=>!m.endedAt&&!!r.endedAt);
+  if(wu.changed){
+    lp.workSessions=wu.list.sort((a,b)=>String(b.startedAt||'').localeCompare(String(a.startedAt||'')));
+    if(typeof reconcileOrderRunningStates==='function')reconcileOrderRunningStates(local);
+    changed=true;
+  }
+  return changed;
+}
+// Вливает серверную версию заказа в нашу (мутирует mine, чтобы не терять ссылки на объект). baseJson — снимок заказа на
+// момент последнего подтверждения сервером (или undefined, если базы нет — тогда объединяем только журналы).
+function mergeOrderInto(mine,remote,baseJson){
+  let base=null;
+  if(baseJson){try{base=JSON.parse(baseJson)}catch(e){base=null}}
+  if(base){
+    Object.keys(remote||{}).forEach(k=>{
+      if(k==='production')return;
+      const b=JSON.stringify(base[k]);
+      if(JSON.stringify(mine[k])===b&&JSON.stringify(remote[k])!==b)mine[k]=orderClone(remote[k]); // мы не трогали, а на сервере изменили
+    });
+    if(remote?.production!==undefined&&JSON.stringify(mine.production)===JSON.stringify(base.production)){
+      mine.production=orderClone(remote.production); // производство мы не правили — берём серверное целиком
+      return true;
+    }
+  }
+  mergeOrderJournals(mine,remote);
+  return true;
+}
 function mergeOrdersForSync(localOrders,remoteOrders){
   const local=cleanStoredOrders(localOrders||[]);
   const remote=cleanStoredOrders(remoteOrders||[]);
-  const localIds=new Set(local.map(o=>String(o?.id||'')).filter(Boolean));
+  const localById=new Map(local.map(o=>[String(o?.id||''),o]).filter(([id])=>id));
   const merged=[];
   remote.forEach(order=>{
     const id=String(order?.id||'');
-    if(id&&localIds.has(id)){const mine=local.find(x=>String(x?.id||'')===id);if(mine)unionWorkSessionsInto(mine,order);return}
+    const mine=id?localById.get(id):null;
+    if(mine){mergeOrderInto(mine,order,orderSyncPersistedSnapshots.get(id));return}
     if(id&&orderSyncKnownRemoteIds.has(id))return;
     merged.push(order);
   });
@@ -451,7 +532,7 @@ function mergeIncomingOrderRow(remoteOrders){
       merged.push(remote);
       orderSyncPersistedSnapshots.set(id,JSON.stringify(remote));
     }else{
-      unionWorkSessionsInto(order,remote); // чужие рабочие сессии («кто сейчас работает») всё равно подтягиваем
+      mergeOrderInto(order,remote,lastPersisted); // v8.21: чужие изменения, которых мы не трогали, и журналы (отметки, сессии) подтягиваем
       merged.push(order); // локальная правка по этому заказу ещё не подтверждена — не перезаписываем
     }
   });
