@@ -338,10 +338,17 @@ if(typeof document!=='undefined')document.addEventListener('click',(e)=>{
     const width=format==='sheet'?readNonNegative('foamWidth'):undefined;
     const length=format==='sheet'?readNonNegative('foamLength'):undefined;
     const thickness=format==='sheet'?readNonNegative('foamHeight'):undefined;
-    const stockQty=status==='stock'?readNonNegative('foamQty',true):0;
+    // v8.26: у поролона два статуса — «На складе» и «Заказано». Раньше при сохранении со статусом «Заказано» форма
+    // обнуляла остаток, цену закупки и место хранения — даже если материал УЖЕ лежит на складе (позиция с 868 шт., у
+    // которой заказали ещё 10, после сохранения «заказано 10 шт.» получала остаток 0 и «нужно заказать» всё количество).
+    // Теперь, если на складе уже что-то есть, при статусе «Заказано» остаток, цена и место хранения сохраняются, а
+    // заказанное количество просто добавляется.
+    const _old=id?data.materials.find(x=>String(x.id)===String(id)):null;
+    const keepStock=status==='ordered'&&!!_old&&Number(_old.quantity||0)>0;
+    const stockQty=status==='stock'?readNonNegative('foamQty',true):(keepStock?Number(_old.quantity||0):0);
     const orderedQty=status==='ordered'?readNonNegative('foamOrderedQty',true):0;
-    const minStockQty=status==='stock'?readNonNegative('foamMin',true):0;
-    const purchasePrice=status==='stock'?readNonNegative('foamPurchasePrice'):undefined;
+    const minStockQty=status==='stock'?readNonNegative('foamMin',true):(keepStock?Number(_old.minQuantity||_old.attributes?.minStockQty||0):0);
+    const purchasePrice=status==='stock'?readNonNegative('foamPurchasePrice'):(keepStock&&_old.attributes?.purchasePrice!=null?Number(_old.attributes.purchasePrice):undefined);
     if([width,length,thickness,stockQty,orderedQty,minStockQty,purchasePrice].some(v=>v===null)){
       // v7.48: раньше текст был зашит на русском — на латышском/английском интерфейсе пользователь
       // получал непонятное русское сообщение и мог решить, что кнопка «Сохранить» вообще не работает.
@@ -354,7 +361,7 @@ if(typeof document!=='undefined')document.addEventListener('click',(e)=>{
     const pdfData=await uploadFoamPdfToSupabase(sku,oldAttrs);
     if(!pdfData)return;
     const grade=(document.getElementById('foamGrade')?.value||'').trim();
-    const storageLocation=status==='stock'?(document.getElementById('foamStorageLocation')?.value||'').trim()||null:null;
+    const storageLocation=status==='stock'?(document.getElementById('foamStorageLocation')?.value||'').trim()||null:(keepStock?(oldAttrs.storageLocation||null):null);
     const arrivalDate=status==='stock'?(document.getElementById('foamArrivalDate')?.value||null):(status==='ordered'?(document.getElementById('foamExpectedDate')?.value||null):null);
     const purchaseOrderInfo=status==='ordered'?(document.getElementById('foamPurchaseOrderInfo')?.value||'').trim()||null:null;
     const supplierEmail=(document.getElementById('foamSupplierEmail')?.value||'').trim();
@@ -362,14 +369,14 @@ if(typeof document!=='undefined')document.addEventListener('click',(e)=>{
     const attrs={
       ...oldAttrs,format,status,width_mm:format==='sheet'?width:null,length_mm:format==='sheet'?length:null,thickness_mm:format==='sheet'?thickness:null,
       stockQty,minStockQty,stockSheets:format==='sheet'?stockQty:null,stockParts:format==='part'?stockQty:null,
-      storageLocation,purchasePrice:status==='stock'?purchasePrice:null,arrivalDate,purchaseOrderInfo,
+      storageLocation,purchasePrice:(status==='stock'||keepStock)?(purchasePrice??null):null,arrivalDate,purchaseOrderInfo,
       pdfUrl:pdfData.pdfUrl||oldAttrs.pdfUrl||null,pdfName:pdfData.pdfName||oldAttrs.pdfName||'',pdfPath:pdfData.pdfPath||oldAttrs.pdfPath||'',
       grade,foamKind:format==='sheet'?'sheet':'detail',
       width:format==='sheet'?String(width):'',length:format==='sheet'?String(length):'',height:format==='sheet'?String(thickness):'',thickness:format==='sheet'?String(thickness):'',
       purchaseStatus:status==='ordered'?'ordered':(status==='stock'?'instock':'noorder'),
       orderedQty,reservedQty:Number(oldAttrs.reservedQty||0),supplier:null,order:purchaseOrderInfo,supplierEmail
     };
-    const obj={id:id||null,sku,name:[categoryLabel('Поролон'),grade].filter(Boolean).join(' · '),category:'Поролон',subcategory:'',attributes:attrs,unit,quantity:status==='stock'?stockQty:0,minQuantity:minStockQty,lastUpdated:today()};
+    const obj={id:id||null,sku,name:[categoryLabel('Поролон'),grade].filter(Boolean).join(' · '),category:'Поролон',subcategory:'',attributes:attrs,unit,quantity:(status==='stock'||keepStock)?stockQty:0,minQuantity:minStockQty,lastUpdated:today()};
     const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
     if(!ok)return;
     if(id){closeModal();await loadMaterialsFromSupabase();renderAll();toast(t('savedMaterial'));return}
