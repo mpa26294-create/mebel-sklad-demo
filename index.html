@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MOLM" />
-  <link rel="stylesheet" href="css/style.css?v=8.28" />
+  <link rel="stylesheet" href="css/style.css?v=8.29" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -239,7 +239,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=8.27"></script>
+<script src="js/translations.js?v=8.29"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 // v8.19: у тестового сайта (ветка dev на Vercel) теперь СВОЯ база — furnicore-test, чтобы эксперименты не трогали
@@ -271,10 +271,10 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.26"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=8.27"></script>
-<script src="js/orders.js?v=8.27"></script>
+<script src="js/orders.js?v=8.29"></script>
 <script src="js/order-files.js?v=7.64"></script>
-<script src="js/technologies.js?v=1.12"></script>
-<script src="js/roles.js?v=8.24"></script>
+<script src="js/technologies.js?v=8.29"></script>
+<script src="js/roles.js?v=8.29"></script>
 <script src="js/stats.js?v=8.25"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
@@ -1077,7 +1077,9 @@ async function loadMaterialsFromSupabase(options={}){
   if(auditRow&&typeof applyAuditSyncRow==='function')await applyAuditSyncRow(auditRow,{render:false});
   if(accessRow)applyAccessSyncRow(accessRow);else{workerAccessList=[];applyWorkerModeForCurrentUser();if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel()}
   if(vaultRow&&typeof applyVaultSyncRow==='function')applyVaultSyncRow(vaultRow);
-  data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)&&!(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row))&&!isAccessSyncRow(row)&&!(typeof isVaultSyncRow==='function'&&isVaultSyncRow(row))).map(dbToMaterial);
+  const opListRow=(rows||[]).find(row=>typeof isOpListRow==='function'&&isOpListRow(row));
+  if(opListRow&&typeof applyOpListRow==='function')applyOpListRow(opListRow); // v8.29: общий список названий операций
+  data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)&&!(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row))&&!isAccessSyncRow(row)&&!(typeof isVaultSyncRow==='function'&&isVaultSyncRow(row))&&!(typeof isOpListRow==='function'&&isOpListRow(row))).map(dbToMaterial);
   snapshotMaterialReserves(); // v8.20
   try{ syncMaterialReservations(); }catch(e){}
   renderAll();

@@ -272,7 +272,7 @@
   function technologyOperationsEditableHtml(tc){
     const stepsList=tc.steps||[];
     const addBtn=`<button class="btn primary order-tech-cta" type="button" onclick="addTechOperation('${tc.id}')">＋ ${escapeHtml(t('addOperation'))}</button>`;
-    return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('techOperations'))}</h4><p>${escapeHtml(t('techOperationsHint'))}</p></div>${addBtn}</div>${stepsList.length?`<div class="order-tech-table-scroll"><table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th><th></th></tr></thead><tbody>${stepsList.map((s,index)=>`<tr><td><div class="technology-stage-picker"><select class="select" aria-label="${escapeHtml(t('operationTemplate'))}" onchange="applyTechOperationTemplate('${tc.id}',${index},this.value)"><option value="">${escapeHtml(t('chooseOperationTemplate'))}</option>${TECH_WORKSHOP_PRESETS.map(name=>`<option value="${escapeHtml(name)}" ${s.name===name?'selected':''}>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(name):name)}</option>`).join('')}</select><input class="input" value="${escapeHtml(s.name||'')}" placeholder="${escapeHtml(t('customOperationName'))}" onchange="updateTechOperation('${tc.id}',${index},'name',this.value)"></div></td><td><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(s.minutes||0)}" onchange="updateTechOperation('${tc.id}',${index},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div></td><td><input class="input" value="${escapeHtml(s.responsible||'')}" placeholder="${escapeHtml(t('notSpecified'))}" onchange="updateTechOperation('${tc.id}',${index},'responsible',this.value)"></td><td><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechOperation('${tc.id}',${index})">×</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('techOperations'))}</b><span>${escapeHtml(t('techOperationsHint'))}</span></div>`}</section>`;
+    return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('techOperations'))}</h4><p>${escapeHtml(t('techOperationsHint'))}</p></div>${addBtn}</div>${stepsList.length?`<div class="order-tech-table-scroll"><table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th><th></th></tr></thead><tbody>${stepsList.map((s,index)=>`<tr><td><div class="technology-stage-picker"><select class="select" aria-label="${escapeHtml(t('operationTemplate'))}" onchange="applyTechOperationTemplate('${tc.id}',${index},this.value)"><option value="">${escapeHtml(t('chooseOperationTemplate'))}</option>${TECH_WORKSHOP_PRESETS.map(name=>`<option value="${escapeHtml(name)}" ${s.name===name?'selected':''}>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(name):name)}</option>`).join('')}</select><input class="input" value="${escapeHtml(s.name||'')}" placeholder="${escapeHtml(t('customOperationName'))}" onchange="updateTechOperation('${tc.id}',${index},'name',this.value)"></div></td><td><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(s.minutes||0)}" ${stepOps(s).length?`readonly title="${escapeHtml(t('stageOpsTimeAuto'))}"`:''} onchange="updateTechOperation('${tc.id}',${index},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div></td><td><input class="input" value="${escapeHtml(s.responsible||'')}" placeholder="${escapeHtml(t('notSpecified'))}" onchange="updateTechOperation('${tc.id}',${index},'responsible',this.value)"></td><td><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechOperation('${tc.id}',${index})">×</button></td></tr>${techStageOpsRowHtml(tc,s,index)}`).join('')}</tbody></table></div>`:`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('techOperations'))}</b><span>${escapeHtml(t('techOperationsHint'))}</span></div>`}</section>`;
   }
   function technologyWorkshopOptions(tc,selected=''){
     const names=[...new Set([...(tc.steps||[]).map(s=>String(s.name||'').trim()).filter(Boolean),...TECH_WORKSHOP_PRESETS])];
@@ -441,6 +441,111 @@
     openTechnologyDetail(tc.id);
   }
   function applyTechOperationTemplate(techId,index,value){if(value)updateTechOperation(techId,index,'name',value)}
+
+  // ---------- v8.29: операции внутри этапа (например, этап «Поклейка» → «поклейка боковин», «поклейка спинок») ----------
+  // step.operations=[{id,name,minutes}]; если операции есть, время этапа = сумма времён операций. Название технолог
+  // вписывает сам; галочка «сохранить в список» кладёт название в ОБЩИЙ список (служебная строка __FURNICORE_OPLIST__ в
+  // базе, как список доступа), откуда его потом можно выбрать. Без галочки название используется только в этой технологии.
+  const OPLIST_ARTICLE='__FURNICORE_OPLIST__';
+  let techSavedOps=[];   // [{id,name,workshop}]
+  let techOpsRowId='';
+  function isOpListRow(row){return String(row?.article||'')===OPLIST_ARTICLE}
+  function applyOpListRow(row){
+    techOpsRowId=row?.id||techOpsRowId;
+    const arr=row?.attributes?.items;
+    techSavedOps=Array.isArray(arr)?arr.filter(x=>x&&x.name).map(x=>({id:x.id||uid(),name:String(x.name),workshop:String(x.workshop||'')})):[];
+  }
+  function stepOps(s){return Array.isArray(s?.operations)?s.operations:[]}
+  function stepOpsMinutes(s){return stepOps(s).reduce((n,o)=>n+Math.max(0,Math.round(Number(o.minutes)||0)),0)}
+  // Записывает общий список: перед записью читает свежую строку и объединяет по названию, чтобы два технолога не затёрли друг друга.
+  async function persistSavedOps(){
+    if(typeof canWriteSupabase==='function'&&!canWriteSupabase())return false;
+    try{
+      const {data:rows,error}=await supabaseClient.from('materials').select('id,attributes').eq('article',OPLIST_ARTICLE).limit(1);
+      if(error)throw error;
+      const remote=rows&&rows[0];
+      if(remote){techOpsRowId=remote.id;const remoteItems=Array.isArray(remote.attributes?.items)?remote.attributes.items:[];
+        const key=x=>`${String(x.workshop||'').toLowerCase()}|${String(x.name||'').toLowerCase()}`;
+        const mine=new Set(techSavedOps.map(key));
+        // чужие записи, которых у нас нет и которые мы не удаляли, оставляем (удаление помечено в techDeletedOpKeys)
+        remoteItems.forEach(x=>{if(x&&x.name&&!mine.has(key(x))&&!techDeletedOpKeys.has(key(x)))techSavedOps.push({id:x.id||uid(),name:String(x.name),workshop:String(x.workshop||'')})});}
+      const payload={article:OPLIST_ARTICLE,name:'MOLM Operation List',category:'__system__',subcategory:'operations',quantity:0,unit:'',min_quantity:0,attributes:{items:techSavedOps,updatedAt:new Date().toISOString()}};
+      if(techOpsRowId){const {error:e2}=await supabaseClient.from('materials').update(payload).eq('id',techOpsRowId);if(e2)throw e2}
+      else{const {data:ins,error:e3}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);if(e3)throw e3;techOpsRowId=ins?.[0]?.id||''}
+      techDeletedOpKeys.clear();
+      return true;
+    }catch(e){console.error('saved operations failed',e);toast(t('stageOpSaveListFailed'));return false}
+  }
+  const techDeletedOpKeys=new Set();
+  function techStageOpsRowHtml(tc,s,index){
+    const ops=stepOps(s);
+    const rows=ops.map((o,oi)=>`<div class="tech-op-row"><input class="input" value="${escapeHtml(o.name||'')}" onchange="updateTechStageOp('${tc.id}',${index},${oi},'name',this.value)"><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(o.minutes||0)}" onchange="updateTechStageOp('${tc.id}',${index},${oi},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechStageOp('${tc.id}',${index},${oi})">×</button></div>`).join('');
+    const total=ops.length?`<span class="tech-ops-total">${escapeHtml(t('stageOpsTotal'))}: <b>${stepOpsMinutes(s)} ${escapeHtml(t('minutesShort'))}</b></span>`:'';
+    return `<tr class="tech-ops-row"><td colspan="4"><div class="tech-ops"><div class="tech-ops-head"><b>${escapeHtml(t('stageOps'))}</b>${total}</div>${rows||`<div class="tech-ops-empty">${escapeHtml(t('stageOpsNone'))}</div>`}<button type="button" class="btn small" onclick="openTechStageOpModal('${tc.id}',${index})">＋ ${escapeHtml(t('addStageOp'))}</button></div></td></tr>`;
+  }
+  function techStageOpsSnapshot(tc){return (tc.steps||[]).map(s=>({...s,operations:stepOps(s).map(o=>({...o}))}))}
+  function openTechStageOpModal(techId,index){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    const step=(tc.steps||[])[index];if(!step)return;
+    const stage=String(step.name||'').trim();
+    const same=techSavedOps.filter(x=>x.workshop===stage),other=techSavedOps.filter(x=>x.workshop!==stage);
+    const optGroup=(label,list)=>list.length?`<optgroup label="${escapeHtml(label)}">${list.map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}</option>`).join('')}</optgroup>`:'';
+    const savedChips=techSavedOps.length?`<div class="tech-op-saved"><small>${escapeHtml(t('stageOpSavedList'))}</small><div>${techSavedOps.map(x=>`<span class="tech-op-chip">${escapeHtml(x.name)}<button type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="deleteSavedTechOp('${x.id}','${techId}',${index})">×</button></span>`).join('')}</div></div>`:'';
+    const body=`<div class="form-grid tech-op-form">
+      ${techSavedOps.length?`<div class="field full"><label>${escapeHtml(t('stageOpPick'))}</label><select class="select" id="techOpPick" onchange="if(this.value){document.getElementById('techOpName').value=this.value}"><option value="">${escapeHtml(t('stageOpPickPlaceholder'))}</option>${optGroup(`${t('stageOpSavedFor')} «${stage}»`,same)}${optGroup(t('stageOpSavedOther'),other)}</select></div>`:''}
+      <div class="field full"><label>${escapeHtml(t('stageOpName'))}</label><input class="input" id="techOpName" placeholder="${escapeHtml(t('stageOpNamePlaceholder'))}" autocomplete="off"></div>
+      <div class="field"><label>${escapeHtml(t('timePerItem'))}, ${escapeHtml(t('minutesShort'))}</label><input class="input" id="techOpMinutes" type="number" min="0" step="1" value="0"></div>
+      <label class="field full tech-op-savecheck"><input type="checkbox" id="techOpSave"> <span>${escapeHtml(t('stageOpSaveCheck'))}</span></label>
+      ${savedChips}
+    </div>`;
+    openModal(`${t('addStageOp')} — ${stage}`,body,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('cancel'))}</button><button class="btn primary" type="button" onclick="addTechStageOp('${techId}',${index})">${escapeHtml(t('add')||'Добавить')}</button>`);
+    setTimeout(()=>document.getElementById('techOpName')?.focus(),50);
+  }
+  async function addTechStageOp(techId,index){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    const name=String(document.getElementById('techOpName')?.value||'').trim();
+    if(!name){toast(t('stageOpNameRequired'));return}
+    const minutes=Math.max(0,Math.round(Number(document.getElementById('techOpMinutes')?.value||0)));
+    const save=!!document.getElementById('techOpSave')?.checked;
+    const steps=techStageOpsSnapshot(tc),st=steps[index];if(!st)return;
+    st.operations.push({id:uid(),name,minutes});
+    st.minutes=stepOpsMinutes(st);
+    tc.steps=steps;
+    if(save&&!techSavedOps.some(x=>x.name.toLowerCase()===name.toLowerCase()&&x.workshop===(st.name||''))){
+      techSavedOps.push({id:uid(),name,workshop:st.name||''});
+      await persistSavedOps();
+    }
+    closeModal();
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+  }
+  async function updateTechStageOp(techId,index,opIndex,field,value){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    const steps=techStageOpsSnapshot(tc),st=steps[index],op=st&&st.operations[opIndex];if(!op)return;
+    if(field==='minutes')op.minutes=Math.max(0,Math.round(Number(value||0)));
+    else{const v=String(value||'').trim();if(!v){toast(t('stageOpNameRequired'));openTechnologyDetail(tc.id);return}op.name=v}
+    st.minutes=stepOpsMinutes(st);
+    tc.steps=steps;
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+  }
+  async function removeTechStageOp(techId,index,opIndex){
+    const tc=(data.technologies||[]).find(x=>String(x.id)===String(techId));if(!tc)return;
+    const steps=techStageOpsSnapshot(tc),st=steps[index];if(!st)return;
+    st.operations=st.operations.filter((_,i)=>i!==opIndex);
+    if(st.operations.length)st.minutes=stepOpsMinutes(st); // остались операции — время по ним; не осталось — время этапа сохраняется как было
+    tc.steps=steps;
+    await persistTechChange(tc);
+    openTechnologyDetail(tc.id);
+  }
+  async function deleteSavedTechOp(opId,techId,index){
+    const item=techSavedOps.find(x=>x.id===opId);if(!item)return;
+    if(!confirm(`${t('stageOpDeleteSavedConfirm')} «${item.name}»?`))return;
+    techDeletedOpKeys.add(`${String(item.workshop||'').toLowerCase()}|${String(item.name||'').toLowerCase()}`);
+    techSavedOps=techSavedOps.filter(x=>x.id!==opId);
+    await persistSavedOps();
+    openTechStageOpModal(techId,index);
+  }
 
   // ---------- материалы: мутаторы ----------
   function openTechMaterialPicker(techId){
@@ -658,7 +763,7 @@
     const hasExisting=(typeof orderSteps==='function'?orderSteps(o):[]).length>0||(typeof orderMaterials==='function'?orderMaterials(o):[]).length>0;
     if(hasExisting&&!confirm(t('confirmApplyTechnologyOverwrite')))return;
     if(typeof markTechnologyStarted==='function')markTechnologyStarted(o);
-    o.steps=(tc.steps||[]).map(s=>({name:s.name||'',minutes:Number(s.minutes||0),responsible:s.responsible||''}));
+    o.steps=(tc.steps||[]).map(s=>{const st={name:s.name||'',minutes:Number(s.minutes||0),responsible:s.responsible||''};if(Array.isArray(s.operations)&&s.operations.length)st.operations=s.operations.map(x=>({id:x.id,name:x.name,minutes:Number(x.minutes||0)}));return st});
     o.materials=(tc.materials||[]).map(item=>{
       const m=(data.materials||[]).find(x=>String(x.id)===String(item.materialId));
       const unit=item.unit||(typeof orderUnitForMaterial==='function'?orderUnitForMaterial(m,item.category):'')||'';
@@ -745,6 +850,7 @@
     openTechNewMaterial,attachCreatedTechnologyMaterialToTech,
     getTechPlannedQty,updateTechPlannedQty,technologyMaterialAvailability,technologyOverallAvailability,
     renameTechDetail,
+    isOpListRow,applyOpListRow,openTechStageOpModal,addTechStageOp,updateTechStageOp,removeTechStageOp,deleteSavedTechOp,stepOpsMinutes,
     insertTechnologyToSupabase,technologyStepsSnapshot,technologyMaterialsSnapshot
   });
 })();
