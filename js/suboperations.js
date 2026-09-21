@@ -138,5 +138,26 @@
     await recordSubOpMark(orderId,index,qty,{});
   }
 
-  Object.assign(window,{subOpTarget:subTarget,subOpPerUnit:perUnitOf,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
+  // v8.34: «Начать / Продолжить / Присоединиться» на этапе с операциями — сначала выбор, что именно будут делать.
+  function needSubOpChoice(o,index){
+    if(!hasSubOps(o,index)||myWorkSession(o,index))return false;
+    const op=productionOp(o,index);if(!op||op.status==='done'||op.status==='cancelled')return false;
+    const open=stageSubOps(o,index).filter(s=>subDone(o,op,s.id)<subTarget(o,s));
+    if(open.length===1){selected.set(skey(o.id,index),String(open[0].id));return false} // осталась одна — выбор очевиден
+    return open.length>1;
+  }
+  function openSubOpChooseModal(orderId,index){
+    const o=findOrder(orderId);if(!o)return;const op=productionOp(o,index);if(!op)return;
+    const subs=stageSubOps(o,index),cur=selectedSubId(o,index,op);
+    const rows=subs.map(s=>{const d=subDone(o,op,s.id),tg=subTarget(o,s),full=d>=tg,pu=perUnitOf(s),pct=tg?Math.round(d/tg*100):0;
+      return `<button type="button" class="subop-row ${String(s.id)===String(cur)?'selected':''} ${full?'full':''}" ${full?'disabled':''} onclick="pickSubOpAndStart('${o.id}',${index},'${escapeHtml(String(s.id))}')"><span class="subop-radio" aria-hidden="true">${full?'✓':'▶'}</span><span class="subop-main"><b>${escapeHtml(s.name)}</b>${pu>1?`<small class="subop-norm">${pu} ${escapeHtml(t('stageOpPcsPerItem'))}</small>`:''}<i class="subop-bar"><u style="width:${pct}%"></u></i></span><span class="subop-num"><b>${d}</b><small>/ ${tg}</small></span></button>`}).join('');
+    openModal(t('subOpStartTitle'),`<p class="subop-choose-hint">${escapeHtml(t('subOpStartHint'))}</p>${rows}`,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button>`);
+  }
+  async function pickSubOpAndStart(orderId,index,subId){
+    selected.set(skey(orderId,index),String(subId));
+    closeModal();
+    await startProductionOperation(orderId,index,{skipSubChoice:true});
+  }
+
+  Object.assign(window,{needSubOpChoice,openSubOpChooseModal,pickSubOpAndStart,subOpTarget:subTarget,subOpPerUnit:perUnitOf,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
 })();

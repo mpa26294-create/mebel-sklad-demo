@@ -4390,3 +4390,4 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .subops-kits summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 2px}
 .simple-round-spacer{display:inline-block;width:56px;height:56px}
 .subop-main .subop-norm{color:var(--muted);font-size:12px}
+.subop-choose-hint{margin:0 0 12px;color:var(--muted);font-size:14px}

@@ -2214,9 +2214,11 @@ async function persistProductionWorkflow(o,message,type='production_update',meta
   try{syncMaterialReservations();await persistReservationMaterials()}catch(e){}
   refreshOrderWorkflow(o.id);
 }
-async function startProductionOperation(orderId,index){
+async function startProductionOperation(orderId,index,opts={}){
   let o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;
   const op=productionOp(o,index);if(!op||op.status==='done')return;
+  // v8.34: этап разбит на операции — сначала спрашиваем, что именно будут делать (см. js/suboperations.js)
+  if(!opts.skipSubChoice&&typeof needSubOpChoice==='function'&&needSubOpChoice(o,index)){openSubOpChooseModal(orderId,index);return}
   const now=productionNow();
   // v7.84: один сотрудник физически не может одновременно вести две операции — если у него уже
   // открыта рабочая сессия на ДРУГОМ заказе/операции, сначала закрываем её как switch_order (чужие
@@ -2298,7 +2300,7 @@ async function recordWithoutSession(orderId,index,qty){
 }
 async function startSessionThenRecord(orderId,index,qty){
   closeModal();
-  await startProductionOperation(orderId,index);
+  await startProductionOperation(orderId,index,{skipSubChoice:true});
   await finalizeProductionQuantity(orderId,index,qty,{skipSessionPrompt:true});
 }
 async function finalizeProductionQuantity(orderId,index,qty,options={}){const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;if(!options.kit&&typeof hasSubOps==='function'&&hasSubOps(o,index))return recordSubOpMark(orderId,index,qty,options);const remaining=orderProductQty(o)-productionCompletedQty(o,op);qty=Math.trunc(Number(qty||0));if(!Number.isFinite(qty)||qty<1||qty>remaining){toast(t('prodInvalidQty'));return}
