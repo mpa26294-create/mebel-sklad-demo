@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MOLM" />
-  <link rel="stylesheet" href="css/style.css?v=8.19" />
+  <link rel="stylesheet" href="css/style.css?v=8.24" />
 </head>
 <body class="auth-locked">
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu"><span class="menu-icon">☰</span></button>
@@ -40,6 +40,7 @@
     <button data-section="orders"><span class="ico"><svg viewBox="0 0 24 24"><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h6"/><rect x="5" y="3" width="14" height="18" rx="2"/></svg></span> Заказы</button>
     <button data-section="technologies" type="button"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="m8 16 2 2 4-4"/></svg></span> Технологии</button>
     <button data-section="workshops"><span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span> Цеха</button>
+    <button data-section="workstats" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg></span> Статистика</button>
     <button data-section="models" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 16l8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg></span> Модели мебели</button>
     <button data-section="refs" type="button"><span class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h11"/></svg></span> Справочники</button>
     <button data-section="activity" type="button"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="3"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span> Активность</button>
@@ -196,6 +197,11 @@
       </div>
     </section>
 
+    <section id="workstats" class="section">
+      <div class="topbar"><div class="title"><h2>Статистика</h2><p>Кто сколько сделал и сколько времени отработал</p></div></div>
+      <div id="workStatsContent"></div>
+    </section>
+
     <section id="activity" class="section">
       <div class="topbar"><div class="title"><h2>Активность</h2><p>Кто сейчас на сайте, когда был последний раз и сколько времени провёл сегодня</p></div></div>
       <div class="stats" id="activityStats"></div>
@@ -228,12 +234,12 @@
 
 
 <script src="js/changelog.js?v=7.39"></script>
-<script src="js/ui.js?v=8.10"></script>
+<script src="js/ui.js?v=8.24"></script>
 <script src="js/app.js?v=6.48"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="js/utils.js?v=6.10"></script>
-<script src="js/translations.js?v=8.18"></script>
+<script src="js/translations.js?v=8.24"></script>
 <script src="js/storage.js?v=6.12"></script>
 <script>
 // v8.19: у тестового сайта (ветка dev на Vercel) теперь СВОЯ база — furnicore-test, чтобы эксперименты не трогали
@@ -268,7 +274,8 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/orders.js?v=8.23"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
-<script src="js/roles.js?v=8.18"></script>
+<script src="js/roles.js?v=8.24"></script>
+<script src="js/stats.js?v=8.24"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
 
@@ -596,6 +603,7 @@ function renderOrdersFromSync(){
   // v8.12: раньше после прихода данных с сервера перерисовывался только список заказов — экран «Цеха» (кто сейчас
   // работает, выпуск, статус) обновлялся лишь по таймеру раз в 30 секунд, а то и никогда, если связь уснула.
   if(typeof renderWorkshops==='function'&&document.getElementById('workshops')?.classList.contains('active'))renderWorkshops();
+  if(typeof renderWorkStats==='function'&&document.getElementById('workstats')?.classList.contains('active'))renderWorkStats(); // v8.24
 }
 // v8.12: страховка к realtime-подписке. У планшета/телефона после сна или смены сети веб-сокет может молча
 // отвалиться — тогда чужие изменения (например, «Иван начал работу») не приходят вовсе до перезахода на сайт.

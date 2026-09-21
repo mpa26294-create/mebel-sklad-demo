@@ -76,6 +76,7 @@ function switchSection(sectionId){
   if(sectionId==='settings'&&typeof loadProfileSettingsForm==='function')loadProfileSettingsForm();
   if(sectionId==='orders'&&typeof renderOrders==='function')renderOrders();
   if(sectionId==='workshops'&&typeof renderWorkshops==='function')renderWorkshops();
+  if(sectionId==='workstats'&&typeof renderWorkStats==='function')renderWorkStats();
   if(sectionId==='history'&&typeof renderSiteHistory==='function')renderSiteHistory();
   if(sectionId==='changelog'&&typeof renderChangelog==='function')renderChangelog();
   if(sectionId==='activity'&&typeof renderActivity==='function')renderActivity();

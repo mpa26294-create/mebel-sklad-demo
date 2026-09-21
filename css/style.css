@@ -4286,3 +4286,29 @@ body.not-owner #dataAdminPanel{display:none!important}
 
 /* v8.19: метка «Тестовая база» — чтобы не перепутать с боевыми данными */
 body.db-test::after{content:"Тестовая база";position:fixed;left:12px;bottom:12px;z-index:99999;padding:6px 12px;border-radius:99px;background:#175cd3;color:#fff;font-size:12px;font-weight:800;letter-spacing:.02em;box-shadow:0 4px 14px rgba(23,92,211,.35);pointer-events:none}
+
+/* v8.24: раздел «Статистика» */
+#workstats .st-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:0 0 16px}
+#workstats .st-filters label{display:flex;flex-direction:column;gap:4px;min-width:150px}
+#workstats .st-filters label small{font-size:11px;font-weight:700;color:#8a8470;text-transform:uppercase;letter-spacing:.05em}
+#workstats .st-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+#workstats .st-card{background:#fff;border:1px solid #e7e2d6;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+#workstats .st-card small{font-size:11px;font-weight:700;color:#8a8470;text-transform:uppercase;letter-spacing:.05em}
+#workstats .st-card b{font-size:26px;font-weight:800;letter-spacing:-.02em;color:#1b1712}
+#workstats .st-card span{font-size:12px;color:#625c4e}
+#workstats .st-panel{margin-bottom:16px;padding:16px 18px}
+#workstats .st-panel h3{margin:0 0 12px;font-size:16px}
+#workstats .st-table-wrap{overflow-x:auto}
+#workstats .st-table{width:100%;border-collapse:collapse;font-size:14px}
+#workstats .st-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#8a8470;padding:0 10px 8px;font-weight:700;white-space:nowrap}
+#workstats .st-table td{padding:10px;border-top:1px solid #efeadf;vertical-align:top}
+#workstats .st-table .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#workstats .st-table small{display:block;color:#8a8470;font-size:11px;margin-top:2px}
+#workstats .st-table tr.restored td{color:#8a8470;font-style:italic}
+#workstats .st-note{margin:12px 0 0;font-size:12px;color:#8a8470;line-height:1.45}
+#workstats .st-chart{display:flex;align-items:flex-end;gap:6px;height:170px;overflow-x:auto;padding:4px 2px 0}
+#workstats .st-bar{flex:1 0 34px;max-width:64px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;position:relative}
+#workstats .st-bar i{display:block;width:70%;min-height:3px;border-radius:6px 6px 0 0;background:#ff6600}
+#workstats .st-bar em{font-style:normal;font-size:11px;font-weight:700;color:#1b1712;order:-1}
+#workstats .st-bar span{font-size:10px;color:#8a8470}
+@media(max-width:640px){#workstats .st-filters label{min-width:calc(50% - 6px)}}

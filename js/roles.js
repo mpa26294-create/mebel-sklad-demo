@@ -14,6 +14,7 @@ const PERMISSIONS=[
   {key:'view.orders',group:'Разделы',label:'Заказы'},
   {key:'view.technologies',group:'Разделы',label:'Технологии'},
   {key:'view.workshops',group:'Разделы',label:'Цеха'},
+  {key:'view.workstats',group:'Разделы',label:'Статистика (кто сколько сделал)'},
   {key:'view.models',group:'Разделы',label:'Модели мебели'},
   {key:'view.refs',group:'Разделы',label:'Справочники'},
   {key:'view.activity',group:'Разделы',label:'Активность'},
@@ -85,7 +86,7 @@ function userCanSection(sectionId){
 }
 // v8.07: куда вести человека, если запрошенный раздел ему недоступен (или при входе): раньше запасным
 // вариантом был жёстко «Склад» — и человек, у которого Склад отключён, всё равно видел его при входе.
-const SECTION_ORDER=['stock','workshops','orders','technologies','models','refs','activity','history','settings','changelog'];
+const SECTION_ORDER=['stock','workshops','workstats','orders','technologies','models','refs','activity','history','settings','changelog'];
 function firstAllowedSection(){return SECTION_ORDER.find(userCanSection)||'stock'}
 // Упрощённый вид рабочего — только если не открыт ни один раздел, кроме Склада и Цехов.
 function userSeesOnlyWorkerSections(){
