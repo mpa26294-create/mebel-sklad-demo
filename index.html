@@ -265,7 +265,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.10"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.22"></script>
+<script src="js/orders.js?v=8.23"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script src="js/roles.js?v=8.18"></script>
@@ -426,7 +426,51 @@ function unionJournal(localList,remoteList,pickRemote){
   });
   return {list,changed,fromRemote};
 }
-function mergeOrderJournals(local,remote){
+// v8.23: у строк материалов заказа (order.materials[i]) есть счётчики «сколько уже списано» (consumedQty/consumedForQty).
+// Это ЧИСЛА, а не журнал: если два человека одновременно отметили выпуск, каждое устройство записывало свой счётчик и
+// одно из списаний в счётчике терялось (в журнале списаний production.consumptionLogs оба сохранялись). Из-за этого
+// СЛЕДУЮЩАЯ отметка считала, что часть уже отмеченных изделий «ещё не списана», и списывала материал повторно.
+// Теперь при объединении журналов счётчики пересчитываются: к своему значению прибавляется вклад ТОЛЬКО тех записей
+// журнала, которых у нас не было (разница «до» и «после» объединения).
+function consumptionLineIndex(order,row,stepName){
+  const lines=Array.isArray(order?.materials)?order.materials:[];
+  if(lines[row.lineIndex]&&String(lines[row.lineIndex].materialId)===String(row.materialId))return Number(row.lineIndex);
+  const i=lines.findIndex(it=>String(it.materialId)===String(row.materialId)&&(!stepName||String(it.workshop||'')===String(stepName)));
+  return i>=0?i:-1;
+}
+function consumptionSumsByLine(order,logs){
+  const sums=new Map();
+  (Array.isArray(logs)?logs:[]).forEach(l=>{
+    if(!l||l.undone)return;
+    (Array.isArray(l.materials)?l.materials:[]).forEach(r=>{
+      const i=consumptionLineIndex(order,r,l.stepName);
+      if(i<0)return;
+      const cur=sums.get(i)||{q:0,f:0};
+      cur.q+=Number(r.qty)||0;cur.f+=Number(r.forQty)||0;
+      sums.set(i,cur);
+    });
+  });
+  return sums;
+}
+function applyConsumptionDiffToLines(order,beforeLogs,afterLogs){
+  const lines=Array.isArray(order?.materials)?order.materials:[];
+  if(!lines.length)return;
+  const before=consumptionSumsByLine(order,beforeLogs),after=consumptionSumsByLine(order,afterLogs);
+  after.forEach((a,i)=>{
+    const b=before.get(i)||{q:0,f:0},dq=a.q-b.q,df=a.f-b.f;
+    if(!dq&&!df)return;
+    const it=lines[i];
+    it.consumedQty=Math.max(0,Number((Number(it.consumedQty||0)+dq).toFixed(6)));
+    it.consumedForQty=Math.max(0,Math.round(Number(it.consumedForQty||0)+df));
+  });
+  before.forEach((b,i)=>{ // запись, которая была у нас, но исчезла/отменена в итоговом наборе
+    if(after.has(i))return;
+    const lines2=lines[i];if(!lines2)return;
+    lines2.consumedQty=Math.max(0,Number((Number(lines2.consumedQty||0)-b.q).toFixed(6)));
+    lines2.consumedForQty=Math.max(0,Math.round(Number(lines2.consumedForQty||0)-b.f));
+  });
+}
+function mergeOrderJournals(local,remote,opts={}){
   const rp=remote?.production;
   if(!rp||typeof rp!=='object')return false;
   if(!local.production||typeof local.production!=='object'){local.production=orderClone(rp);return true}
@@ -447,8 +491,12 @@ function mergeOrderJournals(local,remote){
     lop.completedQty=Math.min(total,base+validMarksQty(lop));
     changed=true;
   });
+  const logsBefore=Array.isArray(lp.consumptionLogs)?orderClone(lp.consumptionLogs):[];
   const cu=unionJournal(lp.consumptionLogs,rp.consumptionLogs,(r,m)=>remoteConsumption.has(String(r.id))||(!!r.undone&&!m.undone));
-  if(cu.changed){lp.consumptionLogs=cu.list.sort((a,b)=>journalTime(b).localeCompare(journalTime(a)));changed=true}
+  if(cu.changed){
+    lp.consumptionLogs=cu.list.sort((a,b)=>journalTime(b).localeCompare(journalTime(a)));changed=true;
+    if(!opts.skipLines)applyConsumptionDiffToLines(local,logsBefore,lp.consumptionLogs);
+  }
   const lu=unionJournal(lp.logs,rp.logs,()=>false);
   if(lu.changed){lp.logs=lu.list.sort((a,b)=>journalTime(b).localeCompare(journalTime(a)));changed=true}
   const wu=unionJournal(lp.workSessions,rp.workSessions,(r,m)=>!m.endedAt&&!!r.endedAt);
@@ -462,20 +510,20 @@ function mergeOrderJournals(local,remote){
 // Вливает серверную версию заказа в нашу (мутирует mine, чтобы не терять ссылки на объект). baseJson — снимок заказа на
 // момент последнего подтверждения сервером (или undefined, если базы нет — тогда объединяем только журналы).
 function mergeOrderInto(mine,remote,baseJson){
-  let base=null;
+  let base=null,adoptedLines=false;
   if(baseJson){try{base=JSON.parse(baseJson)}catch(e){base=null}}
   if(base){
     Object.keys(remote||{}).forEach(k=>{
       if(k==='production')return;
       const b=JSON.stringify(base[k]);
-      if(JSON.stringify(mine[k])===b&&JSON.stringify(remote[k])!==b)mine[k]=orderClone(remote[k]); // мы не трогали, а на сервере изменили
+      if(JSON.stringify(mine[k])===b&&JSON.stringify(remote[k])!==b){mine[k]=orderClone(remote[k]);if(k==='materials')adoptedLines=true} // мы не трогали, а на сервере изменили
     });
     if(remote?.production!==undefined&&JSON.stringify(mine.production)===JSON.stringify(base.production)){
       mine.production=orderClone(remote.production); // производство мы не правили — берём серверное целиком
       return true;
     }
   }
-  mergeOrderJournals(mine,remote);
+  mergeOrderJournals(mine,remote,{skipLines:adoptedLines});
   return true;
 }
 function mergeOrdersForSync(localOrders,remoteOrders){
