@@ -401,7 +401,7 @@ function applyProductionConsumptionPlan(o,op,plan,sessionId){
   normalizeOrderConsumptionFields(o);
   const log={id:uid(),sessionId,stepIndex:Number(op.stepIndex),stepName:op.stepName,qty:plan.qty,at:productionNow(),by:productionActorName(),materials:[]};
   plan.rows.forEach(r=>{
-    r.m.quantity=stockNumForUnit(Math.max(0,r.materialStockAfter),r.materialUnit);
+    {const __q0=Number(r.m.quantity||0);r.m.quantity=stockNumForUnit(Math.max(0,r.materialStockAfter),r.materialUnit);noteStockDelta(r.m,Number(r.m.quantity)-__q0)} // v8.22: в базу уйдёт изменение, а не готовое число
     r.m.lastUpdated=today();
     r.m.attributes=r.m.attributes||{};
     r.m.attributes.stockChangedBy=productionActorName();
@@ -2366,7 +2366,7 @@ async function performQuantityDecrease(orderId,index,consumptionId,newQty){
     const m=(data.materials||[]).find(x=>String(x.id)===String(row.materialId));
     const items=orderMaterials(o);
     const item=items[Number(row.lineIndex)]&&String(items[Number(row.lineIndex)].materialId)===String(row.materialId)?items[Number(row.lineIndex)]:items.find(i=>String(i.materialId)===String(row.materialId)&&materialWorkshopForItem(i,m)===String(log.stepName||''));
-    if(m){const unit=m.unit||row.materialUnit||row.unit;m.quantity=stockNumForUnit(Number(m.quantity||0)+convertMaterialQty(returnQty,row.unit,unit,m),unit);m.lastUpdated=today();m.attributes=m.attributes||{};m.attributes.stockChangedBy=who;m.attributes.stockChangedByEmail=currentUser?.email||'';m.attributes.stockChangedAt=now;}
+    if(m){const unit=m.unit||row.materialUnit||row.unit;const __q0=Number(m.quantity||0);m.quantity=stockNumForUnit(Number(m.quantity||0)+convertMaterialQty(returnQty,row.unit,unit,m),unit);noteStockDelta(m,Number(m.quantity)-__q0);m.lastUpdated=today();m.attributes=m.attributes||{};m.attributes.stockChangedBy=who;m.attributes.stockChangedByEmail=currentUser?.email||'';m.attributes.stockChangedAt=now;}
     if(item){item.consumedQty=stockNumForUnit(Math.max(0,orderItemConsumedQty(item)-returnQty),item.unit||row.unit);item.consumedForQty=Math.max(0,orderItemConsumedForQty(item)-delta);item.consumptionStatus=orderItemConsumptionStatus(item,o);if(cancelled&&Array.isArray(item.consumptionLogs))item.consumptionLogs=item.consumptionLogs.map(x=>String(x.id)===String(log.id)?{...x,undone:true,undoneAt:now,undoneBy:who}:x);}
     row.qty=Number((Number(row.qty||0)-returnQty).toFixed(6));
     returnedRows.push({...row,qty:returnQty});
@@ -2398,7 +2398,7 @@ async function performQuantityIncrease(orderId,index,consumptionId,newQty,plan){
   const oldQty=Number(log.qty||0),now=productionNow(),who=productionActorName();
   if(!Array.isArray(log.materials))log.materials=[];
   plan.rows.forEach(r=>{
-    r.m.quantity=stockNumForUnit(Math.max(0,r.materialStockAfter),r.materialUnit);
+    {const __q0=Number(r.m.quantity||0);r.m.quantity=stockNumForUnit(Math.max(0,r.materialStockAfter),r.materialUnit);noteStockDelta(r.m,Number(r.m.quantity)-__q0)} // v8.22: в базу уйдёт изменение, а не готовое число
     r.m.lastUpdated=today();r.m.attributes=r.m.attributes||{};r.m.attributes.stockChangedBy=who;r.m.attributes.stockChangedByEmail=currentUser?.email||'';r.m.attributes.stockChangedAt=now;
     r.item.consumedForQty=Math.max(orderItemConsumedForQty(r.item),r.targetFor);
     r.item.consumedQty=stockNumForUnit(orderItemConsumedQty(r.item)+r.qty,r.unit);

@@ -265,7 +265,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.10"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.21"></script>
+<script src="js/orders.js?v=8.22"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script src="js/roles.js?v=8.18"></script>
@@ -2872,15 +2872,46 @@ function saveOrderMaterialPurchase(orderId,materialId,opts={}){
   }
   toast(opts.toastText||'Закупка обновлена');
 }
-// v8.20: раньше после КАЖДОГО сохранения/старта заказа в базу по очереди перезаписывались ВСЕ строки склада целиком (в том
-// числе остаток quantity из копии этого устройства) и на каждую писалась запись «Материал изменён» в историю. Проблемы:
-// (1) устройство со старой копией склада могло вернуть старые остатки поверх свежих, (2) история забивалась (45 записей
-// на одно сохранение, старые события вытеснялись). Теперь пишем только те материалы, у которых изменился РЕЗЕРВ
-// (attributes.reservedQty) относительно того, что видели на сервере, и только поле attributes — остаток не трогаем.
+// v8.22 (ИСПРАВЛЕНИЕ ошибки v8.20): списание/возврат материала при отметке выпуска раньше записывалось в базу
+// ПОБОЧНЫМ действием этой функции (она перезаписывала все строки склада целиком, в том числе остаток). В v8.20 я
+// сделал её «только резерв» — и остаток от производства перестал сохраняться (в базу уходил только резерв).
+// Теперь остаток от производства записывается ЯВНО и безопаснее, чем раньше: не готовым числом с устройства (оно могло
+// быть устаревшим и затирало чужие списания), а ИЗМЕНЕНИЕМ (минус столько-то) от СВЕЖЕГО остатка с сервера и с
+// проверкой «остаток не менялся, пока мы считали» (при конфликте — заново). См. noteStockDelta() в js/orders.js.
+const pendingStockDeltas=new Map(); // id материала → накопленное, ещё не записанное изменение остатка
+function noteStockDelta(m,delta){
+  if(!m||!Number.isFinite(delta)||Math.abs(delta)<1e-12)return;
+  const k=String(m.id);
+  pendingStockDeltas.set(k,(pendingStockDeltas.get(k)||0)+delta);
+}
+async function applyStockDeltaToServer(m,delta){
+  for(let attempt=0;attempt<6;attempt++){
+    const{data:cur,error:e1}=await supabaseClient.from('materials').select('quantity').eq('id',m.id).limit(1);
+    if(e1||!cur||!cur[0])return null;
+    const fresh=Number(cur[0].quantity||0),next=stockNumForUnit(fresh+delta,m.unit||'');
+    const{data:done,error:e2}=await supabaseClient.from('materials').update({quantity:next,attributes:m.attributes||{}}).eq('id',m.id).eq('quantity',cur[0].quantity).select('id');
+    if(e2)return null;
+    if(done&&done.length)return next; // остаток на сервере не менялся между чтением и записью — записано
+  }
+  return null; // слишком много конфликтов — оставим изменение в очереди, повторим при следующем сохранении
+}
 const reservedQtySnapshot=new Map(); // id материала → резерв, который сейчас на сервере
 function snapshotMaterialReserves(){reservedQtySnapshot.clear();(data.materials||[]).forEach(m=>reservedQtySnapshot.set(String(m.id),Number(m.attributes?.reservedQty||0)))}
 async function persistReservationMaterials(){
   syncMaterialReservations();
+  // 1) остатки от производства (списание, возврат, исправление) — изменением
+  for(const [key,delta] of [...pendingStockDeltas]){
+    const m=(data.materials||[]).find(x=>String(x.id)===key);
+    if(!m){pendingStockDeltas.delete(key);continue}
+    if(isLocalMode()){pendingStockDeltas.delete(key);await updateMaterialInSupabase(m);continue}
+    if(!requireAuth())return;
+    const next=await applyStockDeltaToServer(m,delta);
+    if(next===null){console.warn('stock delta not applied yet',m.id,delta);continue}
+    m.quantity=next;
+    pendingStockDeltas.delete(key);
+    reservedQtySnapshot.set(key,Number(m.attributes?.reservedQty||0)); // attributes ушли вместе с остатком
+  }
+  // 2) резерв под заказы — только поле attributes и только у тех, у кого резерв изменился (v8.20)
   for(const m of data.materials){
     const now=Number(m.attributes?.reservedQty||0),was=reservedQtySnapshot.get(String(m.id));
     if(was!==undefined&&Math.abs(now-was)<1e-9)continue; // резерв не менялся — строку склада не трогаем
