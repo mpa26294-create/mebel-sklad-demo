@@ -26,8 +26,19 @@ function statsCollect(){
   orders.forEach(o=>{
     const prod=o.production;
     (Array.isArray(prod.operations)?prod.operations:[]).forEach(op=>{
+      const subMarksList=Array.isArray(op.subMarks)?op.subMarks:[];
+      if(subMarksList.length){ // v8.31: этап разбит на операции — выпуск людей считаем по их отметкам: 1 деталь = 1/N комплекта
+        const subCount=Math.max(1,new Set(subMarksList.map(x=>String(x.subId))).size);
+        subMarksList.forEach(m=>{
+          if(!m||m.undone)return;
+          const qty=Math.round((Number(m.qty)||0)/subCount*10)/10;if(qty<=0)return;
+          const email=sessionUserKey(m.byEmail),key=email||nameToKey.get(m.by)||('n:'+(m.by||'?')),name=m.by||email||'—',at=m.at||'';
+          marks.push({order:o.number||'—',client:o.client||'',workshop:op.stepName||'',key,name,qty,at,day:statsDayKey(at),restored:false});
+        });
+      }
       (Array.isArray(op.sessions)?op.sessions:[]).forEach(m=>{
         if(!m||m.undone)return;
+        if(subMarksList.length&&m.kit)return; // автозапись комплекта уже учтена по отметкам операций
         const qty=Number(m.qty)||0;if(qty<=0)return;
         const at=m.endedAt||m.startedAt||'';
         let key,name;
@@ -60,13 +71,14 @@ function statsAggregate(d){
     if(name&&(!p.name||p.name==='—'||(p.name.includes('@')&&!String(name).includes('@'))))p.name=name;if(email&&!p.email)p.email=email;return p};
   const shop=w=>{let s=shops.get(w||'—');if(!s){s={name:w||'—',qty:0,minutes:0,people:new Set()};shops.set(w||'—',s)}return s};
   const day=k=>{let x=days.get(k);if(!x){x={day:k,qty:0,minutes:0};days.set(k,x)}return x};
-  d.marks.forEach(m=>{const p=person(m.key,m.name);p.qty+=m.qty;p.marks++;if(m.workshop)p.shops.add(m.workshop);const s=shop(m.workshop);s.qty+=m.qty;s.people.add(m.key);day(m.day).qty+=m.qty;orders.add(m.order)});
+  const r1=x=>Math.round(x*10)/10; // доли комплекта (v8.31) дают дробные штуки — без «3.9000000000000004»
+  d.marks.forEach(m=>{const p=person(m.key,m.name);p.qty=r1(p.qty+m.qty);p.marks++;if(m.workshop)p.shops.add(m.workshop);const s=shop(m.workshop);s.qty=r1(s.qty+m.qty);s.people.add(m.key);const dd=day(m.day);dd.qty=r1(dd.qty+m.qty);orders.add(m.order)});
   d.sessions.forEach(s=>{const p=person(s.key,s.name,s.email);p.minutes+=s.minutes;if(s.workshop)p.shops.add(s.workshop);const sh=shop(s.workshop);sh.minutes+=s.minutes;sh.people.add(s.key);day(s.day).minutes+=s.minutes;orders.add(s.order)});
   const peopleList=[...people.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
   const shopList=[...shops.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
   const dayList=[...days.values()].sort((a,b)=>a.day.localeCompare(b.day));
   return {peopleList,shopList,dayList,ordersCount:orders.size,orderList:[...orders].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})),
-    totalQty:d.marks.reduce((n,m)=>n+m.qty,0),totalMinutes:d.sessions.reduce((n,s)=>n+s.minutes,0),realPeople:peopleList.filter(p=>p.key!=='__restored__').length};
+    totalQty:r1(d.marks.reduce((n,m)=>n+m.qty,0)),totalMinutes:d.sessions.reduce((n,s)=>n+s.minutes,0),realPeople:peopleList.filter(p=>p.key!=='__restored__').length};
 }
 // v8.25: число («Людей», «Сотрудников», «Заказов») кликабельное: при наведении — подсказка со списком, по нажатию —
 // список раскрывается под числом (работает и на планшете, где нет наведения).

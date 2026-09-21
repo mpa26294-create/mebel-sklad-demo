@@ -60,7 +60,7 @@ const ROLE_GUARDS={
   deleteMaterial:'stock.delete',
   quickAddStock:'stock.move',quickWriteOffStock:'stock.move',quickSubmitStock:'stock.move',quickMaterialAction:'stock.move',adjustMaterialQty:'stock.move',openMaterialReceipt:'stock.move',applyMaterialReceipt:'stock.move',saveMaterialReceipt:'stock.move',
   stopOtherWorkSession:'production.fixAny',
-  startProductionOperation:'production.mark',pauseProductionOperation:'production.mark',toggleProductionOperation:'production.mark',completeProductionOperation:'production.mark',finalizeProductionQuantity:'production.mark',saveProductionComment:'production.mark',recordWorkshopQuickQty:'production.mark',undoLastProductionConsumption:'production.mark'
+  startProductionOperation:'production.mark',pauseProductionOperation:'production.mark',toggleProductionOperation:'production.mark',completeProductionOperation:'production.mark',finalizeProductionQuantity:'production.mark',saveProductionComment:'production.mark',recordWorkshopQuickQty:'production.mark',undoLastProductionConsumption:'production.mark',recordSubOpMark:'production.mark',confirmSubOpMark:'production.mark',undoSubMark:'production.mark',selectSubOp:'production.mark'
 };
 // Кнопки создания скрываем по классу на <body> (deny-<право>) — см. css; сами функции закрыты в guardWrite.
 function permsFromRoles(roles){
