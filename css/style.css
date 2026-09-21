@@ -4356,3 +4356,8 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 @media(max-width:640px){.tech-op-row{grid-template-columns:minmax(0,1fr) 100px 34px}}
 /* v8.29: на узких экранах таблица технологии прокручивается вбок — блок операций держим в пределах экрана */
 @media(max-width:900px){.tech-ops{position:sticky;left:0;max-width:calc(100vw - 96px)}}
+/* v8.30: форма «Добавить операцию» раскрывается прямо в строке этапа */
+.tech-op-add{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:end;padding:12px;border:1.5px dashed #ff6600;border-radius:14px;background:#fff}
+.tech-op-add .field{margin:0}
+.tech-op-add .tech-op-savecheck,.tech-op-add .tech-op-add-actions,.tech-op-add .tech-op-saved{grid-column:1/-1}
+.tech-op-add-actions{display:flex;gap:8px}
