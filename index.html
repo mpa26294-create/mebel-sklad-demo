@@ -265,7 +265,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.10"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=6.57"></script>
-<script src="js/orders.js?v=8.18"></script>
+<script src="js/orders.js?v=8.20"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=1.12"></script>
 <script src="js/roles.js?v=8.18"></script>
@@ -912,6 +912,7 @@ async function loadMaterialsFromSupabase(options={}){
   if(accessRow)applyAccessSyncRow(accessRow);else{workerAccessList=[];applyWorkerModeForCurrentUser();if(typeof renderWorkerAccessPanel==='function')renderWorkerAccessPanel()}
   if(vaultRow&&typeof applyVaultSyncRow==='function')applyVaultSyncRow(vaultRow);
   data.materials = (rows || []).filter(row=>!isOrderSyncRow(row)&&!(typeof isAuditSyncRow==='function'&&isAuditSyncRow(row))&&!isAccessSyncRow(row)&&!(typeof isVaultSyncRow==='function'&&isVaultSyncRow(row))).map(dbToMaterial);
+  snapshotMaterialReserves(); // v8.20
   try{ syncMaterialReservations(); }catch(e){}
   renderAll();
   updateQuickAddInfo();
@@ -2790,7 +2791,25 @@ function saveOrderMaterialPurchase(orderId,materialId,opts={}){
   }
   toast(opts.toastText||'Закупка обновлена');
 }
-async function persistReservationMaterials(){syncMaterialReservations();for(const m of data.materials){await updateMaterialInSupabase(m)}}
+// v8.20: раньше после КАЖДОГО сохранения/старта заказа в базу по очереди перезаписывались ВСЕ строки склада целиком (в том
+// числе остаток quantity из копии этого устройства) и на каждую писалась запись «Материал изменён» в историю. Проблемы:
+// (1) устройство со старой копией склада могло вернуть старые остатки поверх свежих, (2) история забивалась (45 записей
+// на одно сохранение, старые события вытеснялись). Теперь пишем только те материалы, у которых изменился РЕЗЕРВ
+// (attributes.reservedQty) относительно того, что видели на сервере, и только поле attributes — остаток не трогаем.
+const reservedQtySnapshot=new Map(); // id материала → резерв, который сейчас на сервере
+function snapshotMaterialReserves(){reservedQtySnapshot.clear();(data.materials||[]).forEach(m=>reservedQtySnapshot.set(String(m.id),Number(m.attributes?.reservedQty||0)))}
+async function persistReservationMaterials(){
+  syncMaterialReservations();
+  for(const m of data.materials){
+    const now=Number(m.attributes?.reservedQty||0),was=reservedQtySnapshot.get(String(m.id));
+    if(was!==undefined&&Math.abs(now-was)<1e-9)continue; // резерв не менялся — строку склада не трогаем
+    if(isLocalMode()){await updateMaterialInSupabase(m);continue}
+    if(!requireAuth())return;
+    const{error}=await supabaseClient.from('materials').update({attributes:m.attributes||{}}).eq('id',m.id);
+    if(error){console.error(error);continue}
+    reservedQtySnapshot.set(String(m.id),now);
+  }
+}
 // v7.69: раньше здесь было ВТОРОЕ (более старое, нелокализованное) определение deleteOrder() —
 // мёртвый код: JS при повторном "function deleteOrder(id){...}" в одной области видимости просто
 // использует последнее объявление (см. ниже, ближе к концу файла), так что это тело никогда не
