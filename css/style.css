@@ -4330,3 +4330,8 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .material-history-list .mh-text{font-size:14px;font-weight:600}
 #quickActionOrder .wizard-soft-note{margin-bottom:10px;font-size:12.5px;line-height:1.4}
 #quickActionOrder .field{margin-bottom:10px}
+
+/* v8.28: вкладки быстрых действий (добавилась 4-я «Заказать») переносятся, а не обрезаются; профиль в один столбец */
+.quick-actions-tabs{flex-wrap:wrap!important}
+.quick-actions-tabs .quick-tab{flex:1 1 auto;white-space:nowrap}
+.audit-profile-grid.single{grid-template-columns:1fr}

@@ -305,7 +305,7 @@ function auditMaterialFieldDiffsV570(prev,next){
   auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
   auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
   auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
-  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl']);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl']);
   const pa=prev.attributes||{}, na=next.attributes||{};
   Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
     if(ignore.has(k))return;
@@ -431,7 +431,7 @@ function auditMaterialFieldDiffsV571(prev,next){
   auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
   auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
   auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
-  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl','area']);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl','area']);
   const pa=prev.attributes||{}, na=next.attributes||{};
   Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
     if(ignore.has(k))return;
@@ -536,7 +536,7 @@ function auditMaterialFieldDiffsV571(prev,next){
   auditPushDiffV570(diffs,'Единица учёта',prev.unit,next.unit);
   auditPushDiffV570(diffs,'Остаток',prev.quantity,next.quantity);
   auditPushDiffV570(diffs,'Мин. остаток',prev.minQuantity,next.minQuantity);
-  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','orderedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl','area']);
+  const ignore=new Set(['createdBy','createdAt','updatedBy','updatedAt','stockChangedBy','stockChangedAt','reservedQty','frozenQty','manualPurchaseOrders','purchaseStatus','purchaseNo','purchaseQty','pdfPath','pdfUrl','area']);
   const pa=prev.attributes||{}, na=next.attributes||{};
   Array.from(new Set([...Object.keys(pa),...Object.keys(na)])).sort().forEach(k=>{
     if(ignore.has(k))return;
@@ -1205,3 +1205,13 @@ auditDisplayTextV572=function(row){
   }
   return __auditDisplayTextV827Prev(row);
 };
+
+/* v8.28: в истории материала не было, СКОЛЬКО заказано (поле orderedQty было в списке скрытых) — теперь записывается
+   («Заказано: 0 → 10»). Второй блок «История материала» внизу карточки дублировал новый (с фильтрами) — убран,
+   внизу остаётся только «Профиль материала». */
+if(typeof materialProfileHtml==='function'){
+  materialProfileHtml=function(m){
+    const a=m.attributes||{};
+    return `<div class="audit-profile-grid single"><div class="audit-card"><h5>${t('materialProfile')}</h5><div class="audit-kv"><span>${t('addedMaterial')}</span><div class="audit-kv-val">${actorNameEmailHtml(a.createdBy,a.createdByEmail)}</div></div><div class="audit-kv"><span>${t('additionDate')}</span><b>${escapeHtml(a.createdAt?auditTime(a.createdAt):'—')}</b></div><div class="audit-kv"><span>${t('lastChange')}</span><b>${escapeHtml(a.updatedAt?auditTime(a.updatedAt):'—')}</b></div></div></div>`;
+  };
+}
