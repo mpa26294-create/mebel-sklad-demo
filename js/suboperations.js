@@ -13,13 +13,22 @@
   function stageSubOps(o,index){const s=orderSteps(o)[Number(index)];return Array.isArray(s?.operations)?s.operations.filter(x=>x&&x.id&&String(x.name||'').trim()):[]}
   function hasSubOps(o,index){return stageSubOps(o,index).length>0}
   const marksOf=op=>Array.isArray(op?.subMarks)?op.subMarks:[];
-  function subDone(o,op,subId){
-    const total=orderProductQty(o);
-    return Math.min(total,marksOf(op).reduce((n,m)=>n+(m&&!m.undone&&String(m.subId)===String(subId)?Math.max(0,Number(m.qty)||0):0),0));
+  // v8.32: у операции есть perUnit — сколько таких деталей входит в одно изделие (боковин 2 на изделие). Отметки ведутся в
+  // ДЕТАЛЯХ; нужно деталей всего = perUnit × изделий в заказе; в комплект (изделие) идёт perUnit деталей этой операции.
+  const perUnitOf=s=>Math.max(1,Math.round(Number(s?.perUnit)||1));
+  function subTarget(o,s){return perUnitOf(s)*orderProductQty(o)}
+  function sumMarks(op,subId,skip,cap){
+    return Math.min(cap,marksOf(op).reduce((n,m)=>n+(m&&!m.undone&&m!==skip&&String(m.subId)===String(subId)?Math.max(0,Number(m.qty)||0):0),0));
   }
-  function subKits(o,op,skip){
+  function subDone(o,op,subId){
+    const s=stageSubOps(o,op.stepIndex).find(x=>String(x.id)===String(subId));
+    return sumMarks(op,subId,null,s?subTarget(o,s):orderProductQty(o));
+  }
+  // комплектов (изделий) = минимум по операциям из «целых» наборов деталей: floor(сделано деталей / деталей в изделии)
+  function subKits(o,op,skip,extra){
     const subs=stageSubOps(o,op.stepIndex);if(!subs.length)return 0;
-    return Math.min(...subs.map(s=>{const total=orderProductQty(o);return Math.min(total,marksOf(op).reduce((n,m)=>n+(m&&!m.undone&&m!==skip&&String(m.subId)===String(s.id)?Math.max(0,Number(m.qty)||0):0),0))}));
+    const total=orderProductQty(o);
+    return Math.min(total,...subs.map(s=>Math.floor((sumMarks(op,s.id,skip,subTarget(o,s))+(extra&&String(extra.subId)===String(s.id)?extra.qty:0))/perUnitOf(s))));
   }
   // productionOp() каждый раз пересобирает o.production.operations в новые объекты — поэтому уже полученный op передаём сюда, а не берём заново
   function selectedSubId(o,index,opArg){
@@ -44,14 +53,14 @@
   function subOpsPanelHtml(o,op){
     const index=op.stepIndex,subs=stageSubOps(o,index);if(!subs.length)return '';
     const total=orderProductQty(o),kits=subKits(o,op),sel=selectedSubId(o,index,op),canPick=op.status!=='done'&&op.status!=='cancelled';
-    const dones=subs.map(s=>subDone(o,op,s.id)),minDone=Math.min(...dones),maxDone=Math.max(...dones);
+    const dones=subs.map(s=>subDone(o,op,s.id)),targets=subs.map(s=>subTarget(o,s)),setsDone=subs.map((s,i)=>Math.floor(dones[i]/perUnitOf(s))),minDone=Math.min(...setsDone),maxDone=Math.max(...setsDone);
     const rows=subs.map((s,i)=>{
-      const d=dones[i],pct=total?Math.round(d/total*100):0,full=d>=total,lag=!full&&d===minDone&&maxDone>minDone,isSel=String(s.id)===String(sel);
+      const d=dones[i],tg=targets[i],pu=perUnitOf(s),pct=tg?Math.round(d/tg*100):0,full=d>=tg,lag=!full&&setsDone[i]===minDone&&maxDone>minDone,isSel=String(s.id)===String(sel);
       const who=byPersonText(op,s.id);
       return `<button type="button" class="subop-row ${isSel?'selected':''} ${full?'full':''}" aria-pressed="${isSel}" ${canPick&&!full?'':'disabled'} onclick="selectSubOp('${o.id}',${index},'${escapeHtml(String(s.id))}')">
         <span class="subop-radio" aria-hidden="true">${full?'✓':isSel?'●':'○'}</span>
-        <span class="subop-main"><b>${escapeHtml(s.name)}</b><i class="subop-bar"><u style="width:${pct}%"></u></i>${who?`<small>${who}</small>`:''}</span>
-        <span class="subop-num"><b>${d}</b><small>/ ${total}</small>${lag?`<em>${escapeHtml(t('subOpLagging'))}</em>`:''}</span>
+        <span class="subop-main"><b>${escapeHtml(s.name)}</b>${pu>1?`<small class="subop-norm">${pu} ${escapeHtml(t('stageOpPcsPerItem'))}</small>`:''}<i class="subop-bar"><u style="width:${pct}%"></u></i>${who?`<small>${who}</small>`:''}</span>
+        <span class="subop-num"><b>${d}</b><small>/ ${tg}</small>${lag?`<em>${escapeHtml(t('subOpLagging'))}</em>`:''}</span>
       </button>`;
     }).join('');
     const hint=!canPick?'':sel?`${escapeHtml(t('subOpNowMarking'))}: <b>${escapeHtml(subs.find(s=>String(s.id)===String(sel))?.name||'')}</b>`:escapeHtml(t('subOpPickHint'));
@@ -72,7 +81,7 @@
     const op=productionOp(o,index);if(!op||op.status==='done')return;
     const subs=stageSubOps(o,index),subId=selectedSubId(o,index,op),sub=subs.find(s=>String(s.id)===String(subId));
     if(!sub){toast(t('subOpChoose'));return}
-    const total=orderProductQty(o),left=total-subDone(o,op,sub.id);
+    const left=subTarget(o,sub)-subDone(o,op,sub.id);
     if(left<1){toast(t('subOpAlreadyFull'));return}
     qty=Math.trunc(Number(qty||0));
     if(!Number.isFinite(qty)||qty<1){toast(t('prodInvalidQty'));return}
@@ -80,7 +89,7 @@
     // как и при обычной отметке: если рабочая смена не начата — спросить, записывать ли без учёта времени
     if(!options.skipSessionPrompt&&!myWorkSession(o,index)){openWorkSessionMissingModal(orderId,index,qty);return}
     // хватит ли материалов на комплекты, которые эта отметка «закроет»
-    const kitsAfter=Math.min(...subs.map(s=>subDone(o,op,s.id)+(s.id===sub.id?qty:0)));
+    const kitsAfter=subKits(o,op,null,{subId:sub.id,qty});
     const delta=kitsAfter-productionCompletedQty(o,op);
     if(delta>0){
       const plan=productionConsumptionPlan(o,op,delta);
@@ -100,7 +109,7 @@
     }
     if(openWorkSessions(o,index).length){op.status='running';op.pausedAt=''}
     else{op.status='paused';op.pausedAt=now;op.currentSessionStartedAt='';op.currentSessionPauseMinutes=0}
-    await persistProductionWorkflow(o,message,'production_suboperation_marked',{step:op.stepName,operation:sub.name,qty,minutes,doneBySub:subDone(o,op,sub.id),totalQty:total});
+    await persistProductionWorkflow(o,message,'production_suboperation_marked',{step:op.stepName,operation:sub.name,qty,minutes,doneBySub:subDone(o,op,sub.id),target:subTarget(o,sub),totalQty:orderProductQty(o)});
   }
   // Отмена ошибочной отметки. Нельзя, если по ней уже собраны и записаны комплекты (иначе разъедутся списания материалов) —
   // тогда сначала исправляют выпуск комплектов («Редактировать» в списке смен).
@@ -115,8 +124,8 @@
   // Окно «Отметить операцию» — для кнопок «Записать выпуск / Другое количество» в полном виде цеха.
   function openSubOpMarkModal(orderId,index){
     const o=findOrder(orderId);if(!o)return;const op=productionOp(o,index);if(!op||op.status==='done')return;
-    const subs=stageSubOps(o,index),sel=selectedSubId(o,index,op),total=orderProductQty(o);
-    const opts=subs.map(s=>{const d=subDone(o,op,s.id);return `<option value="${escapeHtml(String(s.id))}" ${String(s.id)===String(sel)?'selected':''} ${d>=total?'disabled':''}>${escapeHtml(s.name)} — ${d} / ${total}</option>`}).join('');
+    const subs=stageSubOps(o,index),sel=selectedSubId(o,index,op);
+    const opts=subs.map(s=>{const d=subDone(o,op,s.id),tg=subTarget(o,s);return `<option value="${escapeHtml(String(s.id))}" ${String(s.id)===String(sel)?'selected':''} ${d>=tg?'disabled':''}>${escapeHtml(s.name)} — ${d} / ${tg}</option>`}).join('');
     openModal(t('subOpModalTitle'),`<div class="production-quantity-modal"><label class="field"><span>${escapeHtml(t('subOpModalOp'))}</span><select class="select" id="subOpModalSel">${opts}</select></label><label class="field"><span>${escapeHtml(t('prodEnterCompletedQty'))}</span><input class="input" id="subOpModalQty" type="number" min="1" step="1" value="1"></label></div>`,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmSubOpMark('${o.id}',${index})">${escapeHtml(t('confirm'))}</button>`);
     setTimeout(()=>document.getElementById('subOpModalQty')?.select(),0);
   }
@@ -129,5 +138,5 @@
     await recordSubOpMark(orderId,index,qty,{});
   }
 
-  Object.assign(window,{stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
+  Object.assign(window,{subOpTarget:subTarget,subOpPerUnit:perUnitOf,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
 })();

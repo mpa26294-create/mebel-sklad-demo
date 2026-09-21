@@ -459,7 +459,10 @@
     techSavedOps=Array.isArray(arr)?arr.filter(x=>x&&x.name).map(x=>({id:x.id||uid(),name:String(x.name),workshop:String(x.workshop||'')})):[];
   }
   function stepOps(s){return Array.isArray(s?.operations)?s.operations:[]}
-  function stepOpsMinutes(s){return stepOps(s).reduce((n,o)=>n+Math.max(0,Math.round(Number(o.minutes)||0)),0)}
+  // v8.32: у операции есть «сколько таких деталей в одном изделии» (perUnit, по умолчанию 1) и «время на ОДНУ деталь» (minutes).
+  // Время этапа на изделие = сумма (время на деталь × деталей в изделии).
+  function opPerUnit(o){return Math.max(1,Math.round(Number(o?.perUnit)||1))}
+  function stepOpsMinutes(s){return stepOps(s).reduce((n,o)=>n+Math.max(0,Math.round((Number(o.minutes)||0)*opPerUnit(o))),0)}
   const opKey=x=>`${String(x.workshop||'').toLowerCase()}|${String(x.name||'').toLowerCase()}`;
   // Записывает общий список: перед записью читает свежую строку и объединяет по названию, чтобы два технолога не затёрли друг друга.
   async function persistSavedOps(){
@@ -509,8 +512,8 @@
   // Блок «Операции этапа» под строкой этапа. kind: 'tech' (шаблон в разделе «Технологии») или 'order' (технология внутри заказа).
   function stageOpsRowHtml(kind,owner,s,index){
     const F=STAGE_FN[kind],ops=stepOps(s),id=owner.id,stage=String(s.name||'').trim();
-    const rows=ops.map((o,oi)=>`<div class="tech-op-row"><input class="input" value="${escapeHtml(o.name||'')}" onchange="${F.upd}('${id}',${index},${oi},'name',this.value)"><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(o.minutes||0)}" onchange="${F.upd}('${id}',${index},${oi},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="${F.rem}('${id}',${index},${oi})">×</button></div>`).join('');
-    const total=ops.length?`<span class="tech-ops-total">${escapeHtml(t('stageOpsTotal'))}: <b>${stepOpsMinutes(s)} ${escapeHtml(t('minutesShort'))}</b></span>`:'';
+    const rows=ops.map((o,oi)=>`<div class="tech-op-row"><input class="input" value="${escapeHtml(o.name||'')}" onchange="${F.upd}('${id}',${index},${oi},'name',this.value)"><div class="order-tech-time" title="${escapeHtml(t('stageOpPerUnit'))}"><input class="input" type="number" min="1" step="1" value="${opPerUnit(o)}" onchange="${F.upd}('${id}',${index},${oi},'perUnit',this.value)"><span>${escapeHtml(t('stageOpPcsPerItem'))}</span></div><div class="order-tech-time" title="${escapeHtml(t('stageOpMinPerPart'))}"><input class="input" type="number" min="0" step="1" value="${Number(o.minutes||0)}" onchange="${F.upd}('${id}',${index},${oi},'minutes',this.value)"><span>${escapeHtml(t('stageOpMinPerPcs'))}</span></div><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="${F.rem}('${id}',${index},${oi})">×</button></div>`).join('');
+    const total=ops.length?`<span class="tech-ops-total">${escapeHtml(t('stageOpsTotal'))}: <b>${stepOpsMinutes(s)} ${escapeHtml(t('minutesShort'))}</b> ${escapeHtml(t('stageOpsPerItemNote'))}</span>`:'';
     const open=stageOpFormOpen.has(stageKey(kind,id,index)),fid=`sop-${kind}-${id}-${index}`;
     let form='';
     if(open){
@@ -520,7 +523,8 @@
       form=`<div class="tech-op-add">
         ${techSavedOps.length?`<label class="field"><span>${escapeHtml(t('stageOpPick'))}</span><select class="select" id="${fid}-pick" onchange="if(this.value){document.getElementById('${fid}-name').value=this.value}"><option value="">${escapeHtml(t('stageOpPickPlaceholder'))}</option>${optGroup(`${t('stageOpSavedFor')} «${stage}»`,same)}${optGroup(t('stageOpSavedOther'),other)}</select></label>`:''}
         <label class="field"><span>${escapeHtml(t('stageOpName'))}</span><input class="input" id="${fid}-name" placeholder="${escapeHtml(t('stageOpNamePlaceholder'))}" autocomplete="off"></label>
-        <label class="field"><span>${escapeHtml(t('timePerItem'))}, ${escapeHtml(t('minutesShort'))}</span><input class="input" id="${fid}-min" type="number" min="0" step="1" value="0"></label>
+        <label class="field"><span>${escapeHtml(t('stageOpPerUnit'))}</span><input class="input" id="${fid}-per" type="number" min="1" step="1" value="1"></label>
+        <label class="field"><span>${escapeHtml(t('stageOpMinPerPart'))}</span><input class="input" id="${fid}-min" type="number" min="0" step="1" value="0"></label>
         <label class="tech-op-savecheck"><input type="checkbox" id="${fid}-save"> <span>${escapeHtml(t('stageOpSaveCheck'))}</span></label>
         <div class="tech-op-add-actions"><button type="button" class="btn primary small" onclick="${F.add}('${id}',${index})">${escapeHtml(t('stageOpAddBtn'))}</button><button type="button" class="btn small" onclick="${F.toggle}('${id}',${index})">${escapeHtml(t('cancel'))}</button></div>
         ${chips}
@@ -538,9 +542,10 @@
         const name=String(document.getElementById(fid+'-name')?.value||'').trim();
         if(!name){toast(t('stageOpNameRequired'));return}
         const minutes=Math.max(0,Math.round(Number(document.getElementById(fid+'-min')?.value||0)));
+        const perUnit=Math.max(1,Math.round(Number(document.getElementById(fid+'-per')?.value||1)));
         const save=!!document.getElementById(fid+'-save')?.checked;
         const steps=stageStepsSnapshot(kind,owner),st=steps[index];if(!st)return;
-        st.operations.push({id:uid(),name,minutes});
+        st.operations.push({id:uid(),name,perUnit,minutes});
         st.minutes=stepOpsMinutes(st);
         if(save&&!techSavedOps.some(x=>opKey(x)===opKey({name,workshop:st.name||''}))){
           techSavedOps.push({id:uid(),name,workshop:st.name||''});
@@ -553,6 +558,7 @@
         const owner=stageOwner(kind,id);if(!owner)return;
         const steps=stageStepsSnapshot(kind,owner),st=steps[index],op=st&&st.operations[opIndex];if(!op)return;
         if(field==='minutes')op.minutes=Math.max(0,Math.round(Number(value||0)));
+        else if(field==='perUnit')op.perUnit=Math.max(1,Math.round(Number(value||1)));
         else{const v=String(value||'').trim();if(!v){toast(t('stageOpNameRequired'));stageRerender(kind,id);return}op.name=v}
         st.minutes=stepOpsMinutes(st);
         await stageCommit(kind,owner,steps,'');
@@ -792,7 +798,7 @@
     const hasExisting=(typeof orderSteps==='function'?orderSteps(o):[]).length>0||(typeof orderMaterials==='function'?orderMaterials(o):[]).length>0;
     if(hasExisting&&!confirm(t('confirmApplyTechnologyOverwrite')))return;
     if(typeof markTechnologyStarted==='function')markTechnologyStarted(o);
-    o.steps=(tc.steps||[]).map(s=>{const st={name:s.name||'',minutes:Number(s.minutes||0),responsible:s.responsible||''};if(Array.isArray(s.operations)&&s.operations.length)st.operations=s.operations.map(x=>({id:x.id,name:x.name,minutes:Number(x.minutes||0)}));return st});
+    o.steps=(tc.steps||[]).map(s=>{const st={name:s.name||'',minutes:Number(s.minutes||0),responsible:s.responsible||''};if(Array.isArray(s.operations)&&s.operations.length)st.operations=s.operations.map(x=>({id:x.id,name:x.name,perUnit:Math.max(1,Math.round(Number(x.perUnit)||1)),minutes:Number(x.minutes||0)}));return st});
     o.materials=(tc.materials||[]).map(item=>{
       const m=(data.materials||[]).find(x=>String(x.id)===String(item.materialId));
       const unit=item.unit||(typeof orderUnitForMaterial==='function'?orderUnitForMaterial(m,item.category):'')||'';
