@@ -4391,3 +4391,5 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .simple-round-spacer{display:inline-block;width:56px;height:56px}
 .subop-main .subop-norm{color:var(--muted);font-size:12px}
 .subop-choose-hint{margin:0 0 12px;color:var(--muted);font-size:14px}
+.subops-sync{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0;padding:12px 14px;border:1.5px dashed #ff6600;border-radius:14px;background:#fff4ec;color:#7a3300;font-size:14px;text-align:left}
+.subops-sync span{flex:1 1 220px}

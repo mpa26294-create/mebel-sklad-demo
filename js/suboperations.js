@@ -17,20 +17,25 @@
   // ДЕТАЛЯХ; нужно деталей всего = perUnit × изделий в заказе; в комплект (изделие) идёт perUnit деталей этой операции.
   const perUnitOf=s=>Math.max(1,Math.round(Number(s?.perUnit)||1));
   function subTarget(o,s){return perUnitOf(s)*orderProductQty(o)}
-  function sumMarks(op,subId,skip,cap){
-    return Math.min(cap,marksOf(op).reduce((n,m)=>n+(m&&!m.undone&&m!==skip&&String(m.subId)===String(subId)?Math.max(0,Number(m.qty)||0):0),0));
+  // Выпуск, записанный обычным способом (до разбивки этапа на операции): засчитывается по ВСЕМ операциям — это уже сделанные
+  // полные изделия. Автозаписи комплектов (kit) сюда не входят, они пришли из отметок операций.
+  function classicBase(o,op){
+    const kit=(Array.isArray(op?.sessions)?op.sessions:[]).reduce((n,x)=>n+(x&&!x.undone&&x.kit?Math.max(0,Number(x.qty)||0):0),0);
+    return Math.max(0,productionCompletedQty(o,op)-kit);
+  }
+  function partsDone(o,op,s,skip,extra){
+    const marks=marksOf(op).reduce((n,m)=>n+(m&&!m.undone&&m!==skip&&String(m.subId)===String(s.id)?Math.max(0,Number(m.qty)||0):0),0);
+    return Math.min(subTarget(o,s),classicBase(o,op)*perUnitOf(s)+marks+(extra&&String(extra.subId)===String(s.id)?extra.qty:0));
   }
   function subDone(o,op,subId){
     const s=stageSubOps(o,op.stepIndex).find(x=>String(x.id)===String(subId));
-    return sumMarks(op,subId,null,s?subTarget(o,s):orderProductQty(o));
+    return s?partsDone(o,op,s,null,null):0;
   }
   // комплектов (изделий) = минимум по операциям из «целых» наборов деталей: floor(сделано деталей / деталей в изделии)
   function subKits(o,op,skip,extra){
     const subs=stageSubOps(o,op.stepIndex);if(!subs.length)return 0;
-    const total=orderProductQty(o);
-    return Math.min(total,...subs.map(s=>Math.floor((sumMarks(op,s.id,skip,subTarget(o,s))+(extra&&String(extra.subId)===String(s.id)?extra.qty:0))/perUnitOf(s))));
+    return Math.min(orderProductQty(o),...subs.map(s=>Math.floor(partsDone(o,op,s,skip,extra)/perUnitOf(s))));
   }
-  // productionOp() каждый раз пересобирает o.production.operations в новые объекты — поэтому уже полученный op передаём сюда, а не берём заново
   function selectedSubId(o,index,opArg){
     const subs=stageSubOps(o,index),op=opArg||productionOp(o,index),cur=selected.get(skey(o.id,index));
     if(cur&&subs.some(s=>String(s.id)===String(cur)))return cur;
@@ -50,8 +55,36 @@
     return [...map.entries()].map(([n,q])=>`${escapeHtml(n)} ${q}`).join(' · ');
   }
   // Панель «Операции комплекта»: прогресс по каждой операции, выбор «что делаю сейчас», сколько комплектов собрано.
+  // Шаблон технологии, привязанный к заказу, мог быть разбит на операции ПОСЛЕ того, как этапы скопировались в заказ.
+  function templateOpsFor(o,index){
+    const tc=o.technologyId?(data.technologies||[]).find(x=>String(x.id)===String(o.technologyId)):null;if(!tc)return null;
+    const st=orderSteps(o)[Number(index)];if(!st)return null;
+    const nm=x=>String(x?.name||'').trim(),tsteps=Array.isArray(tc.steps)?tc.steps:[];
+    const ts=tsteps[index]&&nm(tsteps[index])===nm(st)?tsteps[index]:tsteps.find(x=>nm(x)===nm(st));
+    const ops=Array.isArray(ts?.operations)?ts.operations.filter(x=>x&&x.id&&nm(x)):[];
+    return ops.length?{tc,ops}:null;
+  }
+  function syncHintHtml(o,op){
+    const tpl=templateOpsFor(o,op.stepIndex);if(!tpl||op.status==='done'||op.status==='cancelled')return '';
+    const can=typeof userCan==='function'?userCan('orders.technology'):true;
+    const txt=String(t('subOpSyncText')).replace('{tech}',tpl.tc.name||'').replace('{stage}',op.stepName||'').replace('{ops}',tpl.ops.map(x=>x.name).join(', '));
+    return `<div class="subops-sync"><span>${escapeHtml(txt)}</span>${can?`<button type="button" class="btn small primary" onclick="syncStageOpsFromTemplate('${o.id}',${op.stepIndex})">${escapeHtml(t('subOpSyncBtn'))}</button>`:`<small>${escapeHtml(t('subOpSyncNoRight'))}</small>`}</div>`;
+  }
+  async function syncStageOpsFromTemplate(orderId,index){
+    const o=findOrder(orderId);if(!o)return;
+    const tpl=templateOpsFor(o,index);if(!tpl)return;
+    const st=orderSteps(o)[index],op=productionOp(o,index),done=op?productionCompletedQty(o,op):0;
+    const ops=tpl.ops.map(x=>({id:x.id,name:x.name,perUnit:Math.max(1,Math.round(Number(x.perUnit)||1)),minutes:Math.max(0,Number(x.minutes)||0)}));
+    const newMin=ops.reduce((n,x)=>n+Math.round(x.minutes*x.perUnit),0);
+    const msg=String(t('subOpSyncConfirm')).replace('{stage}',st.name||'').replace('{ops}',ops.map(x=>x.name).join(', ')).replace('{done}',done).replace('{old}',Number(st.minutes||0)).replace('{new}',newMin);
+    if(!confirm(msg))return;
+    o.steps=orderSteps(o).map(x=>({...x}));
+    o.steps[index].operations=ops;
+    if(newMin>0)o.steps[index].minutes=newMin;
+    await persistProductionWorkflow(o,`${tRu('subOpAuditSync')}: ${st.name} → ${ops.map(x=>x.name).join(', ')}`,'technology_operations_synced',{step:st.name,operations:ops.map(x=>x.name)});
+  }
   function subOpsPanelHtml(o,op){
-    const index=op.stepIndex,subs=stageSubOps(o,index);if(!subs.length)return '';
+    const index=op.stepIndex,subs=stageSubOps(o,index);if(!subs.length)return syncHintHtml(o,op);
     const total=orderProductQty(o),kits=subKits(o,op),sel=selectedSubId(o,index,op),canPick=op.status!=='done'&&op.status!=='cancelled';
     const dones=subs.map(s=>subDone(o,op,s.id)),targets=subs.map(s=>subTarget(o,s)),setsDone=subs.map((s,i)=>Math.floor(dones[i]/perUnitOf(s))),minDone=Math.min(...setsDone),maxDone=Math.max(...setsDone);
     const rows=subs.map((s,i)=>{
@@ -159,5 +192,5 @@
     await startProductionOperation(orderId,index,{skipSubChoice:true});
   }
 
-  Object.assign(window,{needSubOpChoice,openSubOpChooseModal,pickSubOpAndStart,subOpTarget:subTarget,subOpPerUnit:perUnitOf,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
+  Object.assign(window,{syncStageOpsFromTemplate,needSubOpChoice,openSubOpChooseModal,pickSubOpAndStart,subOpTarget:subTarget,subOpPerUnit:perUnitOf,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
 })();
