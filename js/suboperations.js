@@ -129,15 +129,19 @@
     const now=productionNow();if(!op.startedAt)op.startedAt=now;
     const mine=myWorkSession(o,index),sinceIso=mine?((mine.lastMarkAt&&mine.lastMarkAt>mine.startedAt)?mine.lastMarkAt:mine.startedAt):now;
     const minutes=mine?Math.max(0,productionMinutesBetween(sinceIso,now)):0;
-    if(mine)mine.lastMarkAt=now;
     op.subMarks=[{id:uid(),subId:sub.id,subName:sub.name,qty,at:now,minutes,by:productionActorName(),byEmail:currentUser?.email||''},...marksOf(op)];
-    op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)+minutes);
     const message=`${op.stepName}: ${sub.name} — ${qty} ${tRu('unitsGenitive')}`;
     if(delta>0){
-      // комплект(ы) собраны — дальше обычная запись выпуска этапа: списание материалов, «Выполнено», закрытие этапа
+      // Комплект(ы) собраны — дальше обычная запись выпуска этапа (списание материалов, «Выполнено», закрытие этапа).
+      // v8.41: время этой отметки отдаём ЕЙ — finalizeProductionQuantity сама считает «сколько прошло с последней
+      // отметки» и продвигает mine.lastMarkAt. Раньше мы делали это уже здесь ДО вызова, поэтому к моменту, когда
+      // finalizeProductionQuantity сама считала время, с последней отметки не проходило ни секунды — комплект в
+      // «Комплекты и списание материалов» всегда показывал 0 мин, хотя работа заняла время.
       await finalizeProductionQuantity(orderId,index,delta,{kit:true,skipSessionPrompt:true});
       return;
     }
+    if(mine)mine.lastMarkAt=now;
+    op.actualMinutes=Math.max(0,Number(op.actualMinutes||0)+minutes);
     if(openWorkSessions(o,index).length){op.status='running';op.pausedAt=''}
     else{op.status='paused';op.pausedAt=now;op.currentSessionStartedAt='';op.currentSessionPauseMinutes=0}
     await persistProductionWorkflow(o,message,'production_suboperation_marked',{step:op.stepName,operation:sub.name,qty,minutes,doneBySub:subDone(o,op,sub.id),target:subTarget(o,sub),totalQty:orderProductQty(o)});
