@@ -180,8 +180,10 @@
       </div>
       <!-- v7.04: панель видна только администратору (по логину), заполняется renderNotificationRulesPanel() -->
       <div class="panel" id="notificationRulesPanel" style="display:none;padding:24px;max-width:720px"></div>
-      <!-- v7.40: панель видна только администратору, заполняется renderWorkerAccessPanel() -->
-      <div class="panel" id="workerAccessPanel" style="display:none;padding:24px;max-width:720px"></div>
+      <!-- v8.37: панель ролей переехала из Настроек в отдельный раздел «Пользователи» (js/users-admin.js) — здесь
+           её больше нет, но сам workerAccessPanel-код (renderWorkerAccessPanel и т.д.) не трогаем: он безопасно
+           ничего не делает, если элемента с этим id на странице нет, и его вызовы остаются как страховка на
+           случай отката. -->
       <!-- v7.63: панель видна только администратору, заполняется renderVaultPasswordPanel() (js/order-files.js) -->
       <div class="panel" id="vaultPasswordPanel" style="display:none;padding:24px;max-width:720px"></div>
       <!-- v7.84: панель видна только администратору, заполняется renderShiftSchedulePanel() (js/orders.js) -->
@@ -281,7 +283,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/technologies.js?v=8.33"></script>
 <script src="js/suboperations.js?v=8.35"></script>
 <script src="js/roles.js?v=8.36"></script>
-<script src="js/users-admin.js?v=8.36"></script>
+<script src="js/users-admin.js?v=8.37"></script>
 <script src="js/stats.js?v=8.32"></script>
 <script>
 function materialTitle(m){const a=m.attributes||{};if(m.category==='Поролон'){return [categoryLabel('Поролон'),m.sku,materialDimensions(m),a.grade].filter(Boolean).join(' · ')}return m.name||categoryLabel(m.category)||'—'}
