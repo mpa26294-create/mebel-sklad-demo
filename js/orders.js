@@ -1817,7 +1817,7 @@ function simpleMaterialsInfo(o,op){
   if(!plan.rows.length)return {kind:'consumed',rows:[],short:false};
   const rows=plan.rows.map((r,i)=>{
     const missing=Math.max(0,stockNumForUnit(r.qty-r.stockBefore,r.unit));
-    return {i,name:materialTitle(r.m),need:qtyWithUnit(r.qty,r.unit),missing:missing>0?qtyWithUnit(missing,r.unit):''};
+    return {i,materialId:r.m?.id,name:materialTitle(r.m),need:qtyWithUnit(r.qty,r.unit),missing:missing>0?qtyWithUnit(missing,r.unit):''};
   });
   // Сначала то, чего не хватает — при свёрнутом длинном списке первым делом видны проблемные позиции.
   rows.sort((a,b)=>(a.missing?0:1)-(b.missing?0:1)||a.i-b.i);
@@ -1908,7 +1908,7 @@ function simpleInfoBodyHtml(o,op){
     const matKey=`${o.id}_${op.stepIndex}`,collapsible=mat.rows.length>SIMPLE_MATS_LIMIT+1,expanded=simpleMatsExpanded.has(matKey);
     const shown=collapsible&&!expanded?mat.rows.slice(0,SIMPLE_MATS_LIMIT):mat.rows;
     if(collapsible&&mat.shortCount>0)matSummary=`<span class="sw-mat-summary">${escapeHtml(t('simpleMatShortCount').replace('{k}',mat.shortCount).replace('{n}',mat.rows.length))}</span>`;
-    matBody=`<ul class="sw-mat-list">${shown.map(r=>`<li><span class="name">${escapeHtml(r.name)}</span><span class="qty">${escapeHtml(r.need)}</span>${r.missing?`<span class="short">${escapeHtml(t('simpleMatMissing').replace('{qty}',r.missing))}</span>`:''}</li>`).join('')}</ul>`
+    matBody=`<ul class="sw-mat-list sw-mat-list-click">${shown.map(r=>`<li${r.materialId?` role="button" tabindex="0" onclick="openMaterialDetails('${jsStrArg(r.materialId)}')" onkeydown="if(event.key==='Enter')openMaterialDetails('${jsStrArg(r.materialId)}')"`:''}><span class="name">${escapeHtml(r.name)}</span><span class="qty">${escapeHtml(r.need)}</span>${r.missing?`<span class="short">${escapeHtml(t('simpleMatMissing').replace('{qty}',r.missing))}</span>`:''}</li>`).join('')}</ul>`
       +(collapsible?`<button type="button" class="sw-mat-more" aria-expanded="${expanded}" onclick="toggleSimpleMats('${matKey}')">${escapeHtml(expanded?t('simpleMatCollapse'):t('simpleMatShowAll').replace('{n}',mat.rows.length))}<span class="sw-info-chevron ${expanded?'open':''}" aria-hidden="true">⌄</span></button>`:'');
   }else{
     matBody=`<span class="sw-mat-empty">${escapeHtml(t(mat.kind==='none'?'simpleMatNone':'simpleMatConsumed'))}</span>`;
