@@ -80,6 +80,7 @@ function switchSection(sectionId){
   if(sectionId==='history'&&typeof renderSiteHistory==='function')renderSiteHistory();
   if(sectionId==='changelog'&&typeof renderChangelog==='function')renderChangelog();
   if(sectionId==='activity'&&typeof renderActivity==='function')renderActivity();
+  if(sectionId==='users'&&typeof renderUsersSection==='function'){renderUsersSection();if(typeof loadAuthUsersList==='function')loadAuthUsersList();}
   if(sectionId==='technologies'&&typeof renderTechnologies==='function'){
     renderTechnologies();
     if(typeof loadTechnologiesFromSupabase==='function')loadTechnologiesFromSupabase().then(()=>renderTechnologies());
