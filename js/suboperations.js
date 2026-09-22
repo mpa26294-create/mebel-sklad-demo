@@ -13,10 +13,8 @@
   function stageSubOps(o,index){const s=orderSteps(o)[Number(index)];return Array.isArray(s?.operations)?s.operations.filter(x=>x&&x.id&&String(x.name||'').trim()):[]}
   function hasSubOps(o,index){return stageSubOps(o,index).length>0}
   const marksOf=op=>Array.isArray(op?.subMarks)?op.subMarks:[];
-  // v8.32: у операции есть perUnit — сколько таких деталей входит в одно изделие (боковин 2 на изделие). Отметки ведутся в
-  // ДЕТАЛЯХ; нужно деталей всего = perUnit × изделий в заказе; в комплект (изделие) идёт perUnit деталей этой операции.
-  const perUnitOf=s=>Math.max(1,Math.round(Number(s?.perUnit)||1));
-  function subTarget(o,s){return perUnitOf(s)*orderProductQty(o)}
+  // v8.38: «деталей в изделии» убрали — у каждой операции снова 1 деталь = 1 изделие, как в v8.31.
+  function subTarget(o,s){return orderProductQty(o)}
   // Выпуск, записанный обычным способом (до разбивки этапа на операции): засчитывается по ВСЕМ операциям — это уже сделанные
   // полные изделия. Автозаписи комплектов (kit) сюда не входят, они пришли из отметок операций.
   function classicBase(o,op){
@@ -25,7 +23,7 @@
   }
   function partsDone(o,op,s,skip,extra){
     const marks=marksOf(op).reduce((n,m)=>n+(m&&!m.undone&&m!==skip&&String(m.subId)===String(s.id)?Math.max(0,Number(m.qty)||0):0),0);
-    return Math.min(subTarget(o,s),classicBase(o,op)*perUnitOf(s)+marks+(extra&&String(extra.subId)===String(s.id)?extra.qty:0));
+    return Math.min(subTarget(o,s),classicBase(o,op)+marks+(extra&&String(extra.subId)===String(s.id)?extra.qty:0));
   }
   function subDone(o,op,subId){
     const s=stageSubOps(o,op.stepIndex).find(x=>String(x.id)===String(subId));
@@ -34,7 +32,7 @@
   // комплектов (изделий) = минимум по операциям из «целых» наборов деталей: floor(сделано деталей / деталей в изделии)
   function subKits(o,op,skip,extra){
     const subs=stageSubOps(o,op.stepIndex);if(!subs.length)return 0;
-    return Math.min(orderProductQty(o),...subs.map(s=>Math.floor(partsDone(o,op,s,skip,extra)/perUnitOf(s))));
+    return Math.min(orderProductQty(o),...subs.map(s=>partsDone(o,op,s,skip,extra)));
   }
   function selectedSubId(o,index,opArg){
     const subs=stageSubOps(o,index),op=opArg||productionOp(o,index),cur=selected.get(skey(o.id,index));
@@ -86,13 +84,13 @@
   function subOpsPanelHtml(o,op){
     const index=op.stepIndex,subs=stageSubOps(o,index);if(!subs.length)return syncHintHtml(o,op);
     const total=orderProductQty(o),kits=subKits(o,op),sel=selectedSubId(o,index,op),canPick=op.status!=='done'&&op.status!=='cancelled';
-    const dones=subs.map(s=>subDone(o,op,s.id)),targets=subs.map(s=>subTarget(o,s)),setsDone=subs.map((s,i)=>Math.floor(dones[i]/perUnitOf(s))),minDone=Math.min(...setsDone),maxDone=Math.max(...setsDone);
+    const dones=subs.map(s=>subDone(o,op,s.id)),targets=subs.map(s=>subTarget(o,s)),minDone=Math.min(...dones),maxDone=Math.max(...dones);
     const rows=subs.map((s,i)=>{
-      const d=dones[i],tg=targets[i],pu=perUnitOf(s),pct=tg?Math.round(d/tg*100):0,full=d>=tg,lag=!full&&setsDone[i]===minDone&&maxDone>minDone,isSel=String(s.id)===String(sel);
+      const d=dones[i],tg=targets[i],pct=tg?Math.round(d/tg*100):0,full=d>=tg,lag=!full&&d===minDone&&maxDone>minDone,isSel=String(s.id)===String(sel);
       const who=byPersonText(op,s.id);
       return `<button type="button" class="subop-row ${isSel?'selected':''} ${full?'full':''}" aria-pressed="${isSel}" ${canPick&&!full?'':'disabled'} onclick="selectSubOp('${o.id}',${index},'${escapeHtml(String(s.id))}')">
         <span class="subop-radio" aria-hidden="true">${full?'✓':isSel?'●':'○'}</span>
-        <span class="subop-main"><b>${escapeHtml(s.name)}</b>${pu>1?`<small class="subop-norm">${pu} ${escapeHtml(t('stageOpPcsPerItem'))}</small>`:''}<i class="subop-bar"><u style="width:${pct}%"></u></i>${who?`<small>${who}</small>`:''}</span>
+        <span class="subop-main"><b>${escapeHtml(s.name)}</b><i class="subop-bar"><u style="width:${pct}%"></u></i>${who?`<small>${who}</small>`:''}</span>
         <span class="subop-num"><b>${d}</b><small>/ ${tg}</small>${lag?`<em>${escapeHtml(t('subOpLagging'))}</em>`:''}</span>
       </button>`;
     }).join('');
@@ -192,5 +190,5 @@
     await startProductionOperation(orderId,index,{skipSubChoice:true});
   }
 
-  Object.assign(window,{syncStageOpsFromTemplate,needSubOpChoice,openSubOpChooseModal,pickSubOpAndStart,subOpTarget:subTarget,subOpPerUnit:perUnitOf,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
+  Object.assign(window,{syncStageOpsFromTemplate,needSubOpChoice,openSubOpChooseModal,pickSubOpAndStart,subOpTarget:subTarget,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
 })();

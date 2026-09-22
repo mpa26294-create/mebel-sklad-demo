@@ -4344,10 +4344,7 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .tech-ops-head{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px}
 .tech-ops-total{color:#625c4e;font-size:12.5px}
 .tech-ops-empty{font-size:12.5px;color:#8a8470}
-.tech-op-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto 36px;gap:10px;align-items:center}
-.tech-op-num{display:flex;align-items:center;gap:6px}
-.tech-op-num .input{width:84px;min-width:0;height:38px!important;min-height:38px!important;padding-right:8px}
-.tech-op-num span{color:#8a8470;font-size:12px;white-space:nowrap}
+.tech-op-row{display:grid;grid-template-columns:minmax(0,1fr) 140px 36px;gap:8px;align-items:center}
 .tech-op-ro{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:2px 0}
 .tech-ops>.btn{align-self:flex-start}
 .tech-op-savecheck{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;font-size:13px;font-weight:600}
@@ -4358,7 +4355,7 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .sw-ops{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
 .sw-ops li{display:flex;justify-content:space-between;gap:12px;font-size:15px;font-weight:600}
 .sw-ops .qty{color:#625c4e;white-space:nowrap}
-@media(max-width:640px){.tech-op-row{grid-template-columns:1fr 1fr 34px}.tech-op-row>input:first-child{grid-column:1/-1}.tech-op-num .input{width:100%}}
+@media(max-width:640px){.tech-op-row{grid-template-columns:minmax(0,1fr) 100px 34px}}
 /* v8.29: на узких экранах таблица технологии прокручивается вбок — блок операций держим в пределах экрана */
 @media(max-width:900px){.tech-ops{position:sticky;left:0;max-width:calc(100vw - 96px)}}
 /* v8.30: форма «Добавить операцию» раскрывается прямо в строке этапа */

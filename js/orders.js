@@ -1917,7 +1917,7 @@ function simpleInfoBodyHtml(o,op){
   const matCard=`<div class="sw-info-card wide ${mat.short?'overdue':''}"><small>${escapeHtml(t('simpleMatLabel').replace('{n}',remainingQty))}</small>${matSummary}${matBody}</div>`;
   // v8.29: операции этапа (например, «поклейка боковин — 12 мин/шт»), если технолог разбил этап на операции
   const stepDef=(orderSteps(o)[Number(op.stepIndex)])||{},stageOps=Array.isArray(stepDef.operations)?stepDef.operations:[];
-  const opsCard=stageOps.length?`<div class="sw-info-card wide"><small>${escapeHtml(t('stageOps'))}</small><ul class="sw-ops">${stageOps.map(x=>`<li><span class="name">${escapeHtml(x.name||'')}</span><span class="qty">${Math.max(1,Math.round(Number(x.perUnit)||1))} ${escapeHtml(t('stageOpPcsPerItem'))} · ${escapeHtml(simpleNum(Number(x.minutes||0)))} ${escapeHtml(t('stageOpMinPerPcs'))}</span></li>`).join('')}</ul></div>`:'';
+  const opsCard=stageOps.length?`<div class="sw-info-card wide"><small>${escapeHtml(t('stageOps'))}</small><ul class="sw-ops">${stageOps.map(x=>`<li><span class="name">${escapeHtml(x.name||'')}</span><span class="qty">${escapeHtml(simpleNum(Number(x.minutes||0)))} ${escapeHtml(t('simpleMinPerPc'))}</span></li>`).join('')}</ul></div>`:'';
   return `<div class="sw-info-grid">${dueCard}${normCard}</div>${opsCard}${matCard}${teamTimeCardHtml(o,op)}`;
 }
 // IDLE — блок раскрыт (решение «начинать ли» принимается, глядя на него); ACTIVE — свёрнут в одну строку

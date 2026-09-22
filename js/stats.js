@@ -29,11 +29,10 @@ function statsCollect(){
       const subMarksList=Array.isArray(op.subMarks)?op.subMarks:[];
       if(subMarksList.length){ // v8.31: этап разбит на операции — выпуск людей считаем по их отметкам: 1 деталь = 1/N комплекта
         const stepOpsDef=(Array.isArray(o.steps)?o.steps:[])[op.stepIndex]?.operations||[];
-        const perUnitFor=id=>Math.max(1,Math.round(Number((stepOpsDef.find(x=>String(x.id)===String(id))||{}).perUnit)||1));
         const subCount=Math.max(1,stepOpsDef.length||new Set(subMarksList.map(x=>String(x.subId))).size);
         subMarksList.forEach(m=>{
           if(!m||m.undone)return;
-          const qty=Math.round((Number(m.qty)||0)/perUnitFor(m.subId)/subCount*10)/10;if(qty<=0)return;
+          const qty=Math.round((Number(m.qty)||0)/subCount*10)/10;if(qty<=0)return;
           const email=sessionUserKey(m.byEmail),key=email||nameToKey.get(m.by)||('n:'+(m.by||'?')),name=m.by||email||'—',at=m.at||'';
           marks.push({order:o.number||'—',client:o.client||'',workshop:op.stepName||'',key,name,qty,at,day:statsDayKey(at),restored:false});
         });
