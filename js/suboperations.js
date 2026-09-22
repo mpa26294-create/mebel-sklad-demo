@@ -180,8 +180,8 @@
   function openSubOpChooseModal(orderId,index){
     const o=findOrder(orderId);if(!o)return;const op=productionOp(o,index);if(!op)return;
     const subs=stageSubOps(o,index),cur=selectedSubId(o,index,op);
-    const rows=subs.map(s=>{const d=subDone(o,op,s.id),tg=subTarget(o,s),full=d>=tg,pu=perUnitOf(s),pct=tg?Math.round(d/tg*100):0;
-      return `<button type="button" class="subop-row ${String(s.id)===String(cur)?'selected':''} ${full?'full':''}" ${full?'disabled':''} onclick="pickSubOpAndStart('${o.id}',${index},'${escapeHtml(String(s.id))}')"><span class="subop-radio" aria-hidden="true">${full?'✓':'▶'}</span><span class="subop-main"><b>${escapeHtml(s.name)}</b>${pu>1?`<small class="subop-norm">${pu} ${escapeHtml(t('stageOpPcsPerItem'))}</small>`:''}<i class="subop-bar"><u style="width:${pct}%"></u></i></span><span class="subop-num"><b>${d}</b><small>/ ${tg}</small></span></button>`}).join('');
+    const rows=subs.map(s=>{const d=subDone(o,op,s.id),tg=subTarget(o,s),full=d>=tg,pct=tg?Math.round(d/tg*100):0;
+      return `<button type="button" class="subop-row ${String(s.id)===String(cur)?'selected':''} ${full?'full':''}" ${full?'disabled':''} onclick="pickSubOpAndStart('${o.id}',${index},'${escapeHtml(String(s.id))}')"><span class="subop-radio" aria-hidden="true">${full?'✓':'▶'}</span><span class="subop-main"><b>${escapeHtml(s.name)}</b><i class="subop-bar"><u style="width:${pct}%"></u></i></span><span class="subop-num"><b>${d}</b><small>/ ${tg}</small></span></button>`}).join('');
     openModal(t('subOpStartTitle'),`<p class="subop-choose-hint">${escapeHtml(t('subOpStartHint'))}</p>${rows}`,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button>`);
   }
   async function pickSubOpAndStart(orderId,index,subId){
