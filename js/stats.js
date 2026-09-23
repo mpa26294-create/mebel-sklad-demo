@@ -30,11 +30,12 @@ function statsCollect(){
       if(subMarksList.length){ // v8.31: этап разбит на операции — выпуск людей считаем по их отметкам: 1 деталь = 1/N комплекта
         const stepOpsDef=(Array.isArray(o.steps)?o.steps:[])[op.stepIndex]?.operations||[];
         const subCount=Math.max(1,stepOpsDef.length||new Set(subMarksList.map(x=>String(x.subId))).size);
+        const plan0=Number((Array.isArray(o.steps)?o.steps:[])[op.stepIndex]?.minutes||0); // v8.43: план технолога на изделие для этого этапа
         subMarksList.forEach(m=>{
           if(!m||m.undone)return;
           const qty=Math.round((Number(m.qty)||0)/subCount*10)/10;if(qty<=0)return;
           const email=sessionUserKey(m.byEmail),key=email||nameToKey.get(m.by)||('n:'+(m.by||'?')),name=m.by||email||'—',at=m.at||'';
-          marks.push({order:o.number||'—',client:o.client||'',workshop:op.stepName||'',key,name,qty,at,day:statsDayKey(at),restored:false});
+          marks.push({order:o.number||'—',client:o.client||'',workshop:op.stepName||'',key,name,qty,at,day:statsDayKey(at),restored:false,plan:plan0});
         });
       }
       (Array.isArray(op.sessions)?op.sessions:[]).forEach(m=>{
@@ -45,7 +46,8 @@ function statsCollect(){
         let key,name;
         if(m.restored&&m.by===STATS_RESTORED_LABEL){key='__restored__';name=t('statsRestored')}
         else{const email=sessionUserKey(m.byEmail);key=email||nameToKey.get(m.by)||('n:'+(m.by||'?'));name=m.by||email||'—'}
-        marks.push({order:o.number||'—',client:o.client||'',workshop:op.stepName||'',key,name,qty,at,day:statsDayKey(at),restored:!!m.restored});
+        const plan=Number((Array.isArray(o.steps)?o.steps:[])[op.stepIndex]?.minutes||0);
+        marks.push({order:o.number||'—',client:o.client||'',workshop:op.stepName||'',key,name,qty,at,day:statsDayKey(at),restored:!!m.restored,plan});
       });
     });
     (Array.isArray(prod.workSessions)?prod.workSessions:[]).forEach(w=>{
@@ -68,12 +70,14 @@ function statsFiltered(){
 }
 function statsAggregate(d){
   const people=new Map(),shops=new Map(),days=new Map(),orders=new Set();
-  const person=(k,name,email)=>{let p=people.get(k);if(!p){p={key:k,name,email:email||'',qty:0,marks:0,minutes:0,shops:new Set()};people.set(k,p)}
+  const person=(k,name,email)=>{let p=people.get(k);if(!p){p={key:k,name,email:email||'',qty:0,marks:0,minutes:0,shops:new Set(),planSum:0,planQty:0};people.set(k,p)}
     if(name&&(!p.name||p.name==='—'||(p.name.includes('@')&&!String(name).includes('@'))))p.name=name;if(email&&!p.email)p.email=email;return p};
-  const shop=w=>{let s=shops.get(w||'—');if(!s){s={name:w||'—',qty:0,minutes:0,people:new Set()};shops.set(w||'—',s)}return s};
+  const shop=w=>{let s=shops.get(w||'—');if(!s){s={name:w||'—',qty:0,minutes:0,people:new Set(),planSum:0,planQty:0};shops.set(w||'—',s)}return s};
   const day=k=>{let x=days.get(k);if(!x){x={day:k,qty:0,minutes:0};days.set(k,x)}return x};
   const r1=x=>Math.round(x*10)/10; // доли комплекта (v8.31) дают дробные штуки — без «3.9000000000000004»
-  d.marks.forEach(m=>{const p=person(m.key,m.name);p.qty=r1(p.qty+m.qty);p.marks++;if(m.workshop)p.shops.add(m.workshop);const s=shop(m.workshop);s.qty=r1(s.qty+m.qty);s.people.add(m.key);const dd=day(m.day);dd.qty=r1(dd.qty+m.qty);orders.add(m.order)});
+  // v8.43: «Норма» — средний план технолога (мин/шт) для того, что человек/цех реально сделал за период, взвешенный
+  // по количеству. Изделия по этапам без указанного времени в плане не участвуют (иначе занизили бы среднее нулём).
+  d.marks.forEach(m=>{const p=person(m.key,m.name);p.qty=r1(p.qty+m.qty);p.marks++;if(m.workshop)p.shops.add(m.workshop);const s=shop(m.workshop);s.qty=r1(s.qty+m.qty);s.people.add(m.key);const dd=day(m.day);dd.qty=r1(dd.qty+m.qty);orders.add(m.order);if(m.plan>0){p.planSum+=m.qty*m.plan;p.planQty+=m.qty;s.planSum+=m.qty*m.plan;s.planQty+=m.qty}});
   d.sessions.forEach(s=>{const p=person(s.key,s.name,s.email);p.minutes+=s.minutes;if(s.workshop)p.shops.add(s.workshop);const sh=shop(s.workshop);sh.minutes+=s.minutes;sh.people.add(s.key);day(s.day).minutes+=s.minutes;orders.add(s.order)});
   const peopleList=[...people.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
   const shopList=[...shops.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
@@ -91,6 +95,15 @@ function statsChipHtml(count,items){
 function toggleStatsList(btn){const box=btn.nextElementSibling;if(!box)return;box.hidden=!box.hidden;btn.classList.toggle('open',!box.hidden)}
 function statsPersonLabel(p){return p.email&&p.email!==p.name?`${p.name} (${p.email})`:p.name}
 function statsPace(p){return p.qty>0&&p.minutes>0?(Math.round(p.minutes/p.qty*10)/10):null}
+// v8.43: «Норма» и отклонение факта от неё — см. пояснение у накопления planSum/planQty в statsAggregate().
+function statsNorm(x){return x.planQty>0?Math.round(x.planSum/x.planQty*10)/10:null}
+function statsDiffPct(pace,norm){return pace!=null&&norm>0?Math.round((pace-norm)/norm*100):null}
+function statsDiffHtml(pace,norm){
+  const diff=statsDiffPct(pace,norm);
+  if(diff===null)return '—';
+  const cls=diff<=-5?'ok-text':diff>=5?'danger-text':'';
+  return `<span class="${cls}">${diff>0?'+':''}${diff}%</span>`;
+}
 function statsFmtNum(n){return String(Number(n)).replace('.',currentLang==='en'?'.':',')}
 function statsDayLabel(key){const d=new Date(key+'T12:00:00Z');return d.toLocaleDateString(uiDateLocale(),{day:'2-digit',month:'2-digit',timeZone:'UTC'})}
 function statsMarkTime(iso){const d=new Date(iso||'');return Number.isNaN(d.getTime())?'':d.toLocaleString(uiDateLocale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:statsTz()})}
@@ -99,8 +112,8 @@ function setWorkStatsFilter(key,value){statsState[key]=value;if(key==='period'&&
 function statsCsvCell(v){const s=String(v??'');return /[";\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
 function exportWorkStatsCsv(){
   const d=statsFiltered(),a=statsAggregate(d);
-  const rows=[[t('statsColPerson'),'Email',t('statsColQty'),t('statsColMarks'),t('statsColTimeMin'),t('statsColPace'),t('statsColWorkshops')]];
-  a.peopleList.forEach(p=>rows.push([p.name,p.email,p.qty,p.marks,p.minutes,statsPace(p)??'',[...p.shops].join(', ')]));
+  const rows=[[t('statsColPerson'),'Email',t('statsColQty'),t('statsColMarks'),t('statsColTimeMin'),t('statsColPace'),t('statsColNorm'),t('statsColDiff'),t('statsColWorkshops')]];
+  a.peopleList.forEach(p=>{const pace=statsPace(p),norm=statsNorm(p);rows.push([p.name,p.email,p.qty,p.marks,p.minutes,pace??'',norm??'',statsDiffPct(pace,norm)??'',[...p.shops].join(', ')])});
   rows.push([]);
   rows.push([t('statsColDate'),t('statsColPerson'),t('statsColOrder'),t('statsColWorkshop'),t('statsColQty')]);
   d.marks.slice().sort((x,y)=>String(y.at).localeCompare(String(x.at))).forEach(m=>rows.push([statsMarkTime(m.at),m.name,m.order,m.workshop,m.qty]));
@@ -132,12 +145,12 @@ function renderWorkStats(){
   const maxQty=Math.max(1,...a.dayList.map(x=>x.qty));
   const dayList=a.dayList.slice(-31);
   const chart=`<div class="st-chart">${dayList.map(x=>`<div class="st-bar" title="${escapeHtml(statsDayLabel(x.day))}: ${x.qty} ${escapeHtml(t('unitPieces'))} · ${escapeHtml(orderTimeText(x.minutes))}"><i style="height:${Math.round(x.qty/maxQty*100)}%"></i><em>${x.qty}</em><span>${escapeHtml(statsDayLabel(x.day))}</span></div>`).join('')}</div>`;
-  const peopleTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColPerson'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColMarks'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPace'))}</th><th>${escapeHtml(t('statsColWorkshops'))}</th></tr></thead><tbody>${a.peopleList.map(p=>{const pace=statsPace(p);return `<tr class="${p.key==='__restored__'?'restored':''}"><td><b>${escapeHtml(p.name)}</b>${p.email&&p.email!==p.name?`<small>${escapeHtml(p.email)}</small>`:''}</td><td class="n">${p.qty}</td><td class="n">${p.marks}</td><td class="n">${p.minutes?escapeHtml(orderTimeText(p.minutes)):'—'}</td><td class="n">${pace!==null?statsFmtNum(pace):'—'}</td><td>${escapeHtml([...p.shops].join(', ')||'—')}</td></tr>`}).join('')}</tbody></table></div>`;
-  const shopTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPeople'))}</th></tr></thead><tbody>${a.shopList.map(s=>`<tr><td><b>${escapeHtml(s.name)}</b></td><td class="n">${s.qty}</td><td class="n">${s.minutes?escapeHtml(orderTimeText(s.minutes)):'—'}</td><td class="n">${(()=>{const names=[...s.people].filter(k=>k!=='__restored__').map(k=>{const p=a.peopleList.find(x=>x.key===k);return p?statsPersonLabel(p):''});return statsChipHtml(names.length,names)})()}</td></tr>`).join('')}</tbody></table></div>`;
+  const peopleTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColPerson'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColMarks'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPace'))}</th><th class="n">${escapeHtml(t('statsColNorm'))}</th><th class="n">${escapeHtml(t('statsColDiff'))}</th><th>${escapeHtml(t('statsColWorkshops'))}</th></tr></thead><tbody>${a.peopleList.map(p=>{const pace=statsPace(p),norm=statsNorm(p);return `<tr class="${p.key==='__restored__'?'restored':''}"><td><b>${escapeHtml(p.name)}</b>${p.email&&p.email!==p.name?`<small>${escapeHtml(p.email)}</small>`:''}</td><td class="n">${p.qty}</td><td class="n">${p.marks}</td><td class="n">${p.minutes?escapeHtml(orderTimeText(p.minutes)):'—'}</td><td class="n">${pace!==null?statsFmtNum(pace):'—'}</td><td class="n">${norm!==null?statsFmtNum(norm):'—'}</td><td class="n">${statsDiffHtml(pace,norm)}</td><td>${escapeHtml([...p.shops].join(', ')||'—')}</td></tr>`}).join('')}</tbody></table></div>`;
+  const shopTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPace'))}</th><th class="n">${escapeHtml(t('statsColNorm'))}</th><th class="n">${escapeHtml(t('statsColDiff'))}</th><th class="n">${escapeHtml(t('statsColPeople'))}</th></tr></thead><tbody>${a.shopList.map(s=>{const pace=s.qty>0&&s.minutes>0?Math.round(s.minutes/s.qty*10)/10:null,norm=statsNorm(s);return `<tr><td><b>${escapeHtml(s.name)}</b></td><td class="n">${s.qty}</td><td class="n">${s.minutes?escapeHtml(orderTimeText(s.minutes)):'—'}</td><td class="n">${pace!==null?statsFmtNum(pace):'—'}</td><td class="n">${norm!==null?statsFmtNum(norm):'—'}</td><td class="n">${statsDiffHtml(pace,norm)}</td><td class="n">${(()=>{const names=[...s.people].filter(k=>k!=='__restored__').map(k=>{const p=a.peopleList.find(x=>x.key===k);return p?statsPersonLabel(p):''});return statsChipHtml(names.length,names)})()}</td></tr>`}).join('')}</tbody></table></div>`;
   const last=d.marks.slice().sort((x,y)=>String(y.at).localeCompare(String(x.at))).slice(0,40);
   const marksTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColDate'))}</th><th>${escapeHtml(t('statsColPerson'))}</th><th>${escapeHtml(t('statsColOrder'))}</th><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th></tr></thead><tbody>${last.map(m=>`<tr class="${m.restored?'restored':''}"><td>${escapeHtml(statsMarkTime(m.at))}</td><td>${escapeHtml(m.name)}</td><td><b>${escapeHtml(m.order)}</b>${m.client?`<small>${escapeHtml(m.client)}</small>`:''}</td><td>${escapeHtml(m.workshop)}</td><td class="n">${m.qty}</td></tr>`).join('')}</tbody></table></div>`;
   box.innerHTML=filters+cards
-    +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByPerson'))}</h3>${peopleTable}<p class="st-note">${escapeHtml(t('statsNote'))}</p></section>`
+    +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByPerson'))}</h3>${peopleTable}<p class="st-note">${escapeHtml(t('statsNote'))} ${escapeHtml(t('statsNoteNorm'))}</p></section>`
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByDay'))}</h3>${chart}</section>`
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByWorkshop'))}</h3>${shopTable}</section>`
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsMarksList'))}</h3>${marksTable}</section>`;
