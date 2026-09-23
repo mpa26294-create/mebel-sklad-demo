@@ -52,7 +52,7 @@ function statsCollect(){
     });
     (Array.isArray(prod.workSessions)?prod.workSessions:[]).forEach(w=>{
       const email=sessionUserKey(w.userEmail),key=email||('n:'+(w.userName||'?'));
-      sessions.push({order:o.number||'—',workshop:w.workshop||'',key,email,name:(w.userName&&w.userName!==w.userEmail)?w.userName:(w.userEmail||w.userName||'—'),day:statsDayKey(w.startedAt),minutes:workSessionMinutes(w),overtime:!!w.overtime});
+      sessions.push({order:o.number||'—',client:o.client||'',workshop:w.workshop||'',key,email,name:(w.userName&&w.userName!==w.userEmail)?w.userName:(w.userEmail||w.userName||'—'),day:statsDayKey(w.startedAt),minutes:workSessionMinutes(w),overtime:!!w.overtime});
     });
   });
   return {marks,sessions};
@@ -69,20 +69,24 @@ function statsFiltered(){
   };
 }
 function statsAggregate(d){
-  const people=new Map(),shops=new Map(),days=new Map(),orders=new Set();
+  const people=new Map(),shops=new Map(),days=new Map(),ordersMap=new Map();
   const person=(k,name,email)=>{let p=people.get(k);if(!p){p={key:k,name,email:email||'',qty:0,marks:0,minutes:0,shops:new Set(),planSum:0,planQty:0};people.set(k,p)}
     if(name&&(!p.name||p.name==='—'||(p.name.includes('@')&&!String(name).includes('@'))))p.name=name;if(email&&!p.email)p.email=email;return p};
   const shop=w=>{let s=shops.get(w||'—');if(!s){s={name:w||'—',qty:0,minutes:0,people:new Set(),planSum:0,planQty:0};shops.set(w||'—',s)}return s};
   const day=k=>{let x=days.get(k);if(!x){x={day:k,qty:0,minutes:0};days.set(k,x)}return x};
+  // v8.46: «По заказам» — сколько изделий и часов реально ушло на КОНКРЕТНЫЙ заказ за период (не только общий счётчик
+  // «Заказов» в карточке сверху) — это уже готовый материал для оценки, во что реально обошёлся труд по заказу.
+  const orderStat=(num,client)=>{let o=ordersMap.get(num);if(!o){o={number:num,client:client||'',qty:0,minutes:0,people:new Set()};ordersMap.set(num,o)}if(client&&!o.client)o.client=client;return o};
   const r1=x=>Math.round(x*10)/10; // доли комплекта (v8.31) дают дробные штуки — без «3.9000000000000004»
   // v8.43: «Норма» — средний план технолога (мин/шт) для того, что человек/цех реально сделал за период, взвешенный
   // по количеству. Изделия по этапам без указанного времени в плане не участвуют (иначе занизили бы среднее нулём).
-  d.marks.forEach(m=>{const p=person(m.key,m.name);p.qty=r1(p.qty+m.qty);p.marks++;if(m.workshop)p.shops.add(m.workshop);const s=shop(m.workshop);s.qty=r1(s.qty+m.qty);s.people.add(m.key);const dd=day(m.day);dd.qty=r1(dd.qty+m.qty);orders.add(m.order);if(m.plan>0){p.planSum+=m.qty*m.plan;p.planQty+=m.qty;s.planSum+=m.qty*m.plan;s.planQty+=m.qty}});
-  d.sessions.forEach(s=>{const p=person(s.key,s.name,s.email);p.minutes+=s.minutes;if(s.workshop)p.shops.add(s.workshop);const sh=shop(s.workshop);sh.minutes+=s.minutes;sh.people.add(s.key);day(s.day).minutes+=s.minutes;orders.add(s.order)});
+  d.marks.forEach(m=>{const p=person(m.key,m.name);p.qty=r1(p.qty+m.qty);p.marks++;if(m.workshop)p.shops.add(m.workshop);const s=shop(m.workshop);s.qty=r1(s.qty+m.qty);s.people.add(m.key);const dd=day(m.day);dd.qty=r1(dd.qty+m.qty);const os=orderStat(m.order,m.client);os.qty=r1(os.qty+m.qty);os.people.add(m.key);if(m.plan>0){p.planSum+=m.qty*m.plan;p.planQty+=m.qty;s.planSum+=m.qty*m.plan;s.planQty+=m.qty}});
+  d.sessions.forEach(s=>{const p=person(s.key,s.name,s.email);p.minutes+=s.minutes;if(s.workshop)p.shops.add(s.workshop);const sh=shop(s.workshop);sh.minutes+=s.minutes;sh.people.add(s.key);day(s.day).minutes+=s.minutes;const os=orderStat(s.order,s.client);os.minutes+=s.minutes;os.people.add(s.key)});
   const peopleList=[...people.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
   const shopList=[...shops.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
   const dayList=[...days.values()].sort((a,b)=>a.day.localeCompare(b.day));
-  return {peopleList,shopList,dayList,ordersCount:orders.size,orderList:[...orders].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})),
+  const orderStatList=[...ordersMap.values()].sort((a,b)=>b.qty-a.qty||b.minutes-a.minutes);
+  return {peopleList,shopList,dayList,orderStatList,ordersCount:ordersMap.size,orderList:[...ordersMap.keys()].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})),
     totalQty:r1(d.marks.reduce((n,m)=>n+m.qty,0)),totalMinutes:d.sessions.reduce((n,s)=>n+s.minutes,0),realPeople:peopleList.filter(p=>p.key!=='__restored__').length};
 }
 // v8.25: число («Людей», «Сотрудников», «Заказов») кликабельное: при наведении — подсказка со списком, по нажатию —
@@ -126,6 +130,9 @@ function exportWorkStatsCsv(){
   const rows=[[t('statsColPerson'),'Email',t('statsColQty'),t('statsColMarks'),t('statsColTimeMin'),t('statsColPace'),t('statsColNorm'),t('statsColDiff'),t('statsColWorkshops')]];
   a.peopleList.forEach(p=>{const pace=statsPace(p),norm=statsNorm(p);rows.push([p.name,p.email,p.qty,p.marks,p.minutes,pace??'',norm??'',statsDiffPct(pace,norm)??'',[...p.shops].join(', ')])});
   rows.push([]);
+  rows.push([t('statsByOrder'),t('statsColQty'),t('statsColTimeMin'),t('statsColPeople')]);
+  a.orderStatList.forEach(o=>rows.push([o.client?`${o.number} (${o.client})`:o.number,o.qty,o.minutes,o.people.size]));
+  rows.push([]);
   rows.push([t('statsColDate'),t('statsColPerson'),t('statsColOrder'),t('statsColWorkshop'),t('statsColQty')]);
   d.marks.slice().sort((x,y)=>String(y.at).localeCompare(String(x.at))).forEach(m=>rows.push([statsMarkTime(m.at),m.name,m.order,m.workshop,m.qty]));
   const csv='﻿'+rows.map(r=>r.map(statsCsvCell).join(';')).join('\r\n');
@@ -158,6 +165,7 @@ function renderWorkStats(){
   const chart=`<div class="st-chart">${dayList.map(x=>`<div class="st-bar" title="${escapeHtml(statsDayLabel(x.day))}: ${x.qty} ${escapeHtml(t('unitPieces'))} · ${escapeHtml(orderTimeText(x.minutes))}"><i style="height:${Math.round(x.qty/maxQty*100)}%"></i><em>${x.qty}</em><span>${escapeHtml(statsDayLabel(x.day))}</span></div>`).join('')}</div>`;
   const peopleTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColPerson'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColMarks'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPace'))}</th><th class="n">${escapeHtml(t('statsColNorm'))}</th><th class="n">${escapeHtml(t('statsColDiff'))}</th><th>${escapeHtml(t('statsColWorkshops'))}</th></tr></thead><tbody>${a.peopleList.map(p=>{const pace=statsPace(p),norm=statsNorm(p);return `<tr class="${p.key==='__restored__'?'restored':''}"><td><b>${escapeHtml(p.name)}</b>${p.email&&p.email!==p.name?`<small>${escapeHtml(p.email)}</small>`:''}</td><td class="n">${p.qty}</td><td class="n">${p.marks}</td><td class="n">${p.minutes?escapeHtml(orderTimeText(p.minutes)):'—'}</td><td class="n">${pace!==null?statsFmtNum(pace):'—'}</td><td class="n">${norm!==null?statsFmtNum(norm):'—'}</td><td class="n">${statsDiffHtml(pace,norm)}</td><td>${escapeHtml([...p.shops].join(', ')||'—')}</td></tr>`}).join('')}</tbody></table></div>`;
   const shopTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPace'))}</th><th class="n">${escapeHtml(t('statsColNorm'))}</th><th class="n">${escapeHtml(t('statsColDiff'))}</th><th class="n">${escapeHtml(t('statsColPeople'))}</th></tr></thead><tbody>${a.shopList.map(s=>{const pace=s.qty>0&&s.minutes>0?Math.round(s.minutes/s.qty*10)/10:null,norm=statsNorm(s);return `<tr><td><b>${escapeHtml(s.name)}</b></td><td class="n">${s.qty}</td><td class="n">${s.minutes?escapeHtml(orderTimeText(s.minutes)):'—'}</td><td class="n">${pace!==null?statsFmtNum(pace):'—'}</td><td class="n">${norm!==null?statsFmtNum(norm):'—'}</td><td class="n">${statsDiffHtml(pace,norm)}</td><td class="n">${(()=>{const names=[...s.people].filter(k=>k!=='__restored__').map(k=>{const p=a.peopleList.find(x=>x.key===k);return p?statsPersonLabel(p):''});return statsChipHtml(names.length,names)})()}</td></tr>`}).join('')}</tbody></table></div>`;
+  const orderTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColOrder'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPeople'))}</th></tr></thead><tbody>${a.orderStatList.map(o=>`<tr><td><b>${escapeHtml(o.number)}</b>${o.client?`<small>${escapeHtml(o.client)}</small>`:''}</td><td class="n">${o.qty}</td><td class="n">${o.minutes?escapeHtml(orderTimeText(o.minutes)):'—'}</td><td class="n">${(()=>{const names=[...o.people].filter(k=>k!=='__restored__').map(k=>{const p=a.peopleList.find(x=>x.key===k);return p?statsPersonLabel(p):''});return statsChipHtml(names.length,names)})()}</td></tr>`).join('')}</tbody></table></div>`;
   const last=d.marks.slice().sort((x,y)=>String(y.at).localeCompare(String(x.at))).slice(0,40);
   const marksTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColDate'))}</th><th>${escapeHtml(t('statsColPerson'))}</th><th>${escapeHtml(t('statsColOrder'))}</th><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th></tr></thead><tbody>${last.map(m=>`<tr class="${m.restored?'restored':''}"><td>${escapeHtml(statsMarkTime(m.at))}</td><td>${escapeHtml(m.name)}</td><td><b>${escapeHtml(m.order)}</b>${m.client?`<small>${escapeHtml(m.client)}</small>`:''}</td><td>${escapeHtml(m.workshop)}</td><td class="n">${m.qty}</td></tr>`).join('')}</tbody></table></div>`;
   const normLegend=statsNormLegendHtml();
@@ -165,5 +173,6 @@ function renderWorkStats(){
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByPerson'))}</h3>${normLegend}${peopleTable}<p class="st-note">${escapeHtml(t('statsNote'))}</p></section>`
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByDay'))}</h3>${chart}</section>`
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByWorkshop'))}</h3>${normLegend}${shopTable}</section>`
+    +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByOrder'))}</h3>${orderTable}</section>`
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsMarksList'))}</h3>${marksTable}</section>`;
 }
