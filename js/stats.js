@@ -102,7 +102,18 @@ function statsDiffHtml(pace,norm){
   const diff=statsDiffPct(pace,norm);
   if(diff===null)return '—';
   const cls=diff<=-5?'ok-text':diff>=5?'danger-text':'';
-  return `<span class="${cls}">${diff>0?'+':''}${diff}%</span>`;
+  // v8.45: разница в разы (не на проценты) почти всегда значит, что время в самой технологии указано неточно —
+  // явная подсказка прямо у цифры, чтобы не искать причину в человеке.
+  const warn=Math.abs(diff)>=50?`<span class="st-diff-warn" title="${escapeHtml(t('statsDiffWarnTitle'))}">⚠</span>`:'';
+  return `<span class="${cls}">${diff>0?'+':''}${diff}%</span>${warn}`;
+}
+// v8.45: короткая цветная подсказка «что значат проценты» — прямо у таблиц, простыми словами, не мелкой сноской.
+function statsNormLegendHtml(){
+  return `<div class="st-legend">
+    <span class="st-legend-item ok"><i></i>${escapeHtml(t('statsLegendFaster'))}</span>
+    <span class="st-legend-item bad"><i></i>${escapeHtml(t('statsLegendSlower'))}</span>
+    <span class="st-legend-hint">${escapeHtml(t('statsLegendWarnHint'))}</span>
+  </div>`;
 }
 function statsFmtNum(n){return String(Number(n)).replace('.',currentLang==='en'?'.':',')}
 function statsDayLabel(key){const d=new Date(key+'T12:00:00Z');return d.toLocaleDateString(uiDateLocale(),{day:'2-digit',month:'2-digit',timeZone:'UTC'})}
@@ -149,9 +160,10 @@ function renderWorkStats(){
   const shopTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th><th class="n">${escapeHtml(t('statsColTime'))}</th><th class="n">${escapeHtml(t('statsColPace'))}</th><th class="n">${escapeHtml(t('statsColNorm'))}</th><th class="n">${escapeHtml(t('statsColDiff'))}</th><th class="n">${escapeHtml(t('statsColPeople'))}</th></tr></thead><tbody>${a.shopList.map(s=>{const pace=s.qty>0&&s.minutes>0?Math.round(s.minutes/s.qty*10)/10:null,norm=statsNorm(s);return `<tr><td><b>${escapeHtml(s.name)}</b></td><td class="n">${s.qty}</td><td class="n">${s.minutes?escapeHtml(orderTimeText(s.minutes)):'—'}</td><td class="n">${pace!==null?statsFmtNum(pace):'—'}</td><td class="n">${norm!==null?statsFmtNum(norm):'—'}</td><td class="n">${statsDiffHtml(pace,norm)}</td><td class="n">${(()=>{const names=[...s.people].filter(k=>k!=='__restored__').map(k=>{const p=a.peopleList.find(x=>x.key===k);return p?statsPersonLabel(p):''});return statsChipHtml(names.length,names)})()}</td></tr>`}).join('')}</tbody></table></div>`;
   const last=d.marks.slice().sort((x,y)=>String(y.at).localeCompare(String(x.at))).slice(0,40);
   const marksTable=`<div class="st-table-wrap"><table class="st-table"><thead><tr><th>${escapeHtml(t('statsColDate'))}</th><th>${escapeHtml(t('statsColPerson'))}</th><th>${escapeHtml(t('statsColOrder'))}</th><th>${escapeHtml(t('statsColWorkshop'))}</th><th class="n">${escapeHtml(t('statsColQty'))}</th></tr></thead><tbody>${last.map(m=>`<tr class="${m.restored?'restored':''}"><td>${escapeHtml(statsMarkTime(m.at))}</td><td>${escapeHtml(m.name)}</td><td><b>${escapeHtml(m.order)}</b>${m.client?`<small>${escapeHtml(m.client)}</small>`:''}</td><td>${escapeHtml(m.workshop)}</td><td class="n">${m.qty}</td></tr>`).join('')}</tbody></table></div>`;
+  const normLegend=statsNormLegendHtml();
   box.innerHTML=filters+cards
-    +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByPerson'))}</h3>${peopleTable}<p class="st-note">${escapeHtml(t('statsNote'))} ${escapeHtml(t('statsNoteNorm'))}</p></section>`
+    +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByPerson'))}</h3>${normLegend}${peopleTable}<p class="st-note">${escapeHtml(t('statsNote'))}</p></section>`
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByDay'))}</h3>${chart}</section>`
-    +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByWorkshop'))}</h3>${shopTable}</section>`
+    +`<section class="panel st-panel"><h3>${escapeHtml(t('statsByWorkshop'))}</h3>${normLegend}${shopTable}</section>`
     +`<section class="panel st-panel"><h3>${escapeHtml(t('statsMarksList'))}</h3>${marksTable}</section>`;
 }

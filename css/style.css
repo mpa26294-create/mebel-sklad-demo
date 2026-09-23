@@ -4312,6 +4312,14 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 #workstats .st-table small{display:block;color:#8a8470;font-size:11px;margin-top:2px}
 #workstats .st-table tr.restored td{color:#8a8470;font-style:italic}
 #workstats .st-note{margin:12px 0 0;font-size:12px;color:#8a8470;line-height:1.45}
+/* v8.45: цветная подсказка «что значат проценты» — прямо у таблиц, простыми словами */
+#workstats .st-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-bottom:14px;padding:10px 14px;border-radius:12px;background:#faf9f5;border:1px solid #efeadf}
+#workstats .st-legend-item{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#3b3627}
+#workstats .st-legend-item i{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+#workstats .st-legend-item.ok i{background:#287047}
+#workstats .st-legend-item.bad i{background:#c0392b}
+#workstats .st-legend-hint{flex:1 1 260px;font-size:12px;color:#8a8470;line-height:1.4}
+#workstats .st-diff-warn{margin-left:5px;cursor:help}
 #workstats .st-chart{display:flex;align-items:flex-end;gap:6px;height:170px;overflow-x:auto;padding:4px 2px 0}
 #workstats .st-bar{flex:1 0 34px;max-width:64px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;position:relative}
 #workstats .st-bar i{display:block;width:70%;min-height:3px;border-radius:6px 6px 0 0;background:#ff6600}
