@@ -81,12 +81,13 @@ function userPerms(){
 }
 function userCan(permission){return userPerms().has(permission)}
 function userCanSection(sectionId){
+  if(sectionId==='users')return isOwnerUser(); // v8.29: «Пользователи» — отдельно от общей системы ролей, только владельцу
   const key='view.'+sectionId;
   return PERMISSION_KEYS.includes(key)?userCan(key):true;
 }
 // v8.07: куда вести человека, если запрошенный раздел ему недоступен (или при входе): раньше запасным
 // вариантом был жёстко «Склад» — и человек, у которого Склад отключён, всё равно видел его при входе.
-const SECTION_ORDER=['stock','workshops','workstats','orders','technologies','models','refs','activity','history','settings','changelog'];
+const SECTION_ORDER=['stock','workshops','workstats','orders','technologies','models','refs','activity','history','settings','users','changelog'];
 function firstAllowedSection(){return SECTION_ORDER.find(userCanSection)||'stock'}
 // Упрощённый вид рабочего — только если не открыт ни один раздел, кроме Склада и Цехов.
 function userSeesOnlyWorkerSections(){

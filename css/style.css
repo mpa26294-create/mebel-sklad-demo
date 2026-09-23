@@ -4279,6 +4279,8 @@ html:not(.auth-page-locked) body.local-file-mode,body.local-file-mode .app,body.
 
 /* v8.16: экспорт/импорт JSON и «Очистить всё» — только владельцу */
 body.not-owner #dataAdminPanel{display:none!important}
+body.not-owner #usersNavBtn{display:none!important}
+body.not-owner #users{display:none!important}
 
 /* v8.18: кнопка «Остановить» у мастера в блоке «Сейчас работают» */
 .sw-now-stop{margin-left:10px;padding:4px 10px;border-radius:99px;border:1px solid #f0c9bd;background:#fff5f2;color:#b3261e;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
@@ -4335,3 +4337,15 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .quick-actions-tabs{flex-wrap:wrap!important}
 .quick-actions-tabs .quick-tab{flex:1 1 auto;white-space:nowrap}
 .audit-profile-grid.single{grid-template-columns:1fr}
+/* v8.29: раздел «Пользователи» */
+.users-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.users-warn-count{color:#b54708;font-weight:600;font-size:13px}
+.users-list{display:flex;flex-direction:column;gap:10px}
+.users-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.users-row.warn{border-color:#f3c78c;background:#fffaf0}
+.users-row-main{flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:3px}
+.users-row-main small{color:#6b7280;font-size:12px}
+.users-role-badge{padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.users-role-badge.ok{background:#eef2ff;color:#3538cd}
+.users-role-badge.warn{background:#fff1e6;color:#b54708}
+.users-role-badge.owner{background:#eef8f0;color:#1f6b36}
