@@ -2191,11 +2191,16 @@ function productionKpiHtml(o){
   return `<div class="production-kpi-grid">${cards.map(([icon,label,value])=>`<div class="production-kpi"><span>${icon}</span><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}</div>`;
 }
 function openWorkshopFromOrder(orderId,stepIndex,stepName){
+  // v8.48: раньше нужный цех выставлялся через setTimeout ПОСЛЕ switchSection('workshops') — а
+  // switchSection сама сразу же вызывает renderWorkshops(), так что первая отрисовка успевала пройти
+  // с ещё ПРЕЖНИМ выбранным цехом (или вовсе с общим списком), и лишь следующая, отложенная — с нужным.
+  // В худшем случае это могло «застрять» на первом варианте. Теперь всё выставляется ДО switchSection,
+  // одной синхронной цепочкой — лишнего кадра между «неправильно» и «правильно» просто нет.
   workshopFocusOrderId=orderId;workshopFocusStepIndex=Number(stepIndex);
+  selectedWorkshopName=stepName; // не через openWorkshopDetail() — она сбрасывает фокус, который мы только что выставили
   if(typeof closeModal==='function')closeModal();
   if(typeof switchSection==='function')switchSection('workshops');
-  // Не через openWorkshopDetail() — она сбрасывает фокус, который мы только что выставили.
-  setTimeout(()=>{selectedWorkshopName=stepName;renderWorkshops()},0);
+  else if(typeof renderWorkshops==='function')renderWorkshops();
 }
 function productionOperationCompactRowHtml(o,op){
   const pct=productionOpPercent(o,op),status=productionStatusClass(op.status),completed=productionCompletedQty(o,op),total=orderProductQty(o),coverage=productionMaterialCoverage(o,operationMaterials(o,op),completed);
