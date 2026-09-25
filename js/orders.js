@@ -1209,8 +1209,12 @@ function workshopsOverviewHtml(){
     </div>
     ${workshopsBacklogForecastHtml(names)}`;
 }
-function openWorkshopDetail(name){selectedWorkshopName=name;renderWorkshops()}
-function closeWorkshopDetail(){selectedWorkshopName='';renderWorkshops()}
+// v8.30: «Открыть цех →» из карточки заказа — раньше вело в общий цех, и там показывался тот заказ, что случайно
+// оказался «в работе» первым, а не тот, с которого пришли. workshopFocusOrderId/workshopFocusStepIndex запоминают
+// «именно этот заказ и этап», и workshopDetailHtml показывает его карточку, даже если он ещё не запущен.
+let workshopFocusOrderId='',workshopFocusStepIndex=-1;
+function openWorkshopDetail(name){selectedWorkshopName=name;workshopFocusOrderId='';workshopFocusStepIndex=-1;renderWorkshops()}
+function closeWorkshopDetail(){selectedWorkshopName='';workshopFocusOrderId='';workshopFocusStepIndex=-1;renderWorkshops()}
 const expandedWorkshopOps=new Set();
 function toggleWorkshopQueueItem(orderId,stepIndex){
   const key=`${orderId}_${stepIndex}`;
@@ -1572,7 +1576,14 @@ async function recordWorkshopQuickQty(orderId,index,qty){
   await finalizeProductionQuantity(orderId,index,Math.max(1,Math.min(Number(qty)||1,remaining)));
 }
 function workshopDetailHtml(name){
-  const stat=workshopAnalytics(name),activeRows=workshopActiveRows(stat);
+  const stat=workshopAnalytics(name);
+  let activeRows=workshopActiveRows(stat);
+  // v8.30: пришли сюда через «Открыть цех →» из конкретного заказа — показываем его карточку первой, даже если
+  // этап там ещё не запущен (иначе видно было бы случайный «активный» заказ, а не тот, с которого пришли).
+  if(workshopFocusOrderId&&workshopFocusStepIndex>=0){
+    const focusRow=stat.queue.find(row=>String(row.order.id)===String(workshopFocusOrderId)&&Number(row.index)===workshopFocusStepIndex);
+    if(focusRow&&!activeRows.includes(focusRow))activeRows=[focusRow,...activeRows];
+  }
   // v7.82: если в работе больше одного заказа — карточки складываются в столбик (см. .workshop-current-list
   // в css/style.css), каждая с собственной паузой/продолжением и своей "Записать выпуск".
   const currentCards=activeRows.length?activeRows.map(row=>workshopCurrentCardHtml(row)).join(''):workshopCurrentCardHtml(null);
@@ -2165,14 +2176,16 @@ function productionKpiHtml(o){
   const cards=[['📦',t('orderProductCount'),qty],['🧱',t('materialsCount'),matCount],['⏱',t('plannedTime'),orderTimeText(plan)],['⏱',t('actualTime'),orderTimeText(actual)],['📈',t('readiness'),`${pct}%`],['⚠',t('missingMaterialsCount'),missing]];
   return `<div class="production-kpi-grid">${cards.map(([icon,label,value])=>`<div class="production-kpi"><span>${icon}</span><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('')}</div>`;
 }
-function openWorkshopFromOrder(stepName){
+function openWorkshopFromOrder(orderId,stepIndex,stepName){
+  workshopFocusOrderId=orderId;workshopFocusStepIndex=Number(stepIndex);
   if(typeof closeModal==='function')closeModal();
   if(typeof switchSection==='function')switchSection('workshops');
-  setTimeout(()=>openWorkshopDetail(stepName),0);
+  // Не через openWorkshopDetail() — она сбрасывает фокус, который мы только что выставили.
+  setTimeout(()=>{selectedWorkshopName=stepName;renderWorkshops()},0);
 }
 function productionOperationCompactRowHtml(o,op){
   const pct=productionOpPercent(o,op),status=productionStatusClass(op.status),completed=productionCompletedQty(o,op),total=orderProductQty(o),coverage=productionMaterialCoverage(o,operationMaterials(o,op),completed);
-  return `<button type="button" class="production-op-compact ${status}" onclick="openWorkshopFromOrder('${jsStrArg(op.stepName)}')">
+  return `<button type="button" class="production-op-compact ${status}" onclick="openWorkshopFromOrder('${jsStrArg(o.id)}',${op.stepIndex},'${jsStrArg(op.stepName)}')">
     <span class="production-op-compact-icon">${workshopIcon(op.stepName)}</span>
     <span class="production-op-compact-name"><b>${escapeHtml(workshopLabel(op.stepName))}</b><small>${escapeHtml(t('queue'))}: ${escapeHtml(productionQueueState(o.id,op.stepIndex).label)}</small></span>
     <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
