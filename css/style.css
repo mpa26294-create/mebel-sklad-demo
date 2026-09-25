@@ -3702,6 +3702,12 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .shift-toggle-row input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}
 @media(max-width:1080px){.workshop-work-layout{grid-template-columns:1fr}}
 @media(max-width:760px){.workshop-shift-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.workshop-current-head h3{font-size:19px}.workshop-current-progress-num b{font-size:26px}.workshop-material-alert{flex-wrap:wrap}.workshop-material-alert .btn{width:100%}}
+/* v8.49: на узком экране «Продолжить»/«Начать» у заказа в цеху вылезал за край экрана (шапка карточки не
+   переносила кнопку на новую строку, а название заказа не давало ей сжаться) — переноса или прокрутки
+   вбок при этом не было, кнопка была просто не видна и не нажималась. */
+.workshop-current-head{flex-wrap:wrap}
+.workshop-current-head>div:first-child{min-width:0;flex:1 1 220px}
+@media(max-width:480px){.workshop-current-head-actions{width:100%;justify-content:space-between}}
 
 /* Компактный список операций внутри заказа — детали и управление вынесены в раздел "Цеха". */
 .production-compact-hint{padding:9px 12px;border:1px dashed #d8dde5;border-radius:10px;background:#fafbfc;color:#8490a3;font-size:11px}
