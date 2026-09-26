@@ -1031,21 +1031,6 @@ function workshopsTopStatsHtml(){
     <div class="workshops-top-stat"><small>${escapeHtml(t('needsDecisionLabel'))}</small><b>${decisions} ${escapeHtml(decisions===1?t('workshopWordOne'):t('workshopWordMany'))}</b><span>${escapeHtml(t('needsDecisionHint'))}</span></div>
   </div>`;
 }
-// v8.50: раньше загрузка на 7 дней жила в отдельной панели ниже (workshopsBacklogForecastHtml) — на
-// главной странице получалось 5 разных панелей, во многом повторяющих друг друга. Теперь это короткая
-// пометка прямо в строке цеха, и только когда это РЕАЛЬНАЯ проблема (перегруз) — не на каждый цех.
-function workshopBacklogOverrunText(name){
-  const stat=workshopAnalytics(name);
-  if(!stat.queue.length)return '';
-  const schedule=shiftScheduleFor(name);
-  const dailyMinutes=Math.max(0,timeStrToMinutes(schedule.endTime)-timeStrToMinutes(schedule.startTime));
-  const weeklyCapacity=dailyMinutes*(schedule.workDays||DEFAULT_SHIFT_SCHEDULE.workDays).length;
-  if(!weeklyCapacity)return '';
-  const overrunMinutes=Math.max(0,stat.plan-weeklyCapacity);
-  if(overrunMinutes<=0)return '';
-  const overDays=(overrunMinutes/dailyMinutes).toFixed(1).replace('.',currentLang==='en'?'.':',');
-  return `+${overDays} ${t('daysOverCapacitySuffix')}`;
-}
 // Одна строка на цех: статус учитывает ТОЛЬКО реальное состояние сессии (running/paused), а не
 // статус заказа — заказ может числиться "в производстве" сколько угодно дней подряд.
 function workshopMasterRowHtml(name){
@@ -1070,14 +1055,12 @@ function workshopMasterRowHtml(name){
     const curOp=productionCurrentOp(current.order);
     if(curOp&&Number(curOp.stepIndex)<Number(current.index))subText=`${t('nextOrderPrefix')} ${current.order.number} ${t('afterWorkshopWord')} ${workshopLabel(curOp.stepName)}`;
   }
-  const overrunText=workshopBacklogOverrunText(name);
   return `<button type="button" class="workshop-master-row" onclick="openWorkshopDetail('${jsStrArg(name)}')">
     <span class="workshop-master-row-icon">${workshopIcon(name)}</span>
     <span class="workshop-master-row-main"><b>${escapeHtml(workshopLabel(name))}</b><small>${lineText}</small></span>
     <span class="production-status-pill ${pillCls}">${escapeHtml(statusText)}</span>
     <span class="workshop-master-row-queue">${queue.length} ${escapeHtml(t('inQueueShort'))}</span>
     <span class="workshop-master-row-note ${pillCls==='danger'?'danger-text':''}">${escapeHtml(subText)}</span>
-    ${overrunText?`<span class="workshop-master-row-overrun danger-text" title="${escapeHtml(t('backlog7DaysHint'))}">⚠ ${escapeHtml(overrunText)}</span>`:''}
     <span class="workshop-list-row-arrow">›</span>
   </button>`;
 }
