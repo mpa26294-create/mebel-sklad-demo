@@ -3493,6 +3493,7 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-list-row-arrow{color:#98a2b3;font-size:16px;text-align:center}
 .workshop-empty{padding:36px 16px;text-align:center;color:#8490a3;font-size:12px;border:1px dashed #e5e9f0;border-radius:14px}
 .workshop-detail-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.workshop-show-queue-btn{margin-top:14px}
 .workshop-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:12.5px;font-weight:650;cursor:pointer;white-space:nowrap}
 .workshop-detail-sep{width:1px;height:16px;background:#e5e9f0;flex-shrink:0}
 .workshop-detail-head h3{margin:0;color:#101828;font-size:16px}

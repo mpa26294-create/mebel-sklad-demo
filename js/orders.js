@@ -1031,35 +1031,20 @@ function workshopsTopStatsHtml(){
     <div class="workshops-top-stat"><small>${escapeHtml(t('needsDecisionLabel'))}</small><b>${decisions} ${escapeHtml(decisions===1?t('workshopWordOne'):t('workshopWordMany'))}</b><span>${escapeHtml(t('needsDecisionHint'))}</span></div>
   </div>`;
 }
-// Единственный самый срочный алерт — не список повторяющихся предупреждений по каждому цеху, а
-// ОДНА проблема, которая реально блокирует работу прямо сейчас (материала не хватит даже на 1 ед.).
-// Среди нескольких таких проблем выбирается заказ с ближайшим сроком сдачи.
-function workshopsMostUrgentIssue(){
-  let best=null;
-  allWorkshopNames().forEach(name=>{
-    productionQueueForWorkshop(name).forEach(row=>{
-      const op=productionOp(row.order,row.index);
-      if(!op||op.status==='done'||op.status==='cancelled')return;
-      const limiting=workshopLimitingMaterial(row.order,op);
-      if(!limiting||limiting.enough>0)return;
-      if(!best||String(rowDueDate(row)||'9999')<String(rowDueDate(best.row)||'9999'))best={row,op,limiting,workshopName:name};
-    });
-  });
-  return best;
-}
-function workshopsMainAlertHtml(){
-  const issue=workshopsMostUrgentIssue();
-  if(!issue)return '';
-  const {row,op,limiting,workshopName}=issue,o=row.order,m=limiting.state.av.mat,matName=m?materialTitle(m):t('deletedMaterialWord');
-  const title=String(t('workshopMainAlertTitle')).replace('{workshop}',workshopLabel(workshopName)).replace('{material}',matName).replace('{order}',o.number||'—');
-  const body=String(t('workshopMainAlertBody')).replace('{enough}',limiting.enough).replace('{total}',limiting.total);
-  const sessionNote=op.status==='paused'?` ${escapeHtml(t('workshopMainAlertSessionClosed'))}`:'';
-  const action=m?`<button class="btn primary" type="button" onclick="openProductionMaterialPurchase('${o.id}','${limiting.item.materialId}')">${escapeHtml(t('openPurchaseBtn'))}</button>`:'';
-  return `<div class="workshop-main-alert">
-    <span class="workshop-main-alert-icon">!</span>
-    <div class="workshop-main-alert-body"><b>${escapeHtml(title)}</b><p>${escapeHtml(body)}${sessionNote}</p></div>
-    ${action}
-  </div>`;
+// v8.50: раньше загрузка на 7 дней жила в отдельной панели ниже (workshopsBacklogForecastHtml) — на
+// главной странице получалось 5 разных панелей, во многом повторяющих друг друга. Теперь это короткая
+// пометка прямо в строке цеха, и только когда это РЕАЛЬНАЯ проблема (перегруз) — не на каждый цех.
+function workshopBacklogOverrunText(name){
+  const stat=workshopAnalytics(name);
+  if(!stat.queue.length)return '';
+  const schedule=shiftScheduleFor(name);
+  const dailyMinutes=Math.max(0,timeStrToMinutes(schedule.endTime)-timeStrToMinutes(schedule.startTime));
+  const weeklyCapacity=dailyMinutes*(schedule.workDays||DEFAULT_SHIFT_SCHEDULE.workDays).length;
+  if(!weeklyCapacity)return '';
+  const overrunMinutes=Math.max(0,stat.plan-weeklyCapacity);
+  if(overrunMinutes<=0)return '';
+  const overDays=(overrunMinutes/dailyMinutes).toFixed(1).replace('.',currentLang==='en'?'.':',');
+  return `+${overDays} ${t('daysOverCapacitySuffix')}`;
 }
 // Одна строка на цех: статус учитывает ТОЛЬКО реальное состояние сессии (running/paused), а не
 // статус заказа — заказ может числиться "в производстве" сколько угодно дней подряд.
@@ -1085,12 +1070,14 @@ function workshopMasterRowHtml(name){
     const curOp=productionCurrentOp(current.order);
     if(curOp&&Number(curOp.stepIndex)<Number(current.index))subText=`${t('nextOrderPrefix')} ${current.order.number} ${t('afterWorkshopWord')} ${workshopLabel(curOp.stepName)}`;
   }
+  const overrunText=workshopBacklogOverrunText(name);
   return `<button type="button" class="workshop-master-row" onclick="openWorkshopDetail('${jsStrArg(name)}')">
     <span class="workshop-master-row-icon">${workshopIcon(name)}</span>
     <span class="workshop-master-row-main"><b>${escapeHtml(workshopLabel(name))}</b><small>${lineText}</small></span>
     <span class="production-status-pill ${pillCls}">${escapeHtml(statusText)}</span>
     <span class="workshop-master-row-queue">${queue.length} ${escapeHtml(t('inQueueShort'))}</span>
     <span class="workshop-master-row-note ${pillCls==='danger'?'danger-text':''}">${escapeHtml(subText)}</span>
+    ${overrunText?`<span class="workshop-master-row-overrun danger-text" title="${escapeHtml(t('backlog7DaysHint'))}">⚠ ${escapeHtml(overrunText)}</span>`:''}
     <span class="workshop-list-row-arrow">›</span>
   </button>`;
 }
@@ -1101,42 +1088,11 @@ function workshopsMasterListHtml(names){
     <div class="workshops-master-list">${names.map(workshopMasterRowHtml).join('')}</div>
   </div>`;
 }
-// Правая колонка: карточка на каждую строку "на паузе" — явно объясняет, заказ это без сессии сегодня
-// или сессия, которую реально приостановили и можно продолжить.
-function workshopContinuationCardHtml(row){
-  const o=row.order,op=row.op,workshopName=row.workshopName;
-  const limiting=workshopsRowIsMaterialBlocked(row);
-  const workedToday=opWorkedMinutesToday(o,op.stepIndex);
-  let bodyText,tagHtml='',actionHtml;
-  if(limiting){
-    bodyText=t('continuationOrderNoSessionText');
-    tagHtml=`<span class="continuation-tag danger">${escapeHtml(t('workshopRiskNoMaterial'))}</span>`;
-    const m=limiting.state.av.mat;
-    actionHtml=m?`<button class="btn small primary" type="button" onclick="openProductionMaterialPurchase('${o.id}','${limiting.item.materialId}')">${escapeHtml(t('openPurchaseBtn'))}</button>`:`<button class="btn small" type="button" onclick="openWorkshopDetail('${jsStrArg(workshopName)}')">${escapeHtml(t('openBtn'))}</button>`;
-  }else if(workedToday>0){
-    // "0 минут сегодня" не показываем как будто это ошибка/активность — только реально отработанное.
-    bodyText=String(t('continuationManualPauseText')).replace('{time}',op.pausedAt?productionStartedAtText(op.pausedAt):'—').replace('{minutes}',workedToday);
-    actionHtml=`<button class="btn small" type="button" onclick="openWorkshopDetail('${jsStrArg(workshopName)}')">${escapeHtml(t('openBtn'))}</button>`;
-  }else{
-    bodyText=t('continuationOrderNoSessionText');
-    actionHtml=`<button class="btn small" type="button" onclick="openWorkshopDetail('${jsStrArg(workshopName)}')">${escapeHtml(t('openBtn'))}</button>`;
-  }
-  return `<div class="continuation-card">
-    <div class="continuation-card-head"><b>${escapeHtml(workshopLabel(workshopName))} · ${escapeHtml(o.number||'—')}</b>${tagHtml}</div>
-    <p class="continuation-card-text">${escapeHtml(bodyText)}</p>
-    <div class="continuation-card-actions">${actionHtml}</div>
-  </div>`;
-}
-function workshopsContinuationPanelHtml(){
-  const rows=workshopsPausedRows();
-  const body=rows.length?rows.map(workshopContinuationCardHtml).join(''):`<div class="workshop-empty">${escapeHtml(t('noContinuationNeeded'))}</div>`;
-  return `<div class="panel continuation-panel">
-    <div class="continuation-panel-head"><h3>${escapeHtml(t('continuationTitle'))}</h3><small>${escapeHtml(t('continuationSubtitle'))}</small></div>
-    <div class="continuation-list">${body}</div>
-  </div>`;
-}
-// Компактный список из максимум 5 конкретных действий: материалы к заказу, риск срока, свободный цех.
-function workshopsUpcomingDecisionsHtml(){
+// v8.50: раньше это были три разные панели (алерт про нехватку материала, «на паузе — можно продолжить»,
+// «ближайшие решения») — во многом об одном и том же. Теперь один список «Что делать сейчас», отсортированный
+// по важности: нельзя выполнить (материала не хватит) → риск не успеть к сроку → можно продолжить →
+// цех свободен. Максимум 6 строк — если проблем больше, самые важные всё равно наверху.
+function workshopsActionListHtml(){
   const items=[];
   const seenMaterials=new Set();
   allWorkshopNames().forEach(name=>{
@@ -1144,70 +1100,48 @@ function workshopsUpcomingDecisionsHtml(){
       const op=productionOp(row.order,row.index);
       if(!op||op.status==='done'||op.status==='cancelled')return;
       const limiting=workshopLimitingMaterial(row.order,op);
-      if(!limiting)return;
+      if(!limiting||limiting.enough>0)return;
       if(seenMaterials.has(limiting.item.materialId))return;
       seenMaterials.add(limiting.item.materialId);
       const m=limiting.state.av.mat;
-      items.push({cls:'danger',text:`${t('orderMaterialPrefix')} ${m?materialTitle(m):t('deletedMaterialWord')}`,sub:`${t('shortageForLabel')} ${row.order.number} · ${workshopLabel(name)}`,actionLabel:t('toOrderBtn'),action:m?`openProductionMaterialPurchase('${row.order.id}','${limiting.item.materialId}')`:`openWorkshopDetail('${jsStrArg(name)}')`});
+      items.push({pr:0,cls:'danger',text:`${t('orderMaterialPrefix')} ${m?materialTitle(m):t('deletedMaterialWord')}`,sub:`${t('shortageForLabel')} ${row.order.number} · ${workshopLabel(name)}`,actionLabel:t('toOrderBtn'),action:m?`openProductionMaterialPurchase('${row.order.id}','${limiting.item.materialId}')`:`openWorkshopDetail('${jsStrArg(name)}')`});
     });
   });
   allWorkshopNames().forEach(name=>{
     const queue=productionQueueForWorkshop(name),etaMap=workshopQueueEtaMap(queue);
     queue.forEach(row=>{
       const risk=workshopRowRisk(row,etaMap);
-      if(risk&&risk.text===t('workshopRiskDeadline'))items.push({cls:'warn',text:`${t('checkOrderPrefix')} ${row.order.number}`,sub:`${row.order.client||''} · ${risk.text}`,actionLabel:t('openBtn'),action:`goToOrderFromMaterial(event,'${row.order.id}')`});
+      if(risk&&risk.text===t('workshopRiskDeadline'))items.push({pr:1,cls:'warn',text:`${t('checkOrderPrefix')} ${row.order.number}`,sub:`${row.order.client||''} · ${risk.text}`,actionLabel:t('openBtn'),action:`goToOrderFromMaterial(event,'${row.order.id}')`});
     });
   });
-  allWorkshopNames().forEach(name=>{
-    if(!productionQueueForWorkshop(name).length)items.push({cls:'',text:`${t('assignWorkPrefix')} ${workshopLabel(name)}`,sub:t('workshopFreeLine'),actionLabel:t('planBtn'),action:`switchSection('orders')`});
+  workshopsPausedRows().forEach(row=>{
+    if(workshopsRowIsMaterialBlocked(row))return; // это уже показано выше как нехватка материала
+    const workedToday=opWorkedMinutesToday(row.order,row.op.stepIndex);
+    const sub=workedToday>0?String(t('continuationManualPauseText')).replace('{time}',row.op.pausedAt?productionStartedAtText(row.op.pausedAt):'—').replace('{minutes}',workedToday):t('continuationOrderNoSessionText');
+    items.push({pr:2,cls:'',text:`${t('continueOrderPrefix')} ${row.order.number} · ${workshopLabel(row.workshopName)}`,sub,actionLabel:t('openBtn'),action:`openWorkshopDetail('${jsStrArg(row.workshopName)}')`});
   });
-  const top=items.slice(0,5);
+  allWorkshopNames().forEach(name=>{
+    if(!productionQueueForWorkshop(name).length)items.push({pr:3,cls:'',text:`${t('assignWorkPrefix')} ${workshopLabel(name)}`,sub:t('workshopFreeLine'),actionLabel:t('planBtn'),action:`switchSection('orders')`});
+  });
+  items.sort((a,b)=>a.pr-b.pr);
+  const top=items.slice(0,6);
   const body=top.length?top.map(it=>`<div class="upcoming-decision-row"><span class="upcoming-decision-dot ${it.cls}"></span><div class="upcoming-decision-text"><b>${escapeHtml(it.text)}</b><small>${escapeHtml(it.sub)}</small></div><button class="btn small" type="button" onclick="${it.action}">${escapeHtml(it.actionLabel)}</button></div>`).join(''):`<div class="workshop-empty">${escapeHtml(t('noDecisionsNeeded'))}</div>`;
   return `<div class="panel upcoming-decisions-panel">
-    <div class="continuation-panel-head"><h3>${escapeHtml(t('upcomingDecisionsTitle'))}</h3><small>${escapeHtml(t('upcomingDecisionsHint'))}</small></div>
+    <div class="continuation-panel-head"><h3>${escapeHtml(t('actionListTitle'))}</h3><small>${escapeHtml(t('actionListHint'))}</small></div>
     <div class="upcoming-decisions-list">${body}</div>
   </div>`;
 }
-// Прогноз очереди на 7 дней по фактическому графику смены (а не проценты загрузки 1000%+, которые
-// никому ничего не говорили). Фонд считается из реальных настроек: (конец-начало)×число рабочих дней.
-function workshopsBacklogForecastHtml(names){
-  if(!names.length)return '';
-  const rows=names.map(name=>{
-    const stat=workshopAnalytics(name); // те же план/очередь, что и раньше — без изменений
-    const schedule=shiftScheduleFor(name);
-    const dailyMinutes=Math.max(0,timeStrToMinutes(schedule.endTime)-timeStrToMinutes(schedule.startTime));
-    const weeklyCapacity=dailyMinutes*(schedule.workDays||DEFAULT_SHIFT_SCHEDULE.workDays).length;
-    let text,cls;
-    if(!stat.queue.length){text=t('workshopFreeTag');cls='';}
-    else if(!weeklyCapacity){text=`${stat.queue.length} ${t('inQueueShort')} · ${orderTimeText(stat.plan)} · ${t('noForecastDataText')}`;cls='';}
-    else{
-      const overrunMinutes=Math.max(0,stat.plan-weeklyCapacity);
-      if(overrunMinutes>0){
-        const overDays=overrunMinutes/dailyMinutes;
-        const daysText=overDays.toFixed(1).replace('.',currentLang==='en'?'.':',');
-        text=`+${daysText} ${t('daysOverCapacitySuffix')}`;cls='danger';
-      }else{
-        const ratio=stat.plan/weeklyCapacity;
-        if(ratio>=0.85){text=t('nearlyFullText');cls='warn';}
-        else{text=t('freeCapacityText');cls='';}
-      }
-    }
-    return {name,text,cls};
-  });
-  return `<div class="panel workshops-backlog-panel">
-    <div class="workshops-backlog-head"><h3>${escapeHtml(t('backlog7DaysTitle'))}</h3><small>${escapeHtml(t('backlog7DaysHint'))}</small></div>
-    <div class="workshops-backlog-list">${rows.map(r=>`<button type="button" class="workshops-backlog-row ${r.cls}" onclick="openWorkshopDetail('${jsStrArg(r.name)}')"><span class="workshops-backlog-icon">${workshopIcon(r.name)}</span><span class="workshops-backlog-name">${escapeHtml(workshopLabel(r.name))}</span><span class="workshops-backlog-note">${escapeHtml(r.text)}</span></button>`).join('')}</div>
-  </div>`;
-}
+// v8.50: было 5 панелей (топ-цифры, алерт, список цехов, «на паузе», «ближайшие решения», прогноз на
+// 7 дней) — часть повторяла друг друга, часть почти всегда пустовала. Теперь три понятных блока: цифры
+// периода, единый список «Что делать сейчас» и список цехов (загрузка — короткой пометкой в самой строке).
 function workshopsOverviewHtml(){
   const names=allWorkshopNames();
   if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('noWorkshopsYet'))}</div>`;
-  return `${workshopsPeriodToggleHtml()}${workshopsTopStatsHtml()}${workshopsMainAlertHtml()}
+  return `${workshopsPeriodToggleHtml()}${workshopsTopStatsHtml()}
     <div class="workshops-overview-layout">
       <div class="workshops-overview-main">${workshopsMasterListHtml(names)}</div>
-      <div class="workshops-overview-side">${workshopsContinuationPanelHtml()}${workshopsUpcomingDecisionsHtml()}</div>
-    </div>
-    ${workshopsBacklogForecastHtml(names)}`;
+      <div class="workshops-overview-side">${workshopsActionListHtml()}</div>
+    </div>`;
 }
 // v8.47: «Открыть цех →» из карточки заказа — раньше вело в общий цех, и там показывался тот заказ, что случайно
 // оказался «в работе» первым, а не тот, с которого пришли. workshopFocusOrderId/workshopFocusStepIndex запоминают
@@ -1585,15 +1519,25 @@ async function recordWorkshopQuickQty(orderId,index,qty){
   if(remaining<=0)return;
   await finalizeProductionQuantity(orderId,index,Math.max(1,Math.min(Number(qty)||1,remaining)));
 }
+// v8.50: раньше «Открыть цех →» из заказа добавлял карточку этого заказа В ОБЩУЮ очередь цеха — рядом
+// со всеми остальными активными заказами (см. историю v8.47/48). По просьбе пользователя это отдельный,
+// узкий экран: только карточка ЭТОГО заказа на этом этапе, без чужих заказов. Ссылка внизу открывает
+// обычный вид очереди цеха, если нужен более широкий контекст.
+function workshopOrderFocusHtml(row,name){
+  const op=productionOp(row.order,row.index);
+  return `<div class="workshop-detail-head">
+      <button type="button" class="workshop-back-link" onclick="closeWorkshopDetail()">${escapeHtml(t('backToWorkshops'))}</button>
+      <span class="workshop-detail-sep"></span>
+      <h3>${workshopIcon(name)} ${escapeHtml(workshopLabel(name))}</h3>
+    </div>
+    <div class="workshop-current-list">${workshopCurrentCardHtml(row)}</div>
+    ${op?workshopCurrentMaterialsHtml(row.order,op,''):''}
+    <button type="button" class="btn small workshop-show-queue-btn" onclick="clearWorkshopOrderFocus('${jsStrArg(name)}')">${escapeHtml(t('workshopShowFullQueueBtn'))} →</button>`;
+}
+function clearWorkshopOrderFocus(name){workshopFocusOrderId='';workshopFocusStepIndex=-1;selectedWorkshopName=name;renderWorkshops()}
 function workshopDetailHtml(name){
   const stat=workshopAnalytics(name);
-  let activeRows=workshopActiveRows(stat);
-  // v8.47: пришли сюда через «Открыть цех →» из конкретного заказа — показываем его карточку первой, даже если
-  // этап там ещё не запущен (иначе видно было бы случайный «активный» заказ, а не тот, с которого пришли).
-  if(workshopFocusOrderId&&workshopFocusStepIndex>=0){
-    const focusRow=stat.queue.find(row=>String(row.order.id)===String(workshopFocusOrderId)&&Number(row.index)===workshopFocusStepIndex);
-    if(focusRow&&!activeRows.includes(focusRow))activeRows=[focusRow,...activeRows];
-  }
+  const activeRows=workshopActiveRows(stat);
   // v7.82: если в работе больше одного заказа — карточки складываются в столбик (см. .workshop-current-list
   // в css/style.css), каждая с собственной паузой/продолжением и своей "Записать выпуск".
   const currentCards=activeRows.length?activeRows.map(row=>workshopCurrentCardHtml(row)).join(''):workshopCurrentCardHtml(null);
@@ -2051,6 +1995,17 @@ function renderWorkshops(){
     if(desc)desc.textContent='Ваши задачи по цеху';
     return;
   }
+  // v8.50: пришли через «Открыть цех →» из конкретного заказа — отдельный узкий экран с ЕГО карточкой,
+  // не общая очередь. Если заказ/этап за это время пропал (выполнен, удалён) — сам собой показываем
+  // обычную очередь, а не пустой экран.
+  const focusOrder=workshopFocusOrderId&&workshopFocusStepIndex>=0?(data.orders||[]).find(x=>String(x.id)===String(workshopFocusOrderId)):null;
+  const focusOp=focusOrder?productionOp(focusOrder,workshopFocusStepIndex):null;
+  if(focusOrder&&focusOp){
+    el.innerHTML=workshopOrderFocusHtml({order:focusOrder,index:workshopFocusStepIndex},selectedWorkshopName);
+    if(desc)desc.textContent=t('workshopMasterSubtitle');
+    return;
+  }
+  if(workshopFocusOrderId){workshopFocusOrderId='';workshopFocusStepIndex=-1} // заказ/этап пропал — не застреваем на фокусе
   el.innerHTML=selectedWorkshopName?workshopDetailHtml(selectedWorkshopName):workshopsOverviewHtml();
   // v7.77: у детального экрана цеха теперь свой подзаголовок ("рабочее место мастера") — раньше
   // здесь просто повторялось название цеха ещё раз, хотя оно уже видно в хлебной крошке.
