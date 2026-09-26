@@ -57,7 +57,7 @@ function renderWorkerTabbar(activeId){
   });
   document.body.classList.toggle('worker-no-tabbar',shown<2);
 }
-function switchSection(sectionId){
+function switchSection(sectionId,fromNav){
   if(!sectionId)return false;
   // v7.41: рабочий режим — сотруднику из списка «Упрощённый доступ» (Настройки) доступны только
   // Склад и Цеха; переход в любой другой раздел (в т.ч. по прямой ссылке или через меню профиля)
@@ -68,6 +68,10 @@ function switchSection(sectionId){
   if(typeof userCanSection==='function'&&!userCanSection(sectionId))sectionId=typeof firstAllowedSection==='function'?firstAllowedSection():'stock';
   const section=document.getElementById(sectionId);
   if(!section)return false;
+  // v8.53: клик по «Цеха» в меню — всегда общий список цехов, даже если до этого были в конкретном цехе
+  // или в карточке заказа. Только по клику из меню (fromNav) — переходы из кода (например «Открыть цех →»
+  // из заказа) сами явно выставляют нужный цех/заказ и не должны сбрасываться.
+  if(sectionId==='workshops'&&fromNav&&typeof resetWorkshopsToOverview==='function')resetWorkshopsToOverview();
   document.querySelectorAll('#mainNav button').forEach(x=>x.classList.toggle('active',x.dataset.section===sectionId));
   renderWorkerTabbar(sectionId);
   updateSectionTitle(sectionId);
@@ -94,14 +98,14 @@ function renderNav(){
   document.getElementById('mainNav').onclick=e=>{
     const b=e.target.closest('button[data-section]');
     if(!b || b.classList.contains('disabled')) return;
-    switchSection(b.dataset.section);
+    switchSection(b.dataset.section,true);
   };
 }
 
 document.addEventListener('click',event=>{
   const b=event.target.closest('#mainNav button[data-section]');
   if(!b||b.classList.contains('disabled'))return;
-  switchSection(b.dataset.section);
+  switchSection(b.dataset.section,true);
 },true);
 
 function hardenSearchAutofill(){

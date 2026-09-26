@@ -1130,8 +1130,44 @@ function workshopsOverviewHtml(){
 // оказался «в работе» первым, а не тот, с которого пришли. workshopFocusOrderId/workshopFocusStepIndex запоминают
 // «именно этот заказ и этап», и workshopDetailHtml показывает его карточку, даже если он ещё не запущен.
 let workshopFocusOrderId='',workshopFocusStepIndex=-1;
-function openWorkshopDetail(name){selectedWorkshopName=name;workshopFocusOrderId='';workshopFocusStepIndex=-1;renderWorkshops()}
-function closeWorkshopDetail(){selectedWorkshopName='';workshopFocusOrderId='';workshopFocusStepIndex=-1;renderWorkshops()}
+// v8.53: кнопка «Назад» браузера теперь работает внутри цехов (список цеха ↔ карточка заказа ↔ общий
+// список) — состояние экрана (ws/wso/wsi в query-параметрах) кладём в историю тем же способом, что и
+// ?task= у рабочего режима (см. setSimpleSelectedTaskKey), просто с тремя параметрами вместо одного.
+function syncWorkshopUrl(name,orderId,stepIndex){
+  try{
+    const url=new URL(location.href);
+    if(name)url.searchParams.set('ws',name);else url.searchParams.delete('ws');
+    if(orderId){url.searchParams.set('wso',orderId);url.searchParams.set('wsi',stepIndex)}
+    else{url.searchParams.delete('wso');url.searchParams.delete('wsi')}
+    history.pushState({},'',url);
+  }catch(e){}
+}
+function openWorkshopDetail(name){selectedWorkshopName=name;workshopFocusOrderId='';workshopFocusStepIndex=-1;syncWorkshopUrl(name,'',-1);renderWorkshops()}
+function closeWorkshopDetail(){selectedWorkshopName='';workshopFocusOrderId='';workshopFocusStepIndex=-1;syncWorkshopUrl('','',-1);renderWorkshops()}
+// По клику в верхнем меню «Цеха» — всегда общий список, даже если до этого были в конкретном цехе или
+// в карточке заказа (по просьбе пользователя). Ничего не делает, если и так уже на общем списке — чтобы
+// не плодить лишние записи в истории браузера при обычном клике по разделу.
+function resetWorkshopsToOverview(){
+  if(!selectedWorkshopName&&!workshopFocusOrderId)return;
+  selectedWorkshopName='';workshopFocusOrderId='';workshopFocusStepIndex=-1;
+  syncWorkshopUrl('','',-1);
+}
+// Кнопка «Назад»/«Вперёд» браузера — читаем то же состояние обратно из URL. Как и у рабочего режима,
+// действует, только пока реально открыт раздел "Цеха" (иначе получится, что «Назад» с другого раздела
+// вдруг перекидывает в цеха) и не в рабочем режиме (там свой обработчик popstate, см. выше).
+function handleWorkshopsPopState(){
+  if(document.body.classList.contains('worker-mode'))return;
+  const section=document.getElementById('workshops');
+  if(!section||!section.classList.contains('active'))return;
+  let params;
+  try{params=new URLSearchParams(location.search)}catch(e){return}
+  const wso=params.get('wso')||'';
+  selectedWorkshopName=params.get('ws')||'';
+  workshopFocusOrderId=wso;
+  workshopFocusStepIndex=wso?Number(params.get('wsi')||-1):-1;
+  if(typeof renderWorkshops==='function')renderWorkshops();
+}
+if(typeof window!=='undefined')window.addEventListener('popstate',handleWorkshopsPopState);
 // v7.77: раздел "Цеха" переработан в рабочее место мастера (по ТЗ пользователя) — раньше детальный
 // экран цеха показывал сразу всё: большую сводку с "Загрузка 2296%" (непонятно сотруднику), плановое/
 // фактическое время, полную очередь с развёрнутыми карточками операций (списания, комментарии,
@@ -1464,7 +1500,7 @@ function workshopOrderFocusHtml(row,name){
     ${op?workshopCurrentMaterialsHtml(row.order,op,''):''}
     <button type="button" class="btn small workshop-show-queue-btn" onclick="clearWorkshopOrderFocus('${jsStrArg(name)}')">${escapeHtml(t('workshopShowFullQueueBtn'))} →</button>`;
 }
-function clearWorkshopOrderFocus(name){workshopFocusOrderId='';workshopFocusStepIndex=-1;selectedWorkshopName=name;renderWorkshops()}
+function clearWorkshopOrderFocus(name){workshopFocusOrderId='';workshopFocusStepIndex=-1;selectedWorkshopName=name;syncWorkshopUrl(name,'',-1);renderWorkshops()}
 // v8.52: по просьбе пользователя список цеха — сам по себе компактный (только строка на заказ), а
 // карточка "в работе" с кнопками Начать/Пауза/Записать выпуск открывается ОТДЕЛЬНО, по клику на нужный
 // заказ (см. workshopQueueMiniRowHtml → openWorkshopFromOrder → workshopOrderFocusHtml). Раньше эта
@@ -2077,6 +2113,7 @@ function openWorkshopFromOrder(orderId,stepIndex,stepName){
   // одной синхронной цепочкой — лишнего кадра между «неправильно» и «правильно» просто нет.
   workshopFocusOrderId=orderId;workshopFocusStepIndex=Number(stepIndex);
   selectedWorkshopName=stepName; // не через openWorkshopDetail() — она сбрасывает фокус, который мы только что выставили
+  syncWorkshopUrl(stepName,orderId,workshopFocusStepIndex);
   if(typeof closeModal==='function')closeModal();
   if(typeof switchSection==='function')switchSection('workshops');
   else if(typeof renderWorkshops==='function')renderWorkshops();
