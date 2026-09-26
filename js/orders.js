@@ -1505,14 +1505,37 @@ function workshopCurrentCardHtml(row){
   if(!row)return `<div class="workshop-current-card empty"><div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div></div>`;
   const o=row.order,op=productionOp(o,row.index);
   if(!op)return '';
-  const completed=productionCompletedQty(o,op),total=orderProductQty(o),pct=productionOpPercent(o,op),remaining=Math.max(0,total-completed);
+  const hasSubs=typeof hasSubOps==='function'&&hasSubOps(o,op.stepIndex);
+  const total=orderProductQty(o);
+  // v8.58: пользователь справедливо спросил, откуда сразу два разных числа на экране — "30" тут и
+  // "Комплектов готово: 29" в панели операций ниже (см. subOpsPanelHtml). Для этапа с операциями (боковины/
+  // спинка и т.п.) единственно верное "готово" — это subOpKits (минимум по всем операциям: комплект не
+  // считается, пока не сделаны ВСЕ его части), а не сырое op.completedQty — оно может на 1-2 отличаться,
+  // если когда-то был классический выпуск ДО того, как этап разбили на операции. completedQty по-прежнему
+  // используется для списания материалов и т.п. — здесь меняется только то, что показываем пользователю.
+  const completed=hasSubs&&typeof subOpKits==='function'?subOpKits(o,op):productionCompletedQty(o,op);
+  const pct=total?Math.round(completed/total*100):0,remaining=Math.max(0,total-completed);
   const status=productionStatusClass(op.status);
   const allSteps=orderSteps(o),activeSteps=allSteps.filter(s=>Number(s.minutes||0)>0);
   const curIdx=activeSteps.findIndex(s=>s===allSteps[op.stepIndex]);
   const nextStep=curIdx>=0?activeSteps[curIdx+1]:null;
   const posText=`${t('operationWord')} ${curIdx+1} ${t('of')} ${activeSteps.length}${nextStep?` · ${t('nextStageLabel')}: ${escapeHtml(workshopLabel(nextStep.name))}`:''}`;
+  // Какую именно операцию этапа сейчас отмечают (боковины/спинка/...) — раньше в заголовке было видно
+  // только название ЦЕХА ("Поклейка"), а не то, что конкретно сейчас делают внутри него.
+  // Пока никто явно не выбрал, какую именно операцию делает (боковины/спинка/...), selectedSubId()
+  // возвращает пусто, если открытых операций больше одной — тогда честнее показать ОБА названия сразу
+  // ("Поклейка · боковины / спинка"), а не молчать, будто у этапа одна нераздельная задача.
+  const curSubName=hasSubs&&typeof stageSubOps==='function'?(()=>{
+    const subs=stageSubOps(o,op.stepIndex);
+    const selId=typeof selectedSubId==='function'?selectedSubId(o,op.stepIndex,op):'';
+    const sel=selId?subs.find(s=>String(s.id)===String(selId)):null;
+    return sel?sel.name:subs.map(s=>s.name).join(' / ');
+  })():'';
   const canRecord=op.status!=='done'&&op.status!=='cancelled'&&remaining>0;
-  const chips=[1,5,10,20].map(n=>`<button class="btn workshop-qty-chip" type="button" ${!canRecord||n>remaining?'disabled':''} onclick="recordWorkshopQuickQty('${o.id}',${op.stepIndex},${n})">+${n}</button>`).join('');
+  // Быстрые кнопки +1/+5/+10/+20 записывают выпуск ЦЕЛОГО этапа одним нажатием — для этапа с операциями
+  // это неоднозначно (к какой из операций отнести количество?), и однозначный путь — единственная кнопка
+  // "Записать выпуск" ниже, которая сама открывает окно с выбором операции (см. completeProductionOperation).
+  const chips=hasSubs?'':[1,5,10,20].map(n=>`<button class="btn workshop-qty-chip" type="button" ${!canRecord||n>remaining?'disabled':''} onclick="recordWorkshopQuickQty('${o.id}',${op.stepIndex},${n})">+${n}</button>`).join('');
   // v7.82: явная пауза/продолжение прямо на карточке — раньше единственным действием было "Записать
   // выпуск", а чтобы поставить заказ на паузу (не записывая выпуск) и переключиться на другой, нужно
   // было заходить в полную карточку заказа. toggleProductionOperation уже существует (используется в
@@ -1527,7 +1550,7 @@ function workshopCurrentCardHtml(row){
       <div><small>${escapeHtml(t('workshopNowWorkingLabel'))}</small><h3>${escapeHtml(o.number||'—')}</h3><p>${escapeHtml(o.client||'—')} · ${total} ${escapeHtml(t('unitPieces'))} · ${escapeHtml(t('orderDueDate'))}: ${escapeHtml(formatDeadline(o))}</p></div>
       <div class="workshop-current-head-actions"><span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>${toggleBtn}</div>
     </div>
-    <div class="workshop-current-op"><b>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}</b><span>${escapeHtml(posText)}</span></div>
+    <div class="workshop-current-op"><b>${workshopIcon(op.stepName)} ${escapeHtml(workshopLabel(op.stepName))}${curSubName?` · ${escapeHtml(curSubName)}`:''}</b><span>${escapeHtml(posText)}</span></div>
     ${workshopMaterialAlertHtml(o,op)}
     ${teamNowHtml(o,op)}
     <div class="workshop-current-progress">
@@ -1540,7 +1563,7 @@ function workshopCurrentCardHtml(row){
     ${workshopShiftInfoHtml(o,op)}
     <div class="workshop-record-actions">
       <button class="btn primary workshop-record-btn" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">✔ ${escapeHtml(t('recordOutputBtn'))}</button>
-      <div class="workshop-qty-chips">${chips}<button class="btn workshop-qty-chip" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('otherQtyBtn'))}</button></div>
+      ${chips?`<div class="workshop-qty-chips">${chips}<button class="btn workshop-qty-chip" type="button" ${canRecord?'':'disabled'} onclick="completeProductionOperation('${o.id}',${op.stepIndex})">${escapeHtml(t('otherQtyBtn'))}</button></div>`:''}
     </div>
     ${workshopMarksHtml(o,op)}
     <button type="button" class="workshop-more-link" onclick="goToOrderFromMaterial(event,'${o.id}')">${escapeHtml(t('openOrderCard'))} ↗</button>

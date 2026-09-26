@@ -83,7 +83,7 @@
   }
   function subOpsPanelHtml(o,op){
     const index=op.stepIndex,subs=stageSubOps(o,index);if(!subs.length)return syncHintHtml(o,op);
-    const total=orderProductQty(o),kits=subKits(o,op),sel=selectedSubId(o,index,op),canPick=op.status!=='done'&&op.status!=='cancelled';
+    const sel=selectedSubId(o,index,op),canPick=op.status!=='done'&&op.status!=='cancelled';
     const dones=subs.map(s=>subDone(o,op,s.id)),targets=subs.map(s=>subTarget(o,s)),minDone=Math.min(...dones),maxDone=Math.max(...dones);
     const rows=subs.map((s,i)=>{
       const d=dones[i],tg=targets[i],pct=tg?Math.round(d/tg*100):0,full=d>=tg,lag=!full&&d===minDone&&maxDone>minDone,isSel=String(s.id)===String(sel);
@@ -95,7 +95,11 @@
       </button>`;
     }).join('');
     const hint=!canPick?'':sel?`${escapeHtml(t('subOpNowMarking'))}: <b>${escapeHtml(subs.find(s=>String(s.id)===String(sel))?.name||'')}</b>`:escapeHtml(t('subOpPickHint'));
-    return `<div class="subops"><div class="subops-head"><span>${escapeHtml(t('subOpsTitle'))}</span><strong>${escapeHtml(t('subOpsKits'))}: ${kits} / ${total}</strong></div>${rows}${hint?`<div class="subops-hint ${sel?'ok':''}">${hint}</div>`:''}</div>`;
+    // v8.58: числа "Комплектов готово: X/Y" убрали из заголовка панели — это ровно то же число, что уже
+    // показано главным прогрессом карточки заказа выше (там теперь именно kits, а не op.completedQty,
+    // см. workshopCurrentCardHtml) — раньше на экране одновременно было два разных числа и было неясно,
+    // какое из них верное.
+    return `<div class="subops"><div class="subops-head"><span>${escapeHtml(t('subOpsTitle'))}</span></div>${rows}${hint?`<div class="subops-hint ${sel?'ok':''}">${hint}</div>`:''}</div>`;
   }
   // Отметки по операциям (кто, что, сколько, когда) + отмена ошибочной.
   function subMarksListHtml(o,op){
@@ -194,5 +198,5 @@
     await startProductionOperation(orderId,index,{skipSubChoice:true});
   }
 
-  Object.assign(window,{syncStageOpsFromTemplate,needSubOpChoice,openSubOpChooseModal,pickSubOpAndStart,subOpTarget:subTarget,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
+  Object.assign(window,{syncStageOpsFromTemplate,needSubOpChoice,openSubOpChooseModal,pickSubOpAndStart,subOpTarget:subTarget,stageSubOps,hasSubOps,subOpDone:subDone,subOpKits:subKits,subOpsPanelHtml,subMarksListHtml,selectSubOp,selectedSubId,recordSubOpMark,undoSubMark,openSubOpMarkModal,confirmSubOpMark});
 })();
