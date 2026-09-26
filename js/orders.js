@@ -1063,25 +1063,38 @@ function openActiveSessionsModal(){
   workshopsStatModalOpen(t('activeSessionsLabel'),body,t('activeSessionsNoneGeneric'));
 }
 // Выпуск за период (та же сумма, что и на карточке), но по цехам — источник тот же consumptionLogs.
-function periodOutputByWorkshop(period){
+// v8.57: пользователь справедливо спросил "18 шт — это конкретно что, к какому заказу?" — раньше
+// модалка "Выпуск" суммировала все списания цеха в одно число, не называя заказ. Теперь строка —
+// заказ+этап (а не просто цех), с реальным количеством именно по нему; если один цех выпускал сразу
+// несколько заказов за период — это будет видно отдельными строками, а не одной общей суммой.
+function periodOutputByOrder(period){
   const since=workshopsPeriodSinceDate(period);
-  const byName={};
+  const rows=[],idxByKey=new Map();
   (data.orders||[]).forEach(o=>{
     (ensureWorkflowProduction(o).consumptionLogs||[]).forEach(l=>{
       if(l.undone||!l.stepName)return;
       const d=String(l.at||'').slice(0,10);
       if(since&&d<since)return;
-      byName[l.stepName]=(byName[l.stepName]||0)+Number(l.qty||0);
+      const key=`${o.id}_${l.stepName}`;
+      let idx=idxByKey.get(key);
+      if(idx===undefined){idx=rows.length;idxByKey.set(key,idx);rows.push({order:o,stepName:l.stepName,qty:0,lastAt:l.at});}
+      rows[idx].qty+=Number(l.qty||0);
+      if(String(l.at||'')>String(rows[idx].lastAt||''))rows[idx].lastAt=l.at;
     });
   });
-  return Object.keys(byName).map(name=>({name,qty:byName[name]})).sort((a,b)=>b.qty-a.qty);
+  rows.sort((a,b)=>b.qty-a.qty||String(b.lastAt||'').localeCompare(String(a.lastAt||'')));
+  return rows;
 }
 function openOutputModal(){
   const period=workshopsOverviewPeriod;
   const outputLabel=period==='today'?t('outputTodayLabel'):period==='7days'?t('output7DaysLabel'):t('outputAllLabel');
-  const rows=periodOutputByWorkshop(period);
-  const badgeFor=qty=>`<b>${qty} ${escapeHtml(t('unitPieces'))}</b>`;
-  const body=rows.map(({name,qty})=>workshopsStatModalRowHtml(workshopIcon(name),workshopLabel(name),'',badgeFor(qty),`closeModal();openWorkshopDetail('${jsStrArg(name)}')`)).join('');
+  const rows=periodOutputByOrder(period);
+  const body=rows.map(r=>{
+    const op=(r.order.production?.operations||[]).find(x=>x.stepName===r.stepName);
+    const badge=`<b>${r.qty} ${escapeHtml(t('unitPieces'))}</b>`;
+    const onclick=op?`closeModal();openWorkshopFromOrder('${jsStrArg(r.order.id)}',${op.stepIndex},'${jsStrArg(r.stepName)}')`:`closeModal();openWorkshopDetail('${jsStrArg(r.stepName)}')`;
+    return workshopsStatModalRowHtml(workshopIcon(r.stepName),r.order.number||'—',`${workshopLabel(r.stepName)} · ${r.order.client||'—'}`,badge,onclick);
+  }).join('');
   workshopsStatModalOpen(outputLabel,body);
 }
 function workshopsTopStatsHtml(){
