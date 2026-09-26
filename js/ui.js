@@ -90,8 +90,54 @@ function switchSection(sectionId,fromNav){
     if(typeof loadTechnologiesFromSupabase==='function')loadTechnologiesFromSupabase().then(()=>renderTechnologies());
   }
   closeMobileSidebar();
+  // v8.54: обычная навигация браузера (кнопка «Назад»/«Вперёд», свайп на макбуке) — теперь работает
+  // между разделами сайта, не только внутри цехов (см. v8.53). Каждый переход кладём в историю; сам
+  // popstate ловит handleNavPopState() ниже. В рабочем режиме не участвует — у него свой отдельный
+  // экран задачи на ?task= (см. js/orders.js), с этим не пересекается.
+  if(!navReplaying&&!document.body.classList.contains('worker-mode'))pushNavState(sectionId);
   return true;
 }
+
+// Кладём в историю ТЕКУЩИЙ раздел (и, если это цеха — ещё и какой цех/заказ открыт, см. selectedWorkshopName/
+// workshopFocusOrderId в js/orders.js) — единый query-параметр ?section= для всех разделов, ?ws=/?wso=/?wsi=
+// только для цехов. navReplaying — флаг «мы сейчас САМИ восстанавливаем состояние после popstate», чтобы не
+// положить в историю то же самое ещё раз поверх (иначе кнопка «Вперёд» перестала бы работать).
+let navReplaying=false;
+function pushNavState(sectionId){
+  if(navReplaying)return;
+  try{
+    const url=new URL(location.href);
+    url.searchParams.set('section',sectionId);
+    if(sectionId==='workshops'){
+      if(typeof selectedWorkshopName!=='undefined'&&selectedWorkshopName)url.searchParams.set('ws',selectedWorkshopName);else url.searchParams.delete('ws');
+      if(typeof workshopFocusOrderId!=='undefined'&&workshopFocusOrderId){url.searchParams.set('wso',workshopFocusOrderId);url.searchParams.set('wsi',workshopFocusStepIndex)}
+      else{url.searchParams.delete('wso');url.searchParams.delete('wsi')}
+    }else{
+      url.searchParams.delete('ws');url.searchParams.delete('wso');url.searchParams.delete('wsi');
+    }
+    const next=url.toString();
+    if(next===location.href)return; // ничего не изменилось (например повторный клик по тому же разделу) — не плодим историю
+    history.pushState({},'',url);
+  }catch(e){}
+}
+function handleNavPopState(){
+  if(document.body.classList.contains('worker-mode'))return; // у рабочего режима свой обработчик на ?task=
+  let params;
+  try{params=new URLSearchParams(location.search)}catch(e){return}
+  const targetSection=params.get('section')||(typeof firstAllowedSection==='function'?firstAllowedSection():'stock');
+  if(targetSection==='workshops'){
+    // выставляем ДО switchSection — она сама вызовет renderWorkshops() уже с верным цехом/заказом,
+    // без лишнего повторного рендера.
+    const wso=params.get('wso')||'';
+    selectedWorkshopName=params.get('ws')||'';
+    workshopFocusOrderId=wso;
+    workshopFocusStepIndex=wso?Number(params.get('wsi')||-1):-1;
+  }
+  navReplaying=true;
+  try{if(typeof switchSection==='function')switchSection(targetSection)}
+  finally{navReplaying=false}
+}
+window.addEventListener('popstate',handleNavPopState);
 
 function renderNav(){
   placeChangelogNavLast();
