@@ -1020,6 +1020,8 @@ body.worker-mode{
 .sw-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .sw-info-card{min-width:0;padding:12px 14px;border:1px solid var(--sw-line);border-radius:14px;background:#faf9f5}
 .sw-info-card.wide{grid-column:1/-1}
+.sw-info-card.wide{margin-top:10px}
+.sw-info-grid+.sw-info-card.wide{margin-top:0}
 .sw-info-card small{display:block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--sw-text2)}
 .sw-info-card b{display:block;margin-top:5px;font-size:17px;font-weight:800;line-height:1.25;color:var(--sw-text)}
 .sw-info-card span{display:block;margin-top:3px;font-size:13px;font-weight:600;line-height:1.35;color:var(--sw-text2)}
@@ -1031,6 +1033,8 @@ body.worker-mode{
 .sw-mat-list{list-style:none;margin:6px 0 0;padding:0}
 .sw-mat-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--sw-line)}
 .sw-mat-list li:first-child{border-top:0}
+.sw-mat-list-click li[role="button"]{cursor:pointer;margin:0 -10px;padding:10px;border-radius:10px}
+.sw-mat-list-click li[role="button"]:hover,.sw-mat-list-click li[role="button"]:focus-visible{background:#f1efe8;outline:none}
 .sw-info-card .sw-mat-list .name{margin:0;font-size:15px;font-weight:700;color:var(--sw-text);overflow-wrap:anywhere}
 .sw-info-card .sw-mat-list .qty{margin:0;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;font-weight:600;color:var(--sw-text);white-space:nowrap}
 .sw-info-card .sw-mat-list .short{grid-column:1/-1;margin:0;font-size:13px;font-weight:800;color:#c23b2e}
@@ -3489,35 +3493,14 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-list-row-arrow{color:#98a2b3;font-size:16px;text-align:center}
 .workshop-empty{padding:36px 16px;text-align:center;color:#8490a3;font-size:12px;border:1px dashed #e5e9f0;border-radius:14px}
 .workshop-detail-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.workshop-show-queue-btn{margin-top:14px}
 .workshop-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:12.5px;font-weight:650;cursor:pointer;white-space:nowrap}
 .workshop-detail-sep{width:1px;height:16px;background:#e5e9f0;flex-shrink:0}
 .workshop-detail-head h3{margin:0;color:#101828;font-size:16px}
-.workshop-queue-list{display:flex;flex-direction:column;gap:8px;margin-top:16px}
-.workshop-queue-item{display:flex;flex-direction:column;border:0.5px solid #e5e9f0;border-radius:12px;overflow:hidden}
-.workshop-queue-row{display:grid;grid-template-columns:8px minmax(0,1fr) 70px auto 16px;gap:12px;align-items:center;width:100%;min-height:52px;padding:10px 14px;border:0;background:#fff;text-align:left;cursor:pointer}
-.workshop-queue-row:hover{background:#fafbfc}
-.workshop-row-dot{width:8px;height:8px;border-radius:50%;background:#c5ccd6}
-.workshop-row-dot.running{background:#1677e8}
-.workshop-row-dot.paused{background:#f47a00}
-.workshop-row-dot.done{background:#249943}
-.workshop-row-info{min-width:0;display:flex;flex-direction:column;gap:2px}
-.workshop-row-info b{color:#101828;font-size:13px;font-weight:650}
-.workshop-row-info em{color:#8490a3;font-style:normal;font-size:12px}
-.workshop-row-info small{display:block;color:#8490a3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.workshop-row-danger{color:#c73535;font-weight:650}
-.workshop-row-today{color:#8a650e;font-weight:650}
-.workshop-row-progress{width:70px;height:4px;border-radius:99px;background:#eef1f5;overflow:hidden}
-.workshop-row-progress i{display:block;height:100%}
-.workshop-row-progress b{display:block;height:100%;border-radius:99px;background:var(--accent)}
-.workshop-row-chevron{color:#98a2b3;font-size:16px;text-align:center}
-.workshop-queue-expanded{border-top:0.5px solid #e5e9f0;background:#fafbfc;padding:12px}
-.workshop-queue-order-link{display:inline-flex;margin-bottom:10px;padding:0;border:0;background:none;color:#175cd3;font-size:12px;font-weight:650;cursor:pointer}
-.workshop-queue-expanded .production-operation-card{border-radius:12px}
 /* v7.89: главный обзор "Цеха" — заказ и рабочая сессия разделены, проценты загрузки заменены
    прогнозом в днях. Старые классы .workshops-stat-bar/.workshops-load-*/.workshops-active-*/
    .workshop-list-row* из предыдущего обзора здесь не используются — их CSS ниже (медиа-запрос на
-   760px) намеренно не тронут: он всё ещё безопасен (просто ни на что не действует) и содержит правила
-   для .workshop-queue-row, которые по-прежнему нужны полной очереди цеха. */
+   760px) намеренно не тронут: он всё ещё безопасен (просто ни на что не действует). */
 .production-status-pill.free{border-color:#bfe8cc;background:#ecfdf3;color:#287047}
 .production-status-pill.danger{border-color:#fecaca;background:#fff1f1;color:#b42323}
 .workshops-period-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px}
@@ -3527,16 +3510,37 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshops-period-label{color:#8490a3;font-size:12.5px}
 .workshops-period-label b{color:#344054}
 .workshops-top-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
-.workshops-top-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;min-height:96px}
+.workshops-top-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;min-height:96px;width:100%;text-align:left;cursor:pointer;font:inherit;transition:box-shadow .15s,border-color .15s}
+.workshops-top-stat:hover{border-color:#cfd6e0;box-shadow:0 20px 48px rgba(20,24,32,.1)}
 .workshops-top-stat small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
 .workshops-top-stat b{font-size:24px;font-weight:650;color:#101828;letter-spacing:-.02em}
 .workshops-top-stat span{color:#8490a3;font-size:12px;min-height:15px}
+.workshops-stat-modal-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto}
+.workshops-stat-modal-row{display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:10px;background:none;text-align:left;cursor:pointer}
+.workshops-stat-modal-row:hover{background:#fafbfc}
+.workshops-stat-modal-icon{font-size:17px;flex-shrink:0}
+.workshops-stat-modal-info{min-width:0;flex:1 1 auto;display:flex;flex-direction:column;gap:2px}
+.workshops-stat-modal-info b{color:#101828;font-size:13.5px;font-weight:650}
+.workshops-stat-modal-info small{color:#8490a3;font-size:12px}
 .workshop-main-alert{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;margin-bottom:18px;border:1px solid #f3c9b2;border-radius:16px;background:#fff7ed}
 .workshop-main-alert-icon{flex-shrink:0;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#f47a00;color:#fff;font-weight:700}
 .workshop-main-alert-body{flex:1;min-width:0}
 .workshop-main-alert-body b{display:block;color:#101828;font-size:14.5px;font-weight:650;margin-bottom:4px}
 .workshop-main-alert-body p{margin:0;color:#8a5a2b;font-size:12.5px;line-height:1.5}
 .workshop-main-alert .btn{flex-shrink:0;align-self:center;background:linear-gradient(180deg,#f47a00 0%,#c85f00 100%)!important;border-color:#c85f00!important;color:#fff!important}
+.workshops-charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch}
+.workshops-chart-panel{padding:20px;display:flex;flex-direction:column}
+.workshops-output-chart{width:100%;height:150px;display:block}
+.workshops-chart-summary{margin-top:10px;color:#8490a3;font-size:12.5px}
+.workshops-chart-summary b{color:#101828;font-weight:650}
+.workshops-loadchart-list{display:flex;flex-direction:column;gap:10px}
+.workshops-loadchart-row{display:grid;grid-template-columns:22px minmax(0,1fr) minmax(60px,1.4fr) 24px;align-items:center;gap:10px}
+.workshops-loadchart-icon{font-size:15px;text-align:center}
+.workshops-loadchart-name{min-width:0;color:#344054;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workshops-loadchart-bar{height:8px;border-radius:99px;background:#eef1f5;overflow:hidden}
+.workshops-loadchart-bar i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.workshops-loadchart-count{color:#101828;font-size:12.5px;font-weight:650;text-align:right}
+@media(max-width:900px){.workshops-charts-row{grid-template-columns:1fr}}
 .workshops-overview-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);gap:16px;align-items:start;margin-bottom:16px}
 .workshops-master-panel,.continuation-panel,.upcoming-decisions-panel,.workshops-backlog-panel{padding:20px}
 .workshops-master-head,.continuation-panel-head,.workshops-backlog-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}
@@ -3597,7 +3601,7 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
   .workshop-main-alert{flex-direction:column}
   .workshop-main-alert .btn{align-self:stretch}
 }
-@media(max-width:760px){.workshops-stat-bar{overflow-x:auto;flex-wrap:nowrap}.workshops-stat-bar>div{flex:0 0 auto}.workshops-list-head{display:none}.workshops-load-row{grid-template-columns:20px minmax(0,1fr) 42px;grid-template-areas:"icon name pct" ". bar bar" ". qty qty"}.workshops-load-icon{grid-area:icon}.workshops-load-name{grid-area:name}.workshops-load-pct{grid-area:pct}.workshops-load-bar{grid-area:bar}.workshops-load-qty{grid-area:qty;text-align:left}.workshops-active-row{grid-template-columns:30px minmax(0,1fr) 50px;grid-template-areas:"icon name qty" ". progress progress"}.workshops-active-icon{grid-area:icon}.workshops-active-name{grid-area:name}.workshops-active-qty{grid-area:qty}.workshops-active-progress{grid-area:progress}.workshops-active-status,.workshops-active-time{display:none}.workshop-list-row{grid-template-columns:34px minmax(0,1fr) 16px;grid-template-areas:"icon name arrow" ". stats stats";row-gap:8px}.workshop-list-row-icon{grid-area:icon}.workshop-list-row-name{grid-area:name}.workshop-list-row-arrow{grid-area:arrow}.workshop-list-row-stat,.workshop-list-row-note,.workshop-list-row-badge{grid-area:stats;display:none}.workshop-queue-row{grid-template-columns:8px minmax(0,1fr) 16px;grid-template-areas:"dot info chevron" ". progress ."}.workshop-row-progress{grid-area:progress;width:100%}.production-status-pill{display:none}}
+@media(max-width:760px){.workshops-stat-bar{overflow-x:auto;flex-wrap:nowrap}.workshops-stat-bar>div{flex:0 0 auto}.workshops-list-head{display:none}.workshops-load-row{grid-template-columns:20px minmax(0,1fr) 42px;grid-template-areas:"icon name pct" ". bar bar" ". qty qty"}.workshops-load-icon{grid-area:icon}.workshops-load-name{grid-area:name}.workshops-load-pct{grid-area:pct}.workshops-load-bar{grid-area:bar}.workshops-load-qty{grid-area:qty;text-align:left}.workshops-active-row{grid-template-columns:30px minmax(0,1fr) 50px;grid-template-areas:"icon name qty" ". progress progress"}.workshops-active-icon{grid-area:icon}.workshops-active-name{grid-area:name}.workshops-active-qty{grid-area:qty}.workshops-active-progress{grid-area:progress}.workshops-active-status,.workshops-active-time{display:none}.workshop-list-row{grid-template-columns:34px minmax(0,1fr) 16px;grid-template-areas:"icon name arrow" ". stats stats";row-gap:8px}.workshop-list-row-icon{grid-area:icon}.workshop-list-row-name{grid-area:name}.workshop-list-row-arrow{grid-area:arrow}.workshop-list-row-stat,.workshop-list-row-note,.workshop-list-row-badge{grid-area:stats;display:none}.production-status-pill{display:none}}
 
 /* v7.77: раздел "Цеха" — рабочее место мастера. Синий (#1677e8, тот же, что уже используется для
    "В работе"/running в производственных карточках) — рабочий статус; оранжевый/красный — только для
@@ -3616,8 +3620,6 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-material-alert>span:nth-child(2){flex:1;min-width:0}
 .workshop-material-alert .btn.primary{flex-shrink:0;background:linear-gradient(180deg,#1677e8 0%,#0f5fc4 100%);border-color:#0f5fc4;color:#fff;box-shadow:0 8px 18px rgba(22,119,232,.22)}
 .workshop-material-alert.small{margin-bottom:0;padding:9px 12px;font-size:11px;font-weight:600}
-.workshop-work-layout{display:grid;grid-template-columns:minmax(0,1.45fr) 330px;gap:14px;align-items:start}
-.workshop-work-side{display:flex;flex-direction:column;gap:14px}
 .workshop-current-list{display:flex;flex-direction:column;gap:14px}
 .workshop-current-card{padding:18px;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
 .workshop-current-card.empty{align-items:center;justify-content:center}
@@ -3696,9 +3698,8 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .shift-day-chip input{accent-color:var(--accent)}
 .shift-toggle-row{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:#344054;cursor:pointer}
 .shift-toggle-row input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}
-@media(max-width:1080px){.workshop-work-layout{grid-template-columns:1fr}}
 @media(max-width:760px){.workshop-shift-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.workshop-current-head h3{font-size:19px}.workshop-current-progress-num b{font-size:26px}.workshop-material-alert{flex-wrap:wrap}.workshop-material-alert .btn{width:100%}}
-/* v8.32: на узком экране «Продолжить»/«Начать» у заказа в цеху вылезал за край экрана (шапка карточки не
+/* v8.49: на узком экране «Продолжить»/«Начать» у заказа в цеху вылезал за край экрана (шапка карточки не
    переносила кнопку на новую строку, а название заказа не давало ей сжаться) — переноса или прокрутки
    вбок при этом не было, кнопка была просто не видна и не нажималась. */
 .workshop-current-head{flex-wrap:wrap}
@@ -4314,6 +4315,14 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 #workstats .st-table small{display:block;color:#8a8470;font-size:11px;margin-top:2px}
 #workstats .st-table tr.restored td{color:#8a8470;font-style:italic}
 #workstats .st-note{margin:12px 0 0;font-size:12px;color:#8a8470;line-height:1.45}
+/* v8.45: цветная подсказка «что значат проценты» — прямо у таблиц, простыми словами */
+#workstats .st-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-bottom:14px;padding:10px 14px;border-radius:12px;background:#faf9f5;border:1px solid #efeadf}
+#workstats .st-legend-item{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#3b3627}
+#workstats .st-legend-item i{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+#workstats .st-legend-item.ok i{background:#287047}
+#workstats .st-legend-item.bad i{background:#c0392b}
+#workstats .st-legend-hint{flex:1 1 260px;font-size:12px;color:#8a8470;line-height:1.4}
+#workstats .st-diff-warn{margin-left:5px;cursor:help}
 #workstats .st-chart{display:flex;align-items:flex-end;gap:6px;height:170px;overflow-x:auto;padding:4px 2px 0}
 #workstats .st-bar{flex:1 0 34px;max-width:64px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;position:relative}
 #workstats .st-bar i{display:block;width:70%;min-height:3px;border-radius:6px 6px 0 0;background:#ff6600}
@@ -4343,6 +4352,61 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .quick-actions-tabs{flex-wrap:wrap!important}
 .quick-actions-tabs .quick-tab{flex:1 1 auto;white-space:nowrap}
 .audit-profile-grid.single{grid-template-columns:1fr}
+
+/* v8.29: операции внутри этапа технологии */
+.tech-ops-row td{background:#faf8f3;padding:10px 14px!important}
+.tech-ops{display:flex;flex-direction:column;gap:8px}
+.tech-ops-head{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px}
+.tech-ops-total{color:#625c4e;font-size:12.5px}
+.tech-ops-empty{font-size:12.5px;color:#8a8470}
+.tech-op-row{display:grid;grid-template-columns:minmax(0,1fr) 140px 36px;gap:8px;align-items:center}
+.tech-op-ro{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:2px 0}
+.tech-ops>.btn{align-self:flex-start}
+.tech-op-savecheck{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.tech-op-saved small{display:block;margin-bottom:6px;color:#8a8470;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.tech-op-saved>div{display:flex;flex-wrap:wrap;gap:6px}
+.tech-op-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:99px;background:#efeadf;font-size:12.5px;font-weight:600}
+.tech-op-chip button{border:0;background:none;cursor:pointer;color:#8a8470;font-size:14px;line-height:1;padding:0 2px}
+.sw-ops{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.sw-ops li{display:flex;justify-content:space-between;gap:12px;font-size:15px;font-weight:600}
+.sw-ops .qty{color:#625c4e;white-space:nowrap}
+@media(max-width:640px){.tech-op-row{grid-template-columns:minmax(0,1fr) 100px 34px}}
+/* v8.29: на узких экранах таблица технологии прокручивается вбок — блок операций держим в пределах экрана */
+@media(max-width:900px){.tech-ops{position:sticky;left:0;max-width:calc(100vw - 96px)}}
+/* v8.30: форма «Добавить операцию» раскрывается прямо в строке этапа */
+.tech-op-add{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:end;padding:12px;border:1.5px dashed #ff6600;border-radius:14px;background:#fff}
+.tech-op-add .field{margin:0}
+.tech-op-add .tech-op-savecheck,.tech-op-add .tech-op-add-actions,.tech-op-add .tech-op-saved{grid-column:1/-1}
+.tech-op-add-actions{display:flex;gap:8px}
+/* v8.31: операции этапа в цехе */
+.subops{margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff;text-align:left}
+.subops-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.subops-head strong{color:var(--text);font-size:15px}
+.subop-row{display:flex;align-items:center;gap:12px;width:100%;padding:12px;margin-bottom:8px;border:1.5px solid var(--line);border-radius:14px;background:var(--soft,#f6f7f9);text-align:left;font:inherit;color:inherit;cursor:pointer}
+.subop-row:disabled{cursor:default;opacity:.85}
+.subop-row.selected{border-color:#ff6600;background:#fff4ec;box-shadow:0 0 0 3px rgba(255,102,0,.15)}
+.subop-row.full{background:#eef8f0;border-color:#bfe3c8}
+.subop-radio{font-size:20px;line-height:1;color:#ff6600;flex:0 0 22px;text-align:center}
+.subop-row.full .subop-radio{color:#2a9d4a}
+.subop-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.subop-main b{font-size:15px}
+.subop-main small{color:var(--muted);font-size:12px}
+.subop-bar{display:block;height:6px;border-radius:99px;background:#e3e5ea;overflow:hidden}
+.subop-bar u{display:block;height:100%;background:#ff6600;border-radius:99px;text-decoration:none}
+.subop-row.full .subop-bar u{background:#2a9d4a}
+.subop-num{text-align:right;white-space:nowrap}
+.subop-num b{font-size:20px}
+.subop-num small{color:var(--muted);margin-left:3px}
+.subop-num em{display:block;font-style:normal;font-size:11px;color:#c2410c}
+.subops-hint{padding:8px 10px;border-radius:10px;background:#fff4ec;color:#9a3d00;font-size:13px}
+.subops-hint.ok{background:#eef8f0;color:#1f6b36}
+.subops-kits{margin-top:10px}
+.subops-kits summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 2px}
+.simple-round-spacer{display:inline-block;width:56px;height:56px}
+.subop-main .subop-norm{color:var(--muted);font-size:12px}
+.subop-choose-hint{margin:0 0 12px;color:var(--muted);font-size:14px}
+.subops-sync{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0;padding:12px 14px;border:1.5px dashed #ff6600;border-radius:14px;background:#fff4ec;color:#7a3300;font-size:14px;text-align:left}
+.subops-sync span{flex:1 1 220px}
 /* v8.29: раздел «Пользователи» */
 .users-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
 .users-warn-count{color:#b54708;font-weight:600;font-size:13px}

@@ -272,7 +272,7 @@
   function technologyOperationsEditableHtml(tc){
     const stepsList=tc.steps||[];
     const addBtn=`<button class="btn primary order-tech-cta" type="button" onclick="addTechOperation('${tc.id}')">＋ ${escapeHtml(t('addOperation'))}</button>`;
-    return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('techOperations'))}</h4><p>${escapeHtml(t('techOperationsHint'))}</p></div>${addBtn}</div>${stepsList.length?`<div class="order-tech-table-scroll"><table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th><th></th></tr></thead><tbody>${stepsList.map((s,index)=>`<tr><td><div class="technology-stage-picker"><select class="select" aria-label="${escapeHtml(t('operationTemplate'))}" onchange="applyTechOperationTemplate('${tc.id}',${index},this.value)"><option value="">${escapeHtml(t('chooseOperationTemplate'))}</option>${TECH_WORKSHOP_PRESETS.map(name=>`<option value="${escapeHtml(name)}" ${s.name===name?'selected':''}>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(name):name)}</option>`).join('')}</select><input class="input" value="${escapeHtml(s.name||'')}" placeholder="${escapeHtml(t('customOperationName'))}" onchange="updateTechOperation('${tc.id}',${index},'name',this.value)"></div></td><td><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(s.minutes||0)}" onchange="updateTechOperation('${tc.id}',${index},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div></td><td><input class="input" value="${escapeHtml(s.responsible||'')}" placeholder="${escapeHtml(t('notSpecified'))}" onchange="updateTechOperation('${tc.id}',${index},'responsible',this.value)"></td><td><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechOperation('${tc.id}',${index})">×</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('techOperations'))}</b><span>${escapeHtml(t('techOperationsHint'))}</span></div>`}</section>`;
+    return `<section class="order-tech-card"><div class="order-tech-head"><div><h4>${escapeHtml(t('techOperations'))}</h4><p>${escapeHtml(t('techOperationsHint'))}</p></div>${addBtn}</div>${stepsList.length?`<div class="order-tech-table-scroll"><table class="order-tech-table"><thead><tr><th>${escapeHtml(t('operationStage'))}</th><th>${escapeHtml(t('timePerItem'))}</th><th>${escapeHtml(t('responsibleOptional'))}</th><th></th></tr></thead><tbody>${stepsList.map((s,index)=>`<tr><td><div class="technology-stage-picker"><select class="select" aria-label="${escapeHtml(t('operationTemplate'))}" onchange="applyTechOperationTemplate('${tc.id}',${index},this.value)"><option value="">${escapeHtml(t('chooseOperationTemplate'))}</option>${TECH_WORKSHOP_PRESETS.map(name=>`<option value="${escapeHtml(name)}" ${s.name===name?'selected':''}>${escapeHtml(typeof workshopLabel==='function'?workshopLabel(name):name)}</option>`).join('')}</select><input class="input" value="${escapeHtml(s.name||'')}" placeholder="${escapeHtml(t('customOperationName'))}" onchange="updateTechOperation('${tc.id}',${index},'name',this.value)"></div></td><td><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(s.minutes||0)}" ${stepOps(s).length?`readonly title="${escapeHtml(t('stageOpsTimeAuto'))}"`:''} onchange="updateTechOperation('${tc.id}',${index},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div></td><td><input class="input" value="${escapeHtml(s.responsible||'')}" placeholder="${escapeHtml(t('notSpecified'))}" onchange="updateTechOperation('${tc.id}',${index},'responsible',this.value)"></td><td><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="removeTechOperation('${tc.id}',${index})">×</button></td></tr>${stageOpsRowHtml('tech',tc,s,index)}`).join('')}</tbody></table></div>`:`<div class="order-tech-empty order-tech-empty-action"><b>${escapeHtml(t('techOperations'))}</b><span>${escapeHtml(t('techOperationsHint'))}</span></div>`}</section>`;
   }
   function technologyWorkshopOptions(tc,selected=''){
     const names=[...new Set([...(tc.steps||[]).map(s=>String(s.name||'').trim()).filter(Boolean),...TECH_WORKSHOP_PRESETS])];
@@ -442,13 +442,150 @@
   }
   function applyTechOperationTemplate(techId,index,value){if(value)updateTechOperation(techId,index,'name',value)}
 
+  // ---------- v8.29/8.30: операции внутри этапа (например, этап «Поклейка» → «поклейка боковин», «поклейка спинок») ----------
+  // step.operations=[{id,name,minutes}]; если операции есть, время этапа = сумма времён операций. Работает и в разделе
+  // «Технологии» (шаблон), и в самом заказе (этап «Технология»). Название технолог вписывает сам; галочка «Сохранить
+  // название в список» кладёт его в ОБЩИЙ список (служебная строка __FURNICORE_OPLIST__ в базе, как список доступа),
+  // откуда его потом можно выбрать. Без галочки название используется только в этой технологии/заказе.
+  const OPLIST_ARTICLE='__FURNICORE_OPLIST__';
+  let techSavedOps=[];   // [{id,name,workshop}]
+  let techOpsRowId='';
+  const techDeletedOpKeys=new Set();
+  const stageOpFormOpen=new Set(); // какие формы «Добавить операцию» сейчас раскрыты (ключ kind:id:index)
+  function isOpListRow(row){return String(row?.article||'')===OPLIST_ARTICLE}
+  function applyOpListRow(row){
+    techOpsRowId=row?.id||techOpsRowId;
+    const arr=row?.attributes?.items;
+    techSavedOps=Array.isArray(arr)?arr.filter(x=>x&&x.name).map(x=>({id:x.id||uid(),name:String(x.name),workshop:String(x.workshop||'')})):[];
+  }
+  function stepOps(s){return Array.isArray(s?.operations)?s.operations:[]}
+  // v8.38: убрали «деталей в изделии» (perUnit) обратно — было лишней сложностью. У операции снова только
+  // название и время на изделие; время этапа = сумма времён операций. Если у старой операции в данных
+  // остался perUnit>1 — он просто больше нигде не читается, ни на что не влияет.
+  function stepOpsMinutes(s){return stepOps(s).reduce((n,o)=>n+Math.max(0,Math.round(Number(o.minutes)||0)),0)}
+  const opKey=x=>`${String(x.workshop||'').toLowerCase()}|${String(x.name||'').toLowerCase()}`;
+  // Записывает общий список: перед записью читает свежую строку и объединяет по названию, чтобы два технолога не затёрли друг друга.
+  async function persistSavedOps(){
+    if(typeof canWriteSupabase==='function'&&!canWriteSupabase())return false;
+    try{
+      const {data:rows,error}=await supabaseClient.from('materials').select('id,attributes').eq('article',OPLIST_ARTICLE).limit(1);
+      if(error)throw error;
+      const remote=rows&&rows[0];
+      if(remote){
+        techOpsRowId=remote.id;
+        const mine=new Set(techSavedOps.map(opKey));
+        (Array.isArray(remote.attributes?.items)?remote.attributes.items:[]).forEach(x=>{if(x&&x.name&&!mine.has(opKey(x))&&!techDeletedOpKeys.has(opKey(x)))techSavedOps.push({id:x.id||uid(),name:String(x.name),workshop:String(x.workshop||'')})});
+      }
+      const payload={article:OPLIST_ARTICLE,name:'MOLM Operation List',category:'__system__',subcategory:'operations',quantity:0,unit:'',min_quantity:0,attributes:{items:techSavedOps,updatedAt:new Date().toISOString()}};
+      if(techOpsRowId){const {error:e2}=await supabaseClient.from('materials').update(payload).eq('id',techOpsRowId);if(e2)throw e2}
+      else{const {data:ins,error:e3}=await supabaseClient.from('materials').insert(payload).select('id').limit(1);if(e3)throw e3;techOpsRowId=ins?.[0]?.id||''}
+      techDeletedOpKeys.clear();
+      return true;
+    }catch(e){console.error('saved operations failed',e);toast(t('stageOpSaveListFailed'));return false}
+  }
+  const stageKey=(kind,id,index)=>`${kind}:${id}:${index}`;
+  function stageOwner(kind,id){return kind==='order'?(data.orders||[]).find(x=>String(x.id)===String(id)):(data.technologies||[]).find(x=>String(x.id)===String(id))}
+  function stageStepsSnapshot(kind,owner){
+    const src=kind==='order'&&typeof orderSteps==='function'?orderSteps(owner):(owner.steps||[]);
+    return src.map(s=>({...s,operations:stepOps(s).map(o=>({...o}))}));
+  }
+  function stageRerender(kind,id){
+    if(kind==='order'){if(typeof refreshOrderWorkflow==='function')refreshOrderWorkflow(id)}
+    else openTechnologyDetail(id);
+  }
+  async function stageCommit(kind,owner,steps,auditText){
+    if(kind==='order'){
+      if(typeof markTechnologyStarted==='function')markTechnologyStarted(owner);
+      owner.steps=steps;
+      if(auditText&&typeof auditAdd==='function')auditAdd('technology_operation_added','order',owner.id,owner.number,auditText);
+      await persistTechnologyOrder(owner); // сохраняет и перерисовывает окно заказа
+    }else{
+      owner.steps=steps;
+      await persistTechChange(owner);
+      openTechnologyDetail(owner.id);
+    }
+  }
+  const STAGE_FN={
+    tech:{toggle:'toggleTechStageOpForm',add:'addTechStageOp',upd:'updateTechStageOp',rem:'removeTechStageOp',del:'deleteSavedTechOp'},
+    order:{toggle:'toggleOrderStageOpForm',add:'addOrderStageOp',upd:'updateOrderStageOp',rem:'removeOrderStageOp',del:'deleteSavedOrderOp'}
+  };
+  // Блок «Операции этапа» под строкой этапа. kind: 'tech' (шаблон в разделе «Технологии») или 'order' (технология внутри заказа).
+  function stageOpsRowHtml(kind,owner,s,index){
+    const F=STAGE_FN[kind],ops=stepOps(s),id=owner.id,stage=String(s.name||'').trim();
+    const rows=ops.map((o,oi)=>`<div class="tech-op-row"><input class="input" value="${escapeHtml(o.name||'')}" onchange="${F.upd}('${id}',${index},${oi},'name',this.value)"><div class="order-tech-time"><input class="input" type="number" min="0" step="1" value="${Number(o.minutes||0)}" onchange="${F.upd}('${id}',${index},${oi},'minutes',this.value)"><span>${escapeHtml(t('minutesShort'))}</span></div><button class="iconbtn order-tech-remove" type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="${F.rem}('${id}',${index},${oi})">×</button></div>`).join('');
+    const total=ops.length?`<span class="tech-ops-total">${escapeHtml(t('stageOpsTotal'))}: <b>${stepOpsMinutes(s)} ${escapeHtml(t('minutesShort'))}</b></span>`:'';
+    const open=stageOpFormOpen.has(stageKey(kind,id,index)),fid=`sop-${kind}-${id}-${index}`;
+    let form='';
+    if(open){
+      const same=techSavedOps.filter(x=>x.workshop===stage),other=techSavedOps.filter(x=>x.workshop!==stage);
+      const optGroup=(label,list)=>list.length?`<optgroup label="${escapeHtml(label)}">${list.map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}</option>`).join('')}</optgroup>`:'';
+      const chips=techSavedOps.length?`<div class="tech-op-saved"><small>${escapeHtml(t('stageOpSavedList'))}</small><div>${techSavedOps.map(x=>`<span class="tech-op-chip">${escapeHtml(x.name)}<button type="button" aria-label="${escapeHtml(t('deleteOperation'))}" onclick="${F.del}('${x.id}','${id}',${index})">×</button></span>`).join('')}</div></div>`:'';
+      form=`<div class="tech-op-add">
+        ${techSavedOps.length?`<label class="field"><span>${escapeHtml(t('stageOpPick'))}</span><select class="select" id="${fid}-pick" onchange="if(this.value){document.getElementById('${fid}-name').value=this.value}"><option value="">${escapeHtml(t('stageOpPickPlaceholder'))}</option>${optGroup(`${t('stageOpSavedFor')} «${stage}»`,same)}${optGroup(t('stageOpSavedOther'),other)}</select></label>`:''}
+        <label class="field"><span>${escapeHtml(t('stageOpName'))}</span><input class="input" id="${fid}-name" placeholder="${escapeHtml(t('stageOpNamePlaceholder'))}" autocomplete="off"></label>
+        <label class="field"><span>${escapeHtml(t('timePerItem'))}, ${escapeHtml(t('minutesShort'))}</span><input class="input" id="${fid}-min" type="number" min="0" step="1" value="0"></label>
+        <label class="tech-op-savecheck"><input type="checkbox" id="${fid}-save"> <span>${escapeHtml(t('stageOpSaveCheck'))}</span></label>
+        <div class="tech-op-add-actions"><button type="button" class="btn primary small" onclick="${F.add}('${id}',${index})">${escapeHtml(t('stageOpAddBtn'))}</button><button type="button" class="btn small" onclick="${F.toggle}('${id}',${index})">${escapeHtml(t('cancel'))}</button></div>
+        ${chips}
+      </div>`;
+    }
+    const addBtn=open?'':`<button type="button" class="btn small" onclick="${F.toggle}('${id}',${index})">＋ ${escapeHtml(t('addStageOp'))}</button>`;
+    return `<tr class="tech-ops-row"><td colspan="4"><div class="tech-ops"><div class="tech-ops-head"><b>${escapeHtml(t('stageOps'))}</b>${total}</div>${rows||(open?'':`<div class="tech-ops-empty">${escapeHtml(t('stageOpsNone'))}</div>`)}${form}${addBtn}</div></td></tr>`;
+  }
+  function makeStageOpApi(kind){
+    return {
+      toggle(id,index){const k=stageKey(kind,id,index);if(stageOpFormOpen.has(k))stageOpFormOpen.delete(k);else stageOpFormOpen.add(k);stageRerender(kind,id);setTimeout(()=>document.getElementById(`sop-${kind}-${id}-${index}-name`)?.focus(),30)},
+      async add(id,index){
+        const owner=stageOwner(kind,id);if(!owner)return;
+        const fid=`sop-${kind}-${id}-${index}`;
+        const name=String(document.getElementById(fid+'-name')?.value||'').trim();
+        if(!name){toast(t('stageOpNameRequired'));return}
+        const minutes=Math.max(0,Math.round(Number(document.getElementById(fid+'-min')?.value||0)));
+        const save=!!document.getElementById(fid+'-save')?.checked;
+        const steps=stageStepsSnapshot(kind,owner),st=steps[index];if(!st)return;
+        st.operations.push({id:uid(),name,minutes});
+        st.minutes=stepOpsMinutes(st);
+        if(save&&!techSavedOps.some(x=>opKey(x)===opKey({name,workshop:st.name||''}))){
+          techSavedOps.push({id:uid(),name,workshop:st.name||''});
+          await persistSavedOps();
+        }
+        stageOpFormOpen.delete(stageKey(kind,id,index));
+        await stageCommit(kind,owner,steps,`${tRu?tRu('historyOperationAdded'):'Операция добавлена'}: ${st.name||''} → ${name}`);
+      },
+      async update(id,index,opIndex,field,value){
+        const owner=stageOwner(kind,id);if(!owner)return;
+        const steps=stageStepsSnapshot(kind,owner),st=steps[index],op=st&&st.operations[opIndex];if(!op)return;
+        if(field==='minutes')op.minutes=Math.max(0,Math.round(Number(value||0)));
+        else{const v=String(value||'').trim();if(!v){toast(t('stageOpNameRequired'));stageRerender(kind,id);return}op.name=v}
+        st.minutes=stepOpsMinutes(st);
+        await stageCommit(kind,owner,steps,'');
+      },
+      async remove(id,index,opIndex){
+        const owner=stageOwner(kind,id);if(!owner)return;
+        const steps=stageStepsSnapshot(kind,owner),st=steps[index];if(!st)return;
+        st.operations=st.operations.filter((_,i)=>i!==opIndex);
+        if(st.operations.length)st.minutes=stepOpsMinutes(st); // остались операции — время по ним; не осталось — время этапа сохраняется как было
+        await stageCommit(kind,owner,steps,'');
+      },
+      async delSaved(opId,id,index){
+        const item=techSavedOps.find(x=>x.id===opId);if(!item)return;
+        if(!confirm(`${t('stageOpDeleteSavedConfirm')} «${item.name}»?`))return;
+        techDeletedOpKeys.add(opKey(item));
+        techSavedOps=techSavedOps.filter(x=>x.id!==opId);
+        await persistSavedOps();
+        stageRerender(kind,id);
+      }
+    };
+  }
+  const techStageApi=makeStageOpApi('tech'),orderStageApi=makeStageOpApi('order');
+
   // ---------- материалы: мутаторы ----------
   function openTechMaterialPicker(techId){
     const categories=typeof technologyStockCategories==='function'?technologyStockCategories():[];
     const categoryOptions=categories.map(cat=>`<option value="${escapeHtml(cat)}">${escapeHtml(categoryLabel(cat)||cat)}</option>`).join('');
     const hasMaterials=(data.materials||[]).length>0;
     const body=hasMaterials?`<div class="form-grid technology-stock-picker"><div class="field"><label>${escapeHtml(currentLang==='ru'?'Категория':currentLang==='en'?'Category':'Kategorija')}</label><select class="select" id="techMaterialPickerCategory" onchange="updateTechMaterialPickerOptions(this.value)"><option value="">${escapeHtml(currentLang==='ru'?'Все категории':currentLang==='en'?'All categories':'Visas kategorijas')}</option>${categoryOptions}</select></div><div class="field"><label>${escapeHtml(t('material'))}</label><select class="select" id="techMaterialPickerMaterial" onchange="toggleTechMaterialPickerAdd(this.value)"><option value="">${escapeHtml(t('selectMaterialFromStock'))}</option>${typeof materialOptions==='function'?materialOptions('',''):''}</select></div></div>`:`<div class="order-tech-empty">${escapeHtml(t('noWarehouseMaterials'))}</div>`;
-    openModal(t('addMaterialFromStock'),body,`<button class="btn" type="button" onclick="closeModal();openTechnologyDetail('${techId}')">${escapeHtml(u42('cancel'))}</button><button class="btn primary" id="techMaterialPickerAddBtn" type="button" onclick="addTechMaterialFromStock('${techId}')" disabled>${escapeHtml(u42('add'))}</button>`);
+    openModal(t('addMaterialFromStock'),body,`<button class="btn" type="button" onclick="closeModal();openTechnologyDetail('${techId}')">${escapeHtml(t('cancel'))}</button><button class="btn primary" id="techMaterialPickerAddBtn" type="button" onclick="addTechMaterialFromStock('${techId}')" disabled>${escapeHtml(u42('add'))}</button>`);
   }
   function updateTechMaterialPickerOptions(category){
     const select=document.getElementById('techMaterialPickerMaterial');if(!select)return;
@@ -589,7 +726,7 @@
   function openCreateTechnologyModal(orderId=''){
     if(typeof requireAuth==='function'&&!requireAuth())return;
     const body=createTechnologyModalBody(orderId);
-    openModal(t('createTechnologyTitle'),body,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('cancel'))}</button><button class="btn primary" type="button" onclick="saveNewTechnology()">${escapeHtml(u42('save'))}</button>`);
+    openModal(t('createTechnologyTitle'),body,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="saveNewTechnology()">${escapeHtml(u42('save'))}</button>`);
   }
   function technologyStepsSnapshot(o){
     return (typeof orderSteps==='function'?orderSteps(o):[]).map(s=>({name:s.name||'',minutes:Number(s.minutes||0),responsible:s.responsible||''}));
@@ -658,7 +795,7 @@
     const hasExisting=(typeof orderSteps==='function'?orderSteps(o):[]).length>0||(typeof orderMaterials==='function'?orderMaterials(o):[]).length>0;
     if(hasExisting&&!confirm(t('confirmApplyTechnologyOverwrite')))return;
     if(typeof markTechnologyStarted==='function')markTechnologyStarted(o);
-    o.steps=(tc.steps||[]).map(s=>({name:s.name||'',minutes:Number(s.minutes||0),responsible:s.responsible||''}));
+    o.steps=(tc.steps||[]).map(s=>{const st={name:s.name||'',minutes:Number(s.minutes||0),responsible:s.responsible||''};if(Array.isArray(s.operations)&&s.operations.length)st.operations=s.operations.map(x=>({id:x.id,name:x.name,minutes:Number(x.minutes||0)}));return st});
     o.materials=(tc.materials||[]).map(item=>{
       const m=(data.materials||[]).find(x=>String(x.id)===String(item.materialId));
       const unit=item.unit||(typeof orderUnitForMaterial==='function'?orderUnitForMaterial(m,item.category):'')||'';
@@ -693,7 +830,7 @@
       <label class="tech-save-radio"><input type="radio" name="techSaveMode" value="new" onchange="onTechSaveModeChange()"><span><b>${escapeHtml(t('techSaveNew'))}</b><small>${escapeHtml(t('techSaveNewHint'))}</small></span></label>
       <div class="field" id="techSaveNewNameField" style="display:none"><label>${escapeHtml(t('technologyName'))}</label><input id="techSaveNewName" class="input" value="${escapeHtml(defaultNewName)}"></div>
     </div>`;
-    openModal(t('updateTechnologyTitle'),body,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(u42('cancel'))}</button><button class="btn primary" type="button" onclick="confirmTechnologySave('${o.id}')">${escapeHtml(u42('save'))}</button>`);
+    openModal(t('updateTechnologyTitle'),body,`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('cancel'))}</button><button class="btn primary" type="button" onclick="confirmTechnologySave('${o.id}')">${escapeHtml(u42('save'))}</button>`);
   }
   async function confirmTechnologySave(orderId){
     const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
@@ -745,6 +882,9 @@
     openTechNewMaterial,attachCreatedTechnologyMaterialToTech,
     getTechPlannedQty,updateTechPlannedQty,technologyMaterialAvailability,technologyOverallAvailability,
     renameTechDetail,
+    isOpListRow,applyOpListRow,stageOpsRowHtml,stepOpsMinutes,
+    toggleTechStageOpForm:techStageApi.toggle,addTechStageOp:techStageApi.add,updateTechStageOp:techStageApi.update,removeTechStageOp:techStageApi.remove,deleteSavedTechOp:techStageApi.delSaved,
+    toggleOrderStageOpForm:orderStageApi.toggle,addOrderStageOp:orderStageApi.add,updateOrderStageOp:orderStageApi.update,removeOrderStageOp:orderStageApi.remove,deleteSavedOrderOp:orderStageApi.delSaved,
     insertTechnologyToSupabase,technologyStepsSnapshot,technologyMaterialsSnapshot
   });
 })();
