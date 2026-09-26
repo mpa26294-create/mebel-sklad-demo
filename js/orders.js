@@ -849,7 +849,7 @@ function workshopAnalytics(stepName){
 
 // ===== Раздел "Цеха": та же производственная информация, что и в заказе, но сгруппированная
 // по цеху, а не по заказу — рабочему цеха не нужно открывать заказы по одному, чтобы увидеть
-// свою очередь. Переиспользует productionOperationCardHtml/workshopAnalytics без дублирования логики.
+// свою очередь. Переиспользует workshopAnalytics без дублирования логики.
 let selectedWorkshopName='';
 function allWorkshopNames(){
   const names=[];
@@ -1132,45 +1132,6 @@ function workshopsOverviewHtml(){
 let workshopFocusOrderId='',workshopFocusStepIndex=-1;
 function openWorkshopDetail(name){selectedWorkshopName=name;workshopFocusOrderId='';workshopFocusStepIndex=-1;renderWorkshops()}
 function closeWorkshopDetail(){selectedWorkshopName='';workshopFocusOrderId='';workshopFocusStepIndex=-1;renderWorkshops()}
-const expandedWorkshopOps=new Set();
-function toggleWorkshopQueueItem(orderId,stepIndex){
-  const key=`${orderId}_${stepIndex}`;
-  if(expandedWorkshopOps.has(key))expandedWorkshopOps.delete(key);else expandedWorkshopOps.add(key);
-  renderWorkshops();
-}
-function workshopQueueItemHtml(row,etaMap){
-  const o=row.order,op=productionOp(o,row.index);
-  if(!op)return '';
-  const key=`${o.id}_${op.stepIndex}`,expanded=expandedWorkshopOps.has(key);
-  const pct=productionOpPercent(o,op),status=productionStatusClass(op.status);
-  const coverage=productionMaterialCoverage(o,operationMaterials(o,op),productionCompletedQty(o,op));
-  const dClass=orderDeadlineClass(o,op);
-  const dueNote=dClass==='overdue'?`<span class="workshop-row-danger">· ${escapeHtml(t('overdue')).toLowerCase()}</span>`:dClass==='today'?`<span class="workshop-row-today">· ${escapeHtml(t('dueTodayNote'))}</span>`:'';
-  const matNote=!coverage.ok?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('missingMaterialsCount')).toLowerCase()}</span>`:'';
-  const eta=etaMap?etaMap.get(`${o.id}_${row.index}`):null;
-  const rowDue=orderDueDate(o,op),riskNote=(dClass!=='overdue'&&eta&&rowDue&&eta>rowDue)?`<span class="workshop-row-danger">· ⚠ ${escapeHtml(t('workshopRiskShort'))} (${escapeHtml(t('etaApprox'))} ${escapeHtml(eta)})</span>`:'';
-  // v8.02: срок «через N дн.» и время по норме технолога на остаток — то же, что видит рабочий на своём экране.
-  const dueInfo=simpleDueInfo(o,op),normInfo=simpleNormInfo(o,op);
-  const teamInfo=opTeamInfo(o,op),teamNote=teamInfo.active.length?`<span>· ● ${escapeHtml(teamInfo.active.map(u=>u.name).join(', '))}</span>`:'';
-  const countNote=(dueInfo&&!dClass)?`<span>· ${escapeHtml(dueInfo.text)}</span>`:'';
-  const normNote=(normInfo.perUnit>0&&normInfo.remaining>0)?`<span>· ${escapeHtml(t('simpleNormShort').replace('{time}',orderTimeText(normInfo.remainingMin)))}</span>`:'';
-  return `<div class="workshop-queue-item">
-    <button type="button" class="workshop-queue-row ${status}" onclick="toggleWorkshopQueueItem('${o.id}',${op.stepIndex})">
-      <span class="workshop-row-dot ${status}"></span>
-      <span class="workshop-row-info">
-        <b>${escapeHtml(o.number||'—')}</b>${o.client?`<em> · ${escapeHtml(o.client)}</em>`:''}
-        <small>${escapeHtml(formatDeadline(o,op))} ${countNote} ${dueNote} ${normNote} ${teamNote} ${riskNote} ${matNote}</small>
-      </span>
-      <span class="workshop-row-progress"><i><b style="width:${pct}%"></b></i></span>
-      <span class="production-status-pill ${status}">${escapeHtml(productionStatusLabel(op.status))}</span>
-      <span class="workshop-row-chevron">${expanded?'⌄':'›'}</span>
-    </button>
-    ${expanded?`<div class="workshop-queue-expanded">
-      <button type="button" class="workshop-queue-order-link" onclick="goToOrderFromMaterial(event,'${o.id}')">${escapeHtml(t('openOrderCard'))} ↗</button>
-      ${productionOperationCardHtml(o,op)}
-    </div>`:''}
-  </div>`;
-}
 // v7.77: раздел "Цеха" переработан в рабочее место мастера (по ТЗ пользователя) — раньше детальный
 // экран цеха показывал сразу всё: большую сводку с "Загрузка 2296%" (непонятно сотруднику), плановое/
 // фактическое время, полную очередь с развёрнутыми карточками операций (списания, комментарии,
@@ -1178,9 +1139,7 @@ function workshopQueueItemHtml(row,etaMap){
 // сейчас", уходило слишком много времени. Новый экран отвечает на 4 вопроса сразу: что делаю сейчас,
 // сколько сделано/осталось, что мешает, что дальше. Все данные — те же существующие функции
 // (workshopAnalytics/productionOp/productionMaterialCoverage/finalizeProductionQuantity и т.д.),
-// новых источников данных не добавлено. Старый подробный вид (полная карточка операции: план/факт,
-// история смен, комментарии, ручное списание) никуда не делся — он доступен по ссылке "Открыть
-// полную очередь" (см. openWorkshopFullQueue()) и остаётся рабочим как раньше.
+// новых источников данных не добавлено.
 
 // v7.82: раньше "в работе" считалась ровно ОДНА строка очереди — мастер не мог явно приостановить
 // текущий заказ и начать другой без захода в полную карточку заказа, и тем более не мог держать
@@ -1437,23 +1396,17 @@ function workshopQueueMiniRowHtml(row,isCurrent,etaMap){
   const dueInfo=simpleDueInfo(o,op),queueDueHtml=dueInfo?`${escapeHtml(formatDeadline(o,op))} · <span class="sw-due ${dueInfo.cls}">${escapeHtml(dueInfo.text)}</span>`:escapeHtml(formatDeadline(o,op));
   const startLbl=(op&&openWorkSessions(o,op.stepIndex).length>0&&!myWorkSession(o,op.stepIndex))?t('simpleJoinBtn'):t('prodStart');
   const startBtn=!isCurrent?`<button type="button" class="btn small workshop-queue-mini-start" aria-label="${escapeHtml(startLbl)}" title="${escapeHtml(startLbl)}" onclick="event.stopPropagation();startProductionOperation('${o.id}',${row.index})">▶</button>`:'';
+  // v8.52: клик по строке очереди теперь открывает ту же самую карточку "заказ в цеху"
+  // (workshopOrderFocusHtml), что и "Открыть цех →" из заказа — раньше вёл на общую карточку заказа
+  // (goToOrderFromMaterial), где не было ни "Начать/Пауза", ни "Записать выпуск" этого цеха.
+  const openCall=op?`openWorkshopFromOrder('${jsStrArg(o.id)}',${op.stepIndex},'${jsStrArg(op.stepName)}')`:`goToOrderFromMaterial(event,'${jsStrArg(o.id)}')`;
   return `<div class="workshop-queue-mini-row ${isCurrent?'current':''}">
-    <button type="button" class="workshop-queue-mini-info-btn" onclick="goToOrderFromMaterial(event,'${o.id}')">
+    <button type="button" class="workshop-queue-mini-info-btn" onclick="${openCall}">
       <span class="workshop-queue-mini-dot ${tagCls||'ok'}"></span>
       <span class="workshop-queue-mini-info"><b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · ${isCurrent?`${remaining} ${escapeHtml(t('unitPieces'))} ${escapeHtml(t('remainingWord'))}`:queueDueHtml}</small></span>
       <span class="workshop-queue-mini-tag ${tagCls}">${escapeHtml(tagText)}</span>
     </button>
     ${startBtn}
-  </div>`;
-}
-function workshopQueueSidebarHtml(name,stat,activeRows){
-  const isActive=row=>activeRows.some(a=>String(a.order.id)===String(row.order.id)&&a.index===row.index);
-  const others=stat.queue.filter(row=>!isActive(row));
-  const rows=[...activeRows.map(row=>workshopQueueMiniRowHtml(row,true,stat.etaMap)),...others.slice(0,6).map(row=>workshopQueueMiniRowHtml(row,false,stat.etaMap))].join('');
-  return `<div class="workshop-queue-panel">
-    <div class="workshop-queue-panel-head"><h4>${escapeHtml(t('workshopQueueTitlePrefix'))} ${escapeHtml(workshopLabel(name))}</h4><small>${escapeHtml(t('workshopQueueSortHint'))}</small></div>
-    <div class="workshop-queue-mini-list">${rows||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`}</div>
-    <button type="button" class="workshop-more-link" onclick="openWorkshopFullQueue('${jsStrArg(name)}')">${escapeHtml(t('openFullQueueBtn'))} →</button>
   </div>`;
 }
 // v7.83: пользователь справедливо спросил "материалы КАКОГО заказа", когда в работе одновременно два
@@ -1485,12 +1438,6 @@ function openProductionMaterialsControlModal(orderId){
   if(typeof pushModalState==='function')pushModalState();
   openModal(t('productionMaterialsControl'),productionMaterialsControlHtml(o),`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('closeBtn'))}</button>`);
 }
-function openWorkshopFullQueue(name){
-  const stat=workshopAnalytics(name);
-  const cards=stat.queue.map(row=>workshopQueueItemHtml(row,stat.etaMap)).join('')||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`;
-  if(typeof pushModalState==='function')pushModalState();
-  openModal(`${t('workshopQueueTitlePrefix')} ${workshopLabel(name)}`,`<div class="workshop-queue-list">${cards}</div>`,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('closeBtn'))}</button>`);
-}
 // Быстрая отметка выпуска (+1/+5/+10/+20) — тот же самый finalizeProductionQuantity(), что и обычное
 // "Завершить"/подтверждение количества, просто без промежуточного окна ради "макс. 2 клика". Нехватка
 // материалов по-прежнему обрабатывается штатно: finalizeProductionQuantity сама откроет окно с тем,
@@ -1518,20 +1465,17 @@ function workshopOrderFocusHtml(row,name){
     <button type="button" class="btn small workshop-show-queue-btn" onclick="clearWorkshopOrderFocus('${jsStrArg(name)}')">${escapeHtml(t('workshopShowFullQueueBtn'))} →</button>`;
 }
 function clearWorkshopOrderFocus(name){workshopFocusOrderId='';workshopFocusStepIndex=-1;selectedWorkshopName=name;renderWorkshops()}
+// v8.52: по просьбе пользователя список цеха — сам по себе компактный (только строка на заказ), а
+// карточка "в работе" с кнопками Начать/Пауза/Записать выпуск открывается ОТДЕЛЬНО, по клику на нужный
+// заказ (см. workshopQueueMiniRowHtml → openWorkshopFromOrder → workshopOrderFocusHtml). Раньше эта
+// карточка(и) показывалась сразу тут, рядом с урезанной (до 6 строк) очередью сбоку — два места с
+// частично пересекающимся смыслом на одном экране.
 function workshopDetailHtml(name){
   const stat=workshopAnalytics(name);
   const activeRows=workshopActiveRows(stat);
-  // v7.82: если в работе больше одного заказа — карточки складываются в столбик (см. .workshop-current-list
-  // в css/style.css), каждая с собственной паузой/продолжением и своей "Записать выпуск".
-  const currentCards=activeRows.length?activeRows.map(row=>workshopCurrentCardHtml(row)).join(''):workshopCurrentCardHtml(null);
-  // v7.83: свой блок материалов под КАЖДЫЙ активный заказ, а не только под первый по дедлайну —
-  // иначе при двух заказах в работе было не разобрать, к какому именно относится список материалов.
-  // Заголовок называет заказ по номеру, только если активных заказов больше одного (иначе и так
-  // очевидно, о каком заказе речь).
-  const materialsHtml=activeRows.map(row=>{
-    const op=productionOp(row.order,row.index);
-    return op?workshopCurrentMaterialsHtml(row.order,op,activeRows.length>1?row.order.number:''):'';
-  }).join('');
+  const isActive=row=>activeRows.some(a=>String(a.order.id)===String(row.order.id)&&a.index===row.index);
+  const others=stat.queue.filter(row=>!isActive(row));
+  const rows=[...activeRows.map(row=>workshopQueueMiniRowHtml(row,true,stat.etaMap)),...others.map(row=>workshopQueueMiniRowHtml(row,false,stat.etaMap))].join('');
   return `<div class="workshop-detail-head">
       <button type="button" class="workshop-back-link" onclick="closeWorkshopDetail()">${escapeHtml(t('backToWorkshops'))}</button>
       <span class="workshop-detail-sep"></span>
@@ -1539,12 +1483,9 @@ function workshopDetailHtml(name){
       ${workshopStatusBadgeHtml(stat.queue)}
     </div>
     ${workshopShiftSummaryHtml(name,stat,activeRows)}
-    <div class="workshop-work-layout">
-      <div class="workshop-work-main"><div class="workshop-current-list">${currentCards}</div></div>
-      <div class="workshop-work-side">
-        ${workshopQueueSidebarHtml(name,stat,activeRows)}
-        ${materialsHtml}
-      </div>
+    <div class="workshop-queue-panel">
+      <div class="workshop-queue-panel-head"><h4>${escapeHtml(t('workshopQueueTitlePrefix'))} ${escapeHtml(workshopLabel(name))}</h4><small>${escapeHtml(t('workshopQueueSortHint'))}</small></div>
+      <div class="workshop-queue-mini-list">${rows||`<div class="workshop-empty">${escapeHtml(t('prodQueueDone'))}</div>`}</div>
     </div>`;
 }
 // v7.90: рабочий режим переработан по утверждённому макету — вместо одного плоского списка карточек

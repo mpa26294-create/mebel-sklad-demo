@@ -3497,32 +3497,10 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-back-link{padding:0;border:0;background:none;color:#175cd3;font-size:12.5px;font-weight:650;cursor:pointer;white-space:nowrap}
 .workshop-detail-sep{width:1px;height:16px;background:#e5e9f0;flex-shrink:0}
 .workshop-detail-head h3{margin:0;color:#101828;font-size:16px}
-.workshop-queue-list{display:flex;flex-direction:column;gap:8px;margin-top:16px}
-.workshop-queue-item{display:flex;flex-direction:column;border:0.5px solid #e5e9f0;border-radius:12px;overflow:hidden}
-.workshop-queue-row{display:grid;grid-template-columns:8px minmax(0,1fr) 70px auto 16px;gap:12px;align-items:center;width:100%;min-height:52px;padding:10px 14px;border:0;background:#fff;text-align:left;cursor:pointer}
-.workshop-queue-row:hover{background:#fafbfc}
-.workshop-row-dot{width:8px;height:8px;border-radius:50%;background:#c5ccd6}
-.workshop-row-dot.running{background:#1677e8}
-.workshop-row-dot.paused{background:#f47a00}
-.workshop-row-dot.done{background:#249943}
-.workshop-row-info{min-width:0;display:flex;flex-direction:column;gap:2px}
-.workshop-row-info b{color:#101828;font-size:13px;font-weight:650}
-.workshop-row-info em{color:#8490a3;font-style:normal;font-size:12px}
-.workshop-row-info small{display:block;color:#8490a3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.workshop-row-danger{color:#c73535;font-weight:650}
-.workshop-row-today{color:#8a650e;font-weight:650}
-.workshop-row-progress{width:70px;height:4px;border-radius:99px;background:#eef1f5;overflow:hidden}
-.workshop-row-progress i{display:block;height:100%}
-.workshop-row-progress b{display:block;height:100%;border-radius:99px;background:var(--accent)}
-.workshop-row-chevron{color:#98a2b3;font-size:16px;text-align:center}
-.workshop-queue-expanded{border-top:0.5px solid #e5e9f0;background:#fafbfc;padding:12px}
-.workshop-queue-order-link{display:inline-flex;margin-bottom:10px;padding:0;border:0;background:none;color:#175cd3;font-size:12px;font-weight:650;cursor:pointer}
-.workshop-queue-expanded .production-operation-card{border-radius:12px}
 /* v7.89: главный обзор "Цеха" — заказ и рабочая сессия разделены, проценты загрузки заменены
    прогнозом в днях. Старые классы .workshops-stat-bar/.workshops-load-*/.workshops-active-*/
    .workshop-list-row* из предыдущего обзора здесь не используются — их CSS ниже (медиа-запрос на
-   760px) намеренно не тронут: он всё ещё безопасен (просто ни на что не действует) и содержит правила
-   для .workshop-queue-row, которые по-прежнему нужны полной очереди цеха. */
+   760px) намеренно не тронут: он всё ещё безопасен (просто ни на что не действует). */
 .production-status-pill.free{border-color:#bfe8cc;background:#ecfdf3;color:#287047}
 .production-status-pill.danger{border-color:#fecaca;background:#fff1f1;color:#b42323}
 .workshops-period-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px}
@@ -3602,7 +3580,7 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
   .workshop-main-alert{flex-direction:column}
   .workshop-main-alert .btn{align-self:stretch}
 }
-@media(max-width:760px){.workshops-stat-bar{overflow-x:auto;flex-wrap:nowrap}.workshops-stat-bar>div{flex:0 0 auto}.workshops-list-head{display:none}.workshops-load-row{grid-template-columns:20px minmax(0,1fr) 42px;grid-template-areas:"icon name pct" ". bar bar" ". qty qty"}.workshops-load-icon{grid-area:icon}.workshops-load-name{grid-area:name}.workshops-load-pct{grid-area:pct}.workshops-load-bar{grid-area:bar}.workshops-load-qty{grid-area:qty;text-align:left}.workshops-active-row{grid-template-columns:30px minmax(0,1fr) 50px;grid-template-areas:"icon name qty" ". progress progress"}.workshops-active-icon{grid-area:icon}.workshops-active-name{grid-area:name}.workshops-active-qty{grid-area:qty}.workshops-active-progress{grid-area:progress}.workshops-active-status,.workshops-active-time{display:none}.workshop-list-row{grid-template-columns:34px minmax(0,1fr) 16px;grid-template-areas:"icon name arrow" ". stats stats";row-gap:8px}.workshop-list-row-icon{grid-area:icon}.workshop-list-row-name{grid-area:name}.workshop-list-row-arrow{grid-area:arrow}.workshop-list-row-stat,.workshop-list-row-note,.workshop-list-row-badge{grid-area:stats;display:none}.workshop-queue-row{grid-template-columns:8px minmax(0,1fr) 16px;grid-template-areas:"dot info chevron" ". progress ."}.workshop-row-progress{grid-area:progress;width:100%}.production-status-pill{display:none}}
+@media(max-width:760px){.workshops-stat-bar{overflow-x:auto;flex-wrap:nowrap}.workshops-stat-bar>div{flex:0 0 auto}.workshops-list-head{display:none}.workshops-load-row{grid-template-columns:20px minmax(0,1fr) 42px;grid-template-areas:"icon name pct" ". bar bar" ". qty qty"}.workshops-load-icon{grid-area:icon}.workshops-load-name{grid-area:name}.workshops-load-pct{grid-area:pct}.workshops-load-bar{grid-area:bar}.workshops-load-qty{grid-area:qty;text-align:left}.workshops-active-row{grid-template-columns:30px minmax(0,1fr) 50px;grid-template-areas:"icon name qty" ". progress progress"}.workshops-active-icon{grid-area:icon}.workshops-active-name{grid-area:name}.workshops-active-qty{grid-area:qty}.workshops-active-progress{grid-area:progress}.workshops-active-status,.workshops-active-time{display:none}.workshop-list-row{grid-template-columns:34px minmax(0,1fr) 16px;grid-template-areas:"icon name arrow" ". stats stats";row-gap:8px}.workshop-list-row-icon{grid-area:icon}.workshop-list-row-name{grid-area:name}.workshop-list-row-arrow{grid-area:arrow}.workshop-list-row-stat,.workshop-list-row-note,.workshop-list-row-badge{grid-area:stats;display:none}.production-status-pill{display:none}}
 
 /* v7.77: раздел "Цеха" — рабочее место мастера. Синий (#1677e8, тот же, что уже используется для
    "В работе"/running в производственных карточках) — рабочий статус; оранжевый/красный — только для
@@ -3621,8 +3599,6 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-material-alert>span:nth-child(2){flex:1;min-width:0}
 .workshop-material-alert .btn.primary{flex-shrink:0;background:linear-gradient(180deg,#1677e8 0%,#0f5fc4 100%);border-color:#0f5fc4;color:#fff;box-shadow:0 8px 18px rgba(22,119,232,.22)}
 .workshop-material-alert.small{margin-bottom:0;padding:9px 12px;font-size:11px;font-weight:600}
-.workshop-work-layout{display:grid;grid-template-columns:minmax(0,1.45fr) 330px;gap:14px;align-items:start}
-.workshop-work-side{display:flex;flex-direction:column;gap:14px}
 .workshop-current-list{display:flex;flex-direction:column;gap:14px}
 .workshop-current-card{padding:18px;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
 .workshop-current-card.empty{align-items:center;justify-content:center}
@@ -3701,7 +3677,6 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .shift-day-chip input{accent-color:var(--accent)}
 .shift-toggle-row{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:#344054;cursor:pointer}
 .shift-toggle-row input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}
-@media(max-width:1080px){.workshop-work-layout{grid-template-columns:1fr}}
 @media(max-width:760px){.workshop-shift-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.workshop-current-head h3{font-size:19px}.workshop-current-progress-num b{font-size:26px}.workshop-material-alert{flex-wrap:wrap}.workshop-material-alert .btn{width:100%}}
 /* v8.49: на узком экране «Продолжить»/«Начать» у заказа в цеху вылезал за край экрана (шапка карточки не
    переносила кнопку на новую строку, а название заказа не давало ей сжаться) — переноса или прокрутки
