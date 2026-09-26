@@ -34,18 +34,35 @@
     const subs=stageSubOps(o,op.stepIndex);if(!subs.length)return 0;
     return Math.min(orderProductQty(o),...subs.map(s=>partsDone(o,op,s,skip,extra)));
   }
+  // v8.60: раньше "какая операция сейчас выполняется" держалась только в памяти вкладки (Map ниже) —
+  // после перезахода на страницу (или у другого человека на своём экране) выбор пропадал, хотя работа
+  // по факту продолжалась (отметки уже шли по этой операции). Теперь выбор пишем прямо в заказ
+  // (op.activeSubId) и сохраняем — виден сразу при открытии, у всех и после перезагрузки, а не только
+  // тому, кто только что нажал.
   function selectedSubId(o,index,opArg){
-    const subs=stageSubOps(o,index),op=opArg||productionOp(o,index),cur=selected.get(skey(o.id,index));
-    if(cur&&subs.some(s=>String(s.id)===String(cur)))return cur;
+    const subs=stageSubOps(o,index),op=opArg||productionOp(o,index);
+    const persisted=op&&op.activeSubId?String(op.activeSubId):'';
+    const cur=persisted||selected.get(skey(o.id,index));
+    if(cur&&subs.some(s=>String(s.id)===String(cur))&&(!op||subDone(o,op,cur)<orderProductQty(o)))return cur;
     const open=op?subs.filter(s=>subDone(o,op,s.id)<orderProductQty(o)):subs;
     return open.length===1?open[0].id:''; // осталась одна невыполненная — выбираем её сами
+  }
+  function setActiveSubId(op,subId){
+    if(!op||op.activeSubId===String(subId))return;
+    op.activeSubId=String(subId);
+    if(typeof save==='function')save();
   }
   function rerender(orderId){
     const ws=document.getElementById('workshops');
     if(ws&&ws.classList.contains('active')&&typeof renderWorkshops==='function')renderWorkshops();
     else if(typeof refreshOrderWorkflow==='function')refreshOrderWorkflow(orderId);
   }
-  function selectSubOp(orderId,index,subId){selected.set(skey(orderId,index),String(subId));rerender(orderId)}
+  function selectSubOp(orderId,index,subId){
+    selected.set(skey(orderId,index),String(subId));
+    const o=findOrder(orderId);
+    if(o)setActiveSubId(productionOp(o,index),subId);
+    rerender(orderId);
+  }
 
   function byPersonText(op,subId){
     const map=new Map();
@@ -116,6 +133,7 @@
     const op=productionOp(o,index);if(!op||op.status==='done')return;
     const subs=stageSubOps(o,index),subId=selectedSubId(o,index,op),sub=subs.find(s=>String(s.id)===String(subId));
     if(!sub){toast(t('subOpChoose'));return}
+    setActiveSubId(op,sub.id); // отметка идёт по этой операции — она и есть "сейчас выполняется"
     const left=subTarget(o,sub)-subDone(o,op,sub.id);
     if(left<1){toast(t('subOpAlreadyFull'));return}
     qty=Math.trunc(Number(qty||0));
@@ -194,6 +212,8 @@
   }
   async function pickSubOpAndStart(orderId,index,subId){
     selected.set(skey(orderId,index),String(subId));
+    const o=findOrder(orderId);
+    if(o)setActiveSubId(productionOp(o,index),subId);
     closeModal();
     await startProductionOperation(orderId,index,{skipSubChoice:true});
   }
