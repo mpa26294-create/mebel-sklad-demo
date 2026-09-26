@@ -1009,6 +1009,81 @@ function workshopsRowIsMaterialBlocked(row){
   const limiting=workshopLimitingMaterial(row.order,row.op||productionOp(row.order,row.index));
   return limiting&&limiting.enough<=0?limiting:null;
 }
+// Какие цеха сейчас "требуют решения" (не хватит материала или риск не успеть к сроку, либо цех
+// вообще свободен и его можно занять) — вынесено отдельной функцией, чтобы одни и те же данные
+// использовались и для числа на карточке, и для списка в модалке по клику на неё (см. openWorkshopsDecisionsModal).
+function workshopsNeedingDecision(){
+  const list=[];
+  allWorkshopNames().forEach(name=>{
+    const queue=productionQueueForWorkshop(name);
+    if(!queue.length){list.push({name,reason:t('workshopFreeLine')});return}
+    const etaMap=workshopQueueEtaMap(queue);
+    const current=queue.find(r=>productionOp(r.order,r.index)?.status==='running')||queue.find(r=>productionOp(r.order,r.index)?.status==='paused')||queue[0]||null;
+    const risk=current?workshopRowRisk(current,etaMap):null;
+    if(risk)list.push({name,reason:risk.text,row:current});
+  });
+  return list;
+}
+// Общая строка для всех четырёх модалок с верхних карточек — иконка цеха, заголовок/подпись, метка
+// справа, клик закрывает модалку и ведёт прямо к нужному заказу/цеху (openWorkshopFromOrder/openWorkshopDetail).
+function workshopsStatModalRowHtml(icon,title,subtitle,badge,onclick){
+  return `<button type="button" class="workshops-stat-modal-row" onclick="${onclick}">
+    <span class="workshops-stat-modal-icon">${icon}</span>
+    <span class="workshops-stat-modal-info"><b>${escapeHtml(title)}</b>${subtitle?`<small>${escapeHtml(subtitle)}</small>`:''}</span>
+    ${badge||''}
+  </button>`;
+}
+function workshopsStatModalOpen(title,bodyHtml,emptyText){
+  if(typeof pushModalState==='function')pushModalState();
+  openModal(title,`<div class="workshops-stat-modal-list">${bodyHtml||`<div class="workshop-empty">${escapeHtml(emptyText||t('noDataYet'))}</div>`}</div>`,`<button class="btn" type="button" onclick="goBackModal()">${escapeHtml(t('closeBtn'))}</button>`);
+}
+function openWorkshopsPausedModal(){
+  const rows=workshopsPausedRows();
+  const body=rows.map(row=>{
+    const op=row.op||productionOp(row.order,row.index);
+    const blocked=workshopsRowIsMaterialBlocked(row);
+    const badge=`<span class="production-status-pill ${blocked?'danger':'paused'}">${escapeHtml(blocked?t('workshopRiskNoMaterial'):t('prodStatusPaused'))}</span>`;
+    return workshopsStatModalRowHtml(workshopIcon(row.workshopName),row.order.number||'—',`${workshopLabel(row.workshopName)} · ${row.order.client||'—'}`,badge,`closeModal();openWorkshopFromOrder('${jsStrArg(row.order.id)}',${op.stepIndex},'${jsStrArg(row.workshopName)}')`);
+  }).join('');
+  workshopsStatModalOpen(t('onPauseLabel'),body,t('noContinuationNeeded'));
+}
+function openWorkshopsDecisionsModal(){
+  const list=workshopsNeedingDecision();
+  const body=list.map(({name,reason})=>workshopsStatModalRowHtml(workshopIcon(name),workshopLabel(name),reason,'<span class="workshop-list-row-arrow">›</span>',`closeModal();openWorkshopDetail('${jsStrArg(name)}')`)).join('');
+  workshopsStatModalOpen(t('needsDecisionLabel'),body,t('noDecisionsNeeded'));
+}
+function openActiveSessionsModal(){
+  const rows=currentlyActiveOperations().filter(r=>r.op.status==='running');
+  const body=rows.map(r=>{
+    const info=opTeamInfo(r.order,r.op);
+    const who=info.active.length?info.active.map(u=>teamUserLabel(u)).join(', '):'';
+    const badge=`<span class="production-status-pill running">${escapeHtml(t('prodStatusRunning'))}</span>`;
+    return workshopsStatModalRowHtml(workshopIcon(r.workshopName),r.order.number||'—',`${workshopLabel(r.workshopName)}${who?` · ${who}`:''}`,badge,`closeModal();openWorkshopFromOrder('${jsStrArg(r.order.id)}',${r.op.stepIndex},'${jsStrArg(r.workshopName)}')`);
+  }).join('');
+  workshopsStatModalOpen(t('activeSessionsLabel'),body,t('activeSessionsNoneGeneric'));
+}
+// Выпуск за период (та же сумма, что и на карточке), но по цехам — источник тот же consumptionLogs.
+function periodOutputByWorkshop(period){
+  const since=workshopsPeriodSinceDate(period);
+  const byName={};
+  (data.orders||[]).forEach(o=>{
+    (ensureWorkflowProduction(o).consumptionLogs||[]).forEach(l=>{
+      if(l.undone||!l.stepName)return;
+      const d=String(l.at||'').slice(0,10);
+      if(since&&d<since)return;
+      byName[l.stepName]=(byName[l.stepName]||0)+Number(l.qty||0);
+    });
+  });
+  return Object.keys(byName).map(name=>({name,qty:byName[name]})).sort((a,b)=>b.qty-a.qty);
+}
+function openOutputModal(){
+  const period=workshopsOverviewPeriod;
+  const outputLabel=period==='today'?t('outputTodayLabel'):period==='7days'?t('output7DaysLabel'):t('outputAllLabel');
+  const rows=periodOutputByWorkshop(period);
+  const badgeFor=qty=>`<b>${qty} ${escapeHtml(t('unitPieces'))}</b>`;
+  const body=rows.map(({name,qty})=>workshopsStatModalRowHtml(workshopIcon(name),workshopLabel(name),'',badgeFor(qty),`closeModal();openWorkshopDetail('${jsStrArg(name)}')`)).join('');
+  workshopsStatModalOpen(outputLabel,body);
+}
 function workshopsTopStatsHtml(){
   const period=workshopsOverviewPeriod;
   const output=periodOutputStats(period);
@@ -1017,18 +1092,12 @@ function workshopsTopStatsHtml(){
   const pausedRows=workshopsPausedRows();
   const materialBlockedCount=pausedRows.filter(workshopsRowIsMaterialBlocked).length;
   const manualPauseCount=pausedRows.length-materialBlockedCount;
-  let decisions=0;
-  allWorkshopNames().forEach(name=>{
-    const queue=productionQueueForWorkshop(name);
-    const etaMap=workshopQueueEtaMap(queue);
-    const current=queue.find(r=>productionOp(r.order,r.index)?.status==='running')||queue.find(r=>productionOp(r.order,r.index)?.status==='paused')||queue[0]||null;
-    if((!queue.length)||(current&&workshopRowRisk(current,etaMap)))decisions++;
-  });
+  const decisions=workshopsNeedingDecision().length;
   return `<div class="workshops-top-stats">
-    <div class="workshops-top-stat"><small>${escapeHtml(outputLabel)}</small><b>${output.qty} ${escapeHtml(t('unitPieces'))}</b><span>${escapeHtml(String(t('byOperationsCountSuffix')).replace('{n}',output.opsCount))}</span></div>
-    <div class="workshops-top-stat"><small>${escapeHtml(t('activeSessionsLabel'))}</small><b>${active.count}</b><span>${escapeHtml(active.note)}</span></div>
-    <div class="workshops-top-stat"><small>${escapeHtml(t('onPauseLabel'))}</small><b>${pausedRows.length} ${escapeHtml(pausedRows.length===1?t('orderWordOne'):t('orderWordMany'))}</b><span>${manualPauseCount>0?escapeHtml(String(t('pendingContinueNote')).replace('{n}',manualPauseCount)):''}</span></div>
-    <div class="workshops-top-stat"><small>${escapeHtml(t('needsDecisionLabel'))}</small><b>${decisions} ${escapeHtml(decisions===1?t('workshopWordOne'):t('workshopWordMany'))}</b><span>${escapeHtml(t('needsDecisionHint'))}</span></div>
+    <button type="button" class="workshops-top-stat" onclick="openOutputModal()"><small>${escapeHtml(outputLabel)}</small><b>${output.qty} ${escapeHtml(t('unitPieces'))}</b><span>${escapeHtml(String(t('byOperationsCountSuffix')).replace('{n}',output.opsCount))}</span></button>
+    <button type="button" class="workshops-top-stat" onclick="openActiveSessionsModal()"><small>${escapeHtml(t('activeSessionsLabel'))}</small><b>${active.count}</b><span>${escapeHtml(active.note)}</span></button>
+    <button type="button" class="workshops-top-stat" onclick="openWorkshopsPausedModal()"><small>${escapeHtml(t('onPauseLabel'))}</small><b>${pausedRows.length} ${escapeHtml(pausedRows.length===1?t('orderWordOne'):t('orderWordMany'))}</b><span>${manualPauseCount>0?escapeHtml(String(t('pendingContinueNote')).replace('{n}',manualPauseCount)):''}</span></button>
+    <button type="button" class="workshops-top-stat" onclick="openWorkshopsDecisionsModal()"><small>${escapeHtml(t('needsDecisionLabel'))}</small><b>${decisions} ${escapeHtml(decisions===1?t('workshopWordOne'):t('workshopWordMany'))}</b><span>${escapeHtml(t('needsDecisionHint'))}</span></button>
   </div>`;
 }
 // Одна строка на цех: статус учитывает ТОЛЬКО реальное состояние сессии (running/paused), а не

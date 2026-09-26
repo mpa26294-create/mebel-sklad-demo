@@ -3510,10 +3510,18 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshops-period-label{color:#8490a3;font-size:12.5px}
 .workshops-period-label b{color:#344054}
 .workshops-top-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
-.workshops-top-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;min-height:96px}
+.workshops-top-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;min-height:96px;width:100%;text-align:left;cursor:pointer;font:inherit;transition:box-shadow .15s,border-color .15s}
+.workshops-top-stat:hover{border-color:#cfd6e0;box-shadow:0 20px 48px rgba(20,24,32,.1)}
 .workshops-top-stat small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
 .workshops-top-stat b{font-size:24px;font-weight:650;color:#101828;letter-spacing:-.02em}
 .workshops-top-stat span{color:#8490a3;font-size:12px;min-height:15px}
+.workshops-stat-modal-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto}
+.workshops-stat-modal-row{display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:10px;background:none;text-align:left;cursor:pointer}
+.workshops-stat-modal-row:hover{background:#fafbfc}
+.workshops-stat-modal-icon{font-size:17px;flex-shrink:0}
+.workshops-stat-modal-info{min-width:0;flex:1 1 auto;display:flex;flex-direction:column;gap:2px}
+.workshops-stat-modal-info b{color:#101828;font-size:13.5px;font-weight:650}
+.workshops-stat-modal-info small{color:#8490a3;font-size:12px}
 .workshop-main-alert{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;margin-bottom:18px;border:1px solid #f3c9b2;border-radius:16px;background:#fff7ed}
 .workshop-main-alert-icon{flex-shrink:0;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#f47a00;color:#fff;font-weight:700}
 .workshop-main-alert-body{flex:1;min-width:0}
