@@ -91,7 +91,7 @@
       return `<button type="button" class="subop-row ${isSel?'selected':''} ${full?'full':''}" aria-pressed="${isSel}" ${canPick&&!full?'':'disabled'} onclick="selectSubOp('${o.id}',${index},'${escapeHtml(String(s.id))}')">
         <span class="subop-radio" aria-hidden="true">${full?'✓':isSel?'●':'○'}</span>
         <span class="subop-main"><b>${escapeHtml(s.name)}</b><i class="subop-bar"><u style="width:${pct}%"></u></i>${who?`<small>${who}</small>`:''}</span>
-        <span class="subop-num"><b>${d}</b><small>/ ${tg}</small>${lag?`<em>${escapeHtml(t('subOpLagging'))}</em>`:''}</span>
+        <span class="subop-num"><b>${d}</b><small>/ ${tg}</small>${lag?`<em>${escapeHtml(String(t('subOpLagging')).replace('{n}',maxDone-d))}</em>`:''}</span>
       </button>`;
     }).join('');
     const hint=!canPick?'':sel?`${escapeHtml(t('subOpNowMarking'))}: <b>${escapeHtml(subs.find(s=>String(s.id)===String(sel))?.name||'')}</b>`:escapeHtml(t('subOpPickHint'));
