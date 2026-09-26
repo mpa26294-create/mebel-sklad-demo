@@ -3520,6 +3520,19 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 .workshop-main-alert-body b{display:block;color:#101828;font-size:14.5px;font-weight:650;margin-bottom:4px}
 .workshop-main-alert-body p{margin:0;color:#8a5a2b;font-size:12.5px;line-height:1.5}
 .workshop-main-alert .btn{flex-shrink:0;align-self:center;background:linear-gradient(180deg,#f47a00 0%,#c85f00 100%)!important;border-color:#c85f00!important;color:#fff!important}
+.workshops-charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch}
+.workshops-chart-panel{padding:20px;display:flex;flex-direction:column}
+.workshops-output-chart{width:100%;height:150px;display:block}
+.workshops-chart-summary{margin-top:10px;color:#8490a3;font-size:12.5px}
+.workshops-chart-summary b{color:#101828;font-weight:650}
+.workshops-loadchart-list{display:flex;flex-direction:column;gap:10px}
+.workshops-loadchart-row{display:grid;grid-template-columns:22px minmax(0,1fr) minmax(60px,1.4fr) 24px;align-items:center;gap:10px}
+.workshops-loadchart-icon{font-size:15px;text-align:center}
+.workshops-loadchart-name{min-width:0;color:#344054;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workshops-loadchart-bar{height:8px;border-radius:99px;background:#eef1f5;overflow:hidden}
+.workshops-loadchart-bar i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.workshops-loadchart-count{color:#101828;font-size:12.5px;font-weight:650;text-align:right}
+@media(max-width:900px){.workshops-charts-row{grid-template-columns:1fr}}
 .workshops-overview-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);gap:16px;align-items:start;margin-bottom:16px}
 .workshops-master-panel,.continuation-panel,.upcoming-decisions-panel,.workshops-backlog-panel{padding:20px}
 .workshops-master-head,.continuation-panel-head,.workshops-backlog-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}

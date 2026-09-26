@@ -1114,6 +1114,76 @@ function workshopsActionListHtml(){
     <div class="upcoming-decisions-list">${body}</div>
   </div>`;
 }
+// v8.55: два графика на главной странице цехов — просили сделать вид более наглядным/презентабельным
+// (например, показать заказчику). Оба строятся из уже существующих данных (те же consumptionLogs, что
+// у periodOutputStats, и та же очередь, что у workshopMasterRowHtml), никаких новых источников данных.
+// Выпуск по дням — сумма реально списанных количеств за каждый из последних 7 дней (все цеха вместе).
+function workshopsDailyOutputSeries(days){
+  const n=Math.max(1,Number(days)||7);
+  const byDay={},keys=[];
+  // Ключи дней — от today() (тот же формат YYYY-MM-DD в UTC, что и у l.at ниже), шаг ровно 24ч в UTC —
+  // без local-timezone арифметики (new Date().setDate()), которая на UTC+2/+3 сдвигала бы "сегодня" на
+  // день назад после ISO-конвертации.
+  const anchor=new Date(today()+'T00:00:00Z').getTime();
+  for(let i=n-1;i>=0;i--){
+    const key=new Date(anchor-i*86400000).toISOString().slice(0,10);
+    byDay[key]=0;keys.push(key);
+  }
+  const sinceKey=keys[0];
+  (data.orders||[]).forEach(o=>{
+    (ensureWorkflowProduction(o).consumptionLogs||[]).forEach(l=>{
+      if(l.undone)return;
+      const key=String(l.at||'').slice(0,10);
+      if(key<sinceKey||!(key in byDay))return;
+      byDay[key]+=Number(l.qty||0);
+    });
+  });
+  return keys.map(key=>({key,qty:byDay[key]}));
+}
+function workshopsDailyOutputChartSvg(series){
+  const w=560,h=170,padL=6,padR=6,padTop=20,padBottom=26;
+  const max=Math.max(1,...series.map(s=>s.qty));
+  const n=series.length,gap=10;
+  const barW=(w-padL-padR-gap*(n-1))/n;
+  const dow=[t('dowSun'),t('dowMon'),t('dowTue'),t('dowWed'),t('dowThu'),t('dowFri'),t('dowSat')];
+  const todayKey=today();
+  const bars=series.map((s,i)=>{
+    const x=padL+i*(barW+gap);
+    const barH=s.qty>0?Math.max(3,Math.round((h-padTop-padBottom)*(s.qty/max))):0;
+    const y=h-padBottom-barH;
+    const isToday=s.key===todayKey;
+    const d=new Date(s.key+'T12:00:00Z');
+    const label=dow[d.getUTCDay()];
+    return `<g>${s.qty>0?`<text x="${(x+barW/2).toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="10" fill="#667085">${s.qty}</text>`:''}<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH}" rx="4" fill="${isToday?'var(--accent)':'#cfe0f7'}"></rect><text x="${(x+barW/2).toFixed(1)}" y="${h-9}" text-anchor="middle" font-size="10" fill="${isToday?'#101828':'#98a2b3'}" font-weight="${isToday?700:400}">${escapeHtml(label)}</text></g>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" class="workshops-output-chart" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${escapeHtml(t('dailyOutputChartTitle'))}"><line x1="${padL}" y1="${h-padBottom}" x2="${w-padR}" y2="${h-padBottom}" stroke="#e5e9f0" stroke-width="1"></line>${bars}</svg>`;
+}
+function workshopsDailyOutputChartHtml(){
+  const series=workshopsDailyOutputSeries(7);
+  const total=series.reduce((s,x)=>s+x.qty,0);
+  const avg=Math.round(total/series.length);
+  return `<div class="panel workshops-chart-panel">
+    <div class="workshops-master-head"><h3>${escapeHtml(t('dailyOutputChartTitle'))}</h3><small>${escapeHtml(t('dailyOutputChartHint'))}</small></div>
+    ${workshopsDailyOutputChartSvg(series)}
+    <div class="workshops-chart-summary">${escapeHtml(t('marksTotalLabel'))}: <b>${total} ${escapeHtml(t('unitPieces'))}</b> · ${escapeHtml(t('avgPerDayLabel'))}: <b>${avg} ${escapeHtml(t('unitPieces'))}</b></div>
+  </div>`;
+}
+// Загрузка цехов — сколько заказов сейчас в очереди у каждого цеха, той же самой очередью, что и в
+// строке цеха ниже (productionQueueForWorkshop), просто в виде горизонтальных полос для сравнения на глаз.
+function workshopsLoadChartHtml(names){
+  const rows=names.map(name=>({name,count:productionQueueForWorkshop(name).length})).sort((a,b)=>b.count-a.count);
+  const max=Math.max(1,...rows.map(r=>r.count));
+  const bars=rows.map(r=>`<div class="workshops-loadchart-row">
+    <span class="workshops-loadchart-icon">${workshopIcon(r.name)}</span>
+    <span class="workshops-loadchart-name">${escapeHtml(workshopLabel(r.name))}</span>
+    <span class="workshops-loadchart-bar"><i style="width:${Math.round(r.count/max*100)}%"></i></span>
+    <span class="workshops-loadchart-count">${r.count}</span>
+  </div>`).join('');
+  return `<div class="panel workshops-chart-panel">
+    <div class="workshops-master-head"><h3>${escapeHtml(t('workshopsLoadChartTitle'))}</h3><small>${escapeHtml(t('workshopsLoadChartHint'))}</small></div>
+    <div class="workshops-loadchart-list">${bars||`<div class="workshop-empty">${escapeHtml(t('noWorkshopsYet'))}</div>`}</div>
+  </div>`;
+}
 // v8.50: было 5 панелей (топ-цифры, алерт, список цехов, «на паузе», «ближайшие решения», прогноз на
 // 7 дней) — часть повторяла друг друга, часть почти всегда пустовала. Теперь три понятных блока: цифры
 // периода, единый список «Что делать сейчас» и список цехов (загрузка — короткой пометкой в самой строке).
@@ -1121,6 +1191,7 @@ function workshopsOverviewHtml(){
   const names=allWorkshopNames();
   if(!names.length)return `<div class="workshop-empty">${escapeHtml(t('noWorkshopsYet'))}</div>`;
   return `${workshopsPeriodToggleHtml()}${workshopsTopStatsHtml()}
+    <div class="workshops-charts-row">${workshopsDailyOutputChartHtml()}${workshopsLoadChartHtml(names)}</div>
     <div class="workshops-overview-layout">
       <div class="workshops-overview-main">${workshopsMasterListHtml(names)}</div>
       <div class="workshops-overview-side">${workshopsActionListHtml()}</div>
