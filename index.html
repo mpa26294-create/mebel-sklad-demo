@@ -278,7 +278,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 <script src="js/auth.js?v=8.26"></script>
 <script src="js/presence.js?v=7.13"></script>
 <script src="js/materials.js?v=8.28"></script>
-<script src="js/orders.js?v=8.58"></script>
+<script src="js/orders.js?v=8.62"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=8.38"></script>
 <script src="js/suboperations.js?v=8.44"></script>
@@ -2891,6 +2891,10 @@ async function receiveOrderMaterialPurchase(orderId,materialId){
   // этого заказа.
   m.lastUpdated=today();
 
+  const oldEarmarked=Number(item.earmarkedQty||0);
+  // v8.62: то, что пришло именно по закупке ЭТОГО заказа, закрепляется за ним (не уходит в общий
+  // резерв «на всех») — см. orderItemEarmarkedQty/materialEarmarkTotals в js/orders.js.
+  item.earmarkedQty=stockNumForUnit(oldEarmarked+qty,unit);
   item.purchaseStatus='none';
   item.purchaseQty=0;
   item.purchaseNo='';
@@ -2901,6 +2905,7 @@ async function receiveOrderMaterialPurchase(orderId,materialId){
   if(!ok){
     m.quantity=oldQty;
     m.attributes=oldAttrs;
+    item.earmarkedQty=oldEarmarked;
     item.purchaseStatus='ordered';
     item.purchaseQty=qty;
     save();

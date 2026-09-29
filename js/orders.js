@@ -74,14 +74,41 @@ function materialReservedOutsideOrder(matId,excludeOrderId='',targetUnit=''){
     .filter(i=>String(i.materialId)===String(matId))
     .reduce((s,i)=>{const remaining=typeof orderItemRemainingReserveQty==='function'?orderItemRemainingReserveQty(i,m):Number(i.qty||0);return s+convertMaterialQty(Number(remaining||0),i.unit||m?.unit||targetUnit,targetUnit||i.unit||m?.unit||'',m)},0);
 }
+// v8.62: материал, который пришёл именно по заказу конкретного подзаказа (receiveOrderMaterialPurchase),
+// закрепляется за ним (item.earmarkedQty) и больше не спорит за остаток с другими подзаказами, которым
+// тот же материал тоже нужен — иначе даже подзаказ, получивший ровно своё количество, продолжал
+// показывать «не хватает», если у соседей суммарно не хватало.
+function orderItemEarmarkedQty(item,m=null){
+  const unit=item?.unit||m?.unit||'';
+  const remaining=orderItemRemainingReserveQty(item,m);
+  return Math.max(0,Math.min(remaining,stockNumForUnit(Number(item?.earmarkedQty||0),unit)));
+}
+function materialEarmarkTotals(matId,excludeOrderId,unit,m){
+  let totalEarmarked=0,othersUnearmarked=0;
+  (data.orders||[]).filter(o=>!orderIsTerminal(o.status)).forEach(o=>{
+    orderMaterials(o).filter(i=>String(i.materialId)===String(matId)).forEach(i=>{
+      const iUnit=i.unit||m?.unit||unit;
+      const earmarked=convertMaterialQty(orderItemEarmarkedQty(i,m),iUnit,unit,m);
+      totalEarmarked+=earmarked;
+      if(String(o.id)!==String(excludeOrderId)){
+        const remaining=convertMaterialQty(orderItemRemainingReserveQty(i,m),iUnit,unit,m);
+        othersUnearmarked+=Math.max(0,remaining-earmarked);
+      }
+    });
+  });
+  return {totalEarmarked,othersUnearmarked};
+}
 function orderItemAvailability(item,excludeOrderId=''){
   const m=data.materials.find(x=>String(x.id)===String(item.materialId));
   if(!m)return {ok:false,missing:Number(item.qty||0),available:0,stock:0,unit:item.unit||'',mat:null};
   const unit=item.unit||orderUnitForMaterial(m,item.category)||m.unit;
   const stock=convertMaterialQty(m.quantity,m.unit,unit,m);
-  const reservedOther=materialReservedOutsideOrder(m.id,excludeOrderId,unit);
-  const available=Math.max(0,stock-reservedOther);
   const need=typeof orderItemRemainingReserveQty==='function'?orderItemRemainingReserveQty(item,m):Number(item.qty||0);
+  const myEarmarked=convertMaterialQty(orderItemEarmarkedQty(item,m),item.unit||m.unit||unit,unit,m);
+  const {totalEarmarked,othersUnearmarked}=materialEarmarkTotals(item.materialId,excludeOrderId,unit,m);
+  const sharedPool=Math.max(0,stock-totalEarmarked);
+  const availableShared=Math.max(0,sharedPool-othersUnearmarked);
+  const available=myEarmarked+availableShared;
   return {ok:available>=need,missing:Math.max(0,need-available),available,stock,unit,mat:m}
 }
 function orderHasMaterialProblem(o){return orderMaterials(o).some(i=>!orderItemAvailability(i,o.id).ok)}
