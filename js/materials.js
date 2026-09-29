@@ -740,6 +740,53 @@ function stockAdjustBlock(m){
   return `${stockActionSummaryBlock(m)}<div class="stock-adjust"><div><div class="stock-adjust-title">${t('changeStock')}</div><div class="stock-adjust-current">${escapeHtml(qtyWithUnit(stockNumForUnit(m.quantity,m.unit),m.unit||''))}</div></div><div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">${t('qtyWithUnit')}, ${escapeHtml(unitText)}</span><input id="detailQtyChange" class="input" type="number" step="${step}" min="${step}" value="${value}" inputmode="decimal"></label></div><button class="btn danger-fill" onclick="adjustMaterialQty('${m.id}',-1)">− ${t('writeOff')}</button><button class="btn primary" onclick="adjustMaterialQty('${m.id}',1)">+ ${t('add')}</button>${receiptBtn}</div><div class="stock-order-control"><div><div class="stock-order-control-title">${t('orderedToSupplierShort')}</div><div class="stock-order-control-current">${escapeHtml(qtyWithUnit(orderedManualQty(m),m.unit||''))}</div><div class="hint">${t('chooseOrdersForPurchaseHint')}</div></div>${purchaseOrderPickerHtml(m)}<div><label class="field" style="display:block;margin:0"><span style="display:block;font-weight:500;font-size:12px;color:#555c68;margin-bottom:7px">${t('quantityLabel')}, ${escapeHtml(unitText)}</span><input id="detailOrderedQty" class="input" type="number" step="${step}" min="0" value="${orderedInput}" inputmode="decimal"></label></div><button class="btn primary" onclick="setMaterialOrderedQty('${m.id}')">${t('markOrderedBtn')}</button></div>`;
 }
 function normalizeQtyForUnit(value,unit){return normalizeStockValue(value,unit,false)}
+// v8.63: если пришедшего количества больше, чем «заказано вручную» (ручной счётчик), остаток
+// списывается с «заказано по заказам» — со старых заказов в первую очередь. Без этого приход
+// материала со страницы склада «не видел» заказы (Z-0008 и т.п.), которые сами заказали этот
+// материал у поставщика — «Заказано» на карточке не двигалось, хотя по факту пришло.
+function applyReceiptToOrderedPurchases(mat,qty){
+  let remaining=stockNumForUnit(qty,mat.unit||'шт');
+  if(remaining<=0 || typeof orderMaterials!=='function')return {applied:0,touchedOrders:[]};
+  // Раскладываем по СЫРОМУ признаку «есть незакрытая закупка по заказу» (purchaseStatus==='ordered'),
+  // а не через materialOrderedOrders()/orderItemAvailability — та уже может считать заказ «ok» просто
+  // потому, что мы только что подняли остаток на складе (даже без конкуренции с другими заказами), и
+  // тогда закупка так и осталась бы висеть «Заказано», хотя фактически материал под неё уже пришёл.
+  const rows=(data.orders||[])
+    .filter(o=>!orderIsTerminal(o.status))
+    .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(mat.id) && orderItemPurchaseStatus(i)==='ordered' && Number(orderItemPurchaseQty(i,0)||0)>0).map(i=>({order:o,item:i})));
+  rows.sort((a,b)=>{
+    const da=String(a.order?.date||''), db=String(b.order?.date||'');
+    if(da&&db&&da!==db)return da<db?-1:1;
+    return String(a.order?.number||'').localeCompare(String(b.order?.number||''));
+  });
+  let applied=0;
+  const touchedOrders=[];
+  for(const row of rows){
+    if(remaining<=0)break;
+    const {order:o,item}=row;
+    const itemUnit=item.unit||mat.unit||'шт';
+    const purchaseQtyInItemUnit=Number(orderItemPurchaseQty(item,0)||0);
+    if(purchaseQtyInItemUnit<=0)continue;
+    const remainingInItemUnit=convertMaterialQty(remaining,mat.unit,itemUnit,mat);
+    const consumeInItemUnit=Math.min(purchaseQtyInItemUnit,remainingInItemUnit);
+    if(consumeInItemUnit<=0)continue;
+    const consumeInMatUnit=convertMaterialQty(consumeInItemUnit,itemUnit,mat.unit,mat);
+    item.earmarkedQty=stockNumForUnit(Number(item.earmarkedQty||0)+consumeInItemUnit,itemUnit);
+    const leftPurchaseQty=stockNumForUnit(purchaseQtyInItemUnit-consumeInItemUnit,itemUnit);
+    if(leftPurchaseQty<=0){
+      item.purchaseStatus='none';
+      item.purchaseQty=0;
+      item.purchaseNo='';
+    }else{
+      item.purchaseQty=leftPurchaseQty;
+    }
+    if(typeof calcOrderAutoStatus==='function')o.status=calcOrderAutoStatus(o);
+    remaining=stockNumForUnit(remaining-consumeInMatUnit,mat.unit);
+    applied+=consumeInMatUnit;
+    if(!touchedOrders.includes(o))touchedOrders.push(o);
+  }
+  return {applied,touchedOrders};
+}
 function applyMaterialReceipt(mat, addQty){
   if(!mat) return;
   const unit=mat.unit||'шт';
@@ -748,6 +795,11 @@ function applyMaterialReceipt(mat, addQty){
   const oldOrdered=orderedManualQty(mat);
   mat.quantity=stockNumForUnit(oldStock+addQty,unit);
   mat.attributes.orderedQty=Math.max(0,stockNumForUnit(oldOrdered-addQty,unit));
+  const leftoverForOrders=Math.max(0,stockNumForUnit(addQty-oldOrdered,unit));
+  if(leftoverForOrders>0){
+    const {touchedOrders}=applyReceiptToOrderedPurchases(mat,leftoverForOrders);
+    if(touchedOrders.length && typeof save==='function')save();
+  }
   const activeReserved=typeof materialReservedOutsideOrder==='function'?materialReservedOutsideOrder(mat.id,''):reservedQty(mat);
   mat.attributes.reservedQty=stockNumForUnit(activeReserved,unit);
   if(mat.attributes.orderedQty<=0 && mat.attributes.purchaseStatus==='ordered'){
@@ -813,6 +865,14 @@ async function saveMaterialReceipt(id){
   if(legacyLinear)m.unit='пог. м';
   m.quantity=qty;
   m.lastUpdated=today();
+  // v8.63: как и в «Быстром поступлении» (applyMaterialReceipt) — то, что пришло сверх ручного
+  // счётчика «Заказано у поставщика», списывается со старых заказов, которые сами заказали этот
+  // материал (иначе «Заказано» на карточке не двигалось бы, если весь остаток «заказано» — через заказы).
+  const leftoverForOrders=Math.max(0,stockNumForUnit(received-oldOrder.orderedQty,unit));
+  if(leftoverForOrders>0){
+    const {touchedOrders}=applyReceiptToOrderedPurchases(m,leftoverForOrders);
+    if(touchedOrders.length && typeof save==='function')save();
+  }
   const ok=await updateMaterialInSupabase(m);
   if(!ok)return;
   if(typeof auditAdd==='function')auditAdd('material_receipt','material',m.id,m.sku||m.name,`${(typeof tRu==='function'?tRu('materialReceiptAuditPrefix'):'Поступление материала')}: ${qtyWithUnit(qty,unit)}`,{...oldOrder,quantity:qty,unit});
