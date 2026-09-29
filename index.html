@@ -277,8 +277,8 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 </script>
 <script src="js/auth.js?v=8.26"></script>
 <script src="js/presence.js?v=7.13"></script>
-<script src="js/materials.js?v=8.29"></script>
-<script src="js/orders.js?v=8.62"></script>
+<script src="js/materials.js?v=8.30"></script>
+<script src="js/orders.js?v=8.64"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=8.38"></script>
 <script src="js/suboperations.js?v=8.44"></script>
@@ -1510,6 +1510,11 @@ async function printMaterialPdf(id){const url=await materialPdfUrl(id);if(!url)r
 .order-material-clean-title h4{font-size:21px;margin:0;font-weight:650;letter-spacing:-.035em;color:#111;}
 .order-material-clean-title p{margin:6px 0 0;color:#68707c;}
 .clean-note{border-left:4px solid #f59e0b;background:#fffdf6;border-radius:12px;padding:10px 12px;color:#667085;font-size:12px;line-height:1.35;margin-top:10px;}
+.receipt-alloc-row{display:flex;align-items:flex-start;gap:10px;border:1px solid #e8ebf0;border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;}
+.receipt-alloc-row:has(input:checked){border-color:#f97316;background:#fff8f1;}
+.receipt-alloc-row input{margin-top:3px;}
+.receipt-alloc-row b{display:block;color:#111;}
+.receipt-alloc-row small{display:block;color:#68707c;margin-top:2px;}
 .clean-action-grid{display:grid;grid-template-columns:120px minmax(220px,1fr) auto;gap:10px;align-items:end;}
 .clean-action-grid .input{height:42px!important;border-radius:12px!important;}
 .clean-action-grid .btn{height:42px!important;min-height:42px!important;border-radius:12px!important;}
@@ -1664,11 +1669,26 @@ async function adjustMaterialQty(id,dir){
   }
   const delta=normalizeQtyForUnit(input?.value||0,m.unit||'шт');
   if(delta===null){toast((m.unit||'шт')==='шт'?t('enterIntPositive'):t('enterQtyPositive'));return;}
+  // v8.64: если материал заказан сразу по нескольким заказам, при приёме спрашиваем — для кого именно
+  // эта поставка (или распределить автоматически по старым). Если незакрытых закупок по заказам нет,
+  // ничего не спрашиваем — приём работает как раньше, без лишнего клика.
+  if(dir>0 && typeof materialOutstandingOrderPurchases==='function'){
+    const rows=materialOutstandingOrderPurchases(m.id);
+    if(rows.length){
+      openMaterialReceiptAllocationPicker(id,delta,rows);
+      return;
+    }
+  }
+  await finalizeMaterialQtyChange(id,dir,delta,'');
+}
+async function finalizeMaterialQtyChange(id,dir,delta,targetOrderId=''){
+  const m=data.materials.find(x=>String(x.id)===String(id));
+  if(!m){toast(t('notFoundMaterial'));return;}
   const oldQty=stockNumForUnit(m.quantity,m.unit);
   const oldAttrs={...(m.attributes||{})};
   if(dir<0 && delta>oldQty){toast(t('noNegativeStock'));return;}
   if(dir>0){
-    applyMaterialReceipt(m,delta);
+    applyMaterialReceipt(m,delta,targetOrderId);
   }else{
     m.quantity=stockNumForUnit(oldQty-delta,m.unit);
     m.lastUpdated=today();
@@ -1680,6 +1700,25 @@ async function adjustMaterialQty(id,dir){
   renderAll();
   openMaterialDetails(id);
   toast(dir>0?t('stockAdded'):t('stockWrittenOff'));
+}
+function materialReceiptAllocationRowHtml(row){
+  const {order:o,item}=row;
+  const unit=item.unit||'шт';
+  const fam=typeof orderFamilyMaterialNeed==='function'?orderFamilyMaterialNeed(o,item):null;
+  const famText=fam?` · для всей партии ${escapeHtml(fam.base)} (${fam.familyCount} ч.) нужно ${escapeHtml(qtyWithUnit(fam.familyNeed,unit))}`:'';
+  return `<label class="receipt-alloc-row"><input type="radio" name="receiptAllocOrder" value="${escapeHtml(String(o.id))}"><div><b>${escapeHtml(o.number||'—')}</b><small>${escapeHtml(o.client||'—')} · нужно ${escapeHtml(qtyWithUnit(item.qty,unit))}, ждёт поставки ${escapeHtml(qtyWithUnit(orderItemPurchaseQty(item,0),unit))}${famText}</small></div></label>`;
+}
+function openMaterialReceiptAllocationPicker(materialId,delta,rows){
+  const body=`<p class="muted" style="margin:0 0 12px">Этот материал заказан по нескольким заказам. Для кого эта поставка?</p>
+    <label class="receipt-alloc-row"><input type="radio" name="receiptAllocOrder" value="" checked><div><b>Распределить автоматически</b><small>Спишется со старых заказов в первую очередь</small></div></label>
+    ${rows.map(materialReceiptAllocationRowHtml).join('')}`;
+  openModal('Приём материала',body,`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="confirmMaterialReceiptAllocation('${materialId}',${delta})">Принять на склад</button>`);
+}
+async function confirmMaterialReceiptAllocation(materialId,delta){
+  const sel=document.querySelector('input[name="receiptAllocOrder"]:checked');
+  const targetOrderId=sel?sel.value:'';
+  closeModal();
+  await finalizeMaterialQtyChange(materialId,1,delta,targetOrderId);
 }
 function syncDetailQtyUnit(){
   const unit=document.getElementById('detailQtyUnit')?.value||'';
@@ -3329,7 +3368,12 @@ function openOrderMaterialPurchase(orderId,materialId,editMode=false){
   const statusClass=isOrdered?'ordered-ok':(st.av.ok?'ready':'needbuy');
   const orderInput = (!isOrdered && !st.av.ok) || editMode ? `<div class="clean-card full"><small>Закупка по этому материалу</small><div class="clean-action-grid"><div class="field"><label>Количество</label><input id="singlePurchaseQty" class="input" type="number" min="0" step="${stockStep(unit)}" value="${inputQtyValue(purchaseQty,unit)}"></div><div class="field"><label>№ закупки / поставщик</label><input id="singlePurchaseNo" class="input" value="${escapeHtml(item.purchaseNo||'')}" placeholder="например SIA_SAULE"></div><div id="singlePurchaseActions" data-order-id="${o.id}" data-material-id="${m.id}" data-unit="${unit}"><button class="btn primary" type="button" onclick="${isOrdered?'saveOrderMaterialPurchase(\''+o.id+'\',\''+m.id+'\',{close:false,clear:false,toastText:\'Изменения сохранены\'})':'markOrderMaterialAsOrdered(\''+o.id+'\',\''+m.id+'\')'}">${isOrdered?'Сохранить':'Заказано'}</button></div></div><div class="clean-note">Данные сохраняются в заказе. Складской остаток увеличится только после поступления материала.</div></div>` : '';
   const orderedInfo=isOrdered?`<div class="clean-card full"><small>Оформленная закупка</small><b>${escapeHtml(qtyWithUnit(purchaseQty,unit))}</b><div class="sub">${escapeHtml(item.purchaseNo||'Поставщик не указан')}</div><div class="order-purchase-actions"><button class="btn" onclick="editOrderedPurchase('${o.id}','${m.id}')">Редактировать закупку</button><button class="btn" onclick="receiveOrderMaterialPurchase('${o.id}','${m.id}')">Материал пришёл</button><button class="btn danger" onclick="cancelOrderMaterialPurchase('${o.id}','${m.id}')">Отменить</button></div></div>`:'';
-  const body=`<div class="order-material-clean-title"><div><h4>${escapeHtml(materialTitle(m))}</h4><p>Заказ ${escapeHtml(o.number||'—')} · ${escapeHtml(o.client||'—')}</p></div><span class="status ${statusClass}">${escapeHtml(statusText)}</span></div><div class="order-material-clean-shell"><div><div class="clean-modal-grid"><div class="clean-card"><small>Нужно</small><b>${escapeHtml(qtyWithUnit(item.qty,unit))}</b></div><div class="clean-card"><small>Доступно</small><b>${escapeHtml(qtyWithUnit(st.av.available,unit))}</b></div><div class="clean-card"><small>Нехватка</small><b class="danger-text">${escapeHtml(qtyWithUnit(st.av.missing,unit))}</b></div><div class="clean-card"><small>На складе</small><b>${escapeHtml(qtyWithUnit(st.av.stock,unit))}</b></div>${orderedInfo}${orderInput}</div></div><div class="order-material-clean-side"><div class="material-side-card"><h5>Связанный материал</h5><div class="kv-line"><span>Артикул</span><b>${escapeHtml(m.sku||'—')}</b></div><div class="kv-line"><span>Категория</span><b>${escapeHtml(categoryLabel(m.category))}</b></div><div class="kv-line"><span>Резерв заказа</span><b>${escapeHtml(qtyWithUnit(item.qty,unit))}</b></div></div></div></div>`;
+  // v8.64: если заказ — часть более крупной партии (например "Z-0008/2" при "Z-0008/1..17"),
+  // показываем рядом с «Нужно этой части» ещё и суммарную потребность всей партии — иначе непонятно,
+  // почему материала «не хватает» на одну часть, хотя формально заказано много.
+  const fam=typeof orderFamilyMaterialNeed==='function'?orderFamilyMaterialNeed(o,item):null;
+  const familyInfo=fam?`<div class="clean-card full"><small>Партия ${escapeHtml(fam.base)}</small><b>${escapeHtml(qtyWithUnit(fam.familyNeed,unit))} нужно на все ${fam.familyCount} частей</b><div class="sub">Этой части (${escapeHtml(o.number||'—')}) нужно ${escapeHtml(qtyWithUnit(fam.ownNeed,unit))}</div></div>`:'';
+  const body=`<div class="order-material-clean-title"><div><h4>${escapeHtml(materialTitle(m))}</h4><p>Заказ ${escapeHtml(o.number||'—')} · ${escapeHtml(o.client||'—')}</p></div><span class="status ${statusClass}">${escapeHtml(statusText)}</span></div><div class="order-material-clean-shell"><div><div class="clean-modal-grid"><div class="clean-card"><small>Нужно</small><b>${escapeHtml(qtyWithUnit(item.qty,unit))}</b></div><div class="clean-card"><small>Доступно</small><b>${escapeHtml(qtyWithUnit(st.av.available,unit))}</b></div><div class="clean-card"><small>Нехватка</small><b class="danger-text">${escapeHtml(qtyWithUnit(st.av.missing,unit))}</b></div><div class="clean-card"><small>На складе</small><b>${escapeHtml(qtyWithUnit(st.av.stock,unit))}</b></div>${familyInfo}${orderedInfo}${orderInput}</div></div><div class="order-material-clean-side"><div class="material-side-card"><h5>Связанный материал</h5><div class="kv-line"><span>Артикул</span><b>${escapeHtml(m.sku||'—')}</b></div><div class="kv-line"><span>Категория</span><b>${escapeHtml(categoryLabel(m.category))}</b></div><div class="kv-line"><span>Резерв заказа</span><b>${escapeHtml(qtyWithUnit(item.qty,unit))}</b></div></div></div></div>`;
   // v7.73: по просьбе пользователя — из этой же карточки можно сразу отправить заказ поставщику по
   // email (та же готовая функция, что и в карточке склада, см. openNewMaterialOrder/js/materials.js):
   // подставляет email поставщика, подсказывает недостающее количество и открывает готовое письмо.

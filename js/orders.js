@@ -113,6 +113,46 @@ function orderItemAvailability(item,excludeOrderId=''){
 }
 function orderHasMaterialProblem(o){return orderMaterials(o).some(i=>!orderItemAvailability(i,o.id).ok)}
 
+// v8.64: заказы вида "Z-0008/1".."Z-0008/17" — это отдельные записи одной партии, разбитой на части.
+// Формально в данных между ними нет связи, кроме одинакового начала номера до "/" — этого достаточно,
+// чтобы показать пользователю «сколько нужно этой части» рядом с «сколько нужно всей партии».
+function orderFamilyBase(o){
+  const num=String(o?.number||'');
+  const i=num.indexOf('/');
+  return i>=0?num.slice(0,i):num;
+}
+function orderFamilySiblings(o){
+  const base=orderFamilyBase(o);
+  if(!base)return [o];
+  return (data.orders||[]).filter(x=>!orderIsTerminal(x.status)&&orderFamilyBase(x)===base);
+}
+function orderFamilyMaterialNeed(o,item){
+  const siblings=orderFamilySiblings(o);
+  if(siblings.length<=1)return null;
+  const unit=item.unit||'';
+  let familyNeed=0;
+  siblings.forEach(s=>{
+    orderMaterials(s).filter(i=>String(i.materialId)===String(item.materialId)).forEach(i=>{
+      familyNeed+=convertMaterialQty(Number(i.qty||0),i.unit||unit,unit,null);
+    });
+  });
+  return {ownNeed:Number(item.qty||0),familyNeed:stockNumForUnit(familyNeed,unit),familyCount:siblings.length,base:orderFamilyBase(o)};
+}
+// Сырой список незакрытых закупок по заказам для материала — без фильтра по av.ok (в отличие от
+// materialOrderedOrders в js/materials.js), отсортирован по дате заказа (старые первые). Нужен для
+// распределения пришедшей поставки (см. applyReceiptToOrderedPurchases в js/materials.js) и для окна
+// выбора «для какого заказа пришла поставка».
+function materialOutstandingOrderPurchases(matId){
+  return (data.orders||[])
+    .filter(o=>!orderIsTerminal(o.status))
+    .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(matId) && orderItemPurchaseStatus(i)==='ordered' && Number(orderItemPurchaseQty(i,0)||0)>0).map(i=>({order:o,item:i})))
+    .sort((a,b)=>{
+      const da=String(a.order?.date||''), db=String(b.order?.date||'');
+      if(da&&db&&da!==db)return da<db?-1:1;
+      return String(a.order?.number||'').localeCompare(String(b.order?.number||''));
+    });
+}
+
 function orderItemPurchaseStatus(item){
   const v=item?.purchaseStatus||'';
   return ['need','ordered','none'].includes(v)?v:'';

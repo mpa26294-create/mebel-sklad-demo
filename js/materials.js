@@ -744,21 +744,13 @@ function normalizeQtyForUnit(value,unit){return normalizeStockValue(value,unit,f
 // списывается с «заказано по заказам» — со старых заказов в первую очередь. Без этого приход
 // материала со страницы склада «не видел» заказы (Z-0008 и т.п.), которые сами заказали этот
 // материал у поставщика — «Заказано» на карточке не двигалось, хотя по факту пришло.
-function applyReceiptToOrderedPurchases(mat,qty){
+// v8.64: targetOrderId — если пришедшая поставка отмечена как «для конкретного заказа» (окно выбора
+// в «Быстрых действиях»), распределяем ТОЛЬКО в него, а не по всем незакрытым закупкам подряд.
+function applyReceiptToOrderedPurchases(mat,qty,targetOrderId=''){
   let remaining=stockNumForUnit(qty,mat.unit||'шт');
-  if(remaining<=0 || typeof orderMaterials!=='function')return {applied:0,touchedOrders:[]};
-  // Раскладываем по СЫРОМУ признаку «есть незакрытая закупка по заказу» (purchaseStatus==='ordered'),
-  // а не через materialOrderedOrders()/orderItemAvailability — та уже может считать заказ «ok» просто
-  // потому, что мы только что подняли остаток на складе (даже без конкуренции с другими заказами), и
-  // тогда закупка так и осталась бы висеть «Заказано», хотя фактически материал под неё уже пришёл.
-  const rows=(data.orders||[])
-    .filter(o=>!orderIsTerminal(o.status))
-    .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(mat.id) && orderItemPurchaseStatus(i)==='ordered' && Number(orderItemPurchaseQty(i,0)||0)>0).map(i=>({order:o,item:i})));
-  rows.sort((a,b)=>{
-    const da=String(a.order?.date||''), db=String(b.order?.date||'');
-    if(da&&db&&da!==db)return da<db?-1:1;
-    return String(a.order?.number||'').localeCompare(String(b.order?.number||''));
-  });
+  if(remaining<=0 || typeof materialOutstandingOrderPurchases!=='function')return {applied:0,touchedOrders:[]};
+  let rows=materialOutstandingOrderPurchases(mat.id);
+  if(targetOrderId)rows=rows.filter(r=>String(r.order.id)===String(targetOrderId));
   let applied=0;
   const touchedOrders=[];
   for(const row of rows){
@@ -787,18 +779,27 @@ function applyReceiptToOrderedPurchases(mat,qty){
   }
   return {applied,touchedOrders};
 }
-function applyMaterialReceipt(mat, addQty){
+// v8.64: targetOrderId — пользователь явно указал в окне выбора, что эта поставка для конкретного
+// заказа. В этом случае ручной счётчик «Заказано» не трогаем вообще (это не о нём), а всё количество
+// сразу пробуем списать с закупки именно этого заказа; остаток сверх его закупки просто остаётся
+// свободным на складе (не расходится по другим заказам без спроса пользователя).
+function applyMaterialReceipt(mat, addQty, targetOrderId=''){
   if(!mat) return;
   const unit=mat.unit||'шт';
   mat.attributes=mat.attributes||{};
   const oldStock=stockNumForUnit(mat.quantity,unit);
-  const oldOrdered=orderedManualQty(mat);
   mat.quantity=stockNumForUnit(oldStock+addQty,unit);
-  mat.attributes.orderedQty=Math.max(0,stockNumForUnit(oldOrdered-addQty,unit));
-  const leftoverForOrders=Math.max(0,stockNumForUnit(addQty-oldOrdered,unit));
-  if(leftoverForOrders>0){
-    const {touchedOrders}=applyReceiptToOrderedPurchases(mat,leftoverForOrders);
+  if(targetOrderId){
+    const {touchedOrders}=applyReceiptToOrderedPurchases(mat,addQty,targetOrderId);
     if(touchedOrders.length && typeof save==='function')save();
+  }else{
+    const oldOrdered=orderedManualQty(mat);
+    mat.attributes.orderedQty=Math.max(0,stockNumForUnit(oldOrdered-addQty,unit));
+    const leftoverForOrders=Math.max(0,stockNumForUnit(addQty-oldOrdered,unit));
+    if(leftoverForOrders>0){
+      const {touchedOrders}=applyReceiptToOrderedPurchases(mat,leftoverForOrders);
+      if(touchedOrders.length && typeof save==='function')save();
+    }
   }
   const activeReserved=typeof materialReservedOutsideOrder==='function'?materialReservedOutsideOrder(mat.id,''):reservedQty(mat);
   mat.attributes.reservedQty=stockNumForUnit(activeReserved,unit);
