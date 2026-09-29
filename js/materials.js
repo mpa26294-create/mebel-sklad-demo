@@ -11,17 +11,22 @@ function orderedManualQty(m){return Math.max(0,stockNumForUnit((m.attributes||{}
 function orderedQty(m){return Math.max(0,stockNumForUnit(orderedManualQty(m)+orderedByOrdersQty(m),m.unit))}
 function availableQty(m){const u=m.unit;return Math.max(0,stockNumForUnit(stockNumForUnit(m.quantity,u)-reservedQty(m),u))}
 
+// v8.61: 1) раньше исключались только заказы со статусом ровно 'Готов'/'Отменён' — заказ,
+// завершённый под статусом 'Завершён'/'completed' (см. orderIsTerminal), сюда бы всё равно попадал.
+// 2) строка заказа, у которой материала уже достаточно (av.ok — например, пришло с другой поставки
+// или резерв освободился), исключается — иначе «Заказано у поставщика» на складе продолжало бы
+// бесконечно считать её, хотя по факту заказывать для неё уже нечего.
 function materialOrderedOrders(matId){
   return (data.orders||[])
-    .filter(o=>!['Готов','Отменён'].includes(o.status))
-    .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(matId) && orderItemPurchaseStatus(i)==='ordered' && Number(orderItemPurchaseQty(i,0)||0)>0).map(i=>({order:o,item:i})));
+    .filter(o=>!orderIsTerminal(o.status))
+    .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(matId) && orderItemPurchaseStatus(i)==='ordered' && Number(orderItemPurchaseQty(i,0)||0)>0 && !orderItemAvailability(i,o.id).ok).map(i=>({order:o,item:i})));
 }
 function orderedByOrdersQty(m){
   return Math.max(0,stockNumForUnit(materialOrderedOrders(m.id).reduce((s,r)=>s+convertMaterialQty(Number(orderItemPurchaseQty(r.item,0)||0),r.item.unit||m.unit,m.unit,m),0),m.unit));
 }
 function materialReservationOrders(matId){
   return (data.orders||[])
-    .filter(o=>!['Готов','Отменён'].includes(o.status))
+    .filter(o=>!orderIsTerminal(o.status))
     .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(matId)).map(i=>({order:o,item:i})));
 }
 function materialOrderReservedQty(item,m){
@@ -269,17 +274,85 @@ function materialSupplierDeliveries(m){
   `).join('');
 }
 
-// Placeholder functions for delivery actions
-function acceptMaterialDelivery(materialId,orderId,qty){
-  toast(t('featureAcceptDeliveryStub'));
+// v8.61: карточки «Поставки» на странице материала («Принять»/«Редактировать»/«Отменить») были
+// заглушками — просто показывали тост «будет реализовано», ничего не делали. Теперь работают
+// по-настоящему: для поставки, привязанной к заказу (order.materials[].purchaseStatus==='ordered'),
+// делают ровно то же самое, что и кнопки в карточке «Материал в заказе» (receiveOrderMaterialPurchase/
+// cancelOrderMaterialPurchase/editOrderedPurchase, см. index.html) — это уже проверенная, рабочая
+// логика, здесь просто вызывается со страницы материала. Для «ручной» закупки (m.attributes.
+// manualPurchaseOrders — просто список заказов, для справки, не связанный с purchaseStatus заказа)
+// используется отдельная, более простая логика ниже: она не трогает статус заказа (там нечего
+// менять — заказ и не был отмечен «Заказано»), только остаток и список привязанных заказов.
+function materialDeliveryIsOrderBased(materialId,orderId){
+  const o=(data.orders||[]).find(x=>String(x.id)===String(orderId));
+  if(!o)return false;
+  const item=orderMaterials(o).find(i=>String(i.materialId)===String(materialId));
+  return !!(item&&orderItemPurchaseStatus(item)==='ordered');
 }
-
+async function acceptMaterialDelivery(materialId,orderId){
+  if(materialDeliveryIsOrderBased(materialId,orderId)){
+    if(typeof receiveOrderMaterialPurchase==='function')await receiveOrderMaterialPurchase(orderId,materialId);
+    return;
+  }
+  await acceptManualMaterialDelivery(materialId,orderId);
+}
+async function acceptManualMaterialDelivery(materialId,orderId){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
+  if(!m)return;
+  const alloc=(m.attributes?.manualPurchaseOrders||[]).find(x=>String(x.orderId)===String(orderId));
+  if(!alloc){toast(t('notFoundMaterial'));return}
+  const unit=m.unit||'шт';
+  const qty=stockNumForUnit(alloc.qty||0,unit);
+  if(qty<=0)return;
+  if(!confirm(`${t('receiptBtn')}: ${qtyWithUnit(qty,unit)}?`))return;
+  const oldQty=stockNumForUnit(m.quantity,unit);
+  const oldAttrs={...(m.attributes||{})};
+  m.attributes=m.attributes||{};
+  m.quantity=stockNumForUnit(oldQty+qty,unit);
+  m.attributes.orderedQty=Math.max(0,stockNumForUnit(orderedManualQty(m)-qty,unit));
+  m.attributes.manualPurchaseOrders=(m.attributes.manualPurchaseOrders||[]).filter(x=>String(x.orderId)!==String(orderId));
+  if(m.attributes.orderedQty<=0 && m.attributes.purchaseStatus==='ordered'){
+    m.attributes.purchaseStatus=availableQty(m)>0?'instock':'noorder';
+  }
+  m.lastUpdated=today();
+  const ok=await updateMaterialInSupabase(m);
+  if(!ok){m.quantity=oldQty;m.attributes=oldAttrs;return}
+  await loadMaterialsFromSupabase();
+  renderAll();
+  if(typeof openMaterialDetails==='function')openMaterialDetails(materialId);
+  toast(t('materialAcceptedToStockToast'));
+}
 function editMaterialDelivery(materialId,orderId){
-  toast(t('featureEditDeliveryStub'));
+  if(materialDeliveryIsOrderBased(materialId,orderId)){
+    if(typeof editOrderedPurchase==='function')editOrderedPurchase(orderId,materialId);
+    return;
+  }
+  // Ручная закупка не привязана к конкретной строке заказа — редактируется тем же полем
+  // «Заказано у поставщика» на этой же карточке материала (прокручиваем и ставим туда фокус).
+  const input=document.getElementById('detailOrderedQty');
+  input?.scrollIntoView({block:'center'});
+  input?.focus();
 }
-
-function cancelMaterialDelivery(materialId,orderId){
-  toast(t('featureCancelDeliveryStub'));
+async function cancelMaterialDelivery(materialId,orderId){
+  if(materialDeliveryIsOrderBased(materialId,orderId)){
+    if(typeof cancelOrderMaterialPurchase==='function')cancelOrderMaterialPurchase(orderId,materialId);
+    return;
+  }
+  const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
+  if(!m)return;
+  if(!confirm(`${t('cancel')}?`))return;
+  const oldAttrs={...(m.attributes||{})};
+  m.attributes=m.attributes||{};
+  // Отменяем только привязку ЭТОГО заказа к закупке — саму заказанную у поставщика партию (и её
+  // количество) не трогаем: возможно, она ещё нужна, просто больше не для этого заказа.
+  m.attributes.manualPurchaseOrders=(m.attributes.manualPurchaseOrders||[]).filter(x=>String(x.orderId)!==String(orderId));
+  m.lastUpdated=today();
+  const ok=await updateMaterialInSupabase(m);
+  if(!ok){m.attributes=oldAttrs;return}
+  await loadMaterialsFromSupabase();
+  renderAll();
+  if(typeof openMaterialDetails==='function')openMaterialDetails(materialId);
+  toast(t('cancel'));
 }
 
 // v7.65: кнопка "+ Заказать" была заглушкой (просто toast). Реализовано по просьбе пользователя:
@@ -714,6 +787,14 @@ async function saveMaterialReceipt(id){
   if(qty===null){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return}
   const a={...(m.attributes||{})};
   const oldOrder={orderedQty:a.orderedQty||0,expectedReceiptDate:a.expectedReceiptDate||'',purchaseNote:a.purchaseNote||a.order||''};
+  // v8.61: раньше «Заказано у поставщика» всегда обнулялось целиком (a.orderedQty=0), даже если
+  // фактически пришла только ЧАСТЬ заказанного (например заказали 100, пришло 60) — оставшиеся 40
+  // просто исчезали из учёта. Теперь считаем, сколько реально прибавилось к остатку (новый остаток
+  // минус старый), и уменьшаем «Заказано» ровно на эту разницу — как и в «Быстром поступлении»
+  // (см. applyMaterialReceipt). Если ввели меньше, чем было на складе (исправление пересчёта, а не
+  // приход) — считаем, что ничего не пришло, «Заказано» не трогаем.
+  const oldStockQty=stockNumForUnit(m.quantity,unit);
+  const received=Math.max(0,stockNumForUnit(qty-oldStockQty,unit));
   if(m.category==='Ткань'){
     const widthMm=Number(String(document.getElementById('receiptRollWidth')?.value||0).replace(',','.'))||0;
     const lengthM=Number(String(document.getElementById('receiptRollLength')?.value||0).replace(',','.'))||0;
@@ -725,8 +806,8 @@ async function saveMaterialReceipt(id){
   a.storageLocation=(document.getElementById('receiptStorageLocation')?.value||'').trim();
   a.purchasePrice=document.getElementById('receiptPurchasePrice')?.value||'';
   a.receiptDate=document.getElementById('receiptDate')?.value||today();
-  a.purchaseStatus=qty>0?'instock':'noorder';
-  a.orderedQty=0;
+  a.orderedQty=Math.max(0,stockNumForUnit(oldOrder.orderedQty-received,unit));
+  a.purchaseStatus=a.orderedQty>0?'ordered':(qty>0?'instock':'noorder');
   a.receiptFromOrder=oldOrder;
   m.attributes=a;
   if(legacyLinear)m.unit='пог. м';
@@ -1021,8 +1102,15 @@ function openMaterialEditor(id){
 }
 function statusOf(m){const av=availableQty(m);if(av<=0)return ['out',t('noStock')];if(Number(m.minQuantity||0)>0 && av<=Number(m.minQuantity||0))return ['low',t('lowStock')];return ['ok',t('inStock')]}
 
+// v8.61: пользователь нашёл материал с бейджем «Уже заказана», хотя «Заказано» и «Поставки» уже
+// показывали 0 — раньше badge верил сохранённому m.attributes.purchaseStatus напрямую, а он мог
+// «зависнуть» на 'ordered', если заказ получили каким-то другим путём (не тем, что выставлял этот
+// флаг). Число «Заказано» на этой же карточке — всегда живой пересчёт (orderedQty()); теперь и
+// бейдж 'ordered' показываем, только пока это число по факту больше 0 — сам себя чинит, не важно,
+// через какое именно действие «Заказано» дошло до нуля.
 function purchaseStatusOf(m){
   const saved=m.attributes&&m.attributes.purchaseStatus;
+  if(saved==='ordered')return orderedQty(m)>0?'ordered':(Number(m.quantity||0)>0?'instock':(stockNeededToOrderQty(m)>0?'needorder':'noorder'));
   const v=saved || (Number(m.quantity||0)>0?'instock':'noorder');
   return ['instock','noorder','needorder','ordered'].includes(v)?v:(Number(m.quantity||0)>0?'instock':'noorder');
 }

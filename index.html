@@ -277,7 +277,7 @@ const APP_VERSION = window.FURNICORE_LATEST_VERSION || 'v7.39 — «Что тр�
 </script>
 <script src="js/auth.js?v=8.26"></script>
 <script src="js/presence.js?v=7.13"></script>
-<script src="js/materials.js?v=8.27"></script>
+<script src="js/materials.js?v=8.28"></script>
 <script src="js/orders.js?v=8.58"></script>
 <script src="js/order-files.js?v=7.64"></script>
 <script src="js/technologies.js?v=8.38"></script>
@@ -2883,7 +2883,12 @@ async function receiveOrderMaterialPurchase(orderId,materialId){
   const oldAttrs={...(m.attributes||{})};
   m.attributes=m.attributes||{};
   m.quantity=stockNumForUnit(oldQty+qty,unit);
-  m.attributes.orderedQty=Math.max(0,stockNumForUnit(orderedManualQty(m)-qty,unit));
+  // v8.61: раньше здесь ещё и уменьшался m.attributes.orderedQty («Заказано у поставщика» вручную,
+  // со страницы склада) — но это ДРУГОЙ, независимый счётчик (см. setMaterialOrderedQty/
+  // confirmOrderMaterialEmail без orderId): его трогают только действия «вручную со склада», а сумму
+  // «заказано по заказам» (orderedByOrdersQty) и так уже пересчитывает live item.purchaseStatus ниже.
+  // Если у материала ОТДЕЛЬНО ещё есть ручная закупка — она не должна пострадать от прихода именно
+  // этого заказа.
   m.lastUpdated=today();
 
   item.purchaseStatus='none';
