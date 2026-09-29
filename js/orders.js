@@ -149,7 +149,8 @@ function materialOutstandingOrderPurchases(matId){
     .sort((a,b)=>{
       const da=String(a.order?.date||''), db=String(b.order?.date||'');
       if(da&&db&&da!==db)return da<db?-1:1;
-      return String(a.order?.number||'').localeCompare(String(b.order?.number||''));
+      // numeric:true — иначе "Z-0008/12" встаёт перед "Z-0008/2" (сравнение как текст, а не по числу).
+      return String(a.order?.number||'').localeCompare(String(b.order?.number||''),undefined,{numeric:true,sensitivity:'base'});
     });
 }
 
