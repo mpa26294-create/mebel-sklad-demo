@@ -1536,6 +1536,8 @@ async function printMaterialPdf(id){const url=await materialPdfUrl(id);if(!url)r
 .clean-note{border-left:4px solid #f59e0b;background:#fffdf6;border-radius:12px;padding:10px 12px;color:#667085;font-size:12px;line-height:1.35;margin-top:10px;}
 .receipt-alloc-list{max-height:340px;overflow-y:auto;}
 .receipt-alloc-list .tech-save-radio{margin-bottom:8px;}
+.receipt-alloc-due{color:var(--accent-dark)!important;font-weight:650;}
+.receipt-alloc-due b{color:var(--accent-dark);}
 .clean-action-grid{display:grid;grid-template-columns:120px minmax(220px,1fr) auto;gap:10px;align-items:end;}
 .clean-action-grid .input{height:42px!important;border-radius:12px!important;}
 .clean-action-grid .btn{height:42px!important;min-height:42px!important;border-radius:12px!important;}
@@ -1728,8 +1730,8 @@ function materialReceiptAllocationRowHtml(row){
   const fam=typeof orderFamilyMaterialNeed==='function'?orderFamilyMaterialNeed(o,item):null;
   const famText=fam?` · партия ${escapeHtml(fam.base)}: требуется ${escapeHtml(qtyWithUnit(fam.familyNeed,unit))} на ${fam.familyCount} ч.`:'';
   const due=typeof formatDeadline==='function'?formatDeadline(o):'';
-  const dueText=due&&due!=='—'?` · срок отгрузки: ${escapeHtml(due)}`:'';
-  return `<label class="tech-save-radio"><input type="radio" name="receiptAllocOrder" value="${escapeHtml(String(o.id))}"><span><b>${escapeHtml(o.number||'—')} — ${escapeHtml(o.client||'—')}</b><small>Требуется: ${escapeHtml(qtyWithUnit(item.qty,unit))} · в закупке: ${escapeHtml(qtyWithUnit(orderItemPurchaseQty(item,0),unit))}${dueText}${famText}</small></span></label>`;
+  const dueLine=due&&due!=='—'?`<small class="receipt-alloc-due">Срок отгрузки: <b>${escapeHtml(due)}</b></small>`:'';
+  return `<label class="tech-save-radio"><input type="radio" name="receiptAllocOrder" value="${escapeHtml(String(o.id))}"><span><b>${escapeHtml(o.number||'—')} — ${escapeHtml(o.client||'—')}</b><small>Требуется: ${escapeHtml(qtyWithUnit(item.qty,unit))} · в закупке: ${escapeHtml(qtyWithUnit(orderItemPurchaseQty(item,0),unit))}${famText}</small>${dueLine}</span></label>`;
 }
 function openMaterialReceiptAllocationPicker(materialId,delta,rows){
   const body=`<p class="tech-save-hint">Материал заказан сразу для нескольких заказов. Укажите, к какому из них относится эта поставка.</p>
