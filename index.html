@@ -509,8 +509,32 @@ function mergeOrderJournals(local,remote,opts={}){
     lop.sessions=u.list.sort((a,b)=>journalTime(b).localeCompare(journalTime(a)));
     u.fromRemote.forEach(id=>{const mk=lop.sessions.find(x=>String(x.id)===id);if(mk?.consumptionId)remoteConsumption.add(String(mk.consumptionId))});
     lop.completedQty=Math.min(total,base+validMarksQty(lop));
+    // v8.67: раньше при слиянии сюда попадали только «журнальные» поля (sessions/completedQty) —
+    // статус этапа (op.status), lastConsumption и startedAt на другом устройстве оставались как были
+    // ДО слияния. Если завершение этапа (finalizeProductionQuantity) произошло на ОДНОМ устройстве, а
+    // это, другое, устройство синхронизировалось со своей более старой локальной копией и потом сохранило
+    // её обратно — реальный статус "done" затирался обратно на "not_started"/"running", хотя количество
+    // (completedQty) уже показывало этап выполненным целиком. Результат: карточка цеха (считает по
+    // completedQty) показывала «100%, готово», а список заказов (считает по op.status) — «Не начато»,
+    // и заказ целиком никогда не переходил в «Готов». Теперь статус и связанные поля выводятся из
+    // итогового completedQty так же, как это делает finalizeProductionQuantity при обычном завершении.
+    if(!lop.startedAt&&rop.startedAt)lop.startedAt=rop.startedAt;
+    if(!lop.lastConsumption&&rop.lastConsumption)lop.lastConsumption=rop.lastConsumption;
+    if(lop.status!=='done'&&lop.status!=='cancelled'&&lop.completedQty>=total){
+      const latest=lop.sessions[0];
+      lop.status='done';
+      lop.pausedAt='';
+      lop.finishedAt=lop.finishedAt||journalTime(latest)||productionNow();
+      lop.currentSessionStartedAt='';
+      lop.currentSessionPauseMinutes=0;
+      lop.collapsed=true;
+    }
     changed=true;
   });
+  if(changed&&typeof productionOps==='function'&&typeof productionDoneCount==='function'){
+    const ops=productionOps(local);
+    if(ops.length&&productionDoneCount(local)===ops.length&&!orderIsTerminal(local.status))local.status='Готов';
+  }
   const logsBefore=Array.isArray(lp.consumptionLogs)?orderClone(lp.consumptionLogs):[];
   const cu=unionJournal(lp.consumptionLogs,rp.consumptionLogs,(r,m)=>remoteConsumption.has(String(r.id))||(!!r.undone&&!m.undone));
   if(cu.changed){
