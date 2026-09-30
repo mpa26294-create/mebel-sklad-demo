@@ -146,7 +146,9 @@
     const delta=kitsAfter-productionCompletedQty(o,op);
     if(delta>0){
       const plan=productionConsumptionPlan(o,op,delta);
-      if(!plan.ok){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn primary" type="button" onclick="closeModal()">${escapeHtml(t('closeBtn'))}</button>`);return}
+      // v8.72: по просьбе пользователя — можно завершить комплект даже при нехватке материала
+      // (спишет то, что реально есть, в минус остаток не уйдёт — см. applyProductionConsumptionPlan).
+      if(!plan.ok&&!options.allowShortage){openModal(t('insufficientMaterialTitle'),productionConsumptionPreviewHtml(plan),`<button class="btn" type="button" onclick="closeModal()">${escapeHtml(t('closeBtn'))}</button><button class="btn danger" type="button" onclick="recordSubOpMark('${orderId}',${index},${qty},{allowShortage:true,skipSessionPrompt:true})">${escapeHtml(t('completeAnywayBtn'))}</button>`);return}
     }
     const now=productionNow();if(!op.startedAt)op.startedAt=now;
     const mine=myWorkSession(o,index),sinceIso=mine?((mine.lastMarkAt&&mine.lastMarkAt>mine.startedAt)?mine.lastMarkAt:mine.startedAt):now;
@@ -159,7 +161,7 @@
       // отметки» и продвигает mine.lastMarkAt. Раньше мы делали это уже здесь ДО вызова, поэтому к моменту, когда
       // finalizeProductionQuantity сама считала время, с последней отметки не проходило ни секунды — комплект в
       // «Комплекты и списание материалов» всегда показывал 0 мин, хотя работа заняла время.
-      await finalizeProductionQuantity(orderId,index,delta,{kit:true,skipSessionPrompt:true});
+      await finalizeProductionQuantity(orderId,index,delta,{kit:true,skipSessionPrompt:true,allowShortage:options.allowShortage});
       return;
     }
     if(mine)mine.lastMarkAt=now;
