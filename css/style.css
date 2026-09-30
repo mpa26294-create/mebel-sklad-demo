@@ -3242,6 +3242,8 @@ body #history .history-toolbar{display:flex!important;grid-template-columns:none
 #orders .orders-toolbar input,#orders .orders-toolbar select,#orders .orders-toolbar button{min-height:42px}
 #orders .order-card-list{display:flex;flex-direction:column;gap:12px;margin-top:14px}
 #orders .order-erp-card{overflow:hidden;border:1px solid #e5e9f0;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.045)}
+#orders .order-erp-card.is-done{background:#f7f7f8;border-color:#eceef1;box-shadow:none;opacity:.68;transition:opacity .15s ease}
+#orders .order-erp-card.is-done:hover,#orders .order-erp-card.is-done.expanded{opacity:1}
 #orders .order-card-summary{display:grid;grid-template-columns:38px minmax(95px,.55fr) minmax(180px,1.25fr) minmax(110px,.7fr) minmax(120px,.75fr) minmax(145px,.85fr) auto;gap:16px;align-items:center;padding:16px}
 #orders .order-expand-btn{width:34px;height:34px;display:grid;place-items:center;border:1px solid #dfe4ec;border-radius:10px;background:#fff;color:#344054;font-size:11px;box-shadow:0 2px 5px rgba(16,24,40,.04)}
 #orders .order-card-identity,#orders .order-card-client,#orders .order-card-kv,#orders .order-card-state{min-width:0}
