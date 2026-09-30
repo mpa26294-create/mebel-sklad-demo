@@ -74,17 +74,88 @@ function materialReservedOutsideOrder(matId,excludeOrderId='',targetUnit=''){
     .filter(i=>String(i.materialId)===String(matId))
     .reduce((s,i)=>{const remaining=typeof orderItemRemainingReserveQty==='function'?orderItemRemainingReserveQty(i,m):Number(i.qty||0);return s+convertMaterialQty(Number(remaining||0),i.unit||m?.unit||targetUnit,targetUnit||i.unit||m?.unit||'',m)},0);
 }
+// v8.62: материал, который пришёл именно по заказу конкретного подзаказа (receiveOrderMaterialPurchase),
+// закрепляется за ним (item.earmarkedQty) и больше не спорит за остаток с другими подзаказами, которым
+// тот же материал тоже нужен — иначе даже подзаказ, получивший ровно своё количество, продолжал
+// показывать «не хватает», если у соседей суммарно не хватало.
+function orderItemEarmarkedQty(item,m=null){
+  const unit=item?.unit||m?.unit||'';
+  const remaining=orderItemRemainingReserveQty(item,m);
+  return Math.max(0,Math.min(remaining,stockNumForUnit(Number(item?.earmarkedQty||0),unit)));
+}
+function materialEarmarkTotals(matId,excludeOrderId,unit,m){
+  let totalEarmarked=0,othersUnearmarked=0;
+  (data.orders||[]).filter(o=>!orderIsTerminal(o.status)).forEach(o=>{
+    orderMaterials(o).filter(i=>String(i.materialId)===String(matId)).forEach(i=>{
+      const iUnit=i.unit||m?.unit||unit;
+      const earmarked=convertMaterialQty(orderItemEarmarkedQty(i,m),iUnit,unit,m);
+      totalEarmarked+=earmarked;
+      if(String(o.id)!==String(excludeOrderId)){
+        const remaining=convertMaterialQty(orderItemRemainingReserveQty(i,m),iUnit,unit,m);
+        othersUnearmarked+=Math.max(0,remaining-earmarked);
+      }
+    });
+  });
+  return {totalEarmarked,othersUnearmarked};
+}
 function orderItemAvailability(item,excludeOrderId=''){
   const m=data.materials.find(x=>String(x.id)===String(item.materialId));
   if(!m)return {ok:false,missing:Number(item.qty||0),available:0,stock:0,unit:item.unit||'',mat:null};
   const unit=item.unit||orderUnitForMaterial(m,item.category)||m.unit;
   const stock=convertMaterialQty(m.quantity,m.unit,unit,m);
-  const reservedOther=materialReservedOutsideOrder(m.id,excludeOrderId,unit);
-  const available=Math.max(0,stock-reservedOther);
   const need=typeof orderItemRemainingReserveQty==='function'?orderItemRemainingReserveQty(item,m):Number(item.qty||0);
+  const myEarmarked=convertMaterialQty(orderItemEarmarkedQty(item,m),item.unit||m.unit||unit,unit,m);
+  const {totalEarmarked,othersUnearmarked}=materialEarmarkTotals(item.materialId,excludeOrderId,unit,m);
+  const sharedPool=Math.max(0,stock-totalEarmarked);
+  const availableShared=Math.max(0,sharedPool-othersUnearmarked);
+  const available=myEarmarked+availableShared;
   return {ok:available>=need,missing:Math.max(0,need-available),available,stock,unit,mat:m}
 }
 function orderHasMaterialProblem(o){return orderMaterials(o).some(i=>!orderItemAvailability(i,o.id).ok)}
+
+// v8.64: заказы вида "Z-0008/1".."Z-0008/17" — это отдельные записи одной партии, разбитой на части.
+// Формально в данных между ними нет связи, кроме одинакового начала номера до "/" — этого достаточно,
+// чтобы показать пользователю «сколько нужно этой части» рядом с «сколько нужно всей партии».
+function orderFamilyBase(o){
+  const num=String(o?.number||'');
+  const i=num.indexOf('/');
+  return i>=0?num.slice(0,i):num;
+}
+function orderFamilySiblings(o){
+  const base=orderFamilyBase(o);
+  if(!base)return [o];
+  return (data.orders||[]).filter(x=>!orderIsTerminal(x.status)&&orderFamilyBase(x)===base);
+}
+function orderFamilyMaterialNeed(o,item){
+  const siblings=orderFamilySiblings(o);
+  if(siblings.length<=1)return null;
+  const unit=item.unit||'';
+  let familyNeed=0;
+  siblings.forEach(s=>{
+    orderMaterials(s).filter(i=>String(i.materialId)===String(item.materialId)).forEach(i=>{
+      familyNeed+=convertMaterialQty(Number(i.qty||0),i.unit||unit,unit,null);
+    });
+  });
+  return {ownNeed:Number(item.qty||0),familyNeed:stockNumForUnit(familyNeed,unit),familyCount:siblings.length,base:orderFamilyBase(o)};
+}
+// Сырой список незакрытых закупок по заказам для материала — без фильтра по av.ok (в отличие от
+// materialOrderedOrders в js/materials.js). Нужен для распределения пришедшей поставки (см.
+// applyReceiptToOrderedPurchases в js/materials.js) и для окна выбора «для какого заказа пришла поставка».
+// v8.70: сортировка — по близости срока отгрузки (orderDueSortKey), а не по дате создания заказа.
+// Материал нужнее там, где раньше нужно отгружать, а не там, где заказ просто раньше завели в систему.
+function materialOutstandingOrderPurchases(matId){
+  return (data.orders||[])
+    .filter(o=>!orderIsTerminal(o.status))
+    .flatMap(o=>orderMaterials(o).filter(i=>String(i.materialId)===String(matId) && orderItemPurchaseStatus(i)==='ordered' && Number(orderItemPurchaseQty(i,0)||0)>0).map(i=>({order:o,item:i})))
+    .sort((a,b)=>{
+      const da=String(orderDueSortKey(a.order)||''), db=String(orderDueSortKey(b.order)||'');
+      if(da&&db&&da!==db)return da<db?-1:1;
+      if(da&&!db)return -1;
+      if(db&&!da)return 1;
+      // numeric:true — иначе "Z-0008/12" встаёт перед "Z-0008/2" (сравнение как текст, а не по числу).
+      return String(a.order?.number||'').localeCompare(String(b.order?.number||''),undefined,{numeric:true,sensitivity:'base'});
+    });
+}
 
 function orderItemPurchaseStatus(item){
   const v=item?.purchaseStatus||'';
