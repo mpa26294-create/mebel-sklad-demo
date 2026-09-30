@@ -725,12 +725,33 @@ function ensureWorkflowProduction(o){
   if(!Array.isArray(o.production.logs))o.production.logs=[];
   if(!Array.isArray(o.production.operations))o.production.operations=[];
   const existing=new Map(o.production.operations.map(op=>[Number(op.stepIndex),op]));
+  const total=orderProductQty(o);
   o.production.operations=orderSteps(o).map((step,index)=>{
     const old=existing.get(index)||{};
     const status=PRODUCTION_STATUS_META[old.status]?old.status:(old.finishedAt?'done':old.startedAt?'running':'not_started');
-    const completedQty=old.completedQty==null&&status==='done'?orderProductQty(o):Math.max(0,Math.trunc(Number(old.completedQty||0)));
-    return Object.assign({id:old.id||uid(),stepIndex:index,stepName:step.name||t('operationStage'),status,startedAt:'',pausedAt:'',finishedAt:'',pauseMinutes:0,actualMinutes:0,completedQty:0,responsible:step.responsible||'',comment:'',comments:[],sessions:[],currentSessionStartedAt:'',currentSessionPauseMinutes:0,collapsed:false},old,{stepIndex:index,stepName:step.name||old.stepName||t('operationStage'),responsible:old.responsible||step.responsible||'',completedQty,sessions:Array.isArray(old.sessions)?old.sessions:[]});
+    const completedQty=old.completedQty==null&&status==='done'?total:Math.max(0,Math.trunc(Number(old.completedQty||0)));
+    const op=Object.assign({id:old.id||uid(),stepIndex:index,stepName:step.name||t('operationStage'),status,startedAt:'',pausedAt:'',finishedAt:'',pauseMinutes:0,actualMinutes:0,completedQty:0,responsible:step.responsible||'',comment:'',comments:[],sessions:[],currentSessionStartedAt:'',currentSessionPauseMinutes:0,collapsed:false},old,{stepIndex:index,stepName:step.name||old.stepName||t('operationStage'),responsible:old.responsible||step.responsible||'',completedQty,sessions:Array.isArray(old.sessions)?old.sessions:[]});
+    // v8.69: страховка от того же класса рассинхрона, что случился с Z-0009 (см. mergeOrderJournals,
+    // v8.67) — если по КОЛИЧЕСТВУ этап уже выполнен целиком, а статус почему-то отстал, самоисправляемся
+    // здесь же, при каждом чтении заказа, а не только в момент слияния между устройствами. Так это не
+    // сможет «зависнуть» надолго, каким бы путём рассинхрон ни возник (в т.ч. ещё не найденным).
+    if(op.status!=='done'&&op.status!=='cancelled'&&completedQty>=total){
+      const latest=op.sessions[0];
+      op.status='done';
+      op.pausedAt='';
+      op.finishedAt=op.finishedAt||(latest&&(latest.endedAt||latest.startedAt))||productionNow();
+      op.currentSessionStartedAt='';
+      op.currentSessionPauseMinutes=0;
+      op.collapsed=true;
+    }
+    return op;
   });
+  // v8.69: то же самое для заказа целиком — если ВСЕ этапы (после самоисправления выше) уже done,
+  // а сам заказ ещё не помечен «Готов» (тем же рассинхроном), доводим статус заказа тоже. Раньше это
+  // делала только finalizeProductionQuantity в момент явного завершения — если это событие терялось
+  // при синхронизации, заказ так и оставался «В производстве» навсегда, хотя всё было сделано.
+  const ops=o.production.operations.filter(op=>{const st=orderSteps(o)[op.stepIndex];return Number(st?.minutes||0)>0||(Array.isArray(st?.operations)&&st.operations.length>0)});
+  if(ops.length&&ops.every(op=>op.status==='done')&&!orderIsTerminal(o.status))o.status='Готов';
   return o.production;
 }
 function productionOps(o){return ensureWorkflowProduction(o).operations.filter(op=>{const st=orderSteps(o)[op.stepIndex];return Number(st?.minutes||0)>0||(Array.isArray(st?.operations)&&st.operations.length>0)})}
