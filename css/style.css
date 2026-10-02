@@ -4426,3 +4426,9 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 #stock .order-stat-card.is-clickable{cursor:pointer}
 #stock .order-stat-card.is-clickable:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(16,24,40,.09)!important}
 @media(min-width:1101px){#stock .stats{grid-template-columns:repeat(5,minmax(0,1fr))}}
+/* v8.77: ровные плитки склада — подпись, число и пояснение в столбик */
+#stock .order-stat-card{align-items:center;gap:16px;padding:18px 20px}
+#stock .order-stat-copy{display:flex;flex-direction:column;gap:4px;flex:1}
+#stock .order-stat-label{display:block;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stock .order-stat-value{display:block;margin:0;font-size:30px;line-height:1.05}
+#stock .order-stat-note{display:block;margin:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
