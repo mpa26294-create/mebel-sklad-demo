@@ -2013,15 +2013,20 @@ function printMaterialQrLabel(id){
 // v8.77: плитки на «Складе» стали кнопками. Нажатие открывает список (всего / категории / заканчивается /
 // нет в наличии) или, для плитки «Нужно заказать», окно заказа: категории → список материалов с галочками →
 // по одному письму на каждого поставщика → «Письмо отправлено» отмечает материалы как «Заказано».
-// v8.78: ссылка на чертёж (PDF) материала для письма поставщику — подписанная, действует 30 дней
-// (бакет с файлами закрытый, обычная ссылка не открылась бы).
+// v8.78: ссылка на чертёж (PDF) для письма поставщику. Бакет с файлами закрытый, а длинная подписанная
+// ссылка некрасиво выглядит в письме — поэтому в таблице pdf_links заводится короткий код, а Edge Function
+// `pdf` по нему выдаёт свежую подписанную ссылку при каждом открытии (ссылка не «протухает»).
 async function materialPdfEmailLink(m){
   const a=m?.attributes||{};
+  if(!a.pdfPath||typeof supabaseClient==='undefined')return a.pdfUrl||'';
   try{
-    if(a.pdfPath&&typeof supabaseClient!=='undefined'){
-      const {data:d,error}=await supabaseClient.storage.from(PDF_BUCKET).createSignedUrl(a.pdfPath,60*60*24*30);
-      if(!error&&d?.signedUrl)return d.signedUrl;
-    }
+    const bytes=crypto.getRandomValues(new Uint8Array(8));
+    const code=Array.from(bytes,b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('');
+    const {error}=await supabaseClient.from('pdf_links').insert({code,path:a.pdfPath});
+    if(!error)return `${SUPABASE_URL}/functions/v1/pdf?c=${code}`;
+    console.error(error);
+    const {data:d,error:e2}=await supabaseClient.storage.from(PDF_BUCKET).createSignedUrl(a.pdfPath,60*60*24*30);
+    if(!e2&&d?.signedUrl)return d.signedUrl;
   }catch(e){console.error(e)}
   return a.pdfUrl||'';
 }
