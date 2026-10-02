@@ -2109,10 +2109,10 @@ function openStockOrderLetters(){
     <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email||'Поставщик')}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
     <div class="delivery-info">${g.needEmail&&!g.done?`<div class="field" style="margin:0 0 8px"><label>Email поставщика</label><input type="email" class="input" id="stockOrderEmail${i}" placeholder="order@postavshik.com" value="${escapeHtml(g.email||'')}"><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="stockOrderRemember${i}" ${g.remember?'checked':''}> Запомнить email в карточках этих материалов</label></div>`:`<div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>`}
     ${g.items.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}</div>
-    <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':`<button class="btn small" onclick="openStockOrderLetter(${i})">Открыть письмо</button><button class="btn small primary" onclick="markStockOrderLetterSent(${i})">Письмо отправлено</button>`}</div>
+    <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':`<button class="btn small" onclick="openStockOrderLetter(${i})">Отправить</button><button class="btn small primary" id="stockOrderSent${i}" ${g.opened?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="markStockOrderLetterSent(${i})">Письмо отправлено?</button>`}</div>
   </div>`).join('');
   const miss='';
-  openModal('Письма поставщикам',`<p class="tech-save-hint">1) «Открыть письмо» — откроется готовое письмо в почте. 2) Отправьте его и нажмите «Письмо отправлено» — материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="openStockOrderCategory(${Math.max(0,stockOrderState.cats.indexOf(stockOrderState.cat))})">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
+  openModal('Письма поставщикам',`<p class="tech-save-hint">1) Нажмите «Отправить» — откроется готовое письмо в почте, отправьте его. 2) Затем нажмите «Письмо отправлено?» — материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="openStockOrderCategory(${Math.max(0,stockOrderState.cats.indexOf(stockOrderState.cat))})">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
 }
 function stockOrderReadEmail(i){
   const g=stockOrderState.groups[i];
@@ -2127,11 +2127,15 @@ function stockOrderReadEmail(i){
 }
 function openStockOrderLetter(i){
   const g=stockOrderState.groups[i];
-  if(g&&stockOrderReadEmail(i))window.location.href=stockOrderLetterMailto(g);
+  if(!g||!stockOrderReadEmail(i))return;
+  g.opened=true;
+  const btn=document.getElementById('stockOrderSent'+i);
+  if(btn){btn.disabled=false;btn.style.opacity='';btn.style.cursor=''}
+  window.location.href=stockOrderLetterMailto(g);
 }
 async function markStockOrderLetterSent(i){
   const g=stockOrderState.groups[i];
-  if(!g||g.done||!stockOrderReadEmail(i))return;
+  if(!g||g.done||!g.opened||!stockOrderReadEmail(i))return;
   for(const it of g.items){
     const m=(data.materials||[]).find(x=>String(x.id)===it.id);
     if(!m)continue;
