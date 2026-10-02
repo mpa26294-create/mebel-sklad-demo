@@ -2141,10 +2141,9 @@ function openStockOrderLetters(){
     <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email||'Поставщик')}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
     <div class="delivery-info">${g.needEmail&&!g.done?`<div class="field" style="margin:0 0 8px"><label>Email поставщика</label><input type="email" class="input" id="stockOrderEmail${i}" placeholder="order@postavshik.com" value="${escapeHtml(g.email||'')}"><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="stockOrderRemember${i}" ${g.remember?'checked':''}> Запомнить email в карточках этих материалов</label></div>`:`<div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>`}
     ${g.items.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}</div>
-    <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':`<button class="btn small" onclick="openStockOrderLetter(${i})">Отправить</button><button class="btn small primary" id="stockOrderSent${i}" ${g.opened?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="markStockOrderLetterSent(${i})">Письмо отправлено?</button>`}</div>
-  </div>`).join('');
+    <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':(g.opened?`<div class="stock-order-ask" style="flex:1 1 100%;border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:12px 14px"><b style="display:block;margin-bottom:10px">Письмо отправлено поставщику?</b><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small primary" onclick="markStockOrderLetterSent(${i})">Да, отправлено</button><button class="btn small" onclick="declineStockOrderLetter(${i})">Нет, не отправлено</button><button class="btn small ghost" onclick="openStockOrderLetter(${i})">Открыть письмо ещё раз</button></div></div>`:`<button class="btn small primary" style="flex:1" onclick="openStockOrderLetter(${i})">Отправить</button>`)}</div>`).join('');
   const miss='';
-  openModal('Письма поставщикам',`<p class="tech-save-hint">1) Нажмите «Отправить» — откроется готовое письмо в почте, отправьте его. 2) Затем нажмите «Письмо отправлено?» — материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="openStockOrderCategory(${Math.max(0,stockOrderState.cats.indexOf(stockOrderState.cat))})">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
+  openModal('Письма поставщикам',`<p class="tech-save-hint">1) Нажмите «Отправить» — откроется готовое письмо в почте, отправьте его. 2) Ответьте, отправлено ли оно: после «Да» материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="stockOrderBack()">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
 }
 function stockOrderReadEmail(i){
   const g=stockOrderState.groups[i];
@@ -2161,9 +2160,34 @@ function openStockOrderLetter(i){
   const g=stockOrderState.groups[i];
   if(!g||!stockOrderReadEmail(i))return;
   g.opened=true;
-  const btn=document.getElementById('stockOrderSent'+i);
-  if(btn){btn.disabled=false;btn.style.opacity='';btn.style.cursor=''}
+  openStockOrderLetters();
   window.location.href=stockOrderLetterMailto(g);
+}
+// Окно писем нельзя закрыть, пока по открытому письму нет ответа «отправлено / не отправлено».
+function stockOrderPending(){
+  return document.getElementById('modalTitle')?.textContent==='Письма поставщикам'&&document.getElementById('modalBackdrop')?.classList.contains('show')&&(stockOrderState.groups||[]).some(g=>g.opened&&!g.done);
+}
+function stockOrderNudge(){
+  const el=document.querySelector('#modalBody .stock-order-ask');
+  if(!el)return;
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+  el.animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(-5px)'},{transform:'translateX(0)'}],{duration:350});
+  toast('Сначала ответьте: письмо отправлено или нет?');
+}
+if(!window.__stockOrderCloseGuard&&typeof closeModal==='function'){
+  window.__stockOrderCloseGuard=true;
+  const __closeModalOrig=closeModal;
+  closeModal=function(){if(stockOrderPending()){stockOrderNudge();return}return __closeModalOrig.apply(this,arguments)};
+}
+function stockOrderBack(){
+  if(stockOrderPending()){stockOrderNudge();return}
+  openStockOrderCategory(Math.max(0,stockOrderState.cats.indexOf(stockOrderState.cat)));
+}
+function declineStockOrderLetter(i){
+  const g=stockOrderState.groups[i];
+  if(!g)return;
+  g.opened=false;
+  openStockOrderLetters();
 }
 async function markStockOrderLetterSent(i){
   const g=stockOrderState.groups[i];
