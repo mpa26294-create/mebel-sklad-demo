@@ -202,7 +202,7 @@ function materialSupplierDeliveries(m){
   const rows=materialOrderedOrders(m.id);
 
   // v8.73: кнопка отмены всего ручного заказа закупки (если по материалу есть «Заказано у поставщика» вручную)
-  const cancelAllBtn=(orderedManualQty(m)>0||rows.length>0)?`<div class="delivery-actions" style="margin-top:10px"><button class="btn small danger" type="button" onclick="cancelManualPurchaseOrder('${m.id}')">${t('cancelPurchaseOrderBtn')}</button></div>`:'';
+  const cancelAllBtn='';
   if(!rows.length && manual.length===0)return `<div class="supplier-deliveries-empty">${t('noActiveDeliveries')}</div>${cancelAllBtn}`;
 
   const unit=m.unit||'шт';
@@ -1220,7 +1220,7 @@ function openMaterialDetails(id){
     </aside>
   </div>`;
   const hasPdf=a.pdfPath||a.pdfUrl;
-  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">${t('deleteMaterialBtn')}</button></div><div class="right">${m.sku?`<button class="btn ghost" onclick="printMaterialQrLabel('${m.id}')">${t('printQrBtn')}</button>`:''}${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">${t('openPdfBtn')}</button>`:''}<button class="btn primary" onclick="openMaterialEditor('${m.id}')">${t('editBtn2')}</button></div></div>`;
+  const foot=`<div class="material-detail-foot"><div class="left"><button class="btn danger" onclick="deleteMaterial('${m.id}')">${t('deleteMaterialBtn')}</button></div><div class="right">${materialCancelablePurchases(m).length?`<button class="btn danger" onclick="cancelManualPurchaseOrder('${m.id}')">${t('cancelPurchaseOrderBtn')}</button>`:''}${m.sku?`<button class="btn ghost" onclick="printMaterialQrLabel('${m.id}')">${t('printQrBtn')}</button>`:''}${hasPdf?`<button class="btn ghost" onclick="openMaterialPdf('${m.id}')">${t('openPdfBtn')}</button>`:''}<button class="btn primary" onclick="openMaterialEditor('${m.id}')">${t('editBtn2')}</button></div></div>`;
   openModal(t('infoMaterial'),body,foot);
   const modal=document.querySelector('#modalBackdrop .modal');
   if(modal) modal.classList.add('detail-modal');
