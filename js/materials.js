@@ -1414,7 +1414,7 @@ function filteredMaterials(){
   const acctEmail=String((typeof currentUser!=='undefined'&&currentUser?.email)||'').trim().toLowerCase();
   if(acctEmail&&q===acctEmail){q='';if(searchEl)searchEl.value='';}
   const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||materialSearchHaystack(m).includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
-function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤'],['ready',t('categories'),cats,t('categoriesNote'),'✓'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
+function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const needCount=stockOrderNeedList().length;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤','total'],['ready',t('categories'),cats,t('categoriesNote'),'✓','categories'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△','low'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱','out'],['ready','Нужно заказать',needCount,'позиций для заказа','✉','need']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon,kind])=>`<div class="order-stat-card is-clickable" role="button" tabindex="0" onclick="openStockStatModal('${kind}')"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(woodTypeLabel(m.subcategory)):''}</span>`}
 function stockCategoryTabs(){
   const groups=stockRefs().groups;
@@ -2010,4 +2010,131 @@ function printMaterialQrLabel(id){
   </script>
 </body></html>`);
   w.document.close();
+}
+
+
+// v8.77: плитки на «Складе» стали кнопками. Нажатие открывает список (всего / категории / заканчивается /
+// нет в наличии) или, для плитки «Нужно заказать», окно заказа: категории → список материалов с галочками →
+// по одному письму на каждого поставщика → «Письмо отправлено» отмечает материалы как «Заказано».
+let stockOrderState={cats:[],cat:'',groups:[]};
+function stockOrderNeedQty(m){
+  const u=m.unit||'шт';
+  const min=Number(m.minQuantity||0);
+  const byMin=min>0?Math.max(0,stockNumForUnit(min-availableQty(m)-orderedQty(m),u)):0;
+  return Math.max(stockNeededToOrderQty(m),byMin);
+}
+function stockOrderNeedList(){
+  return (data.materials||[]).map(m=>({m,need:stockOrderNeedQty(m)})).filter(x=>x.need>0);
+}
+function stockStatRowHtml(m,note){
+  return `<div class="tech-save-radio" onclick="closeModal();openMaterialDetails('${m.id}')"><span><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>${escapeHtml(note)}</small></span></div>`;
+}
+function openStockStatModal(kind){
+  const mats=data.materials||[];
+  const unitQty=(m,v)=>qtyWithUnit(stockNumForUnit(v,m.unit||'шт'),m.unit||'шт');
+  const byName=(a,b)=>String(a.sku||a.name||'').localeCompare(String(b.sku||b.name||''),undefined,{numeric:true,sensitivity:'base'});
+  const foot=`<button class="btn" onclick="closeModal()">Закрыть</button>`;
+  if(kind==='need'){openStockOrderCategories();return}
+  if(kind==='categories'){
+    const map={};mats.forEach(m=>{(map[m.category]=map[m.category]||[]).push(m)});
+    const rows=Object.keys(map).sort().map(c=>`<div class="tech-save-radio"><span><b>${escapeHtml(categoryLabel(c)||c)}</b><small>Позиций: ${map[c].length}</small></span></div>`).join('');
+    openModal('Категории',`<div class="tech-save-dialog receipt-alloc-list">${rows||'<p class="tech-save-hint">Нет материалов</p>'}</div>`,foot);
+    return;
+  }
+  let list,title;
+  if(kind==='low'){title='Заканчивается';list=mats.filter(m=>statusOf(m)[0]==='low')}
+  else if(kind==='out'){title='Нет в наличии';list=mats.filter(m=>statusOf(m)[0]==='out')}
+  else{title='Все позиции';list=mats.slice()}
+  list.sort(byName);
+  const rows=list.map(m=>stockStatRowHtml(m,`${categoryLabel(m.category)||m.category} · на складе: ${unitQty(m,m.quantity)} · доступно: ${unitQty(m,availableQty(m))}`)).join('');
+  openModal(`${title}: ${list.length}`,`<div class="tech-save-dialog receipt-alloc-list">${rows||'<p class="tech-save-hint">Нет материалов</p>'}</div>`,foot);
+}
+function openStockOrderCategories(){
+  const list=stockOrderNeedList();
+  const map={};list.forEach(x=>{(map[x.m.category]=map[x.m.category]||[]).push(x)});
+  stockOrderState.cats=Object.keys(map).sort();
+  const foot=`<button class="btn" onclick="closeModal()">Закрыть</button>`;
+  if(!stockOrderState.cats.length){openModal('Нужно заказать','<p class="tech-save-hint">Сейчас заказывать нечего: всё заказано или есть на складе.</p>',foot);return}
+  const rows=stockOrderState.cats.map((c,i)=>`<div class="tech-save-radio" onclick="openStockOrderCategory(${i})"><span><b>${escapeHtml(categoryLabel(c)||c)}</b><small>Позиций к заказу: ${map[c].length}</small></span></div>`).join('');
+  openModal('Нужно заказать',`<p class="tech-save-hint">Выберите категорию материалов.</p><div class="tech-save-dialog">${rows}</div>`,foot);
+}
+function openStockOrderCategory(i){
+  const cat=stockOrderState.cats[i];
+  if(cat===undefined)return;
+  stockOrderState.cat=cat;
+  const list=stockOrderNeedList().filter(x=>x.m.category===cat).sort((a,b)=>String(a.m.sku||a.m.name||'').localeCompare(String(b.m.sku||b.m.name||''),undefined,{numeric:true,sensitivity:'base'}));
+  const rows=list.map(({m,need})=>{
+    const du=materialDisplayUnit(m);
+    const q=Number(convertMaterialQty(need,m.unit||du,du,m).toFixed(3));
+    const email=String(m.attributes?.supplierEmail||'').trim();
+    const sup=m.attributes?.supplier||'';
+    return `<div class="tech-save-radio" data-mid="${escapeHtml(String(m.id))}"><input type="checkbox" class="stock-order-chk" ${email?'checked':''}><span><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>Поставщик: ${escapeHtml(sup||'—')}${email?' · '+escapeHtml(email):' · <span style="color:#b42323">нет email поставщика</span>'}</small></span><input type="number" min="0" step="any" class="input stock-order-qty" style="width:92px;height:34px" value="${q}" title="Количество, ${escapeHtml(unitLabel(du))}"><small>${escapeHtml(unitLabel(du))}</small></div>`;
+  }).join('');
+  openModal(categoryLabel(cat)||cat,`<p class="tech-save-hint">Отметьте, что заказать, и поправьте количество. Письма формируются отдельно для каждого поставщика.</p><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked onchange="document.querySelectorAll('.stock-order-chk').forEach(c=>c.checked=this.checked)"> Выбрать все</label><div class="tech-save-dialog receipt-alloc-list">${rows}</div>`,`<button class="btn" onclick="openStockOrderCategories()">Назад</button><button class="btn primary" onclick="prepareStockOrderLetters()">Создать письма</button>`);
+}
+function prepareStockOrderLetters(){
+  const groups={};
+  const noEmail=[];
+  document.querySelectorAll('#modalBackdrop .stock-order-chk:checked').forEach(chk=>{
+    const row=chk.closest('[data-mid]');
+    const m=(data.materials||[]).find(x=>String(x.id)===String(row.dataset.mid));
+    const qty=Number(row.querySelector('.stock-order-qty')?.value);
+    if(!m||!(qty>0))return;
+    const email=String(m.attributes?.supplierEmail||'').trim();
+    const item={id:String(m.id),qty,unit:materialDisplayUnit(m)};
+    if(!email){noEmail.push(item);return}
+    const key=email.toLowerCase();
+    (groups[key]=groups[key]||{email,supplier:m.attributes?.supplier||'',items:[],done:false}).items.push(item);
+  });
+  stockOrderState.groups=Object.values(groups);
+  stockOrderState.noEmail=noEmail;
+  if(!stockOrderState.groups.length&&!noEmail.length){toast('Ничего не выбрано');return}
+  openStockOrderLetters();
+}
+function stockOrderLetterMailto(g){
+  const lines=[t('orderMaterialGreeting'),''];
+  g.items.forEach((it,i)=>{
+    const m=(data.materials||[]).find(x=>String(x.id)===it.id);
+    if(m)lines.push(`${i+1}. ${materialOrderDisplayName(m)}${m.sku?` (${m.sku})`:''} — ${it.qty} ${unitLabel(it.unit)}`);
+  });
+  lines.push('',t('orderMaterialSignoff'),currentUser?.email||'');
+  const subject=`${t('orderMaterialSubjectPrefix')} (${g.items.length})`;
+  return `mailto:${g.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+}
+function openStockOrderLetters(){
+  const unitOf=it=>unitLabel(it.unit);
+  const nameOf=it=>{const m=(data.materials||[]).find(x=>String(x.id)===it.id);return m?`${m.sku?m.sku+' · ':''}${materialOrderDisplayName(m)}`:it.id};
+  const cards=stockOrderState.groups.map((g,i)=>`<div class="supplier-delivery-card">
+    <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email)}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
+    <div class="delivery-info"><div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>
+    ${g.items.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}</div>
+    <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':`<button class="btn small" onclick="openStockOrderLetter(${i})">Открыть письмо</button><button class="btn small primary" onclick="markStockOrderLetterSent(${i})">Письмо отправлено</button>`}</div>
+  </div>`).join('');
+  const miss=(stockOrderState.noEmail||[]).length?`<div class="supplier-delivery-card"><div class="delivery-header"><div class="delivery-order">Без email поставщика</div><div class="delivery-qty">${stockOrderState.noEmail.length} поз.</div></div><div class="delivery-info">${stockOrderState.noEmail.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}</div><p class="tech-save-hint">Письмо не создано. Укажите email поставщика в карточке материала и повторите заказ.</p></div>`:'';
+  openModal('Письма поставщикам',`<p class="tech-save-hint">1) «Открыть письмо» — откроется готовое письмо в почте. 2) Отправьте его и нажмите «Письмо отправлено» — материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="openStockOrderCategory(${Math.max(0,stockOrderState.cats.indexOf(stockOrderState.cat))})">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
+}
+function openStockOrderLetter(i){
+  const g=stockOrderState.groups[i];
+  if(g)window.location.href=stockOrderLetterMailto(g);
+}
+async function markStockOrderLetterSent(i){
+  const g=stockOrderState.groups[i];
+  if(!g||g.done)return;
+  for(const it of g.items){
+    const m=(data.materials||[]).find(x=>String(x.id)===it.id);
+    if(!m)continue;
+    const du=materialDisplayUnit(m);
+    const add=convertMaterialQty(it.qty,du,m.unit||du,m);
+    m.attributes=m.attributes||{};
+    m.attributes.orderedQty=Number((Number(m.attributes.orderedQty||0)+Number(add)).toFixed(3));
+    m.attributes.purchaseStatus='ordered';
+    m.lastUpdated=today();
+    await updateMaterialInSupabase(m);
+    if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`Заказ поставщику: ${it.qty} ${unitLabel(it.unit)} → ${g.email}`);
+  }
+  g.done=true;
+  save();
+  renderAll();
+  openStockOrderLetters();
+  toast('Отмечено как заказано');
 }

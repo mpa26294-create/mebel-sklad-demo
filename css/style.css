@@ -4421,3 +4421,8 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .users-role-badge.ok{background:#eef2ff;color:#3538cd}
 .users-role-badge.warn{background:#fff1e6;color:#b54708}
 .users-role-badge.owner{background:#eef8f0;color:#1f6b36}
+
+/* v8.77: кликабельные плитки склада + 5 плиток в ряд на широком экране */
+#stock .order-stat-card.is-clickable{cursor:pointer}
+#stock .order-stat-card.is-clickable:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(16,24,40,.09)!important}
+@media(min-width:1101px){#stock .stats{grid-template-columns:repeat(5,minmax(0,1fr))}}
