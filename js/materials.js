@@ -201,7 +201,9 @@ function materialSupplierDeliveries(m){
   const manual=(a.manualPurchaseOrders||[]);
   const rows=materialOrderedOrders(m.id);
 
-  if(!rows.length && manual.length===0)return `<div class="supplier-deliveries-empty">${t('noActiveDeliveries')}</div>`;
+  // v8.73: кнопка отмены всего ручного заказа закупки (если по материалу есть «Заказано у поставщика» вручную)
+  const cancelAllBtn=orderedManualQty(m)>0?`<div class="delivery-actions" style="margin-top:10px"><button class="btn small danger" type="button" onclick="cancelManualPurchaseOrder('${m.id}')">${t('cancelPurchaseOrderBtn')}</button></div>`:'';
+  if(!rows.length && manual.length===0)return `<div class="supplier-deliveries-empty">${t('noActiveDeliveries')}</div>${cancelAllBtn}`;
 
   const unit=m.unit||'шт';
   const deliveries=[];
@@ -239,7 +241,7 @@ function materialSupplierDeliveries(m){
     });
   });
 
-  if(deliveries.length===0)return `<div class="supplier-deliveries-empty">${t('noActiveDeliveries')}</div>`;
+  if(deliveries.length===0)return `<div class="supplier-deliveries-empty">${t('noActiveDeliveries')}</div>${cancelAllBtn}`;
 
   return deliveries.map(d=>`
     <div class="supplier-delivery-card">
@@ -271,7 +273,7 @@ function materialSupplierDeliveries(m){
         <button class="btn small danger" onclick="cancelMaterialDelivery('${m.id}','${d.orderId}')">${t('cancel')}</button>
       </div>
     </div>
-  `).join('');
+  `).join('')+cancelAllBtn;
 }
 
 // v8.61: карточки «Поставки» на странице материала («Принять»/«Редактировать»/«Отменить») были
@@ -340,19 +342,45 @@ async function cancelMaterialDelivery(materialId,orderId){
   }
   const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
   if(!m)return;
-  if(!confirm(`${t('cancel')}?`))return;
+  const unit=m.unit||'шт';
+  const alloc=(m.attributes?.manualPurchaseOrders||[]).find(x=>String(x.orderId)===String(orderId));
+  const cancelQty=Math.min(orderedManualQty(m),stockNumForUnit(alloc?.qty||0,unit));
+  if(!confirm(`${t('cancelPurchaseOrderConfirm')} ${qtyWithUnit(cancelQty,unit)}?`))return;
   const oldAttrs={...(m.attributes||{})};
   m.attributes=m.attributes||{};
-  // Отменяем только привязку ЭТОГО заказа к закупке — саму заказанную у поставщика партию (и её
-  // количество) не трогаем: возможно, она ещё нужна, просто больше не для этого заказа.
+  // v8.73: раньше отмена только убирала привязку заказа, а «Заказано» оставалось — закупка по факту
+  // не отменялась. Теперь отменённое количество вычитается из «Заказано у поставщика».
   m.attributes.manualPurchaseOrders=(m.attributes.manualPurchaseOrders||[]).filter(x=>String(x.orderId)!==String(orderId));
+  m.attributes.orderedQty=Math.max(0,stockNumForUnit(orderedManualQty(m)-cancelQty,unit));
+  m.attributes.purchaseStatus=m.attributes.orderedQty>0?'ordered':(stockNeededToOrderQty(m)>0?'needorder':'instock');
   m.lastUpdated=today();
   const ok=await updateMaterialInSupabase(m);
   if(!ok){m.attributes=oldAttrs;return}
   await loadMaterialsFromSupabase();
   renderAll();
   if(typeof openMaterialDetails==='function')openMaterialDetails(materialId);
-  toast(t('cancel'));
+  toast(t('purchaseOrderCancelledToast'));
+}
+// v8.73: отмена всего ручного заказа закупки у поставщика целиком (количество «Заказано» → 0, привязки
+// заказов сняты). Закупки, оформленные внутри конкретных заказов, не трогает — они отменяются своими
+// кнопками «Отменить» в списке поставок.
+async function cancelManualPurchaseOrder(materialId){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
+  if(!m)return;
+  const unit=m.unit||'шт';
+  const q=orderedManualQty(m);
+  if(q<=0){toast(t('noActiveDeliveries'));return}
+  if(!confirm(`${t('cancelPurchaseOrderConfirm')} ${qtyWithUnit(q,unit)}?`))return;
+  const oldAttrs={...(m.attributes||{})};
+  m.attributes={...oldAttrs,orderedQty:0,manualPurchaseOrders:[],expectedReceiptDate:'',purchaseNote:''};
+  m.attributes.purchaseStatus=stockNeededToOrderQty(m)>0?'needorder':'instock';
+  m.lastUpdated=today();
+  const ok=await updateMaterialInSupabase(m);
+  if(!ok){m.attributes=oldAttrs;return}
+  await loadMaterialsFromSupabase();
+  renderAll();
+  if(typeof openMaterialDetails==='function')openMaterialDetails(materialId);
+  toast(t('purchaseOrderCancelledToast'));
 }
 
 // v7.65: кнопка "+ Заказать" была заглушкой (просто toast). Реализовано по просьбе пользователя:
@@ -1659,6 +1687,7 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
         <div class="field"><label>${t('collection')}</label><input id="mCollection" class="input" value="${escapeHtml(a.collection||'')}" placeholder="${t('collection')}"></div>
         <div class="field"><label>${t('manufacturer')}</label><input id="mManufacturer" class="input" value="${escapeHtml(a.manufacturer||'')}" placeholder="${t('manufacturer')}"></div>
         <div class="field"><label>${t('supplierEmailLabel')}</label><input id="mSupplierEmail" type="email" class="input" value="${escapeHtml(a.supplierEmail||'')}" placeholder="${t('supplierEmailPlaceholder')}"></div>
+        <div class="field full"><label>${t('pdfUpload')}</label><label class="file-drop"><small id="mPdfName">${escapeHtml(a.pdfName||t('pdfNotSelected'))}</small><span class="btn small">${t('choosePdf')}</span><input id="mPdf" type="file" accept="application/pdf" onchange="document.getElementById('mPdfName').textContent=this.files[0]?.name||${escapeHtml(JSON.stringify(t('pdfNotSelected')))}"></label><div class="hint">${t('pdfStorageHint')}</div>${id&&(a.pdfPath||a.pdfUrl)?`<button class="btn small" type="button" style="margin-top:8px" onclick="openMaterialPdf('${id}')">${t('currentPdf')}</button>`:''}</div>
       </div>
     </section>
     <section class="wizard-card">
@@ -1708,6 +1737,20 @@ function openMaterialModal(id=null, presetCategory='Ткань'){
   if(typeof syncGenericMaterialPreview==='function')syncGenericMaterialPreview();
 }
 function toggleMaterialStockStep(){document.getElementById('mStockStep')?.classList.toggle('hidden',!document.getElementById('mHasStock')?.checked)}
+// v8.73: у Фурнитуры/Крепежа/Наполнителей в общей форме не было загрузки PDF вовсе (она была только
+// у Поролона и Деталей из дерева) — добавлено, тем же способом (PDF_BUCKET, cleanStoragePart — из index.html).
+async function uploadGenericMaterialPdf(sku,cat,oldAttrs={}){
+  const keep={pdfName:oldAttrs.pdfName||'',pdfPath:oldAttrs.pdfPath||'',pdfUrl:oldAttrs.pdfUrl||''};
+  const file=document.getElementById('mPdf')?.files?.[0];
+  if(!file)return keep;
+  if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){toast(t('onlyPdf'));return null}
+  const folder={'Фурнитура':'hardware','Крепёж':'fasteners','Наполнители':'fillers'}[cat]||'material';
+  const path=`${folder}/${cleanStoragePart(String(sku||'file'))}/${Date.now()}_${cleanStoragePart(file.name)}`;
+  const {error}=await supabaseClient.storage.from(PDF_BUCKET).upload(path,file,{cacheControl:'3600',upsert:false,contentType:'application/pdf'});
+  if(error){console.error(error);toast(t('pdfUploadError'));return null}
+  const {data:pub}=supabaseClient.storage.from(PDF_BUCKET).getPublicUrl(path);
+  return {pdfName:file.name,pdfPath:path,pdfUrl:pub?.publicUrl||''};
+}
 async function saveMaterial(id){
   const cat=document.getElementById('mCat').value;
   const attrs={};
@@ -1753,6 +1796,10 @@ async function saveMaterial(id){
     attrs.totalVolume=sheetVolume&&count?Number((sheetVolume*count).toFixed(4)):'';
   }
   const obj={id:id||null,sku:mSku.value.trim()||nextSku(cat,mSub.value,id||''),name:mName.value.trim()||mSub.value||categoryLabel(cat),category:cat,subcategory:mSub.value,attributes:attrs,unit,quantity:q,minQuantity:mn,lastUpdated:today()};
+  const oldAttrsForPdf=(id?(data.materials||[]).find(x=>String(x.id)===String(id))?.attributes:null)||{};
+  const pdfData=await uploadGenericMaterialPdf(obj.sku,cat,oldAttrsForPdf);
+  if(!pdfData)return;
+  Object.assign(attrs,pdfData);
   const ok=id?await updateMaterialInSupabase(obj):await insertMaterialToSupabase(obj);
   if(!ok)return;
   if(id){closeModal();await loadMaterialsFromSupabase();if(document.getElementById('orderMaterialsBox')){rebuildOrderMaterialOptions();refreshOrderMaterialRows();}toast(t('savedMaterial'));return;}
