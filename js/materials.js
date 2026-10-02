@@ -202,7 +202,7 @@ function materialSupplierDeliveries(m){
   const rows=materialOrderedOrders(m.id);
 
   // v8.73: кнопка отмены всего ручного заказа закупки (если по материалу есть «Заказано у поставщика» вручную)
-  const cancelAllBtn=orderedManualQty(m)>0?`<div class="delivery-actions" style="margin-top:10px"><button class="btn small danger" type="button" onclick="cancelManualPurchaseOrder('${m.id}')">${t('cancelPurchaseOrderBtn')}</button></div>`:'';
+  const cancelAllBtn=(orderedManualQty(m)>0||rows.length>0)?`<div class="delivery-actions" style="margin-top:10px"><button class="btn small danger" type="button" onclick="cancelManualPurchaseOrder('${m.id}')">${t('cancelPurchaseOrderBtn')}</button></div>`:'';
   if(!rows.length && manual.length===0)return `<div class="supplier-deliveries-empty">${t('noActiveDeliveries')}</div>${cancelAllBtn}`;
 
   const unit=m.unit||'шт';
@@ -361,23 +361,31 @@ async function cancelMaterialDelivery(materialId,orderId){
   if(typeof openMaterialDetails==='function')openMaterialDetails(materialId);
   toast(t('purchaseOrderCancelledToast'));
 }
-// v8.73: отмена всего ручного заказа закупки у поставщика целиком (количество «Заказано» → 0, привязки
-// заказов сняты). Закупки, оформленные внутри конкретных заказов, не трогает — они отменяются своими
-// кнопками «Отменить» в списке поставок.
+// v8.74: «Отменить заказ закупки» — снимает все закупки материала: ручное «Заказано» → 0 и закупки внутри
+// заказов (Z-0008/17 и т.п.) возвращаются в «нужно заказать».
 async function cancelManualPurchaseOrder(materialId){
   const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
   if(!m)return;
   const unit=m.unit||'шт';
-  const q=orderedManualQty(m);
-  if(q<=0){toast(t('noActiveDeliveries'));return}
-  if(!confirm(`${t('cancelPurchaseOrderConfirm')} ${qtyWithUnit(q,unit)}?`))return;
-  const oldAttrs={...(m.attributes||{})};
-  m.attributes={...oldAttrs,orderedQty:0,manualPurchaseOrders:[],expectedReceiptDate:'',purchaseNote:''};
-  m.attributes.purchaseStatus=stockNeededToOrderQty(m)>0?'needorder':'instock';
-  m.lastUpdated=today();
-  const ok=await updateMaterialInSupabase(m);
-  if(!ok){m.attributes=oldAttrs;return}
-  await loadMaterialsFromSupabase();
+  const manualQty=orderedManualQty(m);
+  const orderRows=materialOrderedOrders(materialId);
+  const orderQty=orderedByOrdersQty(m);
+  if(manualQty<=0&&orderRows.length===0){toast(t('noActiveDeliveries'));return}
+  if(!confirm(`${t('cancelPurchaseOrderConfirm')} ${qtyWithUnit(manualQty+orderQty,unit)}?`))return;
+  // Закупки внутри заказов (как Z-0008/17): снимаем статус «заказано» у строк заказов
+  if(orderRows.length){
+    orderRows.forEach(r=>{r.item.purchaseStatus='need';r.item.purchaseQty=0;r.item.purchaseNo='';r.order.status=calcOrderAutoStatus(r.order)});
+    save();
+  }
+  if(manualQty>0){
+    const oldAttrs={...(m.attributes||{})};
+    m.attributes={...oldAttrs,orderedQty:0,manualPurchaseOrders:[],expectedReceiptDate:'',purchaseNote:''};
+    m.attributes.purchaseStatus=stockNeededToOrderQty(m)>0?'needorder':'instock';
+    m.lastUpdated=today();
+    const ok=await updateMaterialInSupabase(m);
+    if(!ok){m.attributes=oldAttrs;return}
+    await loadMaterialsFromSupabase();
+  }
   renderAll();
   if(typeof openMaterialDetails==='function')openMaterialDetails(materialId);
   toast(t('purchaseOrderCancelledToast'));
