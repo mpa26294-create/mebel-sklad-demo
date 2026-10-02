@@ -1414,7 +1414,7 @@ function filteredMaterials(){
   const acctEmail=String((typeof currentUser!=='undefined'&&currentUser?.email)||'').trim().toLowerCase();
   if(acctEmail&&q===acctEmail){q='';if(searchEl)searchEl.value='';}
   const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||materialSearchHaystack(m).includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
-function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const needCount=stockOrderNeedList().length;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤','total'],['ready',t('categories'),cats,t('categoriesNote'),'✓','categories'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△','low'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱','out'],['ready','Нужно заказать',needCount,'позиций для заказа','✉','need']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon,kind])=>`<div class="order-stat-card is-clickable" role="button" tabindex="0" onclick="openStockStatModal('${kind}')"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
+function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const needCount=stockOrderNeedList().length;const cards=[['orders','Заказано',stockOrderedList().length,'','▤','ordered'],['ready',t('categories'),cats,t('categoriesNote'),'✓','categories'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△','low'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱','out'],['ready','Нужно заказать',needCount,'позиций для заказа','✉','need']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon,kind])=>`<div class="order-stat-card is-clickable" role="button" tabindex="0" onclick="openStockStatModal('${kind}')"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(woodTypeLabel(m.subcategory)):''}</span>`}
 function stockCategoryTabs(){
   const groups=stockRefs().groups;
@@ -2023,6 +2023,9 @@ function stockOrderNeedQty(m){
   const byMin=min>0?Math.max(0,stockNumForUnit(min-availableQty(m)-orderedQty(m),u)):0;
   return Math.max(stockNeededToOrderQty(m),byMin);
 }
+function stockOrderedList(){
+  return (data.materials||[]).filter(m=>orderedQty(m)>0);
+}
 function stockOrderNeedList(){
   return (data.materials||[]).map(m=>({m,need:stockOrderNeedQty(m)})).filter(x=>x.need>0);
 }
@@ -2044,6 +2047,15 @@ function openStockStatModal(kind){
   let list,title;
   if(kind==='low'){title='Заканчивается';list=mats.filter(m=>statusOf(m)[0]==='low')}
   else if(kind==='out'){title='Нет в наличии';list=mats.filter(m=>statusOf(m)[0]==='out')}
+  else if(kind==='ordered'){
+    title='Заказано';list=stockOrderedList().sort(byName);
+    const rows=list.map(m=>{
+      const nums=[...new Set([...materialOrderedOrders(m.id).map(r=>r.order.number),...((m.attributes?.manualPurchaseOrders||[]).map(po=>(data.orders||[]).find(o=>String(o.id)===String(po.orderId))?.number))].filter(Boolean))];
+      return stockStatRowHtml(m,`Заказано: ${unitQty(m,orderedQty(m))}${m.attributes?.supplier?' · Поставщик: '+m.attributes.supplier:''}${nums.length?' · Для заказов: '+nums.join(', '):''}`);
+    }).join('');
+    openModal(`Заказано: ${list.length}`,`<div class="tech-save-dialog receipt-alloc-list">${rows||'<p class="tech-save-hint">Сейчас ничего не заказано</p>'}</div>`,foot);
+    return;
+  }
   else{title='Все позиции';list=mats.slice()}
   list.sort(byName);
   const rows=list.map(m=>stockStatRowHtml(m,`${categoryLabel(m.category)||m.category} · на складе: ${unitQty(m,m.quantity)} · доступно: ${unitQty(m,availableQty(m))}`)).join('');
