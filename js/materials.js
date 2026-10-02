@@ -270,7 +270,6 @@ function materialSupplierDeliveries(m){
       <div class="delivery-actions">
         <button class="btn small primary" onclick="acceptMaterialDelivery('${m.id}','${d.orderId}',${d.qty})">${t('acceptBtn')}</button>
         <button class="btn small ghost" onclick="editMaterialDelivery('${m.id}','${d.orderId}')">${t('editBtn')}</button>
-        <button class="btn small danger" onclick="cancelMaterialDelivery('${m.id}','${d.orderId}')">${t('cancel')}</button>
       </div>
     </div>
   `).join('')+cancelAllBtn;
@@ -361,26 +360,63 @@ async function cancelMaterialDelivery(materialId,orderId){
   if(typeof openMaterialDetails==='function')openMaterialDetails(materialId);
   toast(t('purchaseOrderCancelledToast'));
 }
-// v8.74: «Отменить заказ закупки» — снимает все закупки материала: ручное «Заказано» → 0 и закупки внутри
-// заказов (Z-0008/17 и т.п.) возвращаются в «нужно заказать».
-async function cancelManualPurchaseOrder(materialId){
+// v8.75: одна кнопка «Отменить заказ закупки» внизу списка поставок открывает окно выбора:
+// отменить закупку для всех заказов сразу или только для одного (если материал заказан частями).
+function materialCancelablePurchases(m){
+  const unit=m.unit||'шт';
+  const list=[];
+  orderedByOrdersQtyRows(m).forEach(r=>list.push({key:'order:'+r.order.id,title:`${r.order.number||'—'} — ${r.order.client||'—'}`,qty:r.qty}));
+  const manualPos=(m.attributes?.manualPurchaseOrders||[]);
+  manualPos.forEach(po=>{
+    const o=(data.orders||[]).find(x=>String(x.id)===String(po.orderId));
+    list.push({key:'manual:'+po.orderId,title:o?`${o.number||'—'} — ${o.client||'—'}`:'Заказ у поставщика',qty:Number(po.qty||0)});
+  });
+  if(orderedManualQty(m)>0&&manualPos.length===0)list.push({key:'manual:',title:'Заказ у поставщика (без привязки к заказу)',qty:orderedManualQty(m)});
+  return list;
+}
+function orderedByOrdersQtyRows(m){
+  const unit=m.unit||'шт';
+  return materialOrderedOrders(m.id).map(r=>({order:r.order,item:r.item,qty:convertMaterialQty(Number(orderItemPurchaseQty(r.item,0)||0),r.item.unit||unit,unit,m)}));
+}
+function cancelManualPurchaseOrder(materialId){
   const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
   if(!m)return;
   const unit=m.unit||'шт';
-  const manualQty=orderedManualQty(m);
-  const orderRows=materialOrderedOrders(materialId);
-  const orderQty=orderedByOrdersQty(m);
-  if(manualQty<=0&&orderRows.length===0){toast(t('noActiveDeliveries'));return}
-  if(!confirm(`${t('cancelPurchaseOrderConfirm')} ${qtyWithUnit(manualQty+orderQty,unit)}?`))return;
-  // Закупки внутри заказов (как Z-0008/17): снимаем статус «заказано» у строк заказов
+  const list=materialCancelablePurchases(m);
+  if(!list.length){toast(t('noActiveDeliveries'));return}
+  const total=list.reduce((s,x)=>s+x.qty,0);
+  const rowsHtml=list.length>1?`<div class="tech-save-hint">Или отмените закупку только для одного заказа:</div>
+      <div class="receipt-alloc-list">${list.map(x=>`<label class="tech-save-radio"><input type="radio" name="cancelPurchaseChoice" value="${escapeHtml(x.key)}"><span><b>${escapeHtml(x.title)}</b><small>В закупке: ${escapeHtml(qtyWithUnit(x.qty,unit))}</small></span></label>`).join('')}</div>`:'';
+  const body=`<p class="tech-save-hint">Закупка материала будет отменена, количество вернётся в «нужно заказать». Выберите, что отменить.</p>
+    <div class="tech-save-dialog">
+      <label class="tech-save-radio"><input type="radio" name="cancelPurchaseChoice" value="all" checked><span><b>${list.length>1?'Все заказы':escapeHtml(list[0].title)}</b><small>В закупке: ${escapeHtml(qtyWithUnit(total,unit))}</small></span></label>
+      ${rowsHtml}
+    </div>`;
+  openModal('Отмена закупки',body,`<button class="btn" onclick="closeModal()">Назад</button><button class="btn danger" onclick="confirmCancelPurchase('${m.id}')">Отменить закупку</button>`);
+}
+async function confirmCancelPurchase(materialId){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(materialId));
+  const choice=document.querySelector('input[name="cancelPurchaseChoice"]:checked')?.value||'all';
+  closeModal();
+  if(!m)return;
+  const unit=m.unit||'шт';
+  const all=choice==='all';
+  const orderRows=materialOrderedOrders(materialId).filter(r=>all||choice==='order:'+r.order.id);
   if(orderRows.length){
     orderRows.forEach(r=>{r.item.purchaseStatus='need';r.item.purchaseQty=0;r.item.purchaseNo='';r.order.status=calcOrderAutoStatus(r.order)});
     save();
   }
-  if(manualQty>0){
+  const manualQty=orderedManualQty(m);
+  const manualChosen=all?manualQty>0:choice.startsWith('manual:');
+  if(manualChosen&&manualQty>0){
     const oldAttrs={...(m.attributes||{})};
-    m.attributes={...oldAttrs,orderedQty:0,manualPurchaseOrders:[],expectedReceiptDate:'',purchaseNote:''};
-    m.attributes.purchaseStatus=stockNeededToOrderQty(m)>0?'needorder':'instock';
+    const pos=oldAttrs.manualPurchaseOrders||[];
+    const poId=choice.slice(7);
+    const alloc=!all&&poId?pos.find(x=>String(x.orderId)===poId):null;
+    const cancelQty=all||!alloc?manualQty:Math.min(manualQty,stockNumForUnit(alloc.qty||0,unit));
+    m.attributes={...oldAttrs,orderedQty:Math.max(0,stockNumForUnit(manualQty-cancelQty,unit)),manualPurchaseOrders:all?[]:pos.filter(x=>String(x.orderId)!==poId)};
+    if(m.attributes.orderedQty<=0){m.attributes.expectedReceiptDate='';m.attributes.purchaseNote=''}
+    m.attributes.purchaseStatus=m.attributes.orderedQty>0?'ordered':(stockNeededToOrderQty(m)>0?'needorder':'instock');
     m.lastUpdated=today();
     const ok=await updateMaterialInSupabase(m);
     if(!ok){m.attributes=oldAttrs;return}
