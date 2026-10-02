@@ -514,6 +514,7 @@ window.confirmOrderMaterialEmail=async function(materialId,orderId=null){
   // открытия письма, а в текст письма добавляется явное упоминание, что чертёж приложен ОТДЕЛЬНЫМ
   // скачанным файлом и его нужно перетащить в это же письмо вручную.
   const attachPdf=!!document.getElementById('orderMaterialAttachPdfChk')?.checked&&!!(pdfAttrs.pdfName||pdfAttrs.pdfPath||pdfAttrs.pdfUrl);
+  const pdfLink=attachPdf?await materialPdfEmailLink(m):'';
   const lines=[
     t('orderMaterialGreeting'),
     '',
@@ -521,17 +522,13 @@ window.confirmOrderMaterialEmail=async function(materialId,orderId=null){
     sku?`${t('orderMaterialLineSku')}: ${sku}`:null,
     `${t('orderMaterialLineQty')}: ${qty} ${unitLabel(unit)}`,
     note?`${t('orderMaterialLineNote')}: ${note}`:null,
-    attachPdf?`${t('orderMaterialLinePdf')}: ${pdfName||t('orderMaterialLinePdfDefault')} (${t('orderMaterialPdfAttachHint')})`:null,
+    pdfLink?`${t('orderMaterialLinePdf')}: ${pdfLink}`:null,
     '',
     t('orderMaterialSignoff'),
     (currentUser?.email||'')
   ].filter(x=>x!==null);
   const subject=`${t('orderMaterialSubjectPrefix')}: ${displayName}${sku?` (${sku})`:''}`;
   const mailto=`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
-  if(attachPdf&&typeof downloadMaterialPdf==='function'){
-    await downloadMaterialPdf(m.id);
-    toast(t('orderMaterialPdfDownloaded'));
-  }
   window.location.href=mailto;
   if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`${t('orderMaterialAuditMsg')}: ${qty} ${unitLabel(unit)} → ${email}`);
   // v7.75: раньше отправка письма была чисто "письменным" действием — сайт ничего не запоминал,
@@ -2016,6 +2013,18 @@ function printMaterialQrLabel(id){
 // v8.77: плитки на «Складе» стали кнопками. Нажатие открывает список (всего / категории / заканчивается /
 // нет в наличии) или, для плитки «Нужно заказать», окно заказа: категории → список материалов с галочками →
 // по одному письму на каждого поставщика → «Письмо отправлено» отмечает материалы как «Заказано».
+// v8.78: ссылка на чертёж (PDF) материала для письма поставщику — подписанная, действует 30 дней
+// (бакет с файлами закрытый, обычная ссылка не открылась бы).
+async function materialPdfEmailLink(m){
+  const a=m?.attributes||{};
+  try{
+    if(a.pdfPath&&typeof supabaseClient!=='undefined'){
+      const {data:d,error}=await supabaseClient.storage.from(PDF_BUCKET).createSignedUrl(a.pdfPath,60*60*24*30);
+      if(!error&&d?.signedUrl)return d.signedUrl;
+    }
+  }catch(e){console.error(e)}
+  return a.pdfUrl||'';
+}
 let stockOrderState={cats:[],cat:'',groups:[]};
 function stockOrderNeedQty(m){
   const u=m.unit||'шт';
@@ -2087,7 +2096,7 @@ function openStockOrderCategory(i){
   }).join('');
   openModal(categoryLabel(cat)||cat,`<p class="tech-save-hint">Отметьте, что заказать, и поправьте количество. Письма формируются отдельно для каждого поставщика.</p><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked onchange="document.querySelectorAll('.stock-order-chk').forEach(c=>c.checked=this.checked)"> Выбрать все</label><div class="tech-save-dialog receipt-alloc-list">${rows}</div>`,`<button class="btn" onclick="openStockOrderCategories()">Назад</button><button class="btn primary" onclick="prepareStockOrderLetters()">Создать письма</button>`);
 }
-function prepareStockOrderLetters(){
+async function prepareStockOrderLetters(){
   const groups={};
   document.querySelectorAll('#modalBackdrop .stock-order-chk:checked').forEach(chk=>{
     const row=chk.closest('[data-mid]');
@@ -2102,6 +2111,11 @@ function prepareStockOrderLetters(){
   });
   stockOrderState.groups=Object.values(groups);
   if(!stockOrderState.groups.length){toast('Ничего не выбрано');return}
+  await Promise.all(stockOrderState.groups.flatMap(g=>g.items).map(async it=>{
+    const m=(data.materials||[]).find(x=>String(x.id)===it.id);
+    it.pdfLink=m?await materialPdfEmailLink(m):'';
+    it.pdfName=m?.attributes?.pdfName||'';
+  }));
   openStockOrderLetters();
 }
 function stockOrderLetterMailto(g){
@@ -2109,6 +2123,7 @@ function stockOrderLetterMailto(g){
   g.items.forEach((it,i)=>{
     const m=(data.materials||[]).find(x=>String(x.id)===it.id);
     if(m)lines.push(`${i+1}. ${materialOrderDisplayName(m)}${m.sku?` (${m.sku})`:''} — ${it.qty} ${unitLabel(it.unit)}`);
+    if(m&&it.pdfLink)lines.push(`   ${t('orderMaterialLinePdf')}: ${it.pdfLink}`);
   });
   lines.push('',t('orderMaterialSignoff'),currentUser?.email||'');
   const subject=`${t('orderMaterialSubjectPrefix')} (${g.items.length})`;
@@ -2116,7 +2131,7 @@ function stockOrderLetterMailto(g){
 }
 function openStockOrderLetters(){
   const unitOf=it=>unitLabel(it.unit);
-  const nameOf=it=>{const m=(data.materials||[]).find(x=>String(x.id)===it.id);return m?`${m.sku?m.sku+' · ':''}${materialOrderDisplayName(m)}`:it.id};
+  const nameOf=it=>{const m=(data.materials||[]).find(x=>String(x.id)===it.id);return m?`${m.sku?m.sku+' · ':''}${materialOrderDisplayName(m)}${it.pdfLink?' 📎 чертёж ссылкой':''}`:it.id};
   const cards=stockOrderState.groups.map((g,i)=>`<div class="supplier-delivery-card">
     <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email||'Поставщик')}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
     <div class="delivery-info">${g.needEmail&&!g.done?`<div class="field" style="margin:0 0 8px"><label>Email поставщика</label><input type="email" class="input" id="stockOrderEmail${i}" placeholder="order@postavshik.com" value="${escapeHtml(g.email||'')}"><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="stockOrderRemember${i}" ${g.remember?'checked':''}> Запомнить email в карточках этих материалов</label></div>`:`<div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>`}
