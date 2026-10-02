@@ -2070,13 +2070,12 @@ function openStockOrderCategory(i){
     const sup=m.attributes?.supplier||'';
     const forOrders=materialReservationOrders(m.id).map(r=>({r,av:orderItemAvailability(r.item,r.order.id)})).filter(x=>!x.av.ok&&x.av.missing>0&&orderItemPurchaseStatus(x.r.item)!=='ordered').sort((a,b)=>String(a.r.order.number||'').localeCompare(String(b.r.order.number||''),undefined,{numeric:true,sensitivity:'base'}));
     const forText=forOrders.length?forOrders.map(x=>`${escapeHtml(x.r.order.number||'—')} (${escapeHtml(qtyWithUnit(x.av.missing,x.av.unit||m.unit||'шт'))})`).join(', '):'до минимального остатка';
-    return `<div class="tech-save-radio" data-mid="${escapeHtml(String(m.id))}"><input type="checkbox" class="stock-order-chk" checked><span><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>Для заказов: ${forText}</small><small>Поставщик: ${escapeHtml(sup||'—')}${email?' · '+escapeHtml(email):' · <span style="color:#b42323">нет email поставщика</span>'}</small></span><input type="number" min="0" step="any" class="input stock-order-qty" style="width:92px;height:34px" value="${q}" title="Количество, ${escapeHtml(unitLabel(du))}"><small>${escapeHtml(unitLabel(du))}</small></div>`;
+    return `<div class="tech-save-radio" data-mid="${escapeHtml(String(m.id))}"><input type="checkbox" class="stock-order-chk" checked><span><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>Для заказов: ${forText}</small><small>Поставщик: ${escapeHtml(sup||'—')}${email?' · '+escapeHtml(email):' · <span style="color:#8a6d00">email укажете на следующем шаге</span>'}</small></span><input type="number" min="0" step="any" class="input stock-order-qty" style="width:92px;height:34px" value="${q}" title="Количество, ${escapeHtml(unitLabel(du))}"><small>${escapeHtml(unitLabel(du))}</small></div>`;
   }).join('');
   openModal(categoryLabel(cat)||cat,`<p class="tech-save-hint">Отметьте, что заказать, и поправьте количество. Письма формируются отдельно для каждого поставщика.</p><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked onchange="document.querySelectorAll('.stock-order-chk').forEach(c=>c.checked=this.checked)"> Выбрать все</label><div class="tech-save-dialog receipt-alloc-list">${rows}</div>`,`<button class="btn" onclick="openStockOrderCategories()">Назад</button><button class="btn primary" onclick="prepareStockOrderLetters()">Создать письма</button>`);
 }
 function prepareStockOrderLetters(){
   const groups={};
-  const noEmail=[];
   document.querySelectorAll('#modalBackdrop .stock-order-chk:checked').forEach(chk=>{
     const row=chk.closest('[data-mid]');
     const m=(data.materials||[]).find(x=>String(x.id)===String(row.dataset.mid));
@@ -2084,13 +2083,12 @@ function prepareStockOrderLetters(){
     if(!m||!(qty>0))return;
     const email=String(m.attributes?.supplierEmail||'').trim();
     const item={id:String(m.id),qty,unit:materialDisplayUnit(m)};
-    if(!email){noEmail.push(item);return}
-    const key=email.toLowerCase();
-    (groups[key]=groups[key]||{email,supplier:m.attributes?.supplier||'',items:[],done:false}).items.push(item);
+    const sup=m.attributes?.supplier||'';
+    const key=email?email.toLowerCase():'noemail:'+sup.toLowerCase();
+    (groups[key]=groups[key]||{email,supplier:sup,items:[],done:false,needEmail:!email,remember:true}).items.push(item);
   });
   stockOrderState.groups=Object.values(groups);
-  stockOrderState.noEmail=noEmail;
-  if(!stockOrderState.groups.length&&!noEmail.length){toast('Ничего не выбрано');return}
+  if(!stockOrderState.groups.length){toast('Ничего не выбрано');return}
   openStockOrderLetters();
 }
 function stockOrderLetterMailto(g){
@@ -2107,21 +2105,32 @@ function openStockOrderLetters(){
   const unitOf=it=>unitLabel(it.unit);
   const nameOf=it=>{const m=(data.materials||[]).find(x=>String(x.id)===it.id);return m?`${m.sku?m.sku+' · ':''}${materialOrderDisplayName(m)}`:it.id};
   const cards=stockOrderState.groups.map((g,i)=>`<div class="supplier-delivery-card">
-    <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email)}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
-    <div class="delivery-info"><div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>
+    <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email||'Поставщик')}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
+    <div class="delivery-info">${g.needEmail&&!g.done?`<div class="field" style="margin:0 0 8px"><label>Email поставщика</label><input type="email" class="input" id="stockOrderEmail${i}" placeholder="order@postavshik.com" value="${escapeHtml(g.email||'')}"><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="stockOrderRemember${i}" ${g.remember?'checked':''}> Запомнить email в карточках этих материалов</label></div>`:`<div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>`}
     ${g.items.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}</div>
     <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':`<button class="btn small" onclick="openStockOrderLetter(${i})">Открыть письмо</button><button class="btn small primary" onclick="markStockOrderLetterSent(${i})">Письмо отправлено</button>`}</div>
   </div>`).join('');
-  const miss=(stockOrderState.noEmail||[]).length?`<div class="supplier-delivery-card"><div class="delivery-header"><div class="delivery-order">Без email поставщика</div><div class="delivery-qty">${stockOrderState.noEmail.length} поз.</div></div><div class="delivery-info">${stockOrderState.noEmail.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}</div><p class="tech-save-hint">Письмо не создано. Укажите email поставщика в карточке материала и повторите заказ.</p></div>`:'';
+  const miss='';
   openModal('Письма поставщикам',`<p class="tech-save-hint">1) «Открыть письмо» — откроется готовое письмо в почте. 2) Отправьте его и нажмите «Письмо отправлено» — материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="openStockOrderCategory(${Math.max(0,stockOrderState.cats.indexOf(stockOrderState.cat))})">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
+}
+function stockOrderReadEmail(i){
+  const g=stockOrderState.groups[i];
+  if(!g)return false;
+  if(!g.needEmail)return true;
+  const v=String(document.getElementById('stockOrderEmail'+i)?.value||g.email||'').trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){toast('Введите email поставщика');return false}
+  g.email=v;
+  const chk=document.getElementById('stockOrderRemember'+i);
+  if(chk)g.remember=chk.checked;
+  return true;
 }
 function openStockOrderLetter(i){
   const g=stockOrderState.groups[i];
-  if(g)window.location.href=stockOrderLetterMailto(g);
+  if(g&&stockOrderReadEmail(i))window.location.href=stockOrderLetterMailto(g);
 }
 async function markStockOrderLetterSent(i){
   const g=stockOrderState.groups[i];
-  if(!g||g.done)return;
+  if(!g||g.done||!stockOrderReadEmail(i))return;
   for(const it of g.items){
     const m=(data.materials||[]).find(x=>String(x.id)===it.id);
     if(!m)continue;
@@ -2130,6 +2139,7 @@ async function markStockOrderLetterSent(i){
     m.attributes=m.attributes||{};
     m.attributes.orderedQty=Number((Number(m.attributes.orderedQty||0)+Number(add)).toFixed(3));
     m.attributes.purchaseStatus='ordered';
+    if(g.needEmail&&g.remember&&!String(m.attributes.supplierEmail||'').trim())m.attributes.supplierEmail=g.email;
     m.lastUpdated=today();
     await updateMaterialInSupabase(m);
     if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`Заказ поставщику: ${it.qty} ${unitLabel(it.unit)} → ${g.email}`);
