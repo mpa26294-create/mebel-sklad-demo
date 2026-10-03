@@ -714,21 +714,15 @@ async function orderMaterialFromCard(id){
   if(qty===null||qty<=0){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return}
   const date=document.getElementById('detailOrderDate')?.value||'';
   const note=(document.getElementById('detailOrderNote')?.value||'').trim();
-  const oldAttrs={...(m.attributes||{})},oldUpdated=m.lastUpdated;
-  const a={...oldAttrs};
-  a.orderedQty=stockNumForUnit(orderedManualQty(m)+qty,unit);
-  a.purchaseStatus='ordered';
-  if(Number(m.quantity||0)<=0)a.status='ordered'; // остаток есть — статус «на складе» не меняем
-  if(date){a.expectedReceiptDate=date;a.arrivalDate=date}
-  if(note){a.purchaseNote=note;a.purchaseOrderInfo=note;a.order=note}
-  m.attributes=a;m.lastUpdated=today();
-  const ok=await updateMaterialInSupabase(m);
-  if(!ok){m.attributes=oldAttrs;m.lastUpdated=oldUpdated;return}
-  try{if(typeof auditAdd==='function')auditAdd('purchase','material',m.id,m.sku||m.name,`Заказано: +${qty} ${unitLabel(unit)||unit}${date?`, ожидается ${typeof auditFmtDateV827==='function'?auditFmtDateV827(date):date}`:''}${note?` · ${note}`:''}`,{qty,date,note})}catch(e){}
-  await loadMaterialsFromSupabase();
-  renderAll();
-  openMaterialDetails(id);
-  toast(`${t('orderDoneToast')}: ${qty} ${unitLabel(unit)||unit}`);
+  // v8.80: «Заказать» из быстрых действий теперь открывает то же окно писем, что и «Нужно заказать»:
+  // готовится письмо поставщику (с чертежом и QR-этикеткой), а «Заказано» записывается после ответа «Да, отправлено».
+  const du=materialDisplayUnit(m);
+  const email=String(m.attributes?.supplierEmail||'').trim();
+  const sup=m.attributes?.supplier||'';
+  stockOrderState.groups=[{email,supplier:sup,items:[{id:String(m.id),qty:Number(convertMaterialQty(qty,unit,du,m).toFixed(3)),unit:du}],done:false,needEmail:!email,remember:true,expectedDate:date,note}];
+  stockOrderState.cats=[];stockOrderState.cat='';
+  stockOrderState.fromQuick=true;stockOrderState.quickId=String(m.id);
+  await stockOrderFinalizeLetters();
 }
 // Material history filtering
 function filterMaterialHistory(filterType){
@@ -2135,7 +2129,8 @@ function openStockStatModal(kind){
     title='Заказано';list=stockOrderedList().sort(byName);
     const rows=list.map(m=>{
       const nums=[...new Set([...materialOrderedOrders(m.id).map(r=>r.order.number),...((m.attributes?.manualPurchaseOrders||[]).map(po=>(data.orders||[]).find(o=>String(o.id)===String(po.orderId))?.number))].filter(Boolean))];
-      return stockStatRowHtml(m,`Заказано: ${unitQty(m,orderedQty(m))}${m.attributes?.supplier?' · Поставщик: '+m.attributes.supplier:''}${nums.length?' · Для заказов: '+nums.join(', '):''}`);
+      const note=`Заказано: ${unitQty(m,orderedQty(m))}${m.attributes?.supplier?' · Поставщик: '+m.attributes.supplier:''}${nums.length?' · Для заказов: '+nums.join(', '):''}`;
+      return `<div class="tech-save-radio" style="align-items:center;gap:12px" onclick="closeModal();openMaterialDetails('${m.id}')"><span style="flex:1;min-width:0"><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>${escapeHtml(note)}</small></span><button class="btn small danger" onclick="event.stopPropagation();closeModal();cancelManualPurchaseOrder('${m.id}')">Отменить заказ</button></div>`;
     }).join('');
     openModal(`Заказано: ${list.length}`,`<div class="tech-save-dialog receipt-alloc-list">${rows||'<p class="tech-save-hint">Сейчас ничего не заказано</p>'}</div>`,foot);
     return;
@@ -2186,13 +2181,17 @@ async function prepareStockOrderLetters(){
   });
   stockOrderState.groups=Object.values(groups);
   if(!stockOrderState.groups.length){toast('Ничего не выбрано');return}
+  stockOrderState.fromQuick=false;
+  await stockOrderFinalizeLetters();
+}
+async function stockOrderFinalizeLetters(){
+  stockOrderState.addQr=true;
+  toast('Готовлю письма…');
   await Promise.all(stockOrderState.groups.flatMap(g=>g.items).map(async it=>{
     const m=(data.materials||[]).find(x=>String(x.id)===it.id);
     it.pdfLink=m?await materialPdfEmailLink(m):'';
     it.pdfName=m?.attributes?.pdfName||'';
   }));
-  stockOrderState.addQr=true;
-  toast('Готовлю письма…');
   await Promise.all(stockOrderState.groups.map(async g=>{const r=await buildStockOrderQrPdfLink(g);g.qrLink=r.link;g.qrCount=r.count}));
   openStockOrderLetters();
 }
@@ -2203,6 +2202,8 @@ function stockOrderLetterMailto(g){
     if(m)lines.push(`${i+1}. ${materialOrderDisplayName(m)}${m.sku?` (${m.sku})`:''} — ${it.qty} ${unitLabel(it.unit)}`);
     if(m&&it.pdfLink)lines.push(`   ${t('orderMaterialLinePdf')}: ${it.pdfLink}`);
   });
+  if(g.expectedDate)lines.push('',`${t('orderMaterialLineDate')}: ${g.expectedDate.split('-').reverse().join('.')}`);
+  if(g.note)lines.push(`${t('orderMaterialLineNote')}: ${g.note}`);
   if(g.qrLink&&stockOrderState.addQr!==false)lines.push('',`${t('orderMaterialLineQr')}: ${g.qrLink}`);
   lines.push('',t('orderMaterialSignoff'),currentUser?.email||'');
   const subject=`${t('orderMaterialSubjectPrefix')} (${g.items.length})`;
@@ -2215,9 +2216,9 @@ function openStockOrderLetters(){
     <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email||'Поставщик')}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
     <div class="delivery-info">${g.needEmail&&!g.done?`<div class="field" style="margin:0 0 8px"><label>Email поставщика</label><input type="email" class="input" id="stockOrderEmail${i}" placeholder="order@postavshik.com" value="${escapeHtml(g.email||'')}"><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="stockOrderRemember${i}" ${g.remember?'checked':''}> Запомнить email в карточках этих материалов</label></div>`:`<div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>`}
     ${g.items.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}${g.qrLink?`<div class="delivery-info-row stock-order-qr-note" style="${stockOrderState.addQr===false?'display:none':''}"><span class="delivery-value">🏷 QR-этикетки в письме: ${g.qrCount} шт</span></div>`:''}</div>
-    <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':(g.opened?`<div class="stock-order-ask" style="flex:1 1 100%;border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:12px 14px"><b style="display:block;margin-bottom:10px">Письмо отправлено поставщику?</b><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small primary" onclick="markStockOrderLetterSent(${i})">Да, отправлено</button><button class="btn small" onclick="declineStockOrderLetter(${i})">Нет, не отправлено</button><button class="btn small ghost" onclick="openStockOrderLetter(${i})">Открыть письмо ещё раз</button></div></div>`:`<button class="btn small primary" style="flex:1" onclick="openStockOrderLetter(${i})">Отправить</button>`)}</div>`).join('');
+    <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':(g.opened?`<div class="stock-order-ask" style="flex:1 1 100%;border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:12px 14px"><b style="display:block;margin-bottom:10px">Письмо отправлено поставщику?</b><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small primary" onclick="markStockOrderLetterSent(${i})">Да, отправлено</button><button class="btn small" onclick="declineStockOrderLetter(${i})">Нет, не отправлено</button><button class="btn small ghost" onclick="openStockOrderLetter(${i})">Открыть письмо ещё раз</button></div></div>`:`<button class="btn small primary" style="flex:1" onclick="openStockOrderLetter(${i})">Отправить</button><button class="btn small ghost" title="Заказ сделан иначе (например по телефону) — просто записать как заказано" onclick="markStockOrderLetterSent(${i},true)">Заказано без письма</button>`)}</div>`).join('');
   const miss='';
-  openModal('Письма поставщикам',`${stockOrderState.groups.some(g=>g.qrLink)?`<label class="tech-save-radio" style="align-items:center"><input type="checkbox" ${stockOrderState.addQr===false?'':'checked'} onchange="stockOrderToggleQr(this.checked)"><span><b>Добавить QR-этикетки</b><small>В письмо вставится ссылка на PDF с этикетками для печати: поставщик распечатает и наклеит</small></span></label>`:''}<p class="tech-save-hint">1) Нажмите «Отправить» — откроется готовое письмо в почте, отправьте его. 2) Ответьте, отправлено ли оно: после «Да» материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="stockOrderBack()">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
+  openModal('Письма поставщикам',`${stockOrderState.groups.some(g=>g.qrLink)?`<label class="tech-save-radio" style="align-items:center"><input type="checkbox" ${stockOrderState.addQr===false?'':'checked'} onchange="stockOrderToggleQr(this.checked)"><span><b>Добавить QR-этикетки</b><small>В письмо вставится ссылка на PDF с этикетками для печати: поставщик распечатает и наклеит</small></span></label>`:''}<p class="tech-save-hint">1) Нажмите «Отправить» — откроется готовое письмо в почте, отправьте его. 2) Ответьте, отправлено ли оно: после «Да» материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="stockOrderBack()">${stockOrderState.fromQuick?'К карточке':'Назад'}</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
 }
 function stockOrderReadEmail(i){
   const g=stockOrderState.groups[i];
@@ -2255,6 +2256,7 @@ if(!window.__stockOrderCloseGuard&&typeof closeModal==='function'){
 }
 function stockOrderBack(){
   if(stockOrderPending()){stockOrderNudge();return}
+  if(stockOrderState.fromQuick){closeModal();openMaterialDetails(stockOrderState.quickId);return}
   openStockOrderCategory(Math.max(0,stockOrderState.cats.indexOf(stockOrderState.cat)));
 }
 function declineStockOrderLetter(i){
@@ -2263,9 +2265,10 @@ function declineStockOrderLetter(i){
   g.opened=false;
   openStockOrderLetters();
 }
-async function markStockOrderLetterSent(i){
+async function markStockOrderLetterSent(i,noMail=false){
   const g=stockOrderState.groups[i];
-  if(!g||g.done||!g.opened||!stockOrderReadEmail(i))return;
+  if(!g||g.done)return;
+  if(!noMail&&(!g.opened||!stockOrderReadEmail(i)))return;
   for(const it of g.items){
     const m=(data.materials||[]).find(x=>String(x.id)===it.id);
     if(!m)continue;
@@ -2274,10 +2277,12 @@ async function markStockOrderLetterSent(i){
     m.attributes=m.attributes||{};
     m.attributes.orderedQty=Number((Number(m.attributes.orderedQty||0)+Number(add)).toFixed(3));
     m.attributes.purchaseStatus='ordered';
-    if(g.needEmail&&g.remember&&!String(m.attributes.supplierEmail||'').trim())m.attributes.supplierEmail=g.email;
+    if(g.needEmail&&g.remember&&g.email&&!noMail&&!String(m.attributes.supplierEmail||'').trim())m.attributes.supplierEmail=g.email;
+    if(g.expectedDate){m.attributes.expectedReceiptDate=g.expectedDate;m.attributes.arrivalDate=g.expectedDate}
+    if(g.note){m.attributes.purchaseNote=g.note;m.attributes.purchaseOrderInfo=g.note;m.attributes.order=g.note}
     m.lastUpdated=today();
     await updateMaterialInSupabase(m);
-    if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`Заказ поставщику: ${it.qty} ${unitLabel(it.unit)} → ${g.email}`);
+    if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`Заказ поставщику: ${it.qty} ${unitLabel(it.unit)} → ${g.email||'без письма'}`);
   }
   g.done=true;
   save();
