@@ -2114,16 +2114,35 @@ function stockOrderNeedQty(m){
 function materialReceiveOrdered(id){
   const m=(data.materials||[]).find(x=>String(x.id)===String(id));
   if(!m)return;
+  const unit=m.unit||'шт';
+  const rollOrSheet=(typeof isLinearFabricMaterial==='function'&&isLinearFabricMaterial(m))||(m.category==='Древесина'&&(unit==='м²'||unit==='м2'));
+  if(rollOrSheet){
+    // рулоны и листы принимаются через карточку (у них свои единицы), поэтому открываем её на вкладке «Приход»
+    closeModal();openMaterialDetails(id);
+    setTimeout(()=>{if(typeof materialDetailGo==='function')materialDetailGo('receipt')},90);
+    return;
+  }
+  const ordered=orderedQty(m);
+  const body=`<div class="tech-save-dialog">
+    <p class="tech-save-hint"><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><br>Заказано: ${escapeHtml(qtyWithUnit(ordered,unit))}</p>
+    <div class="field"><label>Сколько пришло, ${escapeHtml(unitLabel(unit)||unit)}</label><input id="recvOrderedQty" class="input" type="number" min="0" step="${stockStep(unit)}" value="${ordered}" inputmode="decimal"></div>
+    <p class="tech-save-hint">Остаток на складе увеличится, «Заказано» уменьшится. Если пришла только часть заказа — поправьте количество.</p>
+  </div>`;
+  openModal('Товар пришёл',body,`<button class="btn" onclick="openStockStatModal('ordered')">Отмена</button><button class="btn primary" onclick="confirmMaterialReceiveOrdered('${m.id}')">Принять на склад</button>`);
+  setTimeout(()=>{const i=document.getElementById('recvOrderedQty');i?.focus();i?.select?.()},50);
+}
+async function confirmMaterialReceiveOrdered(id){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+  if(!m)return;
+  const unit=m.unit||'шт';
+  const delta=normalizeQtyForUnit(document.getElementById('recvOrderedQty')?.value||0,unit);
+  if(delta===null){toast(unit==='шт'?t('enterIntPositive'):t('enterQtyPositive'));return}
   closeModal();
-  openMaterialDetails(id);
-  setTimeout(()=>{
-    if(typeof materialDetailGo==='function')materialDetailGo('receipt');
-    const inp=document.getElementById('detailQtyChange');
-    if(inp&&!document.getElementById('detailQtyUnit')){
-      const du=materialDisplayUnit(m);
-      inp.value=Number(convertMaterialQty(orderedQty(m),m.unit||du,du,m).toFixed(3));
-    }
-  },90);
+  if(typeof materialOutstandingOrderPurchases==='function'){
+    const rows=materialOutstandingOrderPurchases(m.id);
+    if(rows.length){openMaterialReceiptAllocationPicker(id,delta,rows);return}
+  }
+  await finalizeMaterialQtyChange(id,1,delta,'');
 }
 function stockOrderedList(){
   return (data.materials||[]).filter(m=>orderedQty(m)>0);
