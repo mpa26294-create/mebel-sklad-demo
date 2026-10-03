@@ -595,6 +595,13 @@ function switchQuickActionMode(mode){
 function materialDetailGo(target){
   const modal=document.querySelector('#modalBackdrop .modal.detail-modal');
   if(!modal)return;
+  if(target==='receipt'){
+    switchQuickActionMode('in');
+    const card=modal.querySelector('[data-detail-action-card]');
+    card?.scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(()=>{const i=document.getElementById('detailQtyChange');i?.focus();i?.select?.()},180);
+    return;
+  }
   if(target==='writeoff'){
     switchQuickActionMode('out');
     const card=modal.querySelector('[data-detail-action-card]');
@@ -1963,7 +1970,7 @@ function handleScannedCode(raw,fromCamera){
   }
   stopBarcodeScanner();
   openMaterialDetails(m.id);
-  setTimeout(()=>{if(typeof materialDetailGo==='function')materialDetailGo('writeoff');},60);
+  setTimeout(()=>{if(typeof materialDetailGo==='function')materialDetailGo('receipt');},60);
   return true;
 }
 
@@ -2101,6 +2108,23 @@ function stockOrderNeedQty(m){
   const byMin=min>0?Math.max(0,stockNumForUnit(min-availableQty(m)-orderedQty(m),u)):0;
   return Math.max(stockNeededToOrderQty(m),byMin);
 }
+// v8.81: «Товар пришёл» из списка «Заказано» — открывает карточку материала на вкладке «Приход» с уже
+// подставленным заказанным количеством; остаётся нажать «Принять на склад» (работает выбор заказа и
+// уменьшение «Заказано» как у обычного прихода).
+function materialReceiveOrdered(id){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+  if(!m)return;
+  closeModal();
+  openMaterialDetails(id);
+  setTimeout(()=>{
+    if(typeof materialDetailGo==='function')materialDetailGo('receipt');
+    const inp=document.getElementById('detailQtyChange');
+    if(inp&&!document.getElementById('detailQtyUnit')){
+      const du=materialDisplayUnit(m);
+      inp.value=Number(convertMaterialQty(orderedQty(m),m.unit||du,du,m).toFixed(3));
+    }
+  },90);
+}
 function stockOrderedList(){
   return (data.materials||[]).filter(m=>orderedQty(m)>0);
 }
@@ -2130,7 +2154,7 @@ function openStockStatModal(kind){
     const rows=list.map(m=>{
       const nums=[...new Set([...materialOrderedOrders(m.id).map(r=>r.order.number),...((m.attributes?.manualPurchaseOrders||[]).map(po=>(data.orders||[]).find(o=>String(o.id)===String(po.orderId))?.number))].filter(Boolean))];
       const note=`Заказано: ${unitQty(m,orderedQty(m))}${m.attributes?.supplier?' · Поставщик: '+m.attributes.supplier:''}${nums.length?' · Для заказов: '+nums.join(', '):''}`;
-      return `<div class="tech-save-radio" style="align-items:center;gap:12px" onclick="closeModal();openMaterialDetails('${m.id}')"><span style="flex:1;min-width:0"><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>${escapeHtml(note)}</small></span><button class="btn small danger" onclick="event.stopPropagation();closeModal();cancelManualPurchaseOrder('${m.id}')">Отменить заказ</button></div>`;
+      return `<div class="tech-save-radio" style="align-items:center;gap:12px" onclick="closeModal();openMaterialDetails('${m.id}')"><span style="flex:1;min-width:0"><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>${escapeHtml(note)}</small></span><div style="display:flex;gap:8px;flex:none"><button class="btn small primary" onclick="event.stopPropagation();materialReceiveOrdered('${m.id}')">Товар пришёл</button><button class="btn small danger" onclick="event.stopPropagation();closeModal();cancelManualPurchaseOrder('${m.id}')">Отменить заказ</button></div></div>`;
     }).join('');
     openModal(`Заказано: ${list.length}`,`<div class="tech-save-dialog receipt-alloc-list">${rows||'<p class="tech-save-hint">Сейчас ничего не заказано</p>'}</div>`,foot);
     return;
