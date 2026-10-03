@@ -2030,6 +2030,76 @@ async function materialPdfEmailLink(m){
   }catch(e){console.error(e)}
   return a.pdfUrl||'';
 }
+// v8.79: QR-этикетки для поставщика. Один PDF на письмо: по одной этикетке на каждый материал (по артикулу),
+// формат как у «Печать QR» в карточке (QR + артикул + название), 9 штук на лист A4. Файл кладётся в Storage,
+// в письмо вставляется короткая ссылка (та же Edge Function `pdf`). Подписи рисуются на canvas, поэтому кириллица
+// в PDF отображается корректно.
+function stockLoadScriptOnce(src,isLoaded){
+  return new Promise((resolve,reject)=>{
+    if(isLoaded()){resolve();return}
+    const el=document.createElement('script');
+    el.src=src;el.onload=()=>resolve();el.onerror=()=>reject(new Error('Не загрузилась библиотека '+src));
+    document.head.appendChild(el);
+  });
+}
+function stockQrLabelCanvas(m){
+  const PX=12,W=64*PX,H=82*PX;
+  const sku=String(m.sku||'').trim();
+  const name=(typeof materialDisplayName==='function'?materialDisplayName(m):m.name)||'';
+  const cat=(typeof categoryLabel==='function'?categoryLabel(m.category):m.category)||'';
+  const holder=document.createElement('div');
+  holder.style.cssText='position:fixed;left:-9999px;top:0';
+  document.body.appendChild(holder);
+  new QRCode(holder,{text:sku,width:44*PX,height:44*PX,correctLevel:QRCode.CorrectLevel.M});
+  const qrCanvas=holder.querySelector('canvas');
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  g.setLineDash([12,9]);g.lineWidth=3;g.strokeStyle='#999';g.strokeRect(2,2,W-4,H-4);g.setLineDash([]);
+  g.imageSmoothingEnabled=false;
+  g.drawImage(qrCanvas,(W-44*PX)/2,7*PX,44*PX,44*PX);
+  holder.remove();
+  g.fillStyle='#000';g.textAlign='center';g.textBaseline='alphabetic';
+  let fs=5.5*PX;
+  g.font=`bold ${fs}px Arial, Helvetica, sans-serif`;
+  while(g.measureText(sku).width>W-8*PX&&fs>20){fs-=2;g.font=`bold ${fs}px Arial, Helvetica, sans-serif`}
+  g.fillText(sku,W/2,60*PX);
+  g.fillStyle='#444';g.font=`${3.2*PX}px Arial, Helvetica, sans-serif`;
+  const words=`${name}${cat?' · '+cat:''}`.split(/\s+/).filter(Boolean);
+  const lines=[];let cur='';
+  words.forEach(w=>{const t2=cur?cur+' '+w:w;if(g.measureText(t2).width>W-8*PX&&cur){lines.push(cur);cur=w}else cur=t2});
+  if(cur)lines.push(cur);
+  lines.slice(0,3).forEach((ln,i)=>g.fillText(ln,W/2,(66+i*4.2)*PX));
+  return c;
+}
+async function buildStockOrderQrPdfLink(group){
+  try{
+    const seen=new Set();
+    const mats=group.items.map(it=>(data.materials||[]).find(x=>String(x.id)===it.id)).filter(m=>m&&String(m.sku||'').trim()&&!seen.has(m.id)&&seen.add(m.id));
+    if(!mats.length)return {link:'',count:0};
+    await stockLoadScriptOnce('https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js',()=>typeof QRCode!=='undefined');
+    await stockLoadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>!!(window.jspdf&&window.jspdf.jsPDF));
+    const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+    mats.forEach((m,idx)=>{
+      const pos=idx%9;
+      if(idx>0&&pos===0)doc.addPage();
+      const png=stockQrLabelCanvas(m).toDataURL('image/png');
+      doc.addImage(png,'PNG',9+(pos%3)*64,25.5+Math.floor(pos/3)*82,64,82,undefined,'FAST');
+    });
+    const rand=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('');
+    const path=`qr-labels/${Date.now()}_${rand}.pdf`;
+    const {error:upErr}=await supabaseClient.storage.from(PDF_BUCKET).upload(path,doc.output('blob'),{contentType:'application/pdf',cacheControl:'3600',upsert:false});
+    if(upErr){console.error(upErr);return {link:'',count:0}}
+    const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('');
+    const {error:linkErr}=await supabaseClient.from('pdf_links').insert({code,path});
+    if(linkErr){console.error(linkErr);return {link:'',count:0}}
+    return {link:`${SUPABASE_URL}/functions/v1/pdf?c=${code}`,count:mats.length};
+  }catch(e){console.error(e);return {link:'',count:0}}
+}
+function stockOrderToggleQr(on){
+  stockOrderState.addQr=!!on;
+  document.querySelectorAll('#modalBody .stock-order-qr-note').forEach(el=>{el.style.display=on?'':'none'});
+}
 let stockOrderState={cats:[],cat:'',groups:[]};
 function stockOrderNeedQty(m){
   const u=m.unit||'шт';
@@ -2121,6 +2191,9 @@ async function prepareStockOrderLetters(){
     it.pdfLink=m?await materialPdfEmailLink(m):'';
     it.pdfName=m?.attributes?.pdfName||'';
   }));
+  stockOrderState.addQr=true;
+  toast('Готовлю письма…');
+  await Promise.all(stockOrderState.groups.map(async g=>{const r=await buildStockOrderQrPdfLink(g);g.qrLink=r.link;g.qrCount=r.count}));
   openStockOrderLetters();
 }
 function stockOrderLetterMailto(g){
@@ -2130,6 +2203,7 @@ function stockOrderLetterMailto(g){
     if(m)lines.push(`${i+1}. ${materialOrderDisplayName(m)}${m.sku?` (${m.sku})`:''} — ${it.qty} ${unitLabel(it.unit)}`);
     if(m&&it.pdfLink)lines.push(`   ${t('orderMaterialLinePdf')}: ${it.pdfLink}`);
   });
+  if(g.qrLink&&stockOrderState.addQr!==false)lines.push('',`${t('orderMaterialLineQr')}: ${g.qrLink}`);
   lines.push('',t('orderMaterialSignoff'),currentUser?.email||'');
   const subject=`${t('orderMaterialSubjectPrefix')} (${g.items.length})`;
   return `mailto:${g.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
@@ -2140,10 +2214,10 @@ function openStockOrderLetters(){
   const cards=stockOrderState.groups.map((g,i)=>`<div class="supplier-delivery-card">
     <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email||'Поставщик')}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
     <div class="delivery-info">${g.needEmail&&!g.done?`<div class="field" style="margin:0 0 8px"><label>Email поставщика</label><input type="email" class="input" id="stockOrderEmail${i}" placeholder="order@postavshik.com" value="${escapeHtml(g.email||'')}"><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="stockOrderRemember${i}" ${g.remember?'checked':''}> Запомнить email в карточках этих материалов</label></div>`:`<div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>`}
-    ${g.items.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}</div>
+    ${g.items.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}${g.qrLink?`<div class="delivery-info-row stock-order-qr-note" style="${stockOrderState.addQr===false?'display:none':''}"><span class="delivery-value">🏷 QR-этикетки в письме: ${g.qrCount} шт</span></div>`:''}</div>
     <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':(g.opened?`<div class="stock-order-ask" style="flex:1 1 100%;border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:12px 14px"><b style="display:block;margin-bottom:10px">Письмо отправлено поставщику?</b><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small primary" onclick="markStockOrderLetterSent(${i})">Да, отправлено</button><button class="btn small" onclick="declineStockOrderLetter(${i})">Нет, не отправлено</button><button class="btn small ghost" onclick="openStockOrderLetter(${i})">Открыть письмо ещё раз</button></div></div>`:`<button class="btn small primary" style="flex:1" onclick="openStockOrderLetter(${i})">Отправить</button>`)}</div>`).join('');
   const miss='';
-  openModal('Письма поставщикам',`<p class="tech-save-hint">1) Нажмите «Отправить» — откроется готовое письмо в почте, отправьте его. 2) Ответьте, отправлено ли оно: после «Да» материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="stockOrderBack()">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
+  openModal('Письма поставщикам',`${stockOrderState.groups.some(g=>g.qrLink)?`<label class="tech-save-radio" style="align-items:center"><input type="checkbox" ${stockOrderState.addQr===false?'':'checked'} onchange="stockOrderToggleQr(this.checked)"><span><b>Добавить QR-этикетки</b><small>В письмо вставится ссылка на PDF с этикетками для печати: поставщик распечатает и наклеит</small></span></label>`:''}<p class="tech-save-hint">1) Нажмите «Отправить» — откроется готовое письмо в почте, отправьте его. 2) Ответьте, отправлено ли оно: после «Да» материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="stockOrderBack()">Назад</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
 }
 function stockOrderReadEmail(i){
   const g=stockOrderState.groups[i];
