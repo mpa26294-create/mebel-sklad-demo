@@ -514,6 +514,7 @@ window.confirmOrderMaterialEmail=async function(materialId,orderId=null){
   // открытия письма, а в текст письма добавляется явное упоминание, что чертёж приложен ОТДЕЛЬНЫМ
   // скачанным файлом и его нужно перетащить в это же письмо вручную.
   const attachPdf=!!document.getElementById('orderMaterialAttachPdfChk')?.checked&&!!(pdfAttrs.pdfName||pdfAttrs.pdfPath||pdfAttrs.pdfUrl);
+  const pdfLink=attachPdf?await materialPdfEmailLink(m):'';
   const lines=[
     t('orderMaterialGreeting'),
     '',
@@ -521,17 +522,13 @@ window.confirmOrderMaterialEmail=async function(materialId,orderId=null){
     sku?`${t('orderMaterialLineSku')}: ${sku}`:null,
     `${t('orderMaterialLineQty')}: ${qty} ${unitLabel(unit)}`,
     note?`${t('orderMaterialLineNote')}: ${note}`:null,
-    attachPdf?`${t('orderMaterialLinePdf')}: ${pdfName||t('orderMaterialLinePdfDefault')} (${t('orderMaterialPdfAttachHint')})`:null,
+    pdfLink?`${t('orderMaterialLinePdf')}: ${pdfLink}`:null,
     '',
     t('orderMaterialSignoff'),
     (currentUser?.email||'')
   ].filter(x=>x!==null);
   const subject=`${t('orderMaterialSubjectPrefix')}: ${displayName}${sku?` (${sku})`:''}`;
   const mailto=`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
-  if(attachPdf&&typeof downloadMaterialPdf==='function'){
-    await downloadMaterialPdf(m.id);
-    toast(t('orderMaterialPdfDownloaded'));
-  }
   window.location.href=mailto;
   if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`${t('orderMaterialAuditMsg')}: ${qty} ${unitLabel(unit)} → ${email}`);
   // v7.75: раньше отправка письма была чисто "письменным" действием — сайт ничего не запоминал,
@@ -598,6 +595,13 @@ function switchQuickActionMode(mode){
 function materialDetailGo(target){
   const modal=document.querySelector('#modalBackdrop .modal.detail-modal');
   if(!modal)return;
+  if(target==='receipt'){
+    switchQuickActionMode('in');
+    const card=modal.querySelector('[data-detail-action-card]');
+    card?.scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(()=>{const i=document.getElementById('detailQtyChange');i?.focus();i?.select?.()},180);
+    return;
+  }
   if(target==='writeoff'){
     switchQuickActionMode('out');
     const card=modal.querySelector('[data-detail-action-card]');
@@ -717,21 +721,15 @@ async function orderMaterialFromCard(id){
   if(qty===null||qty<=0){toast(unit==='шт'?t('fieldWhole'):t('fieldMinZero'));return}
   const date=document.getElementById('detailOrderDate')?.value||'';
   const note=(document.getElementById('detailOrderNote')?.value||'').trim();
-  const oldAttrs={...(m.attributes||{})},oldUpdated=m.lastUpdated;
-  const a={...oldAttrs};
-  a.orderedQty=stockNumForUnit(orderedManualQty(m)+qty,unit);
-  a.purchaseStatus='ordered';
-  if(Number(m.quantity||0)<=0)a.status='ordered'; // остаток есть — статус «на складе» не меняем
-  if(date){a.expectedReceiptDate=date;a.arrivalDate=date}
-  if(note){a.purchaseNote=note;a.purchaseOrderInfo=note;a.order=note}
-  m.attributes=a;m.lastUpdated=today();
-  const ok=await updateMaterialInSupabase(m);
-  if(!ok){m.attributes=oldAttrs;m.lastUpdated=oldUpdated;return}
-  try{if(typeof auditAdd==='function')auditAdd('purchase','material',m.id,m.sku||m.name,`Заказано: +${qty} ${unitLabel(unit)||unit}${date?`, ожидается ${typeof auditFmtDateV827==='function'?auditFmtDateV827(date):date}`:''}${note?` · ${note}`:''}`,{qty,date,note})}catch(e){}
-  await loadMaterialsFromSupabase();
-  renderAll();
-  openMaterialDetails(id);
-  toast(`${t('orderDoneToast')}: ${qty} ${unitLabel(unit)||unit}`);
+  // v8.80: «Заказать» из быстрых действий теперь открывает то же окно писем, что и «Нужно заказать»:
+  // готовится письмо поставщику (с чертежом и QR-этикеткой), а «Заказано» записывается после ответа «Да, отправлено».
+  const du=materialDisplayUnit(m);
+  const email=String(m.attributes?.supplierEmail||'').trim();
+  const sup=m.attributes?.supplier||'';
+  stockOrderState.groups=[{email,supplier:sup,items:[{id:String(m.id),qty:Number(convertMaterialQty(qty,unit,du,m).toFixed(3)),unit:du}],done:false,needEmail:!email,remember:true,expectedDate:date,note}];
+  stockOrderState.cats=[];stockOrderState.cat='';
+  stockOrderState.fromQuick=true;stockOrderState.quickId=String(m.id);
+  await stockOrderFinalizeLetters();
 }
 // Material history filtering
 function filterMaterialHistory(filterType){
@@ -1414,7 +1412,7 @@ function filteredMaterials(){
   const acctEmail=String((typeof currentUser!=='undefined'&&currentUser?.email)||'').trim().toLowerCase();
   if(acctEmail&&q===acctEmail){q='';if(searchEl)searchEl.value='';}
   const cat=document.getElementById('categoryFilter')?.value||'';const sub=document.getElementById('subcategoryFilter')?.value||'';return data.materials.filter(m=>(!cat||m.category===cat)&&(!sub||m.subcategory===sub)&&materialMatchesProfessionalFilters(m)&&(!q||materialSearchHaystack(m).includes(q))).sort((a,b)=>{let av=a[sortKey]??'',bv=b[sortKey]??'';if(sortKey==='quantity'||sortKey==='minQuantity'){av=Number(av);bv=Number(bv)}return av>bv?sortDir:av<bv?-sortDir:0})}
-function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const cards=[['orders',t('totalItems'),total,t('totalItemsNote'),'▤'],['ready',t('categories'),cats,t('categoriesNote'),'✓'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon])=>`<div class="order-stat-card"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
+function renderStats(){const total=data.materials.length;const low=data.materials.filter(m=>statusOf(m)[0]==='low').length;const out=data.materials.filter(m=>statusOf(m)[0]==='out').length;const cats=new Set(data.materials.map(m=>m.category)).size;const needCount=stockOrderNeedList().length;const cards=[['orders','Заказано',stockOrderedList().length,'','▤','ordered'],['ready',t('categories'),cats,t('categoriesNote'),'✓','categories'],['missing',t('lowStock'),low,t('needsAttentionNote'),'△','low'],['ordered',t('outStock'),out,t('outOfStockNote'),'▱','out'],['ready','Нужно заказать',needCount,'позиций для заказа','✉','need']];document.getElementById('stats').innerHTML=cards.map(([cls,label,value,note,icon,kind])=>`<div class="order-stat-card is-clickable" role="button" tabindex="0" onclick="openStockStatModal('${kind}')"><span class="order-stat-icon ${cls}">${icon}</span><div class="order-stat-copy"><small class="order-stat-label">${label}</small><b class="order-stat-value">${value}</b><em class="order-stat-note">${note}</em></div></div>`).join('')}
 function badge(m){const cls=CATEGORIES[m.category]?.cls||'';return `<span class="badge ${cls}">${escapeHtml(categoryLabel(m.category)||m.category)}${m.subcategory?' · '+escapeHtml(woodTypeLabel(m.subcategory)):''}</span>`}
 function stockCategoryTabs(){
   const groups=stockRefs().groups;
@@ -1972,7 +1970,7 @@ function handleScannedCode(raw,fromCamera){
   }
   stopBarcodeScanner();
   openMaterialDetails(m.id);
-  setTimeout(()=>{if(typeof materialDetailGo==='function')materialDetailGo('writeoff');},60);
+  setTimeout(()=>{if(typeof materialDetailGo==='function')materialDetailGo('receipt');},60);
   return true;
 }
 
@@ -1990,7 +1988,10 @@ function printMaterialQrLabel(id){
 <style>
   body{font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px;margin:0}
   .qr-label{border:1px dashed #999;border-radius:8px;padding:18px;text-align:center;width:240px}
-  #qrCanvas{margin:0 auto 10px}
+  .qr-brand{font-size:11px;font-weight:700;letter-spacing:4px;margin-bottom:8px}
+  .qr-wrap{position:relative;width:170px;margin:0 auto 10px}
+  .qr-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34px;height:34px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;line-height:1}
+  #qrCanvas{margin:0 auto}
   .qr-sku{font-size:20px;font-weight:700;letter-spacing:1px;margin-top:4px}
   .qr-name{font-size:12px;color:#444;margin-top:4px;line-height:1.3}
   @media print{.qr-label{border:none}}
@@ -1998,16 +1999,351 @@ function printMaterialQrLabel(id){
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head><body>
   <div class="qr-label">
-    <div id="qrCanvas"></div>
+    <div class="qr-brand">MOLM</div>
+    <div class="qr-wrap"><div id="qrCanvas"></div><div class="qr-logo">M</div></div>
     <div class="qr-sku">${esc(sku)}</div>
     <div class="qr-name">${esc(name)}${cat?' · '+esc(cat):''}</div>
   </div>
   <script>
     try{
-      new QRCode(document.getElementById('qrCanvas'),{text:${JSON.stringify(sku)},width:170,height:170,correctLevel:QRCode.CorrectLevel.M});
+      var qrBox=document.getElementById('qrCanvas'),lvls=['H','Q','M'];
+      for(var li=0;li<lvls.length;li++){try{qrBox.innerHTML='';new QRCode(qrBox,{text:${JSON.stringify(sku)},width:170,height:170,correctLevel:QRCode.CorrectLevel[lvls[li]]});break}catch(e){if(li===lvls.length-1)throw e}}
       window.onload=function(){setTimeout(function(){window.focus();window.print();},350)};
     }catch(e){document.getElementById('qrCanvas').textContent='QR error';}
   </script>
 </body></html>`);
   w.document.close();
+}
+
+
+// v8.77: плитки на «Складе» стали кнопками. Нажатие открывает список (всего / категории / заканчивается /
+// нет в наличии) или, для плитки «Нужно заказать», окно заказа: категории → список материалов с галочками →
+// по одному письму на каждого поставщика → «Письмо отправлено» отмечает материалы как «Заказано».
+// v8.78: ссылка на чертёж (PDF) для письма поставщику. Бакет с файлами закрытый, а длинная подписанная
+// ссылка некрасиво выглядит в письме — поэтому в таблице pdf_links заводится короткий код, а Edge Function
+// `pdf` по нему выдаёт свежую подписанную ссылку при каждом открытии (ссылка не «протухает»).
+async function materialPdfEmailLink(m){
+  const a=m?.attributes||{};
+  if(!a.pdfPath||typeof supabaseClient==='undefined')return a.pdfUrl||'';
+  try{
+    const bytes=crypto.getRandomValues(new Uint8Array(8));
+    const code=Array.from(bytes,b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('');
+    const {error}=await supabaseClient.from('pdf_links').insert({code,path:a.pdfPath});
+    if(!error)return `${SUPABASE_URL}/functions/v1/pdf?c=${code}`;
+    console.error(error);
+    const {data:d,error:e2}=await supabaseClient.storage.from(PDF_BUCKET).createSignedUrl(a.pdfPath,60*60*24*30);
+    if(!e2&&d?.signedUrl)return d.signedUrl;
+  }catch(e){console.error(e)}
+  return a.pdfUrl||'';
+}
+// v8.79: QR-этикетки для поставщика. Один PDF на письмо: по одной этикетке на каждый материал (по артикулу),
+// формат как у «Печать QR» в карточке (QR + артикул + название), 9 штук на лист A4. Файл кладётся в Storage,
+// в письмо вставляется короткая ссылка (та же Edge Function `pdf`). Подписи рисуются на canvas, поэтому кириллица
+// в PDF отображается корректно.
+function stockLoadScriptOnce(src,isLoaded){
+  return new Promise((resolve,reject)=>{
+    if(isLoaded()){resolve();return}
+    const el=document.createElement('script');
+    el.src=src;el.onload=()=>resolve();el.onerror=()=>reject(new Error('Не загрузилась библиотека '+src));
+    document.head.appendChild(el);
+  });
+}
+function stockQrLabelCanvas(m){
+  const PX=12,W=64*PX,H=82*PX;
+  const sku=String(m.sku||'').trim();
+  const name=(typeof materialDisplayName==='function'?materialDisplayName(m):m.name)||'';
+  const cat=(typeof categoryLabel==='function'?categoryLabel(m.category):m.category)||'';
+  const holder=document.createElement('div');
+  holder.style.cssText='position:fixed;left:-9999px;top:0';
+  document.body.appendChild(holder);
+  // уровень H (для буквы в центре); если артикул слишком длинный и не помещается — запасные уровни Q и M
+  for(const lvl of ['H','Q','M']){
+    try{holder.innerHTML='';new QRCode(holder,{text:sku,width:44*PX,height:44*PX,correctLevel:QRCode.CorrectLevel[lvl]});break}catch(e){if(lvl==='M')throw e}
+  }
+  const qrCanvas=holder.querySelector('canvas');
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  g.setLineDash([12,9]);g.lineWidth=3;g.strokeStyle='#999';g.strokeRect(2,2,W-4,H-4);g.setLineDash([]);
+  g.imageSmoothingEnabled=false;
+  g.drawImage(qrCanvas,(W-44*PX)/2,9.5*PX,44*PX,44*PX);
+  holder.remove();
+  g.fillStyle='#000';g.textAlign='center';g.textBaseline='alphabetic';
+  // v8.81: бренд «MOLM» над кодом и буква «M» по центру QR (код читается за счёт уровня коррекции H)
+  g.font=`bold ${3.4*PX}px Arial, Helvetica, sans-serif`;g.fillText('M O L M',W/2,6.5*PX);
+  const ls=9*PX,lx=(W-ls)/2,ly=9.5*PX+(44*PX-ls)/2;
+  g.fillStyle='#fff';g.fillRect(lx,ly,ls,ls);
+  g.fillStyle='#000';g.font=`bold ${6.4*PX}px Arial, Helvetica, sans-serif`;g.textBaseline='middle';g.fillText('M',W/2,ly+ls/2+0.3*PX);
+  g.textBaseline='alphabetic';
+  let fs=5.5*PX;
+  g.font=`bold ${fs}px Arial, Helvetica, sans-serif`;
+  while(g.measureText(sku).width>W-8*PX&&fs>20){fs-=2;g.font=`bold ${fs}px Arial, Helvetica, sans-serif`}
+  g.fillText(sku,W/2,63*PX);
+  g.fillStyle='#444';g.font=`${3.2*PX}px Arial, Helvetica, sans-serif`;
+  const words=`${name}${cat?' · '+cat:''}`.split(/\s+/).filter(Boolean);
+  const lines=[];let cur='';
+  words.forEach(w=>{const t2=cur?cur+' '+w:w;if(g.measureText(t2).width>W-8*PX&&cur){lines.push(cur);cur=w}else cur=t2});
+  if(cur)lines.push(cur);
+  lines.slice(0,3).forEach((ln,i)=>g.fillText(ln,W/2,(69+i*4)*PX));
+  return c;
+}
+async function buildStockOrderQrPdfLink(group){
+  try{
+    const seen=new Set();
+    const mats=group.items.map(it=>(data.materials||[]).find(x=>String(x.id)===it.id)).filter(m=>m&&String(m.sku||'').trim()&&!seen.has(m.id)&&seen.add(m.id));
+    if(!mats.length)return {link:'',count:0};
+    await stockLoadScriptOnce('https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js',()=>typeof QRCode!=='undefined');
+    await stockLoadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>!!(window.jspdf&&window.jspdf.jsPDF));
+    const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+    mats.forEach((m,idx)=>{
+      const pos=idx%9;
+      if(idx>0&&pos===0)doc.addPage();
+      const png=stockQrLabelCanvas(m).toDataURL('image/png');
+      doc.addImage(png,'PNG',9+(pos%3)*64,25.5+Math.floor(pos/3)*82,64,82,undefined,'FAST');
+    });
+    const rand=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('');
+    const path=`qr-labels/${Date.now()}_${rand}.pdf`;
+    const {error:upErr}=await supabaseClient.storage.from(PDF_BUCKET).upload(path,doc.output('blob'),{contentType:'application/pdf',cacheControl:'3600',upsert:false});
+    if(upErr){console.error(upErr);return {link:'',count:0}}
+    const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('');
+    const {error:linkErr}=await supabaseClient.from('pdf_links').insert({code,path});
+    if(linkErr){console.error(linkErr);return {link:'',count:0}}
+    return {link:`${SUPABASE_URL}/functions/v1/pdf?c=${code}`,count:mats.length};
+  }catch(e){console.error(e);return {link:'',count:0}}
+}
+function stockOrderToggleQr(on){
+  stockOrderState.addQr=!!on;
+  document.querySelectorAll('#modalBody .stock-order-qr-note').forEach(el=>{el.style.display=on?'':'none'});
+}
+let stockOrderState={cats:[],cat:'',groups:[]};
+function stockOrderNeedQty(m){
+  const u=m.unit||'шт';
+  const min=Number(m.minQuantity||0);
+  const byMin=min>0?Math.max(0,stockNumForUnit(min-availableQty(m)-orderedQty(m),u)):0;
+  return Math.max(stockNeededToOrderQty(m),byMin);
+}
+// v8.81: «Товар пришёл» из списка «Заказано» — открывает карточку материала на вкладке «Приход» с уже
+// подставленным заказанным количеством; остаётся нажать «Принять на склад» (работает выбор заказа и
+// уменьшение «Заказано» как у обычного прихода).
+function materialReceiveOrdered(id){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+  if(!m)return;
+  const unit=m.unit||'шт';
+  const rollOrSheet=(typeof isLinearFabricMaterial==='function'&&isLinearFabricMaterial(m))||(m.category==='Древесина'&&(unit==='м²'||unit==='м2'));
+  if(rollOrSheet){
+    // рулоны и листы принимаются через карточку (у них свои единицы), поэтому открываем её на вкладке «Приход»
+    closeModal();openMaterialDetails(id);
+    setTimeout(()=>{if(typeof materialDetailGo==='function')materialDetailGo('receipt')},90);
+    return;
+  }
+  const ordered=orderedQty(m);
+  const body=`<div class="tech-save-dialog">
+    <p class="tech-save-hint"><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><br>Заказано: ${escapeHtml(qtyWithUnit(ordered,unit))}</p>
+    <div class="field"><label>Сколько пришло, ${escapeHtml(unitLabel(unit)||unit)}</label><input id="recvOrderedQty" class="input" type="number" min="0" step="${stockStep(unit)}" value="${ordered}" inputmode="decimal"></div>
+    <p class="tech-save-hint">Остаток на складе увеличится, «Заказано» уменьшится. Если пришла только часть заказа — поправьте количество.</p>
+  </div>`;
+  openModal('Товар пришёл',body,`<button class="btn" onclick="openStockStatModal('ordered')">Отмена</button><button class="btn primary" onclick="confirmMaterialReceiveOrdered('${m.id}')">Принять на склад</button>`);
+  setTimeout(()=>{const i=document.getElementById('recvOrderedQty');i?.focus();i?.select?.()},50);
+}
+async function confirmMaterialReceiveOrdered(id){
+  const m=(data.materials||[]).find(x=>String(x.id)===String(id));
+  if(!m)return;
+  const unit=m.unit||'шт';
+  const delta=normalizeQtyForUnit(document.getElementById('recvOrderedQty')?.value||0,unit);
+  if(delta===null){toast(unit==='шт'?t('enterIntPositive'):t('enterQtyPositive'));return}
+  closeModal();
+  if(typeof materialOutstandingOrderPurchases==='function'){
+    const rows=materialOutstandingOrderPurchases(m.id);
+    if(rows.length){openMaterialReceiptAllocationPicker(id,delta,rows);return}
+  }
+  await finalizeMaterialQtyChange(id,1,delta,'');
+}
+function stockOrderedList(){
+  return (data.materials||[]).filter(m=>orderedQty(m)>0);
+}
+function stockOrderNeedList(){
+  return (data.materials||[]).map(m=>({m,need:stockOrderNeedQty(m)})).filter(x=>x.need>0);
+}
+function stockStatRowHtml(m,note){
+  return `<div class="tech-save-radio" onclick="closeModal();openMaterialDetails('${m.id}')"><span><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>${escapeHtml(note)}</small></span></div>`;
+}
+function openStockStatModal(kind){
+  const mats=data.materials||[];
+  const unitQty=(m,v)=>qtyWithUnit(stockNumForUnit(v,m.unit||'шт'),m.unit||'шт');
+  const byName=(a,b)=>String(a.sku||a.name||'').localeCompare(String(b.sku||b.name||''),undefined,{numeric:true,sensitivity:'base'});
+  const foot=`<button class="btn" onclick="closeModal()">Закрыть</button>`;
+  if(kind==='need'){openStockOrderCategories();return}
+  if(kind==='categories'){
+    const map={};mats.forEach(m=>{(map[m.category]=map[m.category]||[]).push(m)});
+    const rows=Object.keys(map).sort().map(c=>`<div class="tech-save-radio"><span><b>${escapeHtml(categoryLabel(c)||c)}</b><small>Позиций: ${map[c].length}</small></span></div>`).join('');
+    openModal('Категории',`<div class="tech-save-dialog receipt-alloc-list">${rows||'<p class="tech-save-hint">Нет материалов</p>'}</div>`,foot);
+    return;
+  }
+  let list,title;
+  if(kind==='low'){title='Заканчивается';list=mats.filter(m=>statusOf(m)[0]==='low')}
+  else if(kind==='out'){title='Нет в наличии';list=mats.filter(m=>statusOf(m)[0]==='out')}
+  else if(kind==='ordered'){
+    title='Заказано';list=stockOrderedList().sort(byName);
+    const rows=list.map(m=>{
+      const nums=[...new Set([...materialOrderedOrders(m.id).map(r=>r.order.number),...((m.attributes?.manualPurchaseOrders||[]).map(po=>(data.orders||[]).find(o=>String(o.id)===String(po.orderId))?.number))].filter(Boolean))];
+      const note=`Заказано: ${unitQty(m,orderedQty(m))}${m.attributes?.supplier?' · Поставщик: '+m.attributes.supplier:''}${nums.length?' · Для заказов: '+nums.join(', '):''}`;
+      return `<div class="tech-save-radio" style="align-items:center;gap:12px" onclick="closeModal();openMaterialDetails('${m.id}')"><span style="flex:1;min-width:0"><b>${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>${escapeHtml(note)}</small></span><div style="display:flex;gap:8px;flex:none"><button class="btn small primary" onclick="event.stopPropagation();materialReceiveOrdered('${m.id}')">Товар пришёл</button><button class="btn small danger" onclick="event.stopPropagation();closeModal();cancelManualPurchaseOrder('${m.id}')">Отменить заказ</button></div></div>`;
+    }).join('');
+    openModal(`Заказано: ${list.length}`,`<div class="tech-save-dialog receipt-alloc-list">${rows||'<p class="tech-save-hint">Сейчас ничего не заказано</p>'}</div>`,foot);
+    return;
+  }
+  else{title='Все позиции';list=mats.slice()}
+  list.sort(byName);
+  const rows=list.map(m=>stockStatRowHtml(m,`${categoryLabel(m.category)||m.category} · на складе: ${unitQty(m,m.quantity)} · доступно: ${unitQty(m,availableQty(m))}`)).join('');
+  openModal(`${title}: ${list.length}`,`<div class="tech-save-dialog receipt-alloc-list">${rows||'<p class="tech-save-hint">Нет материалов</p>'}</div>`,foot);
+}
+function openStockOrderCategories(){
+  const list=stockOrderNeedList();
+  const map={};list.forEach(x=>{(map[x.m.category]=map[x.m.category]||[]).push(x)});
+  stockOrderState.cats=Object.keys(map).sort();
+  const foot=`<button class="btn" onclick="closeModal()">Закрыть</button>`;
+  if(!stockOrderState.cats.length){openModal('Нужно заказать','<p class="tech-save-hint">Сейчас заказывать нечего: всё заказано или есть на складе.</p>',foot);return}
+  const rows=stockOrderState.cats.map((c,i)=>`<div class="tech-save-radio" onclick="openStockOrderCategory(${i})"><span><b>${escapeHtml(categoryLabel(c)||c)}</b><small>Позиций к заказу: ${map[c].length}</small></span></div>`).join('');
+  openModal('Нужно заказать',`<p class="tech-save-hint">Выберите категорию материалов.</p><div class="tech-save-dialog">${rows}</div>`,foot);
+}
+function openStockOrderCategory(i){
+  const cat=stockOrderState.cats[i];
+  if(cat===undefined)return;
+  stockOrderState.cat=cat;
+  const list=stockOrderNeedList().filter(x=>x.m.category===cat).sort((a,b)=>String(a.m.sku||a.m.name||'').localeCompare(String(b.m.sku||b.m.name||''),undefined,{numeric:true,sensitivity:'base'}));
+  const rows=list.map(({m,need})=>{
+    const du=materialDisplayUnit(m);
+    const q=Number(convertMaterialQty(need,m.unit||du,du,m).toFixed(3));
+    const email=String(m.attributes?.supplierEmail||'').trim();
+    const sup=m.attributes?.supplier||'';
+    const forOrders=materialReservationOrders(m.id).map(r=>({r,av:orderItemAvailability(r.item,r.order.id)})).filter(x=>!x.av.ok&&x.av.missing>0&&orderItemPurchaseStatus(x.r.item)!=='ordered').sort((a,b)=>String(a.r.order.number||'').localeCompare(String(b.r.order.number||''),undefined,{numeric:true,sensitivity:'base'}));
+    const forText=forOrders.length?forOrders.map(x=>`${escapeHtml(x.r.order.number||'—')} (${escapeHtml(qtyWithUnit(x.av.missing,x.av.unit||m.unit||'шт'))})`).join(', '):'до минимального остатка';
+    const supLine=`Поставщик: <b style="font-weight:500">${escapeHtml(sup||'не указан')}</b>${email?' · '+escapeHtml(email):''}`;
+    return `<div class="tech-save-radio" data-mid="${escapeHtml(String(m.id))}" style="align-items:center;gap:14px;padding:14px 16px"><input type="checkbox" class="stock-order-chk" checked style="width:18px;height:18px;margin:0;flex:none"><span style="flex:1;min-width:0;gap:4px"><b style="font-size:14px">${escapeHtml(m.sku?m.sku+' · ':'')}${escapeHtml(materialOrderDisplayName(m))}</b><small>Для заказов: <b style="font-weight:500;color:var(--accent-dark)">${forText}</b></small><small>${supLine}${email?'':' · <span style="color:#8a6d00">email — на следующем шаге</span>'}</small></span><span style="flex:none;flex-direction:row;align-items:center;gap:8px;padding-left:14px;border-left:1px solid var(--line)"><input type="number" min="0" step="any" class="input stock-order-qty" style="width:96px;height:38px;text-align:center;font-weight:500" value="${q}" title="Количество"><small style="font-size:13px;color:#3f4651">${escapeHtml(unitLabel(du))}</small></span></div>`;
+  }).join('');
+  openModal(categoryLabel(cat)||cat,`<p class="tech-save-hint">Отметьте, что заказать, и поправьте количество. Письма формируются отдельно для каждого поставщика.</p><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked onchange="document.querySelectorAll('.stock-order-chk').forEach(c=>c.checked=this.checked)"> Выбрать все</label><div class="tech-save-dialog receipt-alloc-list">${rows}</div>`,`<button class="btn" onclick="openStockOrderCategories()">Назад</button><button class="btn primary" onclick="prepareStockOrderLetters()">Создать письма</button>`);
+}
+async function prepareStockOrderLetters(){
+  const groups={};
+  document.querySelectorAll('#modalBackdrop .stock-order-chk:checked').forEach(chk=>{
+    const row=chk.closest('[data-mid]');
+    const m=(data.materials||[]).find(x=>String(x.id)===String(row.dataset.mid));
+    const qty=Number(row.querySelector('.stock-order-qty')?.value);
+    if(!m||!(qty>0))return;
+    const email=String(m.attributes?.supplierEmail||'').trim();
+    const item={id:String(m.id),qty,unit:materialDisplayUnit(m)};
+    const sup=m.attributes?.supplier||'';
+    const key=email?email.toLowerCase():'noemail:'+sup.toLowerCase();
+    (groups[key]=groups[key]||{email,supplier:sup,items:[],done:false,needEmail:!email,remember:true}).items.push(item);
+  });
+  stockOrderState.groups=Object.values(groups);
+  if(!stockOrderState.groups.length){toast('Ничего не выбрано');return}
+  stockOrderState.fromQuick=false;
+  await stockOrderFinalizeLetters();
+}
+async function stockOrderFinalizeLetters(){
+  stockOrderState.addQr=true;
+  toast('Готовлю письма…');
+  await Promise.all(stockOrderState.groups.flatMap(g=>g.items).map(async it=>{
+    const m=(data.materials||[]).find(x=>String(x.id)===it.id);
+    it.pdfLink=m?await materialPdfEmailLink(m):'';
+    it.pdfName=m?.attributes?.pdfName||'';
+  }));
+  await Promise.all(stockOrderState.groups.map(async g=>{const r=await buildStockOrderQrPdfLink(g);g.qrLink=r.link;g.qrCount=r.count}));
+  openStockOrderLetters();
+}
+function stockOrderLetterMailto(g){
+  const lines=[t('orderMaterialGreeting'),''];
+  g.items.forEach((it,i)=>{
+    const m=(data.materials||[]).find(x=>String(x.id)===it.id);
+    if(m)lines.push(`${i+1}. ${materialOrderDisplayName(m)}${m.sku?` (${m.sku})`:''} — ${it.qty} ${unitLabel(it.unit)}`);
+    if(m&&it.pdfLink)lines.push(`   ${t('orderMaterialLinePdf')}: ${it.pdfLink}`);
+  });
+  if(g.expectedDate)lines.push('',`${t('orderMaterialLineDate')}: ${g.expectedDate.split('-').reverse().join('.')}`);
+  if(g.note)lines.push(`${t('orderMaterialLineNote')}: ${g.note}`);
+  if(g.qrLink&&stockOrderState.addQr!==false)lines.push('',`${t('orderMaterialLineQr')}: ${g.qrLink}`);
+  lines.push('',t('orderMaterialSignoff'),currentUser?.email||'');
+  const subject=`${t('orderMaterialSubjectPrefix')} (${g.items.length})`;
+  return `mailto:${g.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+}
+function openStockOrderLetters(){
+  const unitOf=it=>unitLabel(it.unit);
+  const nameOf=it=>{const m=(data.materials||[]).find(x=>String(x.id)===it.id);return m?`${m.sku?m.sku+' · ':''}${materialOrderDisplayName(m)}${it.pdfLink?' 📎 чертёж ссылкой':''}`:it.id};
+  const cards=stockOrderState.groups.map((g,i)=>`<div class="supplier-delivery-card">
+    <div class="delivery-header"><div class="delivery-order">${escapeHtml(g.supplier||g.email||'Поставщик')}</div><div class="delivery-qty">${g.items.length} поз.</div></div>
+    <div class="delivery-info">${g.needEmail&&!g.done?`<div class="field" style="margin:0 0 8px"><label>Email поставщика</label><input type="email" class="input" id="stockOrderEmail${i}" placeholder="order@postavshik.com" value="${escapeHtml(g.email||'')}"><label class="tech-save-hint" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="stockOrderRemember${i}" ${g.remember?'checked':''}> Запомнить email в карточках этих материалов</label></div>`:`<div class="delivery-info-row"><span class="delivery-label">Кому</span><span class="delivery-value">${escapeHtml(g.email)}</span></div>`}
+    ${g.items.map(it=>`<div class="delivery-info-row"><span class="delivery-value">${escapeHtml(nameOf(it))}</span><span class="delivery-value"><b>${it.qty} ${escapeHtml(unitOf(it))}</b></span></div>`).join('')}${g.qrLink?`<div class="delivery-info-row stock-order-qr-note" style="${stockOrderState.addQr===false?'display:none':''}"><span class="delivery-value">🏷 QR-этикетки в письме: ${g.qrCount} шт</span></div>`:''}</div>
+    <div class="delivery-actions">${g.done?'<span class="ok-text">✓ Отмечено как заказано</span>':(g.opened?`<div class="stock-order-ask" style="flex:1 1 100%;border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:12px 14px"><b style="display:block;margin-bottom:10px">Письмо отправлено поставщику?</b><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small primary" onclick="markStockOrderLetterSent(${i})">Да, отправлено</button><button class="btn small" onclick="declineStockOrderLetter(${i})">Нет, не отправлено</button><button class="btn small ghost" onclick="openStockOrderLetter(${i})">Открыть письмо ещё раз</button></div></div>`:`<button class="btn small primary" style="flex:1" onclick="openStockOrderLetter(${i})">Отправить</button><button class="btn small ghost" title="Заказ сделан иначе (например по телефону) — просто записать как заказано" onclick="markStockOrderLetterSent(${i},true)">Заказано без письма</button>`)}</div>`).join('');
+  const miss='';
+  openModal('Письма поставщикам',`${stockOrderState.groups.some(g=>g.qrLink)?`<label class="tech-save-radio" style="align-items:center"><input type="checkbox" ${stockOrderState.addQr===false?'':'checked'} onchange="stockOrderToggleQr(this.checked)"><span><b>Добавить QR-этикетки</b><small>В письмо вставится ссылка на PDF с этикетками для печати: поставщик распечатает и наклеит</small></span></label>`:''}<p class="tech-save-hint">1) Нажмите «Отправить» — откроется готовое письмо в почте, отправьте его. 2) Ответьте, отправлено ли оно: после «Да» материалы отметятся как «Заказано».</p>${cards}${miss}`,`<button class="btn" onclick="stockOrderBack()">${stockOrderState.fromQuick?'К карточке':'Назад'}</button><button class="btn primary" onclick="closeModal()">Готово</button>`);
+}
+function stockOrderReadEmail(i){
+  const g=stockOrderState.groups[i];
+  if(!g)return false;
+  if(!g.needEmail)return true;
+  const v=String(document.getElementById('stockOrderEmail'+i)?.value||g.email||'').trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){toast('Введите email поставщика');return false}
+  g.email=v;
+  const chk=document.getElementById('stockOrderRemember'+i);
+  if(chk)g.remember=chk.checked;
+  return true;
+}
+function openStockOrderLetter(i){
+  const g=stockOrderState.groups[i];
+  if(!g||!stockOrderReadEmail(i))return;
+  g.opened=true;
+  openStockOrderLetters();
+  window.location.href=stockOrderLetterMailto(g);
+}
+// Окно писем нельзя закрыть, пока по открытому письму нет ответа «отправлено / не отправлено».
+function stockOrderPending(){
+  return document.getElementById('modalTitle')?.textContent==='Письма поставщикам'&&document.getElementById('modalBackdrop')?.classList.contains('show')&&(stockOrderState.groups||[]).some(g=>g.opened&&!g.done);
+}
+function stockOrderNudge(){
+  const el=document.querySelector('#modalBody .stock-order-ask');
+  if(!el)return;
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+  el.animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(-5px)'},{transform:'translateX(0)'}],{duration:350});
+  toast('Сначала ответьте: письмо отправлено или нет?');
+}
+if(!window.__stockOrderCloseGuard&&typeof closeModal==='function'){
+  window.__stockOrderCloseGuard=true;
+  const __closeModalOrig=closeModal;
+  closeModal=function(){if(stockOrderPending()){stockOrderNudge();return}return __closeModalOrig.apply(this,arguments)};
+}
+function stockOrderBack(){
+  if(stockOrderPending()){stockOrderNudge();return}
+  if(stockOrderState.fromQuick){closeModal();openMaterialDetails(stockOrderState.quickId);return}
+  openStockOrderCategory(Math.max(0,stockOrderState.cats.indexOf(stockOrderState.cat)));
+}
+function declineStockOrderLetter(i){
+  const g=stockOrderState.groups[i];
+  if(!g)return;
+  g.opened=false;
+  openStockOrderLetters();
+}
+async function markStockOrderLetterSent(i,noMail=false){
+  const g=stockOrderState.groups[i];
+  if(!g||g.done)return;
+  if(!noMail&&(!g.opened||!stockOrderReadEmail(i)))return;
+  for(const it of g.items){
+    const m=(data.materials||[]).find(x=>String(x.id)===it.id);
+    if(!m)continue;
+    const du=materialDisplayUnit(m);
+    const add=convertMaterialQty(it.qty,du,m.unit||du,m);
+    m.attributes=m.attributes||{};
+    m.attributes.orderedQty=Number((Number(m.attributes.orderedQty||0)+Number(add)).toFixed(3));
+    m.attributes.purchaseStatus='ordered';
+    if(g.needEmail&&g.remember&&g.email&&!noMail&&!String(m.attributes.supplierEmail||'').trim())m.attributes.supplierEmail=g.email;
+    if(g.expectedDate){m.attributes.expectedReceiptDate=g.expectedDate;m.attributes.arrivalDate=g.expectedDate}
+    if(g.note){m.attributes.purchaseNote=g.note;m.attributes.purchaseOrderInfo=g.note;m.attributes.order=g.note}
+    m.lastUpdated=today();
+    await updateMaterialInSupabase(m);
+    if(typeof auditAdd==='function')auditAdd('material_order_email','material',m.id,m.name,`Заказ поставщику: ${it.qty} ${unitLabel(it.unit)} → ${g.email||'без письма'}`);
+  }
+  g.done=true;
+  save();
+  renderAll();
+  openStockOrderLetters();
+  toast('Отмечено как заказано');
 }

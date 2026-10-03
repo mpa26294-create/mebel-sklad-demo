@@ -4421,3 +4421,22 @@ body.db-test::after{content:"Тестовая база";position:fixed;left:12px
 .users-role-badge.ok{background:#eef2ff;color:#3538cd}
 .users-role-badge.warn{background:#fff1e6;color:#b54708}
 .users-role-badge.owner{background:#eef8f0;color:#1f6b36}
+
+/* v8.77: кликабельные плитки склада + 5 плиток в ряд на широком экране */
+#stock .order-stat-card.is-clickable{cursor:pointer}
+#stock .order-stat-card.is-clickable:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(16,24,40,.09)!important}
+@media(min-width:1101px){#stock .stats{grid-template-columns:repeat(5,minmax(0,1fr))}}
+/* v8.77: ровные плитки склада — подпись, число и пояснение в столбик */
+#stock .order-stat-card{align-items:center;gap:16px;padding:18px 20px}
+#stock .order-stat-copy{display:flex;flex-direction:column;gap:4px;flex:1}
+#stock .order-stat-label{display:block;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stock .order-stat-value{display:block;margin:0;font-size:30px;line-height:1.05}
+#stock .order-stat-note{display:block;margin:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* v8.77: плитки склада без пояснений, компактнее, чтобы подписи помещались целиком */
+#stock .order-stat-note{display:none!important}
+#stock .order-stat-card{min-height:96px!important;gap:12px;padding:16px 16px}
+#stock .order-stat-icon{width:38px;height:38px;flex:0 0 38px;border-radius:11px;font-size:17px}
+#stock .order-stat-label{white-space:normal;overflow:visible;text-overflow:clip;font-size:13px}
+
+/* v8.80: поле «Изменить остаток» прячется на вкладке «Заказать» (раньше display:grid перебивал .hidden) */
+.quick-shared-qty.hidden{display:none!important}
