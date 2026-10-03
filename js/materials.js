@@ -1988,7 +1988,10 @@ function printMaterialQrLabel(id){
 <style>
   body{font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px;margin:0}
   .qr-label{border:1px dashed #999;border-radius:8px;padding:18px;text-align:center;width:240px}
-  #qrCanvas{margin:0 auto 10px}
+  .qr-brand{font-size:11px;font-weight:700;letter-spacing:4px;margin-bottom:8px}
+  .qr-wrap{position:relative;width:170px;margin:0 auto 10px}
+  .qr-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34px;height:34px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;line-height:1}
+  #qrCanvas{margin:0 auto}
   .qr-sku{font-size:20px;font-weight:700;letter-spacing:1px;margin-top:4px}
   .qr-name{font-size:12px;color:#444;margin-top:4px;line-height:1.3}
   @media print{.qr-label{border:none}}
@@ -1996,13 +1999,15 @@ function printMaterialQrLabel(id){
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head><body>
   <div class="qr-label">
-    <div id="qrCanvas"></div>
+    <div class="qr-brand">MOLM</div>
+    <div class="qr-wrap"><div id="qrCanvas"></div><div class="qr-logo">M</div></div>
     <div class="qr-sku">${esc(sku)}</div>
     <div class="qr-name">${esc(name)}${cat?' · '+esc(cat):''}</div>
   </div>
   <script>
     try{
-      new QRCode(document.getElementById('qrCanvas'),{text:${JSON.stringify(sku)},width:170,height:170,correctLevel:QRCode.CorrectLevel.M});
+      var qrBox=document.getElementById('qrCanvas'),lvls=['H','Q','M'];
+      for(var li=0;li<lvls.length;li++){try{qrBox.innerHTML='';new QRCode(qrBox,{text:${JSON.stringify(sku)},width:170,height:170,correctLevel:QRCode.CorrectLevel[lvls[li]]});break}catch(e){if(li===lvls.length-1)throw e}}
       window.onload=function(){setTimeout(function(){window.focus();window.print();},350)};
     }catch(e){document.getElementById('qrCanvas').textContent='QR error';}
   </script>
@@ -2051,26 +2056,35 @@ function stockQrLabelCanvas(m){
   const holder=document.createElement('div');
   holder.style.cssText='position:fixed;left:-9999px;top:0';
   document.body.appendChild(holder);
-  new QRCode(holder,{text:sku,width:44*PX,height:44*PX,correctLevel:QRCode.CorrectLevel.M});
+  // уровень H (для буквы в центре); если артикул слишком длинный и не помещается — запасные уровни Q и M
+  for(const lvl of ['H','Q','M']){
+    try{holder.innerHTML='';new QRCode(holder,{text:sku,width:44*PX,height:44*PX,correctLevel:QRCode.CorrectLevel[lvl]});break}catch(e){if(lvl==='M')throw e}
+  }
   const qrCanvas=holder.querySelector('canvas');
   const c=document.createElement('canvas');c.width=W;c.height=H;
   const g=c.getContext('2d');
   g.fillStyle='#fff';g.fillRect(0,0,W,H);
   g.setLineDash([12,9]);g.lineWidth=3;g.strokeStyle='#999';g.strokeRect(2,2,W-4,H-4);g.setLineDash([]);
   g.imageSmoothingEnabled=false;
-  g.drawImage(qrCanvas,(W-44*PX)/2,7*PX,44*PX,44*PX);
+  g.drawImage(qrCanvas,(W-44*PX)/2,9.5*PX,44*PX,44*PX);
   holder.remove();
   g.fillStyle='#000';g.textAlign='center';g.textBaseline='alphabetic';
+  // v8.81: бренд «MOLM» над кодом и буква «M» по центру QR (код читается за счёт уровня коррекции H)
+  g.font=`bold ${3.4*PX}px Arial, Helvetica, sans-serif`;g.fillText('M O L M',W/2,6.5*PX);
+  const ls=9*PX,lx=(W-ls)/2,ly=9.5*PX+(44*PX-ls)/2;
+  g.fillStyle='#fff';g.fillRect(lx,ly,ls,ls);
+  g.fillStyle='#000';g.font=`bold ${6.4*PX}px Arial, Helvetica, sans-serif`;g.textBaseline='middle';g.fillText('M',W/2,ly+ls/2+0.3*PX);
+  g.textBaseline='alphabetic';
   let fs=5.5*PX;
   g.font=`bold ${fs}px Arial, Helvetica, sans-serif`;
   while(g.measureText(sku).width>W-8*PX&&fs>20){fs-=2;g.font=`bold ${fs}px Arial, Helvetica, sans-serif`}
-  g.fillText(sku,W/2,60*PX);
+  g.fillText(sku,W/2,63*PX);
   g.fillStyle='#444';g.font=`${3.2*PX}px Arial, Helvetica, sans-serif`;
   const words=`${name}${cat?' · '+cat:''}`.split(/\s+/).filter(Boolean);
   const lines=[];let cur='';
   words.forEach(w=>{const t2=cur?cur+' '+w:w;if(g.measureText(t2).width>W-8*PX&&cur){lines.push(cur);cur=w}else cur=t2});
   if(cur)lines.push(cur);
-  lines.slice(0,3).forEach((ln,i)=>g.fillText(ln,W/2,(66+i*4.2)*PX));
+  lines.slice(0,3).forEach((ln,i)=>g.fillText(ln,W/2,(69+i*4)*PX));
   return c;
 }
 async function buildStockOrderQrPdfLink(group){
